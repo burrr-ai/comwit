@@ -1,7 +1,8 @@
-import { useSyncExternalStore } from 'react'
+import { useRef, useSyncExternalStore, useCallback } from 'react'
 import { model, Model } from './model'
 import { action, ActionFactory } from './action'
 import { StateProvider, useStoreRegistry } from './provider'
+import { isEqual } from '../utils'
 
 function create<S, A>(
     m: Model<S>,
@@ -13,7 +14,7 @@ function create<S, A>(
         const registry = useStoreRegistry()
         const store = registry.get(m)
 
-        const inject = <T,>(dep: Model<T>): T => {
+        const state = <T,>(dep: Model<T>): T => {
             const depStore = registry.get(dep)
             return new Proxy(depStore.snapshot as object, {
                 set(_, prop, value) {
@@ -28,22 +29,34 @@ function create<S, A>(
             }) as T
         }
 
-        const actions = Object.assign(
-            {},
-            ...options.actions.map(factory => factory(inject))
-        ) as A
-
-        const getSnapshot = () => store.snapshot
-        const subscribe = (listener: () => void) => {
-            store.listeners.add(listener)
-            return () => store.listeners.delete(listener)
+        const actionsRef = useRef<A | null>(null)
+        if (!actionsRef.current) {
+            actionsRef.current = Object.assign(
+                {},
+                ...options.actions.map(factory => factory(state))
+            ) as A
         }
 
-        const snapshot = useSyncExternalStore(subscribe, getSnapshot)
-        const full = { ...snapshot, actions } as S & { actions: A }
+        const prevRef = useRef<unknown>(null)
 
-        if (selector) return selector(full)
-        return full
+        const subscribe = useCallback((listener: () => void) => {
+            store.listeners.add(listener)
+            return () => store.listeners.delete(listener)
+        }, [store])
+
+        const getSnapshot = () => {
+            const full = { ...store.snapshot, actions: actionsRef.current } as S & { actions: A }
+            const next = selector ? selector(full) : full
+
+            if (prevRef.current !== null && isEqual(prevRef.current, next)) {
+                return prevRef.current as R
+            }
+
+            prevRef.current = next
+            return next as R
+        }
+
+        return useSyncExternalStore(subscribe, getSnapshot)
     }
 
     return useStore

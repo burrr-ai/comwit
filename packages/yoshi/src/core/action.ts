@@ -1,6 +1,6 @@
-export type Inject = <T>(model: Model<T>) => T
+export type State = <T>(model: Model<T>) => T
 
-export type ActionFactory<A> = (inject: Inject) => A
+export type ActionFactory<A> = (state: State) => A
 
 export function action<A>(factory: ActionFactory<A>): ActionFactory<A> {
     return factory

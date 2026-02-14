@@ -2,8 +2,8 @@ import { action } from '@meursyphus/yoshi'
 import type { TodoActions } from '../types'
 import { todoModel } from '../model'
 
-export const todoBulkActions = action<Pick<TodoActions, 'deleteMany'>>((inject) => {
-    const model = inject(todoModel)
+export const todoBulkActions = action<Pick<TodoActions, 'deleteMany'>>((state) => {
+    const model = state(todoModel)
 
     return {
         async deleteMany(ids) {
