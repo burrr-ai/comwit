@@ -4,7 +4,7 @@ import { action, ActionFactory } from './action'
 import { StateProvider, useStoreRegistry } from './provider'
 import { isEqual } from '../utils'
 
-function create<S, A>(
+function create<S extends object, A>(
     m: Model<S>,
     options: { actions: ActionFactory<Partial<A>>[] }
 ) {
@@ -14,38 +14,27 @@ function create<S, A>(
         const registry = useStoreRegistry()
         const store = registry.get(m)
 
-        const state = <T,>(dep: Model<T>): T => {
-            const depStore = registry.get(dep)
-            return new Proxy(depStore.snapshot as object, {
-                set(_, prop, value) {
-                    depStore.mutate(draft => {
-                        (draft as any)[prop] = value
-                    })
-                    return true
-                },
-                get(_, prop) {
-                    return (depStore.snapshot as any)[prop]
-                }
-            }) as T
-        }
-
         const actionsRef = useRef<A | null>(null)
         if (!actionsRef.current) {
+            const inject = <T extends object>(dep: Model<T>): T => {
+                return registry.get(dep).proxy
+            }
+
             actionsRef.current = Object.assign(
                 {},
-                ...options.actions.map(factory => factory(state))
+                ...options.actions.map(factory => factory(inject))
             ) as A
         }
 
         const prevRef = useRef<unknown>(null)
 
-        const subscribe = useCallback((listener: () => void) => {
-            store.listeners.add(listener)
-            return () => store.listeners.delete(listener)
-        }, [store])
+        const subscribe = useCallback(
+            (listener: () => void) => store.subscribe(listener),
+            [store]
+        )
 
         const getSnapshot = () => {
-            const full = { ...store.snapshot, actions: actionsRef.current } as S & { actions: A }
+            const full = { ...store.getSnapshot(), actions: actionsRef.current } as S & { actions: A }
             const next = selector ? selector(full) : full
 
             if (prevRef.current !== null && isEqual(prevRef.current, next)) {
@@ -56,7 +45,7 @@ function create<S, A>(
             return next as R
         }
 
-        return useSyncExternalStore(subscribe, getSnapshot)
+        return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
     }
 
     return useStore

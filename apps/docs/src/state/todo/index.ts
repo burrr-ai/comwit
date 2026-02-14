@@ -8,4 +8,4 @@ export const useTodo = create<TodoState, TodoActions>(todoModel, {
     actions: [todoCrudActions, todoBulkActions],
 })
 
-export type { Todo, TodoState, TodoActions } from './types'
+export type { Todo, Filter, TodoState, TodoActions } from './types'

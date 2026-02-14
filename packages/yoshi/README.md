@@ -118,8 +118,8 @@ import { action } from '@meursyphus/yoshi'
 import type { TodoActions } from '../types'
 import { todoModel } from '../model'
 
-export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>((state) => {
-  const model = state(todoModel)
+export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>((inject) => {
+  const model = inject(todoModel)
 
   return {
     async create(title) {
@@ -137,8 +137,8 @@ export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>((s
 You can also use an inline class, which opens the door to decorators:
 
 ```ts
-export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>((state) => {
-  const model = state(todoModel)
+export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>((inject) => {
+  const model = inject(todoModel)
 
   return new class {
     async create(title: string) {

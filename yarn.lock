@@ -3140,6 +3140,11 @@ prop-types@^15.8.1:
     object-assign "^4.1.1"
     react-is "^16.13.1"
 
+proxy-compare@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/proxy-compare/-/proxy-compare-3.0.1.tgz#3262cff3a25a6dedeaa299f6cf2369d6f7588a94"
+  integrity sha512-V9plBAt3qjMlS1+nC8771KNf6oJ12gExvaxnNzN/9yVRLdTv/lc+oJlnSzrdYDAvBfTStPCoiaCOTmTs0adv7Q==
+
 punycode@^2.1.0:
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/punycode/-/punycode-2.3.1.tgz#027422e2faec0b25e1549c3e1bd8309b9133b6e5"
@@ -3759,6 +3764,13 @@ uri-js@^4.2.2, uri-js@^4.4.1:
   integrity sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==
   dependencies:
     punycode "^2.1.0"
+
+valtio@^2.3.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/valtio/-/valtio-2.3.0.tgz#c831f362f7a9743a00fa5976d5671cb7d7d8802c"
+  integrity sha512-1MfKNcmOIdBSatiJsYgw420n6jnD+jeoI0V+RkOQbCB0ElLh6GKUfPr0hc9uq/KBGeghivDEarRsKFFdSQQnKw==
+  dependencies:
+    proxy-compare "^3.0.1"
 
 vite-plugin-dts@^4.5.4:
   version "4.5.4"

@@ -1,17 +1,15 @@
 import React, { createContext, useContext, useRef } from 'react'
-import { produce } from 'immer'
+import { proxy, snapshot as valtioSnapshot, subscribe as valtioSubscribe } from 'valtio'
 import type { Model } from './model'
 
-type Listener = () => void
-
-export type StoreEntry<T = any> = {
-    snapshot: T
-    listeners: Set<Listener>
-    mutate(recipe: (draft: T) => void): void
+export type StoreEntry<T extends object = any> = {
+    proxy: T
+    getSnapshot(): T
+    subscribe(listener: () => void): () => void
 }
 
 export type StoreRegistry = {
-    get<T>(model: Model<T>): StoreEntry<T>
+    get<T extends object>(model: Model<T>): StoreEntry<T>
 }
 
 const StateContext = createContext<StoreRegistry | null>(null)
@@ -26,16 +24,19 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
     const storesRef = useRef<Map<symbol, StoreEntry>>(new Map())
 
     const registryRef = useRef<StoreRegistry>({
-        get<T>(model: Model<T>): StoreEntry<T> {
+        get<T extends object>(model: Model<T>): StoreEntry<T> {
             const existing = storesRef.current.get(model.key)
             if (existing) return existing as StoreEntry<T>
 
+            const p = proxy(model.instance())
+
             const entry: StoreEntry<T> = {
-                snapshot: model.instance(),
-                listeners: new Set(),
-                mutate(recipe) {
-                    entry.snapshot = produce(entry.snapshot, recipe)
-                    entry.listeners.forEach(l => l())
+                proxy: p,
+                getSnapshot() {
+                    return valtioSnapshot(p) as T
+                },
+                subscribe(listener) {
+                    return valtioSubscribe(p, listener)
                 },
             }
 
