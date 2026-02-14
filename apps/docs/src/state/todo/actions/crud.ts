@@ -2,7 +2,7 @@ import { action } from '@meursyphus/yoshi'
 import type { TodoActions } from '../types'
 import { todoModel } from '../model'
 
-export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete' | 'updateStatus' | 'updatePriority'>>((inject) => {
+export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete' | 'updateStatus' | 'updatePriority'>>(({ inject }) => {
     const model = inject(todoModel)
 
     return {

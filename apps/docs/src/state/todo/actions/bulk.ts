@@ -2,7 +2,7 @@ import { action } from '@meursyphus/yoshi'
 import type { TodoActions } from '../types'
 import { todoModel } from '../model'
 
-export const todoBulkActions = action<Pick<TodoActions, 'clearCompleted' | 'setFilter'>>((inject) => {
+export const todoBulkActions = action<Pick<TodoActions, 'clearCompleted' | 'setFilter'>>(({ inject }) => {
     const model = inject(todoModel)
 
     return {

@@ -2,6 +2,7 @@ import { useRef, useSyncExternalStore, useCallback } from 'react'
 import { model, Model } from './model'
 import { action, ActionFactory } from './action'
 import { StateProvider, useStoreRegistry } from './provider'
+import { silent } from './silent'
 import { isEqual } from '../utils'
 
 function create<S extends object, A>(
@@ -22,7 +23,7 @@ function create<S extends object, A>(
 
             actionsRef.current = Object.assign(
                 {},
-                ...options.actions.map(factory => factory(inject))
+                ...options.actions.map(factory => factory({ inject }))
             ) as A
         }
 
@@ -55,5 +56,6 @@ export {
     model,
     action,
     create,
+    silent,
     StateProvider,
 }

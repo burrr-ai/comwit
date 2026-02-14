@@ -1,1 +1,1 @@
-export { model, action, create, StateProvider } from './core';
+export { model, action, create, silent, StateProvider } from './core';

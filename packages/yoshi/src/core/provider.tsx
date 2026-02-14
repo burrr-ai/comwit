@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useRef } from 'react'
 import { proxy, snapshot as valtioSnapshot, subscribe as valtioSubscribe } from 'valtio'
 import type { Model } from './model'
+import { isSilent } from './silent'
 
 export type StoreEntry<T extends object = any> = {
     proxy: T
@@ -36,7 +37,9 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
                     return valtioSnapshot(p) as T
                 },
                 subscribe(listener) {
-                    return valtioSubscribe(p, listener)
+                    return valtioSubscribe(p, () => {
+                        if (!isSilent()) listener()
+                    })
                 },
             }
 

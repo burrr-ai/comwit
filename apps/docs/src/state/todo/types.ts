@@ -31,4 +31,6 @@ export type TodoActions = {
     clearCompleted(): void
     /** Set filter criteria */
     setFilter(filter: Partial<Filter>): void
+    /** Initialize todos from server data without triggering re-render */
+    init(todos: Todo[]): void
 }
