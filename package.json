@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev:docs": "yarn workspace docs dev",
+    "dev:playground": "yarn workspace playground dev",
     "dev:lib": "yarn workspace @meursyphus/yoshi dev",
     "build": "yarn workspaces run build",
     "dev": "yarn workspaces run dev"

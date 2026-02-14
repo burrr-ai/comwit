@@ -1,5 +1,5 @@
 import type { Todo } from '@/state/todo'
-import { TodoPage } from './todo-page'
+import { TodoPage } from '../page/todo'
 
 async function fetchTodos(): Promise<Todo[]> {
     // Simulate server-side data fetching
