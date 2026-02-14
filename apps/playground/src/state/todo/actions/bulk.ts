@@ -1,4 +1,4 @@
-import { action } from '@meursyphus/yoshi'
+import { action } from 'mucha'
 import type { TodoActions } from '../types'
 import { todoModel } from '../model'
 

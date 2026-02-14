@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useRef } from 'react'
-import { proxy, snapshot as valtioSnapshot, subscribe as valtioSubscribe } from 'valtio'
 import type { Model } from './model'
+import { createProxy, snapshot, subscribe } from './proxy'
 import { isSilent } from './silent'
 
 export type StoreEntry<T extends object = any> = {
@@ -29,15 +29,15 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             const existing = storesRef.current.get(model.key)
             if (existing) return existing as StoreEntry<T>
 
-            const p = proxy(model.instance())
+            const p = createProxy(model.instance())
 
             const entry: StoreEntry<T> = {
                 proxy: p,
                 getSnapshot() {
-                    return valtioSnapshot(p) as T
+                    return snapshot(p) as T
                 },
                 subscribe(listener) {
-                    return valtioSubscribe(p, () => {
+                    return subscribe(p, () => {
                         if (!isSilent()) listener()
                     })
                 },

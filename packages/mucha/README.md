@@ -29,7 +29,7 @@ Each domain gets its own folder with a consistent layout:
 Wrap your app root with `StateProvider`.
 
 ```tsx
-import { StateProvider } from '@meursyphus/yoshi'
+import { StateProvider } from 'mucha'
 
 function App() {
   return (
@@ -101,7 +101,7 @@ export type TodoActions = {
 
 ```ts
 // state/todo/model.ts
-import { model } from '@meursyphus/yoshi'
+import { model } from 'mucha'
 import type { TodoState } from './types'
 
 export const todoModel = model<TodoState>({
@@ -114,7 +114,7 @@ export const todoModel = model<TodoState>({
 
 ```ts
 // state/todo/actions/crud.ts
-import { action } from '@meursyphus/yoshi'
+import { action } from 'mucha'
 import type { TodoActions } from '../types'
 import { todoModel } from '../model'
 
@@ -157,7 +157,7 @@ export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>(({
 
 ```ts
 // state/todo/index.ts
-import { create } from '@meursyphus/yoshi'
+import { create } from 'mucha'
 import type { TodoState, TodoActions } from './types'
 import { todoModel } from './model'
 import { todoCrudActions } from './actions/crud'

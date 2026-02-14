@@ -9,8 +9,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'Yoshi',
-      fileName: 'yoshi',
+      name: 'Mucha',
+      fileName: 'mucha',
       formats: ['es', 'cjs']
     },
     rollupOptions: {

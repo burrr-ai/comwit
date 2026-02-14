@@ -1,4 +1,4 @@
-import { create } from '@meursyphus/yoshi'
+import { create } from 'mucha'
 import type { TodoState, TodoActions } from './types'
 import { todoModel } from './model'
 import { todoCrudActions } from './actions/crud'

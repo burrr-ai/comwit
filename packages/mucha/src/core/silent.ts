@@ -5,7 +5,7 @@
  *
  * @example
  * ```ts
- * import { silent } from '@meursyphus/yoshi'
+ * import { silent } from 'mucha'
  *
  * silent(() => {
  *   model.todos = serverData.todos

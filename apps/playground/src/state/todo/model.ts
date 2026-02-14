@@ -1,4 +1,4 @@
-import { model } from '@meursyphus/yoshi'
+import { model } from 'mucha'
 import type { TodoState } from './types'
 
 export const todoModel = model<TodoState>({

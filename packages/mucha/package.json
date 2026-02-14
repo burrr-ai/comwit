@@ -1,17 +1,17 @@
 {
-  "name": "@meursyphus/yoshi",
+  "name": "mucha",
   "version": "0.1.0",
   "private": false,
   "type": "module",
   "description": "LLM-friendly React state helper library.",
-  "main": "dist/yoshi.cjs",
-  "module": "dist/yoshi.js",
+  "main": "dist/mucha.cjs",
+  "module": "dist/mucha.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/yoshi.js",
-      "require": "./dist/yoshi.cjs"
+      "import": "./dist/mucha.js",
+      "require": "./dist/mucha.cjs"
     }
   },
   "files": [
