@@ -1,4 +1,4 @@
-import { action, OnError, OnSuccess, Transaction } from 'mucha'
+import { action, OnError, OnSuccess, Transaction } from 'muchajs'
 import { toast } from 'sonner'
 import type { Todo, TodoActionOptions, TodoActions } from '../types'
 import { todoModel } from '../model'

@@ -5,7 +5,7 @@
  *
  * @example
  * ```ts
- * import { silent } from 'mucha'
+ * import { silent } from 'muchajs'
  *
  * silent(() => {
  *   model.todos = serverData.todos

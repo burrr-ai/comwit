@@ -29,7 +29,7 @@ Each domain gets its own folder with a consistent layout:
 Wrap your app root with `StateProvider`.
 
 ```tsx
-import { StateProvider } from 'mucha'
+import { StateProvider } from 'muchajs'
 
 function App() {
   return (
@@ -101,7 +101,7 @@ export type TodoActions = {
 
 ```ts
 // state/todo/model.ts
-import { model } from 'mucha'
+import { model } from 'muchajs'
 import type { TodoState } from './types'
 
 export const todoModel = model<TodoState>({
@@ -114,7 +114,7 @@ export const todoModel = model<TodoState>({
 
 ```ts
 // state/todo/actions/crud.ts
-import { action } from 'mucha'
+import { action } from 'muchajs'
 import type { TodoActions } from '../types'
 import { todoModel } from '../model'
 
@@ -157,7 +157,7 @@ export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>(({
 
 ```ts
 // state/todo/index.ts
-import { create } from 'mucha'
+import { create } from 'muchajs'
 import type { TodoState, TodoActions } from './types'
 import { todoModel } from './model'
 import { todoCrudActions } from './actions/crud'
@@ -178,7 +178,7 @@ You can split domain logic into multiple action files and compose them in one ho
 
 ```ts
 // state/todo/index.ts
-import { create } from 'mucha'
+import { create } from 'muchajs'
 import type { TodoState, TodoActions } from './types'
 import { todoModel } from './model'
 import { todoCrudActions } from './actions/crud'
@@ -196,7 +196,7 @@ export const useTodo = create<TodoState, TodoActions>(todoModel, {
 
 ```ts
 // state/order/actions/create.ts
-import { action, silent } from 'mucha'
+import { action, silent } from 'muchajs'
 import { orderModel } from '../model'
 import { userModel } from '@/state/user/model'
 
@@ -254,7 +254,7 @@ You can wrap only part of your tree with a separate `StateProvider` when you wan
 When initializing state from server data, use `silent()` to avoid client re-renders while bootstrapping.
 
 ```ts
-import { action, silent } from 'mucha'
+import { action, silent } from 'muchajs'
 
 export const todoInitActions = action(({ inject }) => {
   const model = inject(todoModel)
@@ -276,7 +276,7 @@ Interceptors can be used in two styles in `actions`:
 1) Decorator style (class-based actions)
 
 ```ts
-import { action, OnError, OnSuccess, Transaction, Debounce } from 'mucha'
+import { action, OnError, OnSuccess, Debounce } from 'muchajs'
 
 export const todoActions = action(({ inject }) => {
   const model = inject(todoModel)
@@ -286,7 +286,6 @@ export const todoActions = action(({ inject }) => {
       sonner.error(error.message ?? '요청 처리 중 오류가 발생했습니다')
       throw error
     })
-    @Transaction()
     @OnSuccess((result) => {
       console.log('saved', result)
     })
@@ -297,13 +296,10 @@ export const todoActions = action(({ inject }) => {
 })
 ```
 
-`@Transaction` is defined in v2-style API as a placeholder for dynamic model tracking.
-TODO: keep snapshots for auto-detected models during execution, and on error rollback before rethrowing.
-
 2) Function style (pipe)
 
 ```ts
-import { action, onError, onSuccess, transaction, debounce, pipe } from 'mucha'
+import { action, onError, onSuccess, debounce, pipe } from 'muchajs'
 
 export const todoActions = action(({ inject }) => {
   const model = inject(todoModel)
@@ -313,12 +309,11 @@ export const todoActions = action(({ inject }) => {
 
   return {
     save: pipe(
-      onError(error => {
+      onError((error) => {
         sonner.error(error.message ?? '요청 처리 중 오류가 발생했습니다')
         throw error
       }),
-    onSuccess(result => console.log('saved', result)),
-      transaction(),
+      onSuccess((result) => console.log('saved', result)),
       debounce(300),
     )(save),
   }

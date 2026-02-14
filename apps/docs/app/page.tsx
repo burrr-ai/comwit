@@ -11,7 +11,7 @@ function CodeBlock() {
       </div>
       <pre className="leading-relaxed">
         <code>{`\
-`}<span className="keyword">import</span>{" { "}<span className="const">model</span>{", "}<span className="const">action</span>{", "}<span className="const">create</span>{" } "}<span className="keyword">from</span> <span className="string">&apos;mucha&apos;</span>{`
+`}<span className="keyword">import</span>{" { "}<span className="const">model</span>{", "}<span className="const">action</span>{", "}<span className="const">create</span>{" } "}<span className="keyword">from</span> <span className="string">&apos;muchajs&apos;</span>{`
 
 `}<span className="comment">{"// define your domain state"}</span>{`
 `}<span className="keyword">const</span> <span className="const">Todo</span> = <span className="func">model</span>{"({ "}<span className="param">todos</span>{": [], "}<span className="param">count</span>{": 0 })"}{`
@@ -93,7 +93,7 @@ export default function Home() {
         {/* Nav */}
         <nav className="relative z-10 flex w-full max-w-2xl items-center justify-between text-sm tracking-wide">
           <span className="font-serif text-lg font-semibold text-foreground">
-            mucha
+            muchajs
           </span>
           <div className="flex items-center gap-6">
             <a
@@ -105,7 +105,7 @@ export default function Home() {
               GitHub
             </a>
             <a
-              href="https://www.npmjs.com/package/mucha"
+              href="https://www.npmjs.com/package/muchajs"
               target="_blank"
               rel="noopener noreferrer"
               className="text-foreground/60 transition-colors hover:text-foreground"
@@ -154,7 +154,7 @@ export default function Home() {
               Get Started
             </a>
             <div className="group flex items-center gap-2 rounded-full border-2 border-gold/40 bg-cream-light/60 px-6 py-3 font-mono text-sm tracking-wide text-foreground/70 backdrop-blur transition-colors hover:border-gold">
-              npm i mucha
+              npm i muchajs
             </div>
           </div>
         </main>

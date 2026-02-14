@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "mucha — LLM-friendly state management for React",
+  title: "muchajs — LLM-friendly state management for React",
   description:
     "Less tokens. Better instructions. A state management library designed for the AI era.",
 };

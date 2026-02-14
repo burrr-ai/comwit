@@ -1,4 +1,4 @@
-import { create } from 'mucha'
+import { create } from 'muchajs'
 import type { TodoState, TodoActions } from './types'
 import { todoModel } from './model'
 import { todoCrudActions } from './actions/crud'

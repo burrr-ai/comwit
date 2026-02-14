@@ -4,7 +4,7 @@ Yarn workspaces monorepo for Yoshi — an LLM-friendly React state management li
 
 ## Structure
 
-- `packages/mucha` — Core library (`mucha`)
+- `packages/mucha` — Core library (`muchajs`)
 - `apps/docs` — Documentation site (Next.js + Tailwind)
 - `apps/playground` — Playground app for testing
 

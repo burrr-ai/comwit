@@ -1,17 +1,17 @@
 {
-  "name": "mucha",
+  "name": "muchajs",
   "version": "0.0.0",
   "private": false,
   "type": "module",
   "description": "LLM-friendly React state helper library.",
-  "main": "dist/mucha.cjs",
-  "module": "dist/mucha.js",
+  "main": "dist/muchajs.cjs",
+  "module": "dist/muchajs.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/mucha.js",
-      "require": "./dist/mucha.cjs"
+      "import": "./dist/muchajs.js",
+      "require": "./dist/muchajs.cjs"
     }
   },
   "files": [

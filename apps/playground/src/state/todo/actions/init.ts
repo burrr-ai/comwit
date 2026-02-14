@@ -1,4 +1,4 @@
-import { action, silent } from 'mucha'
+import { action, silent } from 'muchajs'
 import type { TodoActions } from '../types'
 import { todoModel } from '../model'
 

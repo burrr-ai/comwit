@@ -11,7 +11,7 @@
     "dev:playground": "yarn workspace playground dev --port 3001",
     "docs": "yarn workspace docs dev",
     "playground": "yarn workspace playground dev --port 3001",
-    "dev:lib": "yarn workspace mucha dev",
+    "dev:lib": "yarn workspace muchajs dev",
     "build": "yarn workspaces run build",
     "dev": "yarn workspaces run dev"
   }

@@ -2,7 +2,7 @@
 
 Yarn workspaces 기반 모노레포입니다.
 
-- `packages/mucha`: React 상태 라이브러리 (Vite Library Mode)
+- `packages/muchajs`: React 상태 라이브러리 (Vite Library Mode)
 - `apps/docs`: 문서 사이트 (Next.js + Tailwind)
 - `apps/playground`: 플레이그라운드 (Next.js)
 
