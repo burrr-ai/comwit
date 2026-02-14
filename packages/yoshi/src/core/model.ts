@@ -1,27 +1,13 @@
-/**
- * @description
- * 
- * @example
- * ```typescript
- * 
- * const todoModel = model({
- *   title: '',
- *   completed: false,
- * });
- * ```
- */
-export function model<T>(obj: T): Model<T> {
+export function model<T>(initial: T): Model<T> {
     return {
         key: Symbol(),
         instance() {
-            return obj
+            return structuredClone(initial)
         }
     }
 }
 
-
 export type Model<T> = {
-    key: Symbol
+    key: symbol
     instance(): T
 }
-

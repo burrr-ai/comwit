@@ -1,43 +1,52 @@
-import { createContext, useContext, useRef, type ReactNode } from 'react';
-import { wrapReactive } from './reactive';
+import React, { createContext, useContext, useRef } from 'react'
+import { produce } from 'immer'
+import type { Model } from './model'
 
-export type StateFactory<TState> = () => TState;
+type Listener = () => void
 
-export type ReactiveRecord<TState> = {
-  proxy: TState;
-  subscribe(listener: () => void): () => void;
-  getSnapshot(): TState;
-};
-
-export const STATE_FACTORY_KEY = Symbol('yoshi.stateFactory');
-
-export class Registry {
-  private instances = new Map<Function, ReactiveRecord<unknown>>();
-
-  resolve<TState extends object>(factory: StateFactory<TState>): ReactiveRecord<TState> {
-    const cached = this.instances.get(factory);
-    if (cached) {
-      return cached as ReactiveRecord<TState>;
-    }
-
-    const record = wrapReactive(factory());
-    this.instances.set(factory, record);
-    return record as ReactiveRecord<TState>;
-  }
+export type StoreEntry<T = any> = {
+    snapshot: T
+    listeners: Set<Listener>
+    mutate(recipe: (draft: T) => void): void
 }
 
-export const RegistryContext = createContext<Registry | null>(null);
-
-export function useRegistry() {
-  const registry = useContext(RegistryContext);
-  if (!registry) {
-    throw new Error('StateProvider is required in the React tree.');
-  }
-  return registry;
+export type StoreRegistry = {
+    get<T>(model: Model<T>): StoreEntry<T>
 }
 
-export function StateProvider({ children }: { children: ReactNode }) {
-  const registry = useRef(new Registry()).current;
+const StateContext = createContext<StoreRegistry | null>(null)
 
-  return <RegistryContext.Provider value={registry}>{children}</RegistryContext.Provider>;
+export function useStoreRegistry(): StoreRegistry {
+    const ctx = useContext(StateContext)
+    if (!ctx) throw new Error('Wrap your app with <StateProvider>')
+    return ctx
+}
+
+export function StateProvider({ children }: { children: React.ReactNode }) {
+    const storesRef = useRef<Map<symbol, StoreEntry>>(new Map())
+
+    const registryRef = useRef<StoreRegistry>({
+        get<T>(model: Model<T>): StoreEntry<T> {
+            const existing = storesRef.current.get(model.key)
+            if (existing) return existing as StoreEntry<T>
+
+            const entry: StoreEntry<T> = {
+                snapshot: model.instance(),
+                listeners: new Set(),
+                mutate(recipe) {
+                    entry.snapshot = produce(entry.snapshot, recipe)
+                    entry.listeners.forEach(l => l())
+                },
+            }
+
+            storesRef.current.set(model.key, entry)
+            return entry
+        }
+    })
+
+    return (
+        <StateContext.Provider value={registryRef.current}>
+            {children}
+        </StateContext.Provider>
+    )
 }

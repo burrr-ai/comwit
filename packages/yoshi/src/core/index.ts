@@ -1,71 +1,57 @@
-import { useRef, useSyncExternalStore } from 'react';
-import { Prettify, UnionToIntersection } from '../utils';
-import { STATE_FACTORY_KEY, useRegistry } from './provider';
+import { useSyncExternalStore } from 'react'
+import { model, Model } from './model'
+import { action, ActionFactory } from './action'
+import { StateProvider, useStoreRegistry } from './provider'
 
-type StateWithActions<State, Actions> = State & { actions: Actions };
+function create<S, A>(
+    m: Model<S>,
+    options: { actions: ActionFactory<Partial<A>>[] }
+) {
+    function useStore(): S & { actions: A }
+    function useStore<R>(selector: (state: S & { actions: A }) => R): R
+    function useStore<R>(selector?: (state: S & { actions: A }) => R) {
+        const registry = useStoreRegistry()
+        const store = registry.get(m)
 
-type ActionFactory<State extends object, ReturnActions> = (
-  model: State,
-  inject: <OtherState extends object, OtherActions>(
-    hook: StateHook<OtherState, OtherActions>,
-  ) => OtherState,
-) => ReturnActions;
-
-type MergeActions<Factories extends readonly ActionFactory<any, any>[]> =
-  Prettify<
-    UnionToIntersection<Factories[number] extends ActionFactory<any, infer Result> ? Result : never>
-  >;
-
-export type StateHook<State extends object, Actions> = {
-  <Selected>(selector?: (state: StateWithActions<State, Actions>) => Selected): Selected;
-} & { [STATE_FACTORY_KEY]: () => State };
-
-export function create<State extends object, Factories extends readonly ActionFactory<State, any>[]>(config: {
-  state: () => State;
-  actions: Factories;
-}): StateHook<State, MergeActions<Factories>> {
-  const { state, actions } = config;
-
-  const hook = ((selector?: (state: StateWithActions<State, MergeActions<Factories>>) => unknown) => {
-    const registry = useRegistry();
-    const { proxy, subscribe, getSnapshot } = registry.resolve(state);
-    const actionRef = useRef<StateWithActions<State, MergeActions<Factories>>['actions'] | null>(null);
-
-    if (!actionRef.current) {
-      const inject = <OtherState extends object, OtherActions>(
-        hook: StateHook<OtherState, OtherActions>,
-      ): OtherState => {
-        const stateFactory = (hook as { [STATE_FACTORY_KEY]: () => OtherState })[STATE_FACTORY_KEY];
-        if (typeof stateFactory !== 'function') {
-          throw new Error('inject() can only receive hooks created by create().');
+        const inject = <T,>(dep: Model<T>): T => {
+            const depStore = registry.get(dep)
+            return new Proxy(depStore.snapshot as object, {
+                set(_, prop, value) {
+                    depStore.mutate(draft => {
+                        (draft as any)[prop] = value
+                    })
+                    return true
+                },
+                get(_, prop) {
+                    return (depStore.snapshot as any)[prop]
+                }
+            }) as T
         }
 
-        return registry.resolve(stateFactory).proxy;
-      };
+        const actions = Object.assign(
+            {},
+            ...options.actions.map(factory => factory(inject))
+        ) as A
 
-      actionRef.current = Object.assign({}, ...actions.map((factory) => factory(proxy, inject)));
+        const getSnapshot = () => store.snapshot
+        const subscribe = (listener: () => void) => {
+            store.listeners.add(listener)
+            return () => store.listeners.delete(listener)
+        }
+
+        const snapshot = useSyncExternalStore(subscribe, getSnapshot)
+        const full = { ...snapshot, actions } as S & { actions: A }
+
+        if (selector) return selector(full)
+        return full
     }
 
-    const actionsValue = actionRef.current;
-    return useSyncExternalStore(
-      subscribe,
-      () => {
-        const merged = { ...getSnapshot(), actions: actionsValue } as StateWithActions<
-          State,
-          MergeActions<Factories>
-        >;
-        return selector ? selector(merged) : (merged as never);
-      },
-      () => {
-        const merged = { ...getSnapshot(), actions: actionsValue } as StateWithActions<
-          State,
-          MergeActions<Factories>
-        >;
-        return selector ? selector(merged) : (merged as never);
-      },
-    ) as never;
-  }) as StateHook<State, MergeActions<Factories>>;
+    return useStore
+}
 
-  (hook as { [STATE_FACTORY_KEY]: () => State })[STATE_FACTORY_KEY] = state;
-  return hook;
+export {
+    model,
+    action,
+    create,
+    StateProvider,
 }
