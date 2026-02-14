@@ -1,7 +1,7 @@
 # Yoshi
 
 React state management library.
-Define domain state as plain objects, optimize re-renders with immer-based immutable snapshots.
+Define domain state as plain objects, optimize re-renders with immutable snapshots.
 
 ## Folder Structure
 
@@ -168,4 +168,160 @@ export const useTodo = create<TodoState, TodoActions>(todoModel, {
 })
 
 export type { TodoState, TodoActions } from './types'
+```
+
+## Additional Usage Patterns
+
+### Combine Action Modules
+
+You can split domain logic into multiple action files and compose them in one hook.
+
+```ts
+// state/todo/index.ts
+import { create } from 'mucha'
+import type { TodoState, TodoActions } from './types'
+import { todoModel } from './model'
+import { todoCrudActions } from './actions/crud'
+import { todoBulkActions } from './actions/bulk'
+import { todoFilterActions } from './actions/filter'
+
+export const useTodo = create<TodoState, TodoActions>(todoModel, {
+  actions: [todoCrudActions, todoBulkActions, todoFilterActions],
+})
+```
+
+### Inject Other Domain State in an Action
+
+`inject()` lets one domain read/write another domain model in a controlled way.
+
+```ts
+// state/order/actions/create.ts
+import { action, silent } from 'mucha'
+import { orderModel } from '../model'
+import { userModel } from '@/state/user/model'
+
+export const orderActions = action(({ inject }) => {
+  const order = inject(orderModel)
+  const user = inject(userModel)
+
+  return {
+    async create(input: { productId: string }) {
+      if (!user.auth) return
+      const created = await api.createOrder(input)
+      order.items.push(created)
+    },
+    resetToServer(data) {
+      silent(() => {
+        order.items = data
+      })
+    },
+  }
+})
+```
+
+### Avoid Unnecessary Renders
+
+Selectors are compared with deep equality before React emits updates, so derived objects are safe.
+
+```tsx
+import { useTodo } from '@/state/todo'
+
+const todoCount = useTodo(s => s.count)
+
+// Only re-render when `count` changes
+const { count, actions } = useTodo(s => ({
+  count: s.count,
+  actions: s.actions,
+}))
+```
+
+### Use Multiple Providers for Isolation
+
+You can wrap only part of your tree with a separate `StateProvider` when you want state to be isolated per subtree (for example in tests, storybook stories, or nested apps).
+
+```tsx
+<StateProvider>
+  <AppShell />
+</StateProvider>
+
+<StateProvider>
+  <EmbeddedWidget />
+</StateProvider>
+```
+
+### SSR / Hydration Helpers
+
+When initializing state from server data, use `silent()` to avoid client re-renders while bootstrapping.
+
+```ts
+import { action, silent } from 'mucha'
+
+export const todoInitActions = action(({ inject }) => {
+  const model = inject(todoModel)
+
+  return {
+    bootstrap(serverTodos: Todo[]) {
+      silent(() => {
+        model.todos = serverTodos
+      })
+    },
+  }
+})
+```
+
+## Interceptors
+
+Interceptors can be used in two styles in `actions`:
+
+1) Decorator style (class-based actions)
+
+```ts
+import { action, OnError, OnSuccess, Transaction, Debounce } from 'mucha'
+
+export const todoActions = action(({ inject }) => {
+  const model = inject(todoModel)
+  return new class {
+    @Debounce(300)
+    @OnError((error) => {
+      sonner.error(error.message ?? '요청 처리 중 오류가 발생했습니다')
+      throw error
+    })
+    @Transaction()
+    @OnSuccess((result) => {
+      console.log('saved', result)
+    })
+    async save(payload: { title: string }) {
+      model.todos.push(await api.saveTodo(payload))
+    }
+  }
+})
+```
+
+`@Transaction` is defined in v2-style API as a placeholder for dynamic model tracking.
+TODO: keep snapshots for auto-detected models during execution, and on error rollback before rethrowing.
+
+2) Function style (pipe)
+
+```ts
+import { action, onError, onSuccess, transaction, debounce, pipe } from 'mucha'
+
+export const todoActions = action(({ inject }) => {
+  const model = inject(todoModel)
+  const save = async (payload: { title: string }) => {
+    model.todos.push(await api.saveTodo(payload))
+  }
+
+  return {
+    save: pipe(
+      onError(error => {
+        sonner.error(error.message ?? '요청 처리 중 오류가 발생했습니다')
+        throw error
+      }),
+    onSuccess(result => console.log('saved', result)),
+      transaction(),
+      debounce(300),
+    )(save),
+  }
+})
+```
 ```

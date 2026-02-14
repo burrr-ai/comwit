@@ -12,6 +12,10 @@ export type Filter = {
     search: string
 }
 
+export type TodoActionOptions = {
+    forceFail?: boolean
+}
+
 export type TodoState = {
     todos: Todo[]
     filter: Filter
@@ -20,15 +24,15 @@ export type TodoState = {
 
 export type TodoActions = {
     /** Create a new todo and append it to the list */
-    create(title: string, priority: Todo['priority']): void
+    create(title: string, priority: Todo['priority'], options?: TodoActionOptions): Promise<Todo>
     /** Update a todo's status */
-    updateStatus(id: string, status: Todo['status']): void
+    updateStatus(id: string, status: Todo['status'], options?: TodoActionOptions): Promise<Todo>
     /** Update a todo's priority */
-    updatePriority(id: string, priority: Todo['priority']): void
+    updatePriority(id: string, priority: Todo['priority'], options?: TodoActionOptions): Promise<Todo>
     /** Delete a todo by id */
-    delete(id: string): void
+    delete(id: string, options?: TodoActionOptions): Promise<void>
     /** Bulk delete all completed todos */
-    clearCompleted(): void
+    clearCompleted(options?: TodoActionOptions): Promise<void>
     /** Set filter criteria */
     setFilter(filter: Partial<Filter>): void
     /** Initialize todos from server data without triggering re-render */

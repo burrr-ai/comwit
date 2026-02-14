@@ -25,7 +25,7 @@ function Stats() {
     )
 }
 
-function FilterBar() {
+function FilterBar({ forceFail }: { forceFail: boolean }) {
     const { filter, actions } = useTodo(s => ({ filter: s.filter, actions: s.actions }))
 
     return (
@@ -54,7 +54,13 @@ function FilterBar() {
                 {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
             <button
-                onClick={() => actions.clearCompleted()}
+                onClick={async () => {
+                    try {
+                        await actions.clearCompleted({ forceFail })
+                    } catch {
+                        // toast / retry behavior is handled by interceptors
+                    }
+                }}
                 style={{ padding: '4px 12px', border: '1px solid #999', background: '#fff', color: '#000', cursor: 'pointer' }}
             >
                 Clear Completed
@@ -63,16 +69,20 @@ function FilterBar() {
     )
 }
 
-function AddTodo() {
+function AddTodo({ forceFail }: { forceFail: boolean }) {
     const [title, setTitle] = useState('')
     const [priority, setPriority] = useState<Todo['priority']>('medium')
     const { actions } = useTodo(s => ({ actions: s.actions }))
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!title.trim()) return
-        actions.create(title.trim(), priority)
-        setTitle('')
+        try {
+            await actions.create(title.trim(), priority, { forceFail })
+            setTitle('')
+        } catch {
+            // toast / error handling is done by interceptors
+        }
     }
 
     return (
@@ -101,7 +111,7 @@ function AddTodo() {
     )
 }
 
-function TodoItem({ todo }: { todo: Todo }) {
+function TodoItem({ todo, forceFail }: { todo: Todo; forceFail: boolean }) {
     const { actions } = useTodo(s => ({ actions: s.actions }))
 
     return (
@@ -121,13 +131,25 @@ function TodoItem({ todo }: { todo: Todo }) {
             </span>
             <select
                 value={todo.status}
-                onChange={e => actions.updateStatus(todo.id, e.target.value as Todo['status'])}
+                onChange={async e => {
+                    try {
+                        await actions.updateStatus(todo.id, e.target.value as Todo['status'], { forceFail })
+                    } catch {
+                        // toast / error handling is done by interceptors
+                    }
+                }}
                 style={{ padding: '2px 4px', border: '1px solid #999', fontSize: 12, background: '#fff', color: '#000' }}
             >
                 {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <button
-                onClick={() => actions.delete(todo.id)}
+                onClick={async () => {
+                    try {
+                        await actions.delete(todo.id, { forceFail })
+                    } catch {
+                        // toast / error handling is done by interceptors
+                    }
+                }}
                 style={{ padding: '2px 8px', border: '1px solid #999', background: '#fff', color: '#000', cursor: 'pointer', fontSize: 12 }}
             >
                 x
@@ -136,7 +158,7 @@ function TodoItem({ todo }: { todo: Todo }) {
     )
 }
 
-function TodoList() {
+function TodoList({ forceFail }: { forceFail: boolean }) {
     const { todos, filter } = useTodo(s => ({ todos: s.todos, filter: s.filter }))
 
     const filtered = todos.filter(t => {
@@ -152,22 +174,31 @@ function TodoList() {
 
     return (
         <div>
-            {filtered.map(todo => <TodoItem key={todo.id} todo={todo} />)}
+            {filtered.map(todo => <TodoItem key={todo.id} todo={todo} forceFail={forceFail} />)}
         </div>
     )
 }
 
 export function TodoPage({ initialTodos }: { initialTodos: Todo[] }) {
     const { actions } = useTodo(s => ({ actions: s.actions }))
+    const [forceFail, setForceFail] = useState(false)
     actions.init(initialTodos)
 
     return (
         <main style={{ maxWidth: 600, margin: '0 auto', padding: '40px 20px', fontFamily: 'var(--font-geist-mono)' }}>
             <h1 style={{ fontSize: 24, marginBottom: 8 }}>Yoshi Todo</h1>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <input
+                    type="checkbox"
+                    checked={forceFail}
+                    onChange={e => setForceFail(e.target.checked)}
+                />
+                실패 강제 재현 토글
+            </label>
             <Stats />
-            <FilterBar />
-            <AddTodo />
-            <TodoList />
+            <FilterBar forceFail={forceFail} />
+            <AddTodo forceFail={forceFail} />
+            <TodoList forceFail={forceFail} />
         </main>
     )
 }
