@@ -1,0 +1,15 @@
+{
+  "name": "subarashi-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:docs": "yarn workspace docs dev",
+    "dev:lib": "yarn workspace @meursyphus/yoshi dev",
+    "build": "yarn workspaces run build",
+    "dev": "yarn workspaces run dev"
+  }
+}
