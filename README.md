@@ -335,7 +335,6 @@ export const todoActions = action(({ inject }) => {
 - `cacheTime` / `gcTime`: cache lifetime hints
 - `placeholderData`: value or function
 - `force`: ignore stale check
-- `refetchOnWindowFocus`, `refetchOnReconnect`
 
 ```ts
 await state.todos.query(
