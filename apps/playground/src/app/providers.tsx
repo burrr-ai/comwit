@@ -1,7 +1,17 @@
 'use client'
 
-import { StateProvider } from 'muchajs'
+import { MuchaProvider } from 'muchajs'
 
 export function Providers({ children }: { children: React.ReactNode }) {
-    return <StateProvider>{children}</StateProvider>
+    return (
+        <MuchaProvider
+            defaultOptions={{
+                query: {
+                    staleTime: 60_000,
+                },
+            }}
+        >
+            {children}
+        </MuchaProvider>
+    )
 }

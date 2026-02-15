@@ -1,4 +1,4 @@
-import { isResourceDescriptor, ResourceDescriptorMap } from './resource'
+import { isResourceDescriptor, ResourceDescriptorMap } from './query'
 
 export function model<T extends object>(initial: T): Model<T> {
     const resources: ResourceDescriptorMap = new Map()
@@ -21,7 +21,7 @@ export type Model<T extends object> = {
 
 function normalize(value: unknown, path: string, resources: ResourceDescriptorMap): unknown {
     if (isResourceDescriptor(value)) {
-        if (!path) throw new Error('resource() entry must be assigned to a model field')
+        if (!path) throw new Error('query() entry must be assigned to a model field')
         resources.set(path, value)
         return value.initialState
     }

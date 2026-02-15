@@ -26,16 +26,16 @@ Each domain gets its own folder with a consistent layout:
 
 ## Setup
 
-Wrap your app root with `StateProvider`.
+Wrap your app root with `MuchaProvider`.
 
 ```tsx
-import { StateProvider } from 'muchajs'
+import { MuchaProvider } from 'muchajs'
 
 function App() {
   return (
-    <StateProvider>
+    <MuchaProvider>
       <YourApp />
-    </StateProvider>
+    </MuchaProvider>
   )
 }
 ```
@@ -241,16 +241,16 @@ const { count, actions } = useTodo(s => ({
 
 ### Use Multiple Providers for Isolation
 
-`StateProvider` instances are scoped by subtree.
+`MuchaProvider` instances are scoped by subtree.
 
 ```tsx
-<StateProvider>
+<MuchaProvider>
   <AppShell />
-</StateProvider>
+</MuchaProvider>
 
-<StateProvider>
+<MuchaProvider>
   <EmbeddedWidget />
-</StateProvider>
+</MuchaProvider>
 ```
 
 ### SSR / Hydration Helpers
@@ -339,43 +339,88 @@ export const todoActions = action(({ inject }) => {
 })
 ```
 
+
 ## Data Fetching with Resource (domain-first)
+
+`query` now follows a query-oriented API.
+
+- `query({...})` creates a single resource
+- `query.infinite({...})` creates an infinite resource
+- `query(arg?, options?)` is the fetch entry
+- `query` has no separate page-builder in this version
+
+### Resource types
 
 ```ts
 // state/todo/types.ts
 import { Resource } from 'muchajs'
 
 export type Todo = { id: string; title: string; status: 'pending' | 'done' }
+export type TodoPageResult = {
+  data: Todo[]
+  page: number
+  totalPage: number
+  totalCount: number
+}
 
 export type TodoState = {
-  todos: Resource.Page<Todo[]>
-  filter: { status: 'all' | 'pending' | 'done' }
+  me: Resource<Todo>
+  todos: Resource<TodoPageResult, { page?: number }>
+  feed: Resource.Infinite<Todo[]>
 }
 ```
 
+### Provider default options
+
+```tsx
+import { MuchaProvider, keepPreviousData } from 'muchajs'
+
+function App() {
+  return (
+    <MuchaProvider
+      defaultOptions={{
+        query: {
+          staleTime: 60_000,
+          placeholderData: keepPreviousData,
+        },
+      }}
+    >
+      <YourApp />
+    </MuchaProvider>
+  )
+}
+```
+
+### Model registration
+
 ```ts
 // state/todo/model.ts
-import { model, resource } from 'muchajs'
-import type { Todo, TodoState } from './types'
+import { keepPreviousData, model, query } from 'muchajs'
+import type { Todo, TodoPageResult, TodoState } from './types'
 
 export const todoModel = model<TodoState>({
-  todos: resource.page({
-    initialData: [] as Todo[],
-    load: async ({ page }) => {
-      const r = await api.memo.findAll({ page })
-      return {
-        data: r.items,
-        page: r.page,
-        totalPage: r.totalPage,
-        totalCount: r.totalCount,
-      }
+  me: query<Todo>({
+    initialData: { id: '', title: '', status: 'pending' },
+    queryFn: async () => {
+      return { id: 'id-1', title: 'Demo', status: 'pending' }
     },
+    placeholderData: keepPreviousData,
   }),
-  filter: { status: 'all' },
+  todos: query<TodoPageResult, { page?: number }>({
+    initialData: { data: [], page: 1, totalPage: 1, totalCount: 0 },
+    queryFn: ({ page = 1 }) => {
+      return api.todo.findAll({ page })
+    },
+    placeholderData: keepPreviousData,
+  }),
+  feed: query.infinite<Todo[]>({
+    initialData: [],
+    queryFn: ({ cursor }) => api.todo.findAfter(cursor),
+  }),
 })
 ```
 
-`initialData` is the only required input for every resource definition. Loading flags are preinitialized (`isLoading`, `isFetching`, `isSuccess`, `isError`, `error`) and page/infinite fields get safe defaults.
+### Action usage
 
 ```ts
 // state/todo/actions/crud.ts
@@ -386,122 +431,60 @@ export const todoActions = action(({ inject }) => {
   const state = inject(todoModel)
 
   return {
-    async reload() {
-      await state.todos.load()
+    async refreshMe() {
+      await state.me.query()
     },
-    async nextPage() {
-      await state.todos.load({ page: state.todos.page + 1 })
+    async loadNextPage() {
+      const nextPage = Math.min(state.todos.data.page + 1, state.todos.data.totalPage)
+      await state.todos.query({ page: nextPage })
     },
-  }
-})
-```
-
-### Resource builders and exposed types
-
-- `resource({...})` → `Resource<TData>`
-- `resource.page({...})` → `Resource.Page<TData>`
-- `resource.infinite({...})` → `Resource.Infinite<TData>`
-
-Common builder options:
-
-```ts
-resource({
-  initialData: TData,             // required
-  keepPreviousData?: boolean,      // keep data while fetching
-  load?: (...) => ...,
-})
-```
-
-```ts
-export type TodoState = {
-  single: Resource<Todo[]>
-  paged: Resource.Page<Todo[]>
-  infinite: Resource.Infinite<Todo[]>
-}
-```
-
-```ts
-// state/todo/model.ts
-import { model, resource } from 'muchajs'
-import type { Todo, TodoState } from './types'
-
-export const todoModel = model<TodoState>({
-  single: resource({
-    initialData: [] as Todo[],
-    keepPreviousData: true,
-    load: ({ state }) => {
-      return state.data
+    async loadNextFeed() {
+      await state.feed.nextFetch()
     },
-  }),
-  paged: resource.page({
-    initialData: [] as Todo[],
-    keepPreviousData: false,
-    load: async ({ page }) => {
-      const r = await api.todo.findAll({ page })
-      return {
-        data: r.items,
-        page: r.page,
-        totalPage: r.totalPage,
-        totalCount: r.totalCount,
-      }
-    },
-  }),
-  infinite: resource.infinite({
-    initialData: [] as Todo[],
-    keepPreviousData: true,
-    load: async ({ cursor }) => api.todo.findAfter(cursor),
-    loadMore: async ({ cursor }) => api.todo.findAfter(cursor),
-  }),
-})
-```
-
-### Resource loading strategy (`load` / `loadMore`) and `keepPreviousData`
-
-`keepPreviousData` controls whether `load` keeps current `data` during loading.
-For `loadMore` (infinite), previous data is always preserved because new items are appended.
-
-- builder-level: set `keepPreviousData` in `resource(...)`, `resource.page(...)`, `resource.infinite(...)`
-- call-level override:
-  - `state.paged.load(arg, { keepPreviousData: true })`
-  - `state.single.load({ keepPreviousData: true })`
-  - `state.infinite.loadMore(arg)` (no `keepPreviousData` argument)
-
-```ts
-export const todoActions = action(({ inject }) => {
-  const state = inject(todoModel)
-
-  return {
-    async refresh() {
-      await state.single.load({ keepPreviousData: true })
-      await state.paged.load({ page: 2 }, { keepPreviousData: true })
-      await state.infinite.loadMore({ cursor: state.infinite.cursor })
+    async reloadFeed() {
+      await state.feed.refetch()
     },
   }
 })
 ```
 
-Merge behavior:
-- single: returned value (or `undefined`) replaces `data`
-- page/infinite: returned `{ data, ... }` is merged into state
-- infinite `loadMore`: when both arrays exist, returned `data` is appended to existing `data`
+### Builder and call options
 
-```tsx
-const { todos, actions } = useTodo(s => ({ todos: s.todos, actions: s.actions }))
+- `staleTime`: stale threshold in ms
+- `cacheTime` / `gcTime`: cache duration hints
+- `placeholderData`: function or value for transitional data
+- `force`: force execute even if cache is still fresh
 
-if (todos.isLoading) return <span>loading...</span>
-if (todos.isError) return <span>{String(todos.error)}</span>
-
-// load can be used from actions; keep UI state focused on flags/data
+```ts
+await state.todos.query(
+  { page: 3 },
+  {
+    force: true,
+    staleTime: 0,
+    placeholderData: keepPreviousData,
+  },
+)
 ```
 
-`Resource` states use one `is*` shape across modes.
+`placeholderData` can also be a value/function:
+
+```ts
+import { keepPreviousData, type PlaceholderData } from 'muchajs'
+
+const same: PlaceholderData<TodoPageResult, { page?: number }> = keepPreviousData
+```
+
+`isLoading` is `true` for the initial query phase (before first success), and `false` during background refetches.
+
+`Resource` states always provide these flags:
+
 - `isLoading`
 - `isFetching`
 - `isSuccess`
 - `isError`
 - `error`
 
-Mode fields.
-- `Single`: `data`
-- `Page`: `data`, `page`, `totalPage`, `totalCount` (use `load` for next page)
-- `Infinite`: `data`, `cursor`, `hasMore`
+State fields:
+
+- `Resource<TData, TArg>`: `data`, query args are part of method signature
+- `Resource.Infinite`: `data`, `cursor`, `hasMore`

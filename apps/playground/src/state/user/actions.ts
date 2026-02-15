@@ -8,22 +8,22 @@ export const userActions = action<UserActions>(({ inject }) => {
     return {
         async bootstrap() {
             await Promise.all([
-                model.me.load(),
-                model.collaborators.load({ page: 1 }),
+                model.me.query(),
+                model.collaborators.query({ page: 1 }),
             ])
         },
         async loadFirstCollaborators() {
-            await model.collaborators.load({ page: 1 })
+            await model.collaborators.query({ page: 1 })
         },
         async loadNextCollaborators() {
-            const nextPage = Math.min(model.collaborators.page + 1, model.collaborators.totalPage)
-            await model.collaborators.load({ page: nextPage })
+            const nextPage = Math.min(model.collaborators.data.page + 1, model.collaborators.data.totalPage)
+            await model.collaborators.query({ page: nextPage })
         },
         async refreshMe() {
-            await model.me.load()
+            await model.me.query()
         },
         async reloadUser() {
-            await model.me.load()
+            await model.me.query()
         },
     }
 })

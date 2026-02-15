@@ -246,7 +246,7 @@ function ResourceSection() {
             <div style={{ marginTop: 8, borderTop: '1px solid #f3f4f6', paddingTop: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 6 }}>
                     <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>
-                        Collaborators {collaborators.isLoading ? 'loading...' : `(${collaborators.totalCount ?? 0})`}
+                        Collaborators {collaborators.isLoading ? 'loading...' : `(${collaborators.data.totalCount ?? 0})`}
                     </p>
                     <button
                         disabled={collaborators.isLoading}
@@ -268,10 +268,10 @@ function ResourceSection() {
                 <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
                     {collaborators.isLoading ? (
                         <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>팀원을 불러오는 중...</p>
-                    ) : collaborators.data.length === 0 ? (
+                    ) : collaborators.data.data.length === 0 ? (
                         <p style={{ margin: 0, fontSize: 12, color: '#9ca3af' }}>불러온 팀원이 없습니다.</p>
                     ) : (
-                        collaborators.data.map(user => (
+                        collaborators.data.data.map(user => (
                             <span key={user.id} style={{
                                 width: 24,
                                 height: 24,

@@ -1,31 +1,43 @@
 import React, { createContext, useContext, useRef } from 'react'
-import type { Model } from './model'
 import { createProxy, snapshot, subscribe } from './proxy'
+import type { ResourceDefaultOptions } from './query'
+import type { Model } from './model'
 import { isSilent } from './silent'
 
-export type StoreEntry<T extends object = any> = {
+type StoreEntry<T extends object = any> = {
     model: Model<T>
     proxy: T
     getSnapshot(): T
     subscribe(listener: () => void): () => void
 }
 
+export type RegistryDefaults = {
+    query?: ResourceDefaultOptions
+}
+
+export type MuchaProviderProps = {
+    children: React.ReactNode
+    defaultOptions?: RegistryDefaults
+}
+
 export type StoreRegistry = {
     get<T extends object>(model: Model<T>): StoreEntry<T>
+    queryDefaults?: RegistryDefaults['query']
 }
 
 const StateContext = createContext<StoreRegistry | null>(null)
 
 export function useStoreRegistry(): StoreRegistry {
     const ctx = useContext(StateContext)
-    if (!ctx) throw new Error('Wrap your app with <StateProvider>')
+    if (!ctx) throw new Error('Wrap your app with <MuchaProvider>')
     return ctx
 }
 
-export function StateProvider({ children }: { children: React.ReactNode }) {
+export function MuchaProvider({ children, defaultOptions }: MuchaProviderProps) {
     const storesRef = useRef<Map<symbol, StoreEntry>>(new Map())
 
     const registryRef = useRef<StoreRegistry>({
+        queryDefaults: defaultOptions?.query,
         get<T extends object>(model: Model<T>): StoreEntry<T> {
             const existing = storesRef.current.get(model.key)
             if (existing) return existing as StoreEntry<T>
@@ -47,7 +59,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
 
             storesRef.current.set(model.key, entry)
             return entry
-        }
+        },
     })
 
     return (

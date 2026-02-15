@@ -1,9 +1,18 @@
 import { useRef, useSyncExternalStore, useCallback } from 'react'
 import { model, Model } from './model'
 import { action, ActionFactory } from './action'
-import { StateProvider, useStoreRegistry } from './provider'
+import { MuchaProvider, useStoreRegistry } from './provider'
 import { silent } from './silent'
-import { bindResourceState, BoundResourceState, resource, Resource } from './resource'
+import {
+    bindResourceState,
+    BoundResourceState,
+    keepPreviousData,
+    PlaceholderData,
+    Resource,
+    ResourceDefaultOptions,
+    ResourceQueryOptions,
+    query,
+} from './query'
 import { isEqual } from '../utils'
 
 type ActionModule = Record<string, unknown>
@@ -61,15 +70,12 @@ function create<S extends object, A>(
                     return entry.proxy as BoundResourceState<T>
                 }
 
-                const bound = bindResourceState(entry.proxy, entry.model.resources)
+                const bound = bindResourceState(entry.proxy, entry.model.resources, registry.queryDefaults)
                 resourceStateRef.current.set(dep.key, bound)
                 return bound as BoundResourceState<T>
             }
 
-            actionsRef.current = Object.assign(
-                {},
-                ...options.actions.map(factory => normalizeActions(factory({ inject }) as ActionModule))
-            ) as A
+            actionsRef.current = Object.assign({}, ...options.actions.map(factory => normalizeActions(factory({ inject }) as ActionModule))) as A
         }
 
         const prevRef = useRef<unknown>(null)
@@ -102,10 +108,14 @@ export {
     action,
     create,
     silent,
-    StateProvider,
-    resource,
+    MuchaProvider,
+    query,
+    keepPreviousData,
 }
 
 export type {
     Resource,
+    PlaceholderData,
+    ResourceDefaultOptions,
+    ResourceQueryOptions,
 }

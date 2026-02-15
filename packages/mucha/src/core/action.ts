@@ -1,4 +1,4 @@
-import type { BoundResourceState } from './resource'
+import type { BoundResourceState } from './query'
 
 export type Inject = <T extends object>(model: Model<T>) => BoundResourceState<T>
 

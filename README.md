@@ -12,16 +12,16 @@ npm i muchajs
 
 ## Setup
 
-Wrap your app root with `StateProvider`.
+Wrap your app root with `MuchaProvider`.
 
 ```tsx
-import { StateProvider } from 'muchajs'
+import { MuchaProvider } from 'muchajs'
 
 function App() {
   return (
-    <StateProvider>
+    <MuchaProvider>
       <YourApp />
-    </StateProvider>
+    </MuchaProvider>
   )
 }
 ```
@@ -259,35 +259,48 @@ This pattern is used in the playground `TodoPage` init flow.
 
 ## Data Fetching with Resource
 
+`query()` builds a single resource, `query.infinite()` builds an infinite resource.
+The fetch entrypoint is always `query(arg?, options?)`.
+
 ```ts
 // state/todo/types.ts
 import { Resource } from 'muchajs'
 
 export type Todo = { id: string; title: string; status: 'pending' | 'done' }
+export type TodoPageResult = {
+  data: Todo[]
+  page: number
+  totalPage: number
+  totalCount: number
+}
 
 export type TodoState = {
-  todos: Resource.Page<Todo[]>
+  me: Resource<Todo>
+  todos: Resource<TodoPageResult, { page?: number }>
+  feed: Resource.Infinite<Todo[]>
   filter: { status: 'all' | 'pending' | 'done' }
 }
 ```
 
 ```ts
 // state/todo/model.ts
-import { model, resource } from 'muchajs'
-import type { Todo, TodoState } from './types'
+import { keepPreviousData, model, query } from 'muchajs'
+import type { Todo, TodoPageResult, TodoState } from './types'
 
 export const todoModel = model<TodoState>({
-  todos: resource.page({
-    initialData: [] as Todo[],
-    load: async ({ page }) => {
-      const r = await api.memo.findAll({ page })
-      return {
-        data: r.items,
-        page: r.page,
-        totalPage: r.totalPage,
-        totalCount: r.totalCount,
-      }
-    },
+  me: query<Todo>({
+    initialData: { id: '', title: '', status: 'pending' },
+    queryFn: async () => ({ id: 'id-1', title: 'Demo', status: 'pending' }),
+    placeholderData: keepPreviousData,
+  }),
+  todos: query<TodoPageResult, { page?: number }>({
+    initialData: { data: [], page: 1, totalPage: 1, totalCount: 0 },
+    queryFn: ({ page = 1 }) => api.todo.findAll({ page }),
+    placeholderData: keepPreviousData,
+  }),
+  feed: query.infinite<Todo[]>({
+    initialData: [],
+    queryFn: ({ cursor }) => api.todo.findAfter(cursor),
   }),
   filter: { status: 'all' },
 })
@@ -299,117 +312,44 @@ import { action } from 'muchajs'
 import { todoModel } from './model'
 
 export const todoActions = action(({ inject }) => {
-  class TodoResourceActions {
-    private state = inject(todoModel)
-
-    async reload() {
-      await this.state.todos.load()
-    }
-
-    async nextPage() {
-      await this.state.todos.load({ page: this.state.todos.page + 1 })
-    }
-  }
-
-  return new TodoResourceActions()
-})
-```
-
-### Resource builders and exposed types
-
-`resource()` has three factory forms:
-
-- `resource({...})` → `Resource<TData>`
-- `resource.page({...})` → `Resource.Page<TData>`
-- `resource.infinite({...})` → `Resource.Infinite<TData>`
-
-Common builder options:
-
-```ts
-resource({
-  initialData: TData,             // required
-  keepPreviousData?: boolean,      // keep data while fetching
-  load?: (...) => ...,
-})
-```
-
-```ts
-export type TodoState = {
-  single: Resource<Todo[]>
-  paged: Resource.Page<Todo[]>
-  infinite: Resource.Infinite<Todo[]>
-}
-```
-
-```ts
-// state/todo/model.ts
-import { model, resource } from 'muchajs'
-import type { Todo, TodoState } from './types'
-
-export const todoModel = model<TodoState>({
-  single: resource({
-    initialData: [] as Todo[],
-    keepPreviousData: true,
-    load: ({ state }) => {
-      return state.data
-    },
-  }),
-  paged: resource.page({
-    initialData: [] as Todo[],
-    keepPreviousData: false,
-    load: async ({ page }) => {
-      const r = await api.todo.findAll({ page })
-      return {
-        data: r.items,
-        page: r.page,
-        totalPage: r.totalPage,
-        totalCount: r.totalCount,
-      }
-    },
-  }),
-  infinite: resource.infinite({
-    initialData: [] as Todo[],
-    keepPreviousData: true,
-    load: async ({ cursor }) => api.todo.findAfter(cursor),
-    loadMore: async ({ cursor }) => api.todo.findAfter(cursor),
-  }),
-})
-```
-
-### Resource loading strategy (`load` / `loadMore`) and `keepPreviousData`
-
-`keepPreviousData` controls whether `load` keeps current `data` during loading.
-For `loadMore` (infinite), previous data is always preserved because new items are appended.
-
-- builder-level: set `keepPreviousData` in `resource(...)`, `resource.page(...)`, `resource.infinite(...)`
-- call-level override:
-  - `state.paged.load(arg, { keepPreviousData: true })`
-  - `state.single.load({ keepPreviousData: true })`
-  - `state.infinite.loadMore(arg)` (no `keepPreviousData` argument)
-
-```ts
-export const todoActions = action(({ inject }) => {
   const state = inject(todoModel)
 
   return {
-    async refresh() {
-      await state.single.load({ keepPreviousData: true })
-      await state.paged.load({ page: 2 }, { keepPreviousData: true })
-      await state.infinite.loadMore({ cursor: state.infinite.cursor })
+    async reloadMe() {
+      await state.me.query()
+    },
+    async loadNextTodoPage() {
+      const nextPage = Math.min(state.todos.data.page + 1, state.todos.data.totalPage)
+      await state.todos.query({ page: nextPage })
+    },
+    async loadNextFeed() {
+      await state.feed.nextFetch()
     },
   }
 })
 ```
 
-Merge behavior:
-- single: returned value (or `undefined`) replaces `data`
-- page/infinite: returned `{ data, ... }` is merged into state
-- infinite `loadMore`: when both arrays exist, returned `data` is appended to existing `data`
+### Builder / call options
 
-`Resource` states use one `is*` shape across modes.
+- `staleTime`: stale threshold (ms)
+- `cacheTime` / `gcTime`: cache lifetime hints
+- `placeholderData`: value or function
+- `force`: ignore stale check
+- `refetchOnWindowFocus`, `refetchOnReconnect`
+
+```ts
+await state.todos.query(
+  { page: 3 },
+  {
+    force: true,
+    staleTime: 0,
+    placeholderData: keepPreviousData,
+  },
+)
+```
+
+`Resource` state flags:
+
 - `isLoading`, `isFetching`, `isSuccess`, `isError`, `error`
 
-Mode fields:
-- `Single`: `data`
-- `Page`: `data`, `page`, `totalPage`, `totalCount`
-- `Infinite`: `data`, `cursor`, `hasMore`
+`isLoading` is `true` only while the resource has not yet successfully resolved; background refetches keep `isLoading` `false` while `isFetching` is `true`.

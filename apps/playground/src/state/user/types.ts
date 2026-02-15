@@ -11,8 +11,13 @@ export type DemoUser = {
 }
 
 export type UserState = {
-    me: Resource.Single<DemoUser>
-    collaborators: Resource.Page<DemoUser[]>
+    me: Resource<DemoUser>
+    collaborators: Resource<{
+        data: DemoUser[]
+        page: number
+        totalPage: number
+        totalCount: number
+    }, { page?: number }>
 }
 
 export type UserActions = {
