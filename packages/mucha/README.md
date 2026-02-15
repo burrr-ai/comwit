@@ -417,7 +417,34 @@ export const todoModel = model<TodoState>({
     initialData: [],
     queryFn: ({ cursor }) => api.todo.findAfter(cursor),
   }),
-})
+  })
+```
+
+`defaultOptions.query` values are used whenever a query call does not provide its own options.  
+Per-query options override provider defaults, and per-call options override both.
+
+```tsx
+// default option: stale for 60s
+<MuchaProvider
+  defaultOptions={{
+    query: {
+      staleTime: 60_000,
+      cacheTime: 60_000,
+      placeholderData: keepPreviousData,
+    },
+  }}
+>
+  <App />
+</MuchaProvider>
+
+// Uses provider defaults
+await state.users.query() // staleTime 60_000, cacheTime 60_000, placeholderData keepPreviousData
+
+// Override for only this call
+await state.users.query(
+  { page: 2 },
+  { staleTime: 0, force: true },
+)
 ```
 
 ### Action usage
