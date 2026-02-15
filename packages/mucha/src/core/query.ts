@@ -23,15 +23,13 @@ export function keepPreviousData<TData, TArg = void>(_: TArg, previousData: TDat
     return previousData
 }
 
-const RESOURCE_QUERY_OPTION_KEYS = new Set(['force', 'placeholderData', 'staleTime', 'cacheTime', 'gcTime', 'refetchOnWindowFocus', 'refetchOnReconnect'])
+const RESOURCE_QUERY_OPTION_KEYS = new Set(['force', 'placeholderData', 'staleTime', 'cacheTime', 'gcTime'])
 
 export type ResourceDefaultOptions = {
     staleTime?: number
     cacheTime?: number
     gcTime?: number
     placeholderData?: PlaceholderData<unknown, unknown>
-    refetchOnWindowFocus?: boolean
-    refetchOnReconnect?: boolean
 }
 
 export type ResourceQueryOptions<TData, TArg> = ResourceDefaultOptions & {
