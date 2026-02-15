@@ -8,6 +8,9 @@ import {
     BoundResourceState,
     keepPreviousData,
     PlaceholderData,
+    Query,
+    QueryDefaultOptions,
+    QueryQueryOptions,
     Resource,
     ResourceDefaultOptions,
     ResourceQueryOptions,
@@ -115,7 +118,10 @@ export {
 
 export type {
     Resource,
+    Query,
     PlaceholderData,
+    QueryDefaultOptions,
+    QueryQueryOptions,
     ResourceDefaultOptions,
     ResourceQueryOptions,
 }

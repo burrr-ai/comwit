@@ -257,14 +257,14 @@ export function TodoPage({ initialTodos }: { initialTodos: Todo[] }) {
 
 This pattern is used in the playground `TodoPage` init flow.
 
-## Data Fetching with Resource
+## Data Fetching with Query
 
 `query()` builds a single resource, `query.infinite()` builds an infinite resource.
 The fetch entrypoint is always `query(arg?, options?)`.
 
 ```ts
 // state/todo/types.ts
-import { Resource } from 'muchajs'
+import { Query } from 'muchajs'
 
 export type Todo = { id: string; title: string; status: 'pending' | 'done' }
 export type TodoPageResult = {
@@ -275,9 +275,9 @@ export type TodoPageResult = {
 }
 
 export type TodoState = {
-  me: Resource<Todo>
-  todos: Resource<TodoPageResult, { page?: number }>
-  feed: Resource.Infinite<Todo[]>
+  me: Query<Todo>
+  todos: Query<TodoPageResult, { page?: number }>
+  feed: Query.Infinite<Todo[]>
   filter: { status: 'all' | 'pending' | 'done' }
 }
 ```
@@ -347,8 +347,8 @@ await state.todos.query(
 )
 ```
 
-`Resource` state flags:
+`Query` state flags:
 
 - `isLoading`, `isFetching`, `isSuccess`, `isError`, `error`
 
-`isLoading` is `true` only while the resource has not yet successfully resolved; background refetches keep `isLoading` `false` while `isFetching` is `true`.
+`isLoading` is `true` only while the query has not yet successfully resolved; background refetches keep `isLoading` `false` while `isFetching` is `true`.

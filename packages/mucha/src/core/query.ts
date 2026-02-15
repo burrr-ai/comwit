@@ -59,14 +59,24 @@ export type ResourceInfiniteState<TData> = ResourceBaseState<TData> & {
 
 export type ResourceResult<TData> = ResourceResultShape<ResourceBaseState<TData>, TData>
 
-export type Resource<TData, TArg = void> = SingleResourceDescriptor<TData, TArg>
+export type Query<TData, TArg = void> = SingleResourceDescriptor<TData, TArg>
+export type Resource<TData, TArg = void> = Query<TData, TArg>
+
+export namespace Query {
+    export type Single<TData, TArg = void> = Query<TData, TArg>
+    export type Infinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
+}
 
 export namespace Resource {
-    export type Single<TData, TArg = void> = Resource<TData, TArg>
+    export type Single<TData, TArg = void> = Query<TData, TArg>
     export type Infinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
 }
 
 export type ResourceInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
+export type QueryInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
+
+export type QueryDefaultOptions = ResourceDefaultOptions
+export type QueryQueryOptions<TData, TArg> = ResourceQueryOptions<TData, TArg>
 
 type SingleResourceLoadResult<TData> = TData | ResourceResult<TData>
 type InfiniteResourceLoadResult<TData> = ResourceInfiniteState<TData> | ({ data: TData } & Partial<Omit<ResourceInfiniteState<TData>, 'data'>>)

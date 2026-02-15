@@ -340,7 +340,7 @@ export const todoActions = action(({ inject }) => {
 ```
 
 
-## Data Fetching with Resource (domain-first)
+## Data Fetching with Query (domain-first)
 
 `query` now follows a query-oriented API.
 
@@ -349,11 +349,11 @@ export const todoActions = action(({ inject }) => {
 - `query(arg?, options?)` is the fetch entry
 - `query` has no separate page-builder in this version
 
-### Resource types
+### Query types
 
 ```ts
 // state/todo/types.ts
-import { Resource } from 'muchajs'
+import { Query } from 'muchajs'
 
 export type Todo = { id: string; title: string; status: 'pending' | 'done' }
 export type TodoPageResult = {
@@ -364,9 +364,9 @@ export type TodoPageResult = {
 }
 
 export type TodoState = {
-  me: Resource<Todo>
-  todos: Resource<TodoPageResult, { page?: number }>
-  feed: Resource.Infinite<Todo[]>
+  me: Query<Todo>
+  todos: Query<TodoPageResult, { page?: number }>
+  feed: Query.Infinite<Todo[]>
 }
 ```
 
@@ -503,7 +503,7 @@ const same: PlaceholderData<TodoPageResult, { page?: number }> = keepPreviousDat
 
 `isLoading` is `true` for the initial query phase (before first success), and `false` during background refetches.
 
-`Resource` states always provide these flags:
+`Query` states always provide these flags:
 
 - `isLoading`
 - `isFetching`
@@ -513,5 +513,5 @@ const same: PlaceholderData<TodoPageResult, { page?: number }> = keepPreviousDat
 
 State fields:
 
-- `Resource<TData, TArg>`: `data`, query args are part of method signature
-- `Resource.Infinite`: `data`, `cursor`, `hasMore`
+- `Query<TData, TArg>`: `data`, query args are part of method signature
+- `Query.Infinite`: `data`, `cursor`, `hasMore`
