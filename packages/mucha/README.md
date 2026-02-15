@@ -273,19 +273,12 @@ export const todoInitActions = action(({ inject }) => {
 })
 ```
 
-Use this init action directly during render/initialization (not inside `useEffect`) with a one-time guard, following the playground `TodoPage` pattern:
+Use this init action directly during render/initialization (not inside `useEffect`), following the playground `TodoPage` pattern:
 
 ```tsx
-import { useRef } from 'react'
-
 export function TodoPage({ initialTodos }: { initialTodos: Todo[] }) {
   const { actions } = useTodo(s => ({ actions: s.actions }))
-  const initedRef = useRef(false)
-
-  if (!initedRef.current) {
-    initedRef.current = true
-    actions.init(initialTodos)
-  }
+  actions.init(initialTodos)
 
   return <main>...</main>
 }

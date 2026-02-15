@@ -246,19 +246,12 @@ export const todoInitActions = action(({ inject }) => {
 })
 ```
 
-You can call this init action directly when hydrating from server props (instead of wrapping it in `useEffect`) and guard it to run only once.
+You can call this init action directly when hydrating from server props (instead of wrapping it in `useEffect`).
 
 ```tsx
-import { useRef } from 'react'
-
 export function TodoPage({ initialTodos }: { initialTodos: Todo[] }) {
   const { actions } = useTodo(s => ({ actions: s.actions }))
-  const initedRef = useRef(false)
-
-  if (!initedRef.current) {
-    initedRef.current = true
-    actions.init(initialTodos)
-  }
+  actions.init(initialTodos)
 }
 ```
 
