@@ -1,15 +1,26 @@
 import { action, silent } from 'muchajs'
-import type { TodoActions } from '../types'
+import type { Todo, TodoActions, TodoState } from '../types'
 import { todoModel } from '../model'
 
 export const todoInitActions = action<Pick<TodoActions, 'init'>>(({ inject }) => {
-    const model = inject(todoModel)
+    const model = inject<TodoState>(todoModel)
 
-    return {
-        init(todos) {
+    class TodoInitActions {
+        constructor(private readonly model: TodoState) {}
+
+        init(todos: Todo[]) {
             silent(() => {
-                model.todos = todos
+                const seen = new Set<string>()
+                this.model.todos = todos.filter((todo) => {
+                    if (seen.has(todo.id)) {
+                        return false
+                    }
+                    seen.add(todo.id)
+                    return true
+                })
             })
-        },
+        }
     }
+
+    return new TodoInitActions(model)
 })

@@ -1,30 +1,47 @@
-import { action, OnError, OnSuccess, Transaction } from 'muchajs'
+import { action, OnError, OnSuccess } from 'muchajs'
 import { toast } from 'sonner'
-import type { TodoActionOptions, TodoActions } from '../types'
+import type { TodoActionOptions, TodoActions, Filter, TodoState } from '../types'
 import { todoModel } from '../model'
-import { clearCompletedTodos } from '@/api/todo'
+import { clearCompletedTodos } from '@/api/todo/index'
+
+function errorMessage(error: unknown) {
+    return error instanceof Error ? error.message : '요청 처리 중 알 수 없는 오류가 발생했습니다.'
+}
+
+function throwAfterToast(context: string, error: unknown) {
+    const message = errorMessage(error)
+    toast.error(`${context} 실패`, { description: message })
+    throw error
+}
 
 export const todoBulkActions = action<Pick<TodoActions, 'clearCompleted' | 'setFilter'>>(({ inject }) => {
-    const model = inject(todoModel)
-    const onServerError = (context: string) => (error: unknown) => {
-        const message = error instanceof Error ? error.message : '요청 처리 중 알 수 없는 오류가 발생했습니다.'
-        toast.error(`${context} 실패`, { description: message })
-        throw error
-    }
+    const model = inject<TodoState>(todoModel)
 
-    return new class {
-        @Transaction()
-        @OnError(onServerError('완료 항목 삭제'))
+    class TodoBulkActions {
+        constructor(private readonly model: TodoState) {}
+
         @OnSuccess(() => {
             toast.success('완료 항목 삭제 완료')
         })
+        @OnError((error: unknown) => throwAfterToast('완료 항목 삭제', error))
         async clearCompleted(options?: TodoActionOptions) {
-            const remaining = await clearCompletedTodos({ forceFail: options?.forceFail })
-            model.todos = remaining
+            const previous = [...this.model.todos]
+            this.model.todos = this.model.todos.filter(t => t.status !== 'done')
+
+            try {
+                const remaining = await clearCompletedTodos({ forceFail: options?.forceFail })
+                this.model.todos = remaining
+            }
+            catch (error) {
+                this.model.todos = previous
+                throw error
+            }
         }
 
-        setFilter(filter) {
-            Object.assign(model.filter, filter)
+        setFilter(filter: Partial<Filter>) {
+            Object.assign(this.model.filter, filter)
         }
     }
+
+    return new TodoBulkActions(model)
 })

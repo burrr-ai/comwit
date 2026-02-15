@@ -3,14 +3,14 @@ import { AnyFunction, createDecorator, Interceptor } from './utils'
 
 export function debounce<T extends AnyFunction>(waitMs: number, options?: DebounceOptions): Interceptor {
     return next => {
-        const fn = ((...args: Parameters<T>) => {
-            void next(...args)
+        const fn = (function(this: unknown, ...args: Parameters<T>) {
+            void (next as AnyFunction).apply(this, args)
         }) as AnyFunction
 
         const debounced = debounceUtil(fn, waitMs, options)
 
-        return ((...args: Parameters<T>) => {
-            return debounced(...args)
+        return (function(this: unknown, ...args: Parameters<T>) {
+            return (debounced as AnyFunction).apply(this, args)
         }) as AnyFunction as T
     }
 }
@@ -18,4 +18,3 @@ export function debounce<T extends AnyFunction>(waitMs: number, options?: Deboun
 export function Debounce(waitMs: number, options?: DebounceOptions): MethodDecorator {
     return createDecorator(debounce(waitMs, options))
 }
-

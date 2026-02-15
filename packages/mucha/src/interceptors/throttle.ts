@@ -3,14 +3,14 @@ import { AnyFunction, createDecorator, Interceptor } from './utils'
 
 export function throttle<T extends AnyFunction>(waitMs: number, options?: ThrottleOptions): Interceptor {
     return next => {
-        const fn = ((...args: Parameters<T>) => {
-            void next(...args)
+        const fn = (function(this: unknown, ...args: Parameters<T>) {
+            void (next as AnyFunction).apply(this, args)
         }) as AnyFunction
 
         const throttled = throttleUtil(fn, waitMs, options)
 
-        return ((...args: Parameters<T>) => {
-            return throttled(...args)
+        return (function(this: unknown, ...args: Parameters<T>) {
+            return (throttled as AnyFunction).apply(this, args)
         }) as AnyFunction as T
     }
 }
@@ -18,4 +18,3 @@ export function throttle<T extends AnyFunction>(waitMs: number, options?: Thrott
 export function Throttle(waitMs: number, options?: ThrottleOptions): MethodDecorator {
     return createDecorator(throttle(waitMs, options))
 }
-

@@ -6,6 +6,38 @@ import { silent } from './silent'
 import { bindResourceState, BoundResourceState, resource, Resource } from './resource'
 import { isEqual } from '../utils'
 
+type ActionModule = Record<string, unknown>
+
+function normalizeActions(module: ActionModule): ActionModule {
+    if (!module || typeof module !== 'object') return {}
+
+    const out: ActionModule = {}
+
+    for (const key of Object.getOwnPropertyNames(module)) {
+        const value = module[key]
+        if (typeof value === 'function') {
+            out[key] = value.bind(module)
+            continue
+        }
+        out[key] = value
+    }
+
+    for (let proto = Object.getPrototypeOf(module); proto && proto !== Object.prototype; proto = Object.getPrototypeOf(proto)) {
+        for (const key of Object.getOwnPropertyNames(proto)) {
+            if (key === 'constructor') continue
+            const descriptor = Object.getOwnPropertyDescriptor(proto, key)
+            const fn = descriptor?.value
+
+            if (typeof fn !== 'function') continue
+            out[key] = (fn as AnyFunction).bind(module)
+        }
+    }
+
+    return out
+}
+
+type AnyFunction = (...args: unknown[]) => unknown
+
 function create<S extends object, A>(
     m: Model<S>,
     options: { actions: ActionFactory<Partial<A>>[] }
@@ -36,7 +68,7 @@ function create<S extends object, A>(
 
             actionsRef.current = Object.assign(
                 {},
-                ...options.actions.map(factory => factory({ inject }))
+                ...options.actions.map(factory => normalizeActions(factory({ inject }) as ActionModule))
             ) as A
         }
 

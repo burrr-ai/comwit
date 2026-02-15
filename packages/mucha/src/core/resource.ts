@@ -83,12 +83,12 @@ export type BoundInfiniteResourceState<TData, TArg = unknown> = ResourceInfinite
   loadMore(arg?: TArg): Promise<unknown>
 }
 
-export type BoundResourceState<T> = T extends ResourceSingleState<infer TData>
-  ? BoundSingleResourceState<TData, unknown>
-  : T extends ResourcePageState<infer TData>
-    ? BoundPageResourceState<TData, unknown>
-    : T extends ResourceInfiniteState<infer TData>
-      ? BoundInfiniteResourceState<TData, unknown>
+export type BoundResourceState<T> = T extends ResourcePageState<infer TData>
+  ? BoundPageResourceState<TData, unknown>
+  : T extends ResourceInfiniteState<infer TData>
+    ? BoundInfiniteResourceState<TData, unknown>
+  : T extends ResourceSingleState<infer TData>
+    ? BoundSingleResourceState<TData, unknown>
       : T extends (infer U)[]
         ? BoundResourceState<U>[]
         : T extends object
@@ -103,47 +103,79 @@ export type AnyResourceDescriptor =
 export type ResourceDescriptorMap = Map<string, AnyResourceDescriptor>
 
 export type SingleResourceBuilderOptions<TData, TArg = void> = {
-  initialState: ResourceSingleState<TData>
+  initialData: TData
   load?: (arg: TArg, context: ResourceContext<ResourceSingleState<TData>>) => AsyncResult<ResourceResult<ResourceSingleState<TData>, TData>>
 }
 
 export type PageResourceBuilderOptions<TData, TArg = void> = {
-  initialState: ResourcePageState<TData>
+  initialData: TData
   load?: (arg: TArg, context: ResourceContext<ResourcePageState<TData>>) => AsyncResult<ResourceResult<ResourcePageState<TData>, TData>>
 }
 
 export type InfiniteResourceBuilderOptions<TData, TArg = void> = {
-  initialState: ResourceInfiniteState<TData>
+  initialData: TData
   load?: (arg: TArg, context: ResourceContext<ResourceInfiniteState<TData>>) => AsyncResult<ResourceResult<ResourceInfiniteState<TData>, TData>>
   loadMore?: (arg: TArg, context: ResourceContext<ResourceInfiniteState<TData>>) => AsyncResult<ResourceResult<ResourceInfiniteState<TData>, TData>>
 }
 
 function createSingleDescriptor<TData, TArg = void>(opts: SingleResourceBuilderOptions<TData, TArg>): SingleResourceDescriptor<TData, TArg> {
+  const initialState: ResourceSingleState<TData> = {
+    data: opts.initialData,
+    isLoading: false,
+    isFetching: false,
+    isSuccess: false,
+    isError: false,
+    error: null,
+  }
+
   return {
-    ...opts.initialState,
+    ...initialState,
     kind: 'single',
     [RESOURCE_BRAND]: true,
-    initialState: opts.initialState,
+    initialState,
     load: opts.load,
   }
 }
 
 function createPageDescriptor<TData, TArg = void>(opts: PageResourceBuilderOptions<TData, TArg>): PageResourceDescriptor<TData, TArg> {
+  const initialState: ResourcePageState<TData> = {
+    data: opts.initialData,
+    page: 1,
+    totalPage: 1,
+    totalCount: 0,
+    isLoading: false,
+    isFetching: false,
+    isSuccess: false,
+    isError: false,
+    error: null,
+  }
+
   return {
-    ...opts.initialState,
+    ...initialState,
     kind: 'page',
     [RESOURCE_BRAND]: true,
-    initialState: opts.initialState,
+    initialState,
     load: opts.load,
   }
 }
 
 function createInfiniteDescriptor<TData, TArg = void>(opts: InfiniteResourceBuilderOptions<TData, TArg>): InfiniteResourceDescriptor<TData, TArg> {
+  const initialState: ResourceInfiniteState<TData> = {
+    data: opts.initialData,
+    cursor: null,
+    hasMore: false,
+    isLoading: false,
+    isFetching: false,
+    isSuccess: false,
+    isError: false,
+    error: null,
+  }
+
   return {
-    ...opts.initialState,
+    ...initialState,
     kind: 'infinite',
     [RESOURCE_BRAND]: true,
-    initialState: opts.initialState,
+    initialState,
     load: opts.load,
     loadMore: opts.loadMore,
   }

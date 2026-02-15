@@ -1,8 +1,8 @@
 import { AnyFunction, createDecorator, isThenable } from './utils'
 
 export function onSuccess<T extends AnyFunction>(handler: (result: Awaited<ReturnType<T>>) => void): (next: T) => T {
-    return ((next: T) => ((...args: Parameters<T>) => {
-        const result = next(...args)
+    return ((next: T) => (function(this: unknown, ...args: Parameters<T>) {
+        const result = (next as AnyFunction).apply(this, args)
         if (!isThenable(result)) {
             handler(result as Awaited<ReturnType<T>>)
             return result

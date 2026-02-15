@@ -134,22 +134,26 @@ export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>(({
 })
 ```
 
-You can also use an inline class, which opens the door to decorators:
+For class-based actions with decorators, declare the class and return an instance:
 
 ```ts
+class TodoCrudActionHandlers {
+  constructor(private readonly model: TodoState) {}
+
+  async create(title: string) {
+    const todo = await api.createTodo({ title })
+    this.model.todos.push(todo)
+  }
+
+  async delete(id: string) {
+    this.model.todos = this.model.todos.filter(t => t.id !== id)
+    await api.deleteTodo(id)
+  }
+}
+
 export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>(({ inject }) => {
   const model = inject(todoModel)
-
-  return new class {
-    async create(title: string) {
-      const todo = await api.createTodo({ title })
-      model.todos.push(todo)
-    }
-    async delete(id: string) {
-      model.todos = model.todos.filter(t => t.id !== id)
-      await api.deleteTodo(id)
-    }
-  }
+  return new TodoCrudActionHandlers(model)
 })
 ```
 
@@ -276,12 +280,16 @@ Interceptors can be used in two styles in `actions`:
 1) Decorator style (class-based actions)
 
 ```ts
-import { action, OnError, OnSuccess, Debounce } from 'muchajs'
+import { action, OnError, OnSuccess, Debounce, Transaction } from 'muchajs'
 
 export const todoActions = action(({ inject }) => {
   const model = inject(todoModel)
-  return new class {
+
+  class TodoActions {
+    constructor(private readonly model: TodoState) {}
+
     @Debounce(300)
+    @Transaction()
     @OnError((error) => {
       sonner.error(error.message ?? 'An unexpected error occurred while processing the request')
       throw error
@@ -290,9 +298,11 @@ export const todoActions = action(({ inject }) => {
       console.log('saved', result)
     })
     async save(payload: { title: string }) {
-      model.todos.push(await api.saveTodo(payload))
+      this.model.todos.push(await api.saveTodo(payload))
     }
   }
+
+  return new TodoActions(model)
 })
 ```
 
@@ -341,17 +351,7 @@ import type { Todo, TodoState } from './types'
 
 export const todoModel = model<TodoState>({
   todos: resource.page({
-    initialState: {
-      data: [] as Todo[],
-      page: 1,
-      totalPage: 1,
-      totalCount: 0,
-      isLoading: false,
-      isFetching: false,
-      isSuccess: false,
-      isError: false,
-      error: null,
-    },
+    initialData: [] as Todo[],
     load: async ({ page }) => {
       const r = await api.memo.findAll({ page })
       return {
@@ -365,6 +365,8 @@ export const todoModel = model<TodoState>({
   filter: { status: 'all' },
 })
 ```
+
+`initialData` is the only required input for every resource definition. Loading flags are preinitialized (`isLoading`, `isFetching`, `isSuccess`, `isError`, `error`) and page/infinite fields get safe defaults.
 
 ```ts
 // state/todo/actions/crud.ts
