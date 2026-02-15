@@ -79,6 +79,8 @@ export type InfiniteResourceDescriptor<TData, TArg = void> =
     loadMore?: (arg: TArg, context: ResourceContext<ResourceInfiniteState<TData>>) => AsyncResult<ResourceResult<ResourceInfiniteState<TData>, TData>>
   }
 
+export interface Resource<TData, TArg = void> extends ResourceSingleState<TData> {}
+
 export namespace Resource {
   export type Single<TData, TArg = void> = ResourceSingleState<TData>
   export type Page<TData, TArg = void> = ResourcePageState<TData>
