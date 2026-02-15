@@ -378,13 +378,14 @@ export const todoModel = model<TodoState>({
 
 ### Resource loading strategy (`load` / `loadMore`) and `keepPreviousData`
 
-`keepPreviousData` controls whether current `data` is preserved during loading. If true, `isLoading` stays false while `isFetching` can still be true.
+`keepPreviousData` controls whether `load` keeps current `data` during loading.
+For `loadMore` (infinite), previous data is always preserved because new items are appended.
 
 - builder-level: set `keepPreviousData` in `resource(...)`, `resource.page(...)`, `resource.infinite(...)`
 - call-level override:
   - `state.paged.load(arg, { keepPreviousData: true })`
   - `state.single.load({ keepPreviousData: true })`
-  - `state.infinite.loadMore(arg, { keepPreviousData: true })`
+  - `state.infinite.loadMore(arg)` (no `keepPreviousData` argument)
 
 ```ts
 export const todoActions = action(({ inject }) => {
@@ -394,7 +395,7 @@ export const todoActions = action(({ inject }) => {
     async refresh() {
       await state.single.load({ keepPreviousData: true })
       await state.paged.load({ page: 2 }, { keepPreviousData: true })
-      await state.infinite.loadMore({ cursor: state.infinite.cursor }, { keepPreviousData: true })
+      await state.infinite.loadMore({ cursor: state.infinite.cursor })
     },
   }
 })

@@ -101,10 +101,10 @@ type ResourceLoadController<TArg = unknown> =
 type ResourceLoadMoreController<TArg = unknown> =
   [TArg] extends [void]
     ? {
-        loadMore(options?: ResourceLoadOptions): Promise<unknown>
+        loadMore(): Promise<unknown>
       }
     : {
-        loadMore(arg?: TArg, options?: ResourceLoadOptions): Promise<unknown>
+        loadMore(arg?: TArg): Promise<unknown>
       }
 
 export type BoundSingleResourceState<TData> = ResourceSingleState<TData> & ResourceLoadController<void>
@@ -351,13 +351,8 @@ function createResourceAccessor(state: ResourceDataLike, descriptor: AnyResource
     }
   }
 
-  const runLoadMore = async (arg: unknown, options?: ResourceLoadOptions) => {
-    const shouldPreserve =
-      (isResourceLoadOptions(options) ? options.keepPreviousData : undefined) ??
-      descriptor.keepPreviousData ??
-      false
-
-    state.isLoading = !shouldPreserve
+  const runLoadMore = async (arg: unknown) => {
+    state.isLoading = false
     state.isFetching = true
     state.isError = false
     state.error = null
