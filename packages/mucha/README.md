@@ -273,6 +273,24 @@ export const todoInitActions = action(({ inject }) => {
 })
 ```
 
+Use this init action directly during render/initialization (not inside `useEffect`) with a one-time guard, following the playground `TodoPage` pattern:
+
+```tsx
+import { useRef } from 'react'
+
+export function TodoPage({ initialTodos }: { initialTodos: Todo[] }) {
+  const { actions } = useTodo(s => ({ actions: s.actions }))
+  const initedRef = useRef(false)
+
+  if (!initedRef.current) {
+    initedRef.current = true
+    actions.init(initialTodos)
+  }
+
+  return <main>...</main>
+}
+```
+
 ## Interceptors
 
 Interceptors can be used in two styles in `actions`:
@@ -384,6 +402,96 @@ export const todoActions = action(({ inject }) => {
   }
 })
 ```
+
+### Resource builders and exposed types
+
+`resource()` has three factory forms:
+
+- `resource({...})` → `Resource.Single<TData>` (single shape)
+- `resource.page({...})` → `Resource.Page<TData>`
+- `resource.infinite({...})` → `Resource.Infinite<TData>`
+
+Common builder options:
+
+```ts
+resource({
+  initialData: TData,             // required
+  keepPreviousData?: boolean,      // keep data while fetching
+  load?: (...) => ...,
+})
+```
+
+```ts
+export type TodoState = {
+  single: Resource.Single<Todo[]>
+  paged: Resource.Page<Todo[]>
+  infinite: Resource.Infinite<Todo[]>
+}
+```
+
+```ts
+// state/todo/model.ts
+import { model, resource } from 'muchajs'
+import type { Todo, TodoState } from './types'
+
+export const todoModel = model<TodoState>({
+  single: resource({
+    initialData: [] as Todo[],
+    keepPreviousData: true,
+    load: ({ state }) => {
+      return state.data
+    },
+  }),
+  paged: resource.page({
+    initialData: [] as Todo[],
+    keepPreviousData: false,
+    load: async ({ page }) => {
+      const r = await api.todo.findAll({ page })
+      return {
+        data: r.items,
+        page: r.page,
+        totalPage: r.totalPage,
+        totalCount: r.totalCount,
+      }
+    },
+  }),
+  infinite: resource.infinite({
+    initialData: [] as Todo[],
+    keepPreviousData: true,
+    load: async ({ cursor }) => api.todo.findAfter(cursor),
+    loadMore: async ({ cursor }) => api.todo.findAfter(cursor),
+  }),
+})
+```
+
+### Resource loading strategy (`load` / `loadMore`) and `keepPreviousData`
+
+`keepPreviousData` controls whether current `data` is preserved during loading. If true, `isLoading` stays false while `isFetching` can still be true.
+
+- builder-level: set `keepPreviousData` in `resource(...)`, `resource.page(...)`, `resource.infinite(...)`
+- call-level override:
+  - `state.paged.load(arg, { keepPreviousData: true })`
+  - `state.single.load({ keepPreviousData: true })`
+  - `state.infinite.loadMore(arg, { keepPreviousData: true })`
+
+```ts
+export const todoActions = action(({ inject }) => {
+  const state = inject(todoModel)
+
+  return {
+    async refresh() {
+      await state.single.load({ keepPreviousData: true })
+      await state.paged.load({ page: 2 }, { keepPreviousData: true })
+      await state.infinite.loadMore({ cursor: state.infinite.cursor }, { keepPreviousData: true })
+    },
+  }
+})
+```
+
+Merge behavior:
+- single: returned value (or `undefined`) replaces `data`
+- page/infinite: returned `{ data, ... }` is merged into state
+- infinite `loadMore`: when both arrays exist, returned `data` is appended to existing `data`
 
 ```tsx
 const { todos, actions } = useTodo(s => ({ todos: s.todos, actions: s.actions }))
