@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
+import { DemoTodo } from "./demo-todo";
 
 const artworks = [
   { src: "/mucha/zodiac.jpg", alt: "Alphonse Mucha — Zodiac (1896)" },
@@ -152,6 +153,9 @@ export default function Home() {
               Give this to Claude Code. It handles the rest.
             </p>
           </div>
+
+          {/* Interactive Demo */}
+          <DemoTodo />
         </main>
 
         {/* Footer */}

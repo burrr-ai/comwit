@@ -10,6 +10,10 @@ type AsyncResult<T> = T | Promise<T>
 type ResourceKind = 'single' | 'page' | 'infinite'
 
 type ResourceDataLike = Record<string, unknown>
+type ResourceResultShape<TState extends ResourceDataLike, TData = TState extends { data: infer T } ? T : never> =
+  | TState
+  | ({ data: TData } & Partial<Omit<TState, 'data'>>)
+  | undefined
 
 export type ResourceBaseState<TData> = {
   data: TData
@@ -37,32 +41,41 @@ export type ResourceContext<TState> = {
   state: Readonly<TState>
 }
 
-export type ResourceResult<TState, TData = TState extends { data: infer T } ? T : never> =
-  | TState
-  | Partial<TState>
-  | TData
-  | undefined
+export type ResourceLoadOptions = {
+  keepPreviousData?: boolean
+}
 
-type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TData = TState extends { data: infer TDataFromState } ? TDataFromState : never> = {
+type SingleResourceLoadResult<TData> = TData | undefined
+
+export type ResourceResult<TState extends ResourceDataLike, TData = TState extends { data: infer T } ? T : never> =
+  ResourceResultShape<TState, TData>
+
+type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TResult> = {
   [RESOURCE_BRAND]: true
   kind: ResourceKind
   initialState: TState
-  load?: (arg: TArg, context: ResourceContext<TState>) => AsyncResult<ResourceResult<TState, TData>>
+  keepPreviousData?: boolean
 }
 
 export type SingleResourceDescriptor<TData, TArg = void> =
-  BaseResourceDescriptor<ResourceSingleState<TData>, TArg, TData> & ResourceSingleState<TData> & {
+  BaseResourceDescriptor<ResourceSingleState<TData>, TArg, SingleResourceLoadResult<TData>> &
+  ResourceSingleState<TData> & {
     kind: 'single'
+    load?: (context: ResourceContext<ResourceSingleState<TData>>) => AsyncResult<SingleResourceLoadResult<TData>>
   }
 
 export type PageResourceDescriptor<TData, TArg = void> =
-  BaseResourceDescriptor<ResourcePageState<TData>, TArg, TData> & ResourcePageState<TData> & {
+  BaseResourceDescriptor<ResourcePageState<TData>, TArg, ResourceResult<ResourcePageState<TData>, TData>> &
+  ResourcePageState<TData> & {
     kind: 'page'
+    load?: (arg: TArg, context: ResourceContext<ResourcePageState<TData>>) => AsyncResult<ResourceResult<ResourcePageState<TData>, TData>>
   }
 
 export type InfiniteResourceDescriptor<TData, TArg = void> =
-  BaseResourceDescriptor<ResourceInfiniteState<TData>, TArg, TData> & ResourceInfiniteState<TData> & {
+  BaseResourceDescriptor<ResourceInfiniteState<TData>, TArg, ResourceResult<ResourceInfiniteState<TData>, TData>> &
+  ResourceInfiniteState<TData> & {
     kind: 'infinite'
+    load?: (arg: TArg, context: ResourceContext<ResourceInfiniteState<TData>>) => AsyncResult<ResourceResult<ResourceInfiniteState<TData>, TData>>
     loadMore?: (arg: TArg, context: ResourceContext<ResourceInfiniteState<TData>>) => AsyncResult<ResourceResult<ResourceInfiniteState<TData>, TData>>
   }
 
@@ -72,28 +85,42 @@ export namespace Resource {
   export type Infinite<TData, TArg = void> = ResourceInfiniteState<TData>
 }
 
-type ResourceLoadController<TData, TArg = unknown> = {
-  load(arg?: TArg): Promise<unknown>
-  set(next: unknown): unknown
-}
+type ResourceLoadController<TArg = unknown> =
+  [TArg] extends [void]
+    ? {
+        load(options?: ResourceLoadOptions): Promise<unknown>
+        set(next: unknown): unknown
+      }
+    : {
+        load(arg?: TArg, options?: ResourceLoadOptions): Promise<unknown>
+        set(next: unknown): unknown
+      }
 
-export type BoundSingleResourceState<TData, TArg = unknown> = ResourceSingleState<TData> & ResourceLoadController<TData, TArg>
-export type BoundPageResourceState<TData, TArg = unknown> = ResourcePageState<TData> & ResourceLoadController<TData, TArg>
-export type BoundInfiniteResourceState<TData, TArg = unknown> = ResourceInfiniteState<TData> & ResourceLoadController<TData, TArg> & {
-  loadMore(arg?: TArg): Promise<unknown>
-}
+type ResourceLoadMoreController<TArg = unknown> =
+  [TArg] extends [void]
+    ? {
+        loadMore(options?: ResourceLoadOptions): Promise<unknown>
+      }
+    : {
+        loadMore(arg?: TArg, options?: ResourceLoadOptions): Promise<unknown>
+      }
+
+export type BoundSingleResourceState<TData> = ResourceSingleState<TData> & ResourceLoadController<void>
+export type BoundPageResourceState<TData, TArg = unknown> = ResourcePageState<TData> & ResourceLoadController<TArg>
+export type BoundInfiniteResourceState<TData, TArg = unknown> =
+  ResourceInfiniteState<TData> & ResourceLoadController<TArg> & ResourceLoadMoreController<TArg>
 
 export type BoundResourceState<T> = T extends ResourcePageState<infer TData>
   ? BoundPageResourceState<TData, unknown>
   : T extends ResourceInfiniteState<infer TData>
     ? BoundInfiniteResourceState<TData, unknown>
   : T extends ResourceSingleState<infer TData>
-    ? BoundSingleResourceState<TData, unknown>
-      : T extends (infer U)[]
-        ? BoundResourceState<U>[]
-        : T extends object
-          ? { [K in keyof T]: BoundResourceState<T[K]> }
-          : T
+    ? BoundSingleResourceState<TData>
+    : T extends (infer U)[]
+      ? BoundResourceState<U>[]
+      : T extends object
+        ? { [K in keyof T]: BoundResourceState<T[K]> }
+        : T
 
 export type AnyResourceDescriptor =
   | SingleResourceDescriptor<unknown, unknown>
@@ -102,23 +129,32 @@ export type AnyResourceDescriptor =
 
 export type ResourceDescriptorMap = Map<string, AnyResourceDescriptor>
 
-export type SingleResourceBuilderOptions<TData, TArg = void> = {
+export type SingleResourceBuilderOptions<TData> = {
   initialData: TData
-  load?: (arg: TArg, context: ResourceContext<ResourceSingleState<TData>>) => AsyncResult<ResourceResult<ResourceSingleState<TData>, TData>>
+  keepPreviousData?: boolean
+  load?: (context: ResourceContext<ResourceSingleState<TData>>) => AsyncResult<SingleResourceLoadResult<TData>>
 }
 
 export type PageResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
+  keepPreviousData?: boolean
   load?: (arg: TArg, context: ResourceContext<ResourcePageState<TData>>) => AsyncResult<ResourceResult<ResourcePageState<TData>, TData>>
 }
 
 export type InfiniteResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
+  keepPreviousData?: boolean
   load?: (arg: TArg, context: ResourceContext<ResourceInfiniteState<TData>>) => AsyncResult<ResourceResult<ResourceInfiniteState<TData>, TData>>
   loadMore?: (arg: TArg, context: ResourceContext<ResourceInfiniteState<TData>>) => AsyncResult<ResourceResult<ResourceInfiniteState<TData>, TData>>
 }
 
-function createSingleDescriptor<TData, TArg = void>(opts: SingleResourceBuilderOptions<TData, TArg>): SingleResourceDescriptor<TData, TArg> {
+type ResourceFactory = {
+  <TData>(opts: SingleResourceBuilderOptions<TData>): SingleResourceDescriptor<TData, void>
+  page: <TData, TArg = void>(opts: PageResourceBuilderOptions<TData, TArg>) => PageResourceDescriptor<TData, TArg>
+  infinite: <TData, TArg = void>(opts: InfiniteResourceBuilderOptions<TData, TArg>) => InfiniteResourceDescriptor<TData, TArg>
+}
+
+function createSingleDescriptor<TData>(opts: SingleResourceBuilderOptions<TData>): SingleResourceDescriptor<TData, void> {
   const initialState: ResourceSingleState<TData> = {
     data: opts.initialData,
     isLoading: false,
@@ -133,6 +169,7 @@ function createSingleDescriptor<TData, TArg = void>(opts: SingleResourceBuilderO
     kind: 'single',
     [RESOURCE_BRAND]: true,
     initialState,
+    keepPreviousData: opts.keepPreviousData,
     load: opts.load,
   }
 }
@@ -155,6 +192,7 @@ function createPageDescriptor<TData, TArg = void>(opts: PageResourceBuilderOptio
     kind: 'page',
     [RESOURCE_BRAND]: true,
     initialState,
+    keepPreviousData: opts.keepPreviousData,
     load: opts.load,
   }
 }
@@ -176,16 +214,19 @@ function createInfiniteDescriptor<TData, TArg = void>(opts: InfiniteResourceBuil
     kind: 'infinite',
     [RESOURCE_BRAND]: true,
     initialState,
+    keepPreviousData: opts.keepPreviousData,
     load: opts.load,
     loadMore: opts.loadMore,
   }
 }
 
-export const resource = {
-  single: createSingleDescriptor,
-  page: createPageDescriptor,
-  infinite: createInfiniteDescriptor,
-} as const
+export const resource: ResourceFactory = Object.assign(
+  (opts: SingleResourceBuilderOptions<unknown>) => createSingleDescriptor(opts),
+  {
+    page: createPageDescriptor,
+    infinite: createInfiniteDescriptor,
+  }
+) as ResourceFactory
 
 export function isResourceDescriptor(value: unknown): value is AnyResourceDescriptor {
   return typeof value === 'object' && value !== null && (value as { [RESOURCE_BRAND]?: unknown })[RESOURCE_BRAND] === true
@@ -211,6 +252,10 @@ function normalizeError(error: unknown) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isResourceLoadOptions(value: unknown): value is ResourceLoadOptions {
+  return isRecord(value) && 'keepPreviousData' in value
 }
 
 function mergeResult(state: ResourceDataLike, result: unknown, appendData = false) {
@@ -251,8 +296,13 @@ function createResourceAccessor(state: ResourceDataLike, descriptor: AnyResource
     return BOUND_RESOURCE_VALUE.get(state) as ResourceDataLike
   }
 
-  const runLoad = async (arg: unknown) => {
-    state.isLoading = true
+  const runLoad = async (arg: unknown, options?: ResourceLoadOptions) => {
+    const shouldPreserve =
+      descriptor.kind === 'single'
+        ? (isResourceLoadOptions(arg) ? arg.keepPreviousData : undefined) ?? descriptor.keepPreviousData ?? false
+        : (isResourceLoadOptions(options) ? options.keepPreviousData : undefined) ?? descriptor.keepPreviousData ?? false
+
+    state.isLoading = !shouldPreserve
     state.isError = false
     state.error = null
     state.isFetching = true
@@ -264,8 +314,7 @@ function createResourceAccessor(state: ResourceDataLike, descriptor: AnyResource
 
       let result: unknown
       if (descriptor.kind === 'single') {
-        result = await (descriptor as SingleResourceDescriptor<unknown, unknown>).load!(
-          arg,
+        result = await (descriptor as SingleResourceDescriptor<unknown, void>).load!(
           contextFor(state) as ResourceContext<ResourceSingleState<unknown>>
         )
       } else if (descriptor.kind === 'page') {
@@ -280,7 +329,13 @@ function createResourceAccessor(state: ResourceDataLike, descriptor: AnyResource
         )
       }
 
-      mergeResult(state, result)
+      if (descriptor.kind === 'single') {
+        if (result !== undefined) {
+          state.data = result
+        }
+      } else {
+        mergeResult(state, result)
+      }
       state.isSuccess = true
       return result
     } catch (error) {
@@ -295,6 +350,7 @@ function createResourceAccessor(state: ResourceDataLike, descriptor: AnyResource
   }
 
   const runLoadMore = async (arg: unknown) => {
+    state.isLoading = false
     state.isFetching = true
     state.isError = false
     state.error = null

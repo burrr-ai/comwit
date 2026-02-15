@@ -188,12 +188,12 @@ function ResourceSection() {
     }))
 
     useEffect(() => {
-        void actions.reloadUser().catch(() => {})
-        void actions.loadFirstCollaborators().catch(() => {})
+        actions.reloadUser().catch(() => { })
+        actions.loadFirstCollaborators().catch(() => { })
     }, [actions])
 
-    const profileName = me.data.displayName || '불러오는 중...'
-    const profileEmail = me.data.email || 'loading@example.com'
+    const profileName = me.data.displayName
+    const profileEmail = me.data.email
 
     return (
         <section style={{

@@ -283,13 +283,11 @@ Interceptors can be used in two styles in `actions`:
 import { action, OnError, OnSuccess, Debounce, Transaction } from 'muchajs'
 
 export const todoActions = action(({ inject }) => {
-  const model = inject(todoModel)
 
   class TodoActions {
-    constructor(private readonly model: TodoState) {}
+    private model = inject(todoModel)
 
     @Debounce(300)
-    @Transaction()
     @OnError((error) => {
       sonner.error(error.message ?? 'An unexpected error occurred while processing the request')
       throw error
@@ -302,7 +300,7 @@ export const todoActions = action(({ inject }) => {
     }
   }
 
-  return new TodoActions(model)
+  return new TodoActions()
 })
 ```
 

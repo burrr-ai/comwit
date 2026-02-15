@@ -3,7 +3,7 @@ import type { DemoUser, UserState } from './types'
 import { getCollaborators, getCurrentUser } from '@/api/user'
 
 export const userModel = model<UserState>({
-    me: resource.single<DemoUser>({
+    me: resource<DemoUser>({
         initialData: {
             id: '',
             username: '',
@@ -14,7 +14,8 @@ export const userModel = model<UserState>({
             joinedAt: '',
         },
         load: async () => {
-            return getCurrentUser()
+            const data = await getCurrentUser()
+            return data
         },
     }),
     collaborators: resource.page<DemoUser[], { page?: number }>({
