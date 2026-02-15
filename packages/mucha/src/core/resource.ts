@@ -349,8 +349,13 @@ function createResourceAccessor(state: ResourceDataLike, descriptor: AnyResource
     }
   }
 
-  const runLoadMore = async (arg: unknown) => {
-    state.isLoading = false
+  const runLoadMore = async (arg: unknown, options?: ResourceLoadOptions) => {
+    const shouldPreserve =
+      (isResourceLoadOptions(options) ? options.keepPreviousData : undefined) ??
+      descriptor.keepPreviousData ??
+      false
+
+    state.isLoading = !shouldPreserve
     state.isFetching = true
     state.isError = false
     state.error = null

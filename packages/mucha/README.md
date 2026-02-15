@@ -400,7 +400,7 @@ export const todoActions = action(({ inject }) => {
 
 `resource()` has three factory forms:
 
-- `resource({...})` → `Resource.Single<TData>` (single shape)
+- `resource({...})` → single resource state (`data` + `is*` flags)
 - `resource.page({...})` → `Resource.Page<TData>`
 - `resource.infinite({...})` → `Resource.Infinite<TData>`
 
@@ -416,7 +416,14 @@ resource({
 
 ```ts
 export type TodoState = {
-  single: Resource.Single<Todo[]>
+  single: {
+    data: Todo[]
+    isLoading: boolean
+    isFetching: boolean
+    isSuccess: boolean
+    isError: boolean
+    error: string | null
+  }
   paged: Resource.Page<Todo[]>
   infinite: Resource.Infinite<Todo[]>
 }
