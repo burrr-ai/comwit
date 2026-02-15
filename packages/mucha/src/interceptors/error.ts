@@ -1,7 +1,7 @@
 import { AnyFunction, createDecorator, isThenable } from './utils'
 
 export function onError<T extends AnyFunction>(handler: (error: unknown) => void): (next: T) => T {
-    return (next => ((...args: Parameters<T>) => {
+    return ((next: T) => ((...args: Parameters<T>) => {
         try {
             const result = next(...args)
             if (!isThenable(result)) return result

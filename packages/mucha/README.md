@@ -237,7 +237,7 @@ const { count, actions } = useTodo(s => ({
 
 ### Use Multiple Providers for Isolation
 
-You can wrap only part of your tree with a separate `StateProvider` when you want state to be isolated per subtree (for example in tests, storybook stories, or nested apps).
+`StateProvider` instances are scoped by subtree.
 
 ```tsx
 <StateProvider>
@@ -283,7 +283,7 @@ export const todoActions = action(({ inject }) => {
   return new class {
     @Debounce(300)
     @OnError((error) => {
-      sonner.error(error.message ?? '요청 처리 중 오류가 발생했습니다')
+      sonner.error(error.message ?? 'An unexpected error occurred while processing the request')
       throw error
     })
     @OnSuccess((result) => {
@@ -310,7 +310,7 @@ export const todoActions = action(({ inject }) => {
   return {
     save: pipe(
       onError((error) => {
-        sonner.error(error.message ?? '요청 처리 중 오류가 발생했습니다')
+        sonner.error(error.message ?? 'An unexpected error occurred while processing the request')
         throw error
       }),
       onSuccess((result) => console.log('saved', result)),
@@ -319,4 +319,89 @@ export const todoActions = action(({ inject }) => {
   }
 })
 ```
+
+## Data Fetching with Resource (domain-first)
+
+```ts
+// state/todo/types.ts
+import { Resource } from 'muchajs'
+
+export type Todo = { id: string; title: string; status: 'pending' | 'done' }
+
+export type TodoState = {
+  todos: Resource.Page<Todo[]>
+  filter: { status: 'all' | 'pending' | 'done' }
+}
 ```
+
+```ts
+// state/todo/model.ts
+import { model, resource } from 'muchajs'
+import type { Todo, TodoState } from './types'
+
+export const todoModel = model<TodoState>({
+  todos: resource.page({
+    initialState: {
+      data: [] as Todo[],
+      page: 1,
+      totalPage: 1,
+      totalCount: 0,
+      isLoading: false,
+      isFetching: false,
+      isSuccess: false,
+      isError: false,
+      error: null,
+    },
+    load: async ({ page }) => {
+      const r = await api.memo.findAll({ page })
+      return {
+        data: r.items,
+        page: r.page,
+        totalPage: r.totalPage,
+        totalCount: r.totalCount,
+      }
+    },
+  }),
+  filter: { status: 'all' },
+})
+```
+
+```ts
+// state/todo/actions/crud.ts
+import { action } from 'muchajs'
+import { todoModel } from './model'
+
+export const todoActions = action(({ inject }) => {
+  const state = inject(todoModel)
+
+  return {
+    async reload() {
+      await state.todos.load()
+    },
+    async nextPage() {
+      await state.todos.load({ page: state.todos.page + 1 })
+    },
+  }
+})
+```
+
+```tsx
+const { todos, actions } = useTodo(s => ({ todos: s.todos, actions: s.actions }))
+
+if (todos.isLoading) return <span>loading...</span>
+if (todos.isError) return <span>{String(todos.error)}</span>
+
+// load can be used from actions; keep UI state focused on flags/data
+```
+
+`Resource` states use one `is*` shape across modes.
+- `isLoading`
+- `isFetching`
+- `isSuccess`
+- `isError`
+- `error`
+
+Mode fields.
+- `Single`: `data`
+- `Page`: `data`, `page`, `totalPage`, `totalCount` (use `load` for next page)
+- `Infinite`: `data`, `cursor`, `hasMore`

@@ -1,0 +1,42 @@
+---
+title: "Why mucha"
+order: 0
+---
+
+# Why mucha
+
+Most state libraries were designed for humans reading docs. mucha was designed for LLMs writing code. That changes everything about how a library should be structured.
+
+---
+
+## Optimized for vibe coding
+
+You don't learn a state library anymore. Your LLM does. mucha is architected so that LLMs spend fewer tokens understanding context and generating correct code. Less token overhead means faster results, fewer hallucinations, and less back-and-forth. The library is the prompt.
+
+## Next.js native
+
+Not a generic React library bolted onto Next.js after the fact. mucha was built from day one for App Router, server components, and SSR. State initializes on the server without hydration mismatches, without workarounds, without ceremony.
+
+## OOP because LLMs think in objects
+
+Object-oriented patterns are what LLMs generate most reliably. Direct mutation, no reducers, no dispatch ceremony, no action creators. When the mental model is "change the object," LLMs get it right on the first try.
+
+## Domain-driven, type-first
+
+Each feature is a self-contained domain. Types define the contract. An LLM reads one types file and understands the entire domain — its shape, its capabilities, its boundaries. This is enforced structure, not optional convention.
+
+## Bottom-up, not top-down
+
+No central store. No giant root config. No provider hierarchy. Start with one domain, add more as you build. Models initialize lazily, on first access. Features compose — they don't depend on a master plan.
+
+## State and API in one place
+
+State management and server API calls live in the same domain. No separate API layer, no action-at-a-distance, no tracing through five files to understand one feature. One domain, one concern, one place to look.
+
+## Best practices are the only option
+
+The architecture forces separation of concerns, explicit dependencies, and typed interfaces. It's not "you should do this" — it's "you can only do this." LLMs thrive on constraints. So does your codebase.
+
+---
+
+mucha is a set of hard opinions about how state should be organized — opinions that make code easier to write, easier to read, and dramatically easier for machines to generate correctly.

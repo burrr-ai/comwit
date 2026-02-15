@@ -11,8 +11,8 @@ export function composeInterceptors<T extends AnyFunction>(interceptors: Interce
 }
 
 export function createDecorator<T extends AnyFunction>(interceptor: Interceptor<T>): MethodDecorator {
-    return (_target: object, _propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+    return (_target: object, _propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<any>) => {
         if (!descriptor || !descriptor.value) return
-        descriptor.value = interceptor(descriptor.value)
+        descriptor.value = interceptor(descriptor.value as T)
     }
 }

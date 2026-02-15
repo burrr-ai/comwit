@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 :root {
   --background: #f5f0e8;
@@ -105,24 +106,3 @@ body {
     transparent
   );
 }
-
-/* Code block styling */
-.code-block {
-  background: #1e1e1e;
-  color: #d4d4d4;
-  border-radius: 10px;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.85rem;
-  line-height: 1.7;
-  overflow-x: auto;
-  box-shadow: 0 8px 32px rgba(44, 24, 16, 0.15);
-}
-
-.code-block .keyword { color: #c586c0; }
-.code-block .const { color: #4ec9b0; }
-.code-block .func { color: #dcdcaa; }
-.code-block .string { color: #ce9178; }
-.code-block .comment { color: #6a9955; }
-.code-block .bracket { color: #ffd700; }
-.code-block .param { color: #9cdcfe; }
-.code-block .type { color: #4ec9b0; }

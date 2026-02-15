@@ -1,4 +1,6 @@
-export type Inject = <T extends object>(model: Model<T>) => T
+import type { BoundResourceState } from './resource'
+
+export type Inject = <T extends object>(model: Model<T>) => BoundResourceState<T>
 
 export type ActionContext = {
     inject: Inject
@@ -10,4 +12,4 @@ export function action<A>(factory: ActionFactory<A>): ActionFactory<A> {
     return factory
 }
 
-type Model<T> = import('./model').Model<T>
+type Model<T extends object> = import('./model').Model<T>

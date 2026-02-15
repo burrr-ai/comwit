@@ -4,6 +4,7 @@ import { createProxy, snapshot, subscribe } from './proxy'
 import { isSilent } from './silent'
 
 export type StoreEntry<T extends object = any> = {
+    model: Model<T>
     proxy: T
     getSnapshot(): T
     subscribe(listener: () => void): () => void
@@ -32,6 +33,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             const p = createProxy(model.instance())
 
             const entry: StoreEntry<T> = {
+                model,
                 proxy: p,
                 getSnapshot() {
                     return snapshot(p) as T

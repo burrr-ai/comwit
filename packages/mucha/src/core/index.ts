@@ -3,6 +3,7 @@ import { model, Model } from './model'
 import { action, ActionFactory } from './action'
 import { StateProvider, useStoreRegistry } from './provider'
 import { silent } from './silent'
+import { bindResourceState, BoundResourceState, resource, Resource } from './resource'
 import { isEqual } from '../utils'
 
 function create<S extends object, A>(
@@ -16,9 +17,21 @@ function create<S extends object, A>(
         const store = registry.get(m)
 
         const actionsRef = useRef<A | null>(null)
+        const resourceStateRef = useRef<Map<symbol, object>>(new Map())
         if (!actionsRef.current) {
-            const inject = <T extends object>(dep: Model<T>): T => {
-                return registry.get(dep).proxy
+            const inject = <T extends object>(dep: Model<T>): BoundResourceState<T> => {
+                const existing = resourceStateRef.current.get(dep.key)
+                if (existing) return existing as BoundResourceState<T>
+
+                const entry = registry.get(dep)
+                if (!entry.model.resources.size) {
+                    resourceStateRef.current.set(dep.key, entry.proxy)
+                    return entry.proxy as BoundResourceState<T>
+                }
+
+                const bound = bindResourceState(entry.proxy, entry.model.resources)
+                resourceStateRef.current.set(dep.key, bound)
+                return bound as BoundResourceState<T>
             }
 
             actionsRef.current = Object.assign(
@@ -58,4 +71,9 @@ export {
     create,
     silent,
     StateProvider,
+    resource,
+}
+
+export type {
+    Resource,
 }
