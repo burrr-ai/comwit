@@ -1,12 +1,7 @@
-import { isEqual as _isEqual } from 'es-toolkit'
-
+export { isEqual } from 'es-toolkit'
 export { debounce, type DebounceOptions, type DebouncedFunction } from 'es-toolkit'
 export { throttle, type ThrottleOptions, type ThrottledFunction } from 'es-toolkit'
 export { flow as pipe, flowRight as compose } from 'es-toolkit'
-
-export function isEqual(a: any, b: any) {
-  return _isEqual(a, b)
-}
 
 export type ArrayElement<T extends readonly unknown[]> = T[number]
 
