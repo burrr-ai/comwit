@@ -7,6 +7,10 @@
     "packages/*"
   ],
   "scripts": {
+    "prepare": "husky",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "format:staged": "lint-staged",
     "dev:docs": "yarn workspace docs dev",
     "dev:playground": "yarn workspace playground dev --port 3001",
     "docs": "yarn workspace docs dev",
@@ -14,5 +18,15 @@
     "dev:lib": "yarn workspace muchajs dev",
     "build": "yarn workspaces run build",
     "dev": "yarn workspaces run dev"
+  },
+  "lint-staged": {
+    "*.{js,cjs,mjs,jsx,ts,tsx,json,yaml,yml,md,mdx,css,scss,html}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
+    "prettier": "^3.5.3"
   }
 }

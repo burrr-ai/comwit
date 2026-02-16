@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @plugin "@tailwindcss/typography";
 
 :root {
@@ -38,7 +38,7 @@ body {
 
 .art-nouveau-frame::before,
 .art-nouveau-frame::after {
-  content: "";
+  content: '';
   position: absolute;
   width: 32px;
   height: 32px;
@@ -96,13 +96,8 @@ body {
 
 .ornament::before,
 .ornament::after {
-  content: "";
+  content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--gold),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }

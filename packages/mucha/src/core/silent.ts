@@ -15,14 +15,14 @@
 let _silent = false
 
 export function silent(fn: () => void) {
-    _silent = true
-    try {
-        fn()
-    } finally {
-        _silent = false
-    }
+  _silent = true
+  try {
+    fn()
+  } finally {
+    _silent = false
+  }
 }
 
 export function isSilent() {
-    return _silent
+  return _silent
 }

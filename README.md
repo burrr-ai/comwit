@@ -62,11 +62,7 @@ Then use it in your root `app/layout.tsx` (server component).
 // app/layout.tsx (server component)
 import { Providers } from './providers'
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
@@ -149,7 +145,7 @@ import { todoModel } from '../model'
 
 export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>(({ state }) => {
   class TodoCrudActionHandlers {
-  private model = state(todoModel)
+    private model = state(todoModel)
 
     @OnError((error) => {
       sonner.error(error.message ?? 'An unexpected error occurred')
@@ -161,7 +157,7 @@ export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>(({
     }
 
     async delete(id: string) {
-      this.model.todos = this.model.todos.filter(t => t.id !== id)
+      this.model.todos = this.model.todos.filter((t) => t.id !== id)
       await api.deleteTodo(id)
     }
   }
@@ -212,7 +208,7 @@ function TodoPage() {
 Pass a selector to pick only what you need. Selectors are compared with deep equality before React emits updates, so derived objects are safe.
 
 ```tsx
-const { count, todos, actions } = useTodo(s => ({
+const { count, todos, actions } = useTodo((s) => ({
   count: s.count,
   todos: s.todos,
   actions: s.actions,
@@ -313,19 +309,21 @@ type TodoNavigationActions = {
   openById(id: string): Promise<Todo | null>
 }
 
-export const todoNavigationActions = action<TodoNavigationActions, AppActionContext>(({ state, context }) => {
-  class TodoNavigationActions {
-    private model = state(todoModel)
+export const todoNavigationActions = action<TodoNavigationActions, AppActionContext>(
+  ({ state, context }) => {
+    class TodoNavigationActions {
+      private model = state(todoModel)
 
-    async openById(id: string) {
-      context.router.push(`${context.pathname}/detail/${id}`)
-      const found = this.model.todos.find(todo => todo.id === id)
-      return found ?? null
+      async openById(id: string) {
+        context.router.push(`${context.pathname}/detail/${id}`)
+        const found = this.model.todos.find((todo) => todo.id === id)
+        return found ?? null
+      }
     }
-  }
 
-  return new TodoNavigationActions()
-})
+    return new TodoNavigationActions()
+  }
+)
 ```
 
 `action`에서 제네릭을 생략하면 `context`는 `{}`로 추론되고, `router` 같은 값은 타입으로 보이지 않습니다.
@@ -425,7 +423,7 @@ You can call this init action directly when hydrating from server props (instead
 
 ```tsx
 export function TodoPage({ initialTodos }: { initialTodos: Todo[] }) {
-  const { actions } = useTodo(s => ({ actions: s.actions }))
+  const { actions } = useTodo((s) => ({ actions: s.actions }))
   actions.init(initialTodos)
 }
 ```
@@ -518,7 +516,7 @@ await state.todos.query(
     force: true,
     staleTime: 0,
     placeholderData: keepPreviousData,
-  },
+  }
 )
 ```
 

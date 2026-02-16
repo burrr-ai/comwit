@@ -1,24 +1,21 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { useState } from "react";
-import type { DocMeta } from "@/lib/mdx";
+import Link from 'next/link'
+import { useState } from 'react'
+import type { DocMeta } from '@/lib/mdx'
 
 export function DocsSidebar({
   ungrouped,
   groups,
 }: {
-  ungrouped: DocMeta[];
-  groups: Record<string, DocMeta[]>;
+  ungrouped: DocMeta[]
+  groups: Record<string, DocMeta[]>
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
 
   const navContent = (
     <>
-      <Link
-        href="/"
-        className="block font-serif text-lg tracking-[0.15em] text-foreground mb-6"
-      >
+      <Link href="/" className="block font-serif text-lg tracking-[0.15em] text-foreground mb-6">
         mucha
       </Link>
 
@@ -30,11 +27,7 @@ export function DocsSidebar({
         {ungrouped.map((doc) => (
           <Link
             key={doc.slug}
-            href={
-              doc.slug === "" || doc.slug === "index"
-                ? "/docs"
-                : `/docs/${doc.slug}`
-            }
+            href={doc.slug === '' || doc.slug === 'index' ? '/docs' : `/docs/${doc.slug}`}
             onClick={() => setOpen(false)}
             className="block font-serif text-[13px] tracking-wide text-foreground/60 hover:text-gold-dark transition-colors"
           >
@@ -66,7 +59,7 @@ export function DocsSidebar({
         <span />
       </div>
     </>
-  );
+  )
 
   return (
     <>
@@ -102,10 +95,7 @@ export function DocsSidebar({
 
       {/* Mobile overlay */}
       {open && (
-        <div
-          className="fixed inset-0 z-30 bg-black/20 md:hidden"
-          onClick={() => setOpen(false)}
-        />
+        <div className="fixed inset-0 z-30 bg-black/20 md:hidden" onClick={() => setOpen(false)} />
       )}
 
       {/* Mobile sidebar */}
@@ -113,15 +103,15 @@ export function DocsSidebar({
         className={`
           fixed top-0 left-0 z-40 h-screen w-56 border-r border-gold/30 p-5 pt-14
           overflow-y-auto transition-transform duration-200 ease-in-out
-          ${open ? "translate-x-0" : "-translate-x-full"}
+          ${open ? 'translate-x-0' : '-translate-x-full'}
           md:hidden
         `}
         style={{
-          backgroundColor: "var(--cream-light)",
-          backgroundImage: "url(/mucha/the-seasons-spring.jpg)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundBlendMode: "soft-light",
+          backgroundColor: 'var(--cream-light)',
+          backgroundImage: 'url(/mucha/the-seasons-spring.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundBlendMode: 'soft-light',
         }}
       >
         <div className="relative z-10">{navContent}</div>
@@ -131,17 +121,15 @@ export function DocsSidebar({
       <aside
         className="hidden md:block w-56 shrink-0 border-r border-gold/30"
         style={{
-          backgroundColor: "var(--cream-light)",
-          backgroundImage: "url(/mucha/the-seasons-spring.jpg)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundBlendMode: "soft-light",
+          backgroundColor: 'var(--cream-light)',
+          backgroundImage: 'url(/mucha/the-seasons-spring.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundBlendMode: 'soft-light',
         }}
       >
-        <div className="sticky top-0 h-screen overflow-y-auto p-5">
-          {navContent}
-        </div>
+        <div className="sticky top-0 h-screen overflow-y-auto p-5">{navContent}</div>
       </aside>
     </>
-  );
+  )
 }

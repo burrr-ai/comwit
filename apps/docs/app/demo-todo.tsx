@@ -1,42 +1,40 @@
-"use client";
+'use client'
 
-import { useState, useCallback } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { useState, useCallback } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 
 type Todo = {
-  id: string;
-  text: string;
-  done: boolean;
-};
+  id: string
+  text: string
+  done: boolean
+}
 
 const INITIAL_TODOS: Todo[] = [
-  { id: "1", text: "Install muchajs", done: true },
-  { id: "2", text: "Define your first domain", done: false },
-  { id: "3", text: "Ship it", done: false },
-];
+  { id: '1', text: 'Install muchajs', done: true },
+  { id: '2', text: 'Define your first domain', done: false },
+  { id: '3', text: 'Ship it', done: false },
+]
 
-let nextId = 4;
+let nextId = 4
 
 export function DemoTodo() {
-  const [todos, setTodos] = useState<Todo[]>(INITIAL_TODOS);
-  const [input, setInput] = useState("");
+  const [todos, setTodos] = useState<Todo[]>(INITIAL_TODOS)
+  const [input, setInput] = useState('')
 
   const add = useCallback(() => {
-    const text = input.trim();
-    if (!text) return;
-    setTodos((prev) => [...prev, { id: String(nextId++), text, done: false }]);
-    setInput("");
-  }, [input]);
+    const text = input.trim()
+    if (!text) return
+    setTodos((prev) => [...prev, { id: String(nextId++), text, done: false }])
+    setInput('')
+  }, [input])
 
   const toggle = useCallback((id: string) => {
-    setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t))
-    );
-  }, []);
+    setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
+  }, [])
 
   const remove = useCallback((id: string) => {
-    setTodos((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+    setTodos((prev) => prev.filter((t) => t.id !== id))
+  }, [])
 
   return (
     <div className="w-full max-w-sm">
@@ -50,7 +48,7 @@ export function DemoTodo() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && add()}
+            onKeyDown={(e) => e.key === 'Enter' && add()}
             placeholder="Add a todo..."
             className="flex-1 bg-transparent px-4 py-2.5 font-serif text-[13px] text-foreground/80 placeholder:text-foreground/25 outline-none"
           />
@@ -80,7 +78,7 @@ export function DemoTodo() {
               <motion.li
                 key={todo.id}
                 initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
+                animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.2 }}
                 className="flex items-center gap-3 px-4 py-2 group"
@@ -88,9 +86,7 @@ export function DemoTodo() {
                 <button
                   onClick={() => toggle(todo.id)}
                   className={`w-4 h-4 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors ${
-                    todo.done
-                      ? "border-gold bg-gold/20"
-                      : "border-gold/40 hover:border-gold"
+                    todo.done ? 'border-gold bg-gold/20' : 'border-gold/40 hover:border-gold'
                   }`}
                 >
                   {todo.done && (
@@ -111,9 +107,7 @@ export function DemoTodo() {
                 </button>
                 <span
                   className={`flex-1 font-serif text-[13px] transition-colors ${
-                    todo.done
-                      ? "text-foreground/30 line-through"
-                      : "text-foreground/70"
+                    todo.done ? 'text-foreground/30 line-through' : 'text-foreground/70'
                   }`}
                 >
                   {todo.text}
@@ -150,5 +144,5 @@ export function DemoTodo() {
         )}
       </div>
     </div>
-  );
+  )
 }

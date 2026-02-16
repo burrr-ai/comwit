@@ -10,12 +10,12 @@ import { createDecorator, Interceptor } from './utils'
  */
 
 export function transaction(): <T extends (...args: any[]) => any>(next: T) => T {
-    return next => {
-        // TODO: Implement scoped rollback once proxy tracking strategy is finalized.
-        return next
-    }
+  return (next) => {
+    // TODO: Implement scoped rollback once proxy tracking strategy is finalized.
+    return next
+  }
 }
 
 export function Transaction(): MethodDecorator {
-    return createDecorator(transaction())
+  return createDecorator(transaction())
 }

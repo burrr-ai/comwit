@@ -1,30 +1,26 @@
-import { getAllDocs, type DocMeta } from "@/lib/mdx";
-import { DocsSidebar } from "./sidebar";
-import { TableOfContents } from "./toc";
+import { getAllDocs, type DocMeta } from '@/lib/mdx'
+import { DocsSidebar } from './sidebar'
+import { TableOfContents } from './toc'
 
 function groupDocs(docs: DocMeta[]) {
-  const ungrouped: DocMeta[] = [];
-  const groups: Record<string, DocMeta[]> = {};
+  const ungrouped: DocMeta[] = []
+  const groups: Record<string, DocMeta[]> = {}
 
   for (const doc of docs) {
     if (doc.group) {
-      if (!groups[doc.group]) groups[doc.group] = [];
-      groups[doc.group].push(doc);
+      if (!groups[doc.group]) groups[doc.group] = []
+      groups[doc.group].push(doc)
     } else {
-      ungrouped.push(doc);
+      ungrouped.push(doc)
     }
   }
 
-  return { ungrouped, groups };
+  return { ungrouped, groups }
 }
 
-export default function DocsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const docs = getAllDocs();
-  const { ungrouped, groups } = groupDocs(docs);
+export default function DocsLayout({ children }: { children: React.ReactNode }) {
+  const docs = getAllDocs()
+  const { ungrouped, groups } = groupDocs(docs)
 
   return (
     <div className="min-h-screen max-w-7xl mx-auto flex">
@@ -32,9 +28,7 @@ export default function DocsLayout({
 
       {/* Content area */}
       <main className="flex-1 min-w-0 px-6 py-8 md:px-16 md:py-12">
-        <div className="w-full max-w-3xl">
-          {children}
-        </div>
+        <div className="w-full max-w-3xl">{children}</div>
       </main>
 
       {/* Table of Contents — right side, desktop only */}
@@ -44,5 +38,5 @@ export default function DocsLayout({
         </div>
       </aside>
     </div>
-  );
+  )
 }

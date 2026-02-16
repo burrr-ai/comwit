@@ -1,38 +1,38 @@
-"use client";
+'use client'
 
-import Image from "next/image";
-import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useState } from "react";
-import { DemoTodo } from "./demo-todo";
+import Image from 'next/image'
+import { AnimatePresence, motion } from 'motion/react'
+import { useCallback, useEffect, useState } from 'react'
+import { DemoTodo } from './demo-todo'
 
 const artworks = [
-  { src: "/mucha/zodiac.jpg", alt: "Alphonse Mucha — Zodiac (1896)" },
-  { src: "/mucha/reverie.jpg", alt: "Alphonse Mucha — Reverie (1897)" },
-  { src: "/mucha/job.jpg", alt: "Alphonse Mucha — Job (1896)" },
-  { src: "/mucha/dance.jpg", alt: "Alphonse Mucha — Dance (1898)" },
-  { src: "/mucha/gismonda.jpg", alt: "Alphonse Mucha — Gismonda (1894)" },
-];
+  { src: '/mucha/zodiac.jpg', alt: 'Alphonse Mucha — Zodiac (1896)' },
+  { src: '/mucha/reverie.jpg', alt: 'Alphonse Mucha — Reverie (1897)' },
+  { src: '/mucha/job.jpg', alt: 'Alphonse Mucha — Job (1896)' },
+  { src: '/mucha/dance.jpg', alt: 'Alphonse Mucha — Dance (1898)' },
+  { src: '/mucha/gismonda.jpg', alt: 'Alphonse Mucha — Gismonda (1894)' },
+]
 
-const SWITCH_INTERVAL_MS = 10000;
-const FADE_DURATION = 1.5;
+const SWITCH_INTERVAL_MS = 10000
+const FADE_DURATION = 1.5
 
 export default function Home() {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [copied, setCopied] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [copied, setCopied] = useState(false)
 
   const copyUrl = useCallback(() => {
-    navigator.clipboard.writeText("https://muchajs.dev/llm.txt");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, []);
+    navigator.clipboard.writeText('https://muchajs.dev/llm.txt')
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % artworks.length);
-    }, SWITCH_INTERVAL_MS);
+      setActiveIndex((prev) => (prev + 1) % artworks.length)
+    }, SWITCH_INTERVAL_MS)
 
-    return () => clearInterval(timer);
-  }, []);
+    return () => clearInterval(timer)
+  }, [])
 
   return (
     <div className="flex h-screen overflow-hidden bg-background font-sans">
@@ -45,7 +45,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: FADE_DURATION, ease: "easeInOut" }}
+            transition={{ duration: FADE_DURATION, ease: 'easeInOut' }}
           >
             <Image
               src={artworks[activeIndex].src}
@@ -64,24 +64,14 @@ export default function Home() {
       <div className="relative flex flex-1 flex-col justify-between px-8 py-8 lg:px-16 lg:py-12">
         {/* Mobile background */}
         <div className="pointer-events-none absolute inset-0 lg:hidden">
-          <Image
-            src="/mucha/zodiac.jpg"
-            alt=""
-            fill
-            className="object-cover opacity-[0.06]"
-          />
+          <Image src="/mucha/zodiac.jpg" alt="" fill className="object-cover opacity-[0.06]" />
         </div>
 
         {/* Nav */}
         <nav className="relative z-10 flex w-full max-w-xl items-center justify-between text-sm tracking-wide">
-          <span className="font-serif text-lg font-semibold text-foreground">
-            muchajs
-          </span>
+          <span className="font-serif text-lg font-semibold text-foreground">muchajs</span>
           <div className="flex items-center gap-6">
-            <a
-              href="/docs"
-              className="text-foreground/50 transition-colors hover:text-foreground"
-            >
+            <a href="/docs" className="text-foreground/50 transition-colors hover:text-foreground">
               Docs
             </a>
             <a
@@ -173,5 +163,5 @@ export default function Home() {
         </footer>
       </div>
     </div>
-  );
+  )
 }

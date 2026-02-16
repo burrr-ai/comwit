@@ -1,0 +1,10 @@
+node_modules
+.next
+.turbo
+.cache
+dist
+build
+coverage
+*.lock
+package-lock.json
+yarn.lock

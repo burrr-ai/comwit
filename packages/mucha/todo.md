@@ -16,20 +16,31 @@
 
 9. Undo/Redo should be treated as **Phase-2** after rollback/transaction safety is stable.
 10. Decide policy for undo/redo scope before implementation:
-   - Per-action history (one successful `@Transaction` run = one undo unit), or
-   - Manual explicit `beginUndoable`/`endUndoable` blocks.
+
+- Per-action history (one successful `@Transaction` run = one undo unit), or
+- Manual explicit `beginUndoable`/`endUndoable` blocks.
+
 11. Start with a model-level immutable snapshot strategy for undo/redo:
-   - simpler to verify first,
-   - then optimize to field-level or patch-level entries if needed.
+
+- simpler to verify first,
+- then optimize to field-level or patch-level entries if needed.
+
 12. Define conflict behavior for redo after external mutation:
-   - rebase vs reject (explicit error),
-   - and keep it consistent with existing `TransactionConflict` strategy.
+
+- rebase vs reject (explicit error),
+- and keep it consistent with existing `TransactionConflict` strategy.
+
 13. Decide storage lifetime:
-   - in-memory history per provider instance,
-   - cap size (e.g. 50) and clear on provider unmount/reset.
+
+- in-memory history per provider instance,
+- cap size (e.g. 50) and clear on provider unmount/reset.
+
 14. Define API shape candidate:
-   - `beginTransaction`, `commit`, `rollback`,
-   - `undo()`, `redo()`, and optional `canUndo/canRedo`.
+
+- `beginTransaction`, `commit`, `rollback`,
+- `undo()`, `redo()`, and optional `canUndo/canRedo`.
+
 15. Defer `resource` key strategy:
-   - Keep `key` out of user-facing examples for now.
-   - Later: evaluate whether to generate resource identifiers implicitly (model+field based) and keep explicit key as an optional advanced escape hatch.
+
+- Keep `key` out of user-facing examples for now.
+- Later: evaluate whether to generate resource identifiers implicitly (model+field based) and keep explicit key as an optional advanced escape hatch.

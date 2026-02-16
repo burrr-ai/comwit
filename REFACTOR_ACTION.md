@@ -5,6 +5,7 @@
 ### 현재 문제
 
 1. **`action()`이 identity 함수** — 타입 추론 외에 아무것도 안 함
+
    ```ts
    // packages/mucha/src/core/action.ts
    export function action<A, C>(factory: ActionFactory<A, C>): ActionFactory<A, C> {
@@ -13,6 +14,7 @@
    ```
 
 2. **`create()`가 너무 많은 일을 함** — React hook 역할 + action 인스턴스화 + normalizeActions + state() 생성이 전부 `create()` 안에 있음
+
    ```
    // packages/mucha/src/core/index.ts 의 create() 내부:
    - state() 함수 생성 (63-81행)
@@ -26,6 +28,7 @@
 ### SSR 제약
 
 모듈 스코프에 실제 상태(인스턴스)를 두면 서로 다른 유저 요청 간 상태가 오염됨. 따라서:
+
 - `model()`, `action()`은 **팩토리(설계도)** 역할만 해야 함
 - 실제 인스턴스는 **Provider(요청 단위)** 안에서 생성되어야 함
 - 이 제약은 유지해야 함
@@ -44,6 +47,7 @@
 현재 `create()` 안의 `normalizeActions()`를 `action()` 쪽으로 이동.
 
 `action()`이 factory를 감싸서, 호출 시점(`{ state, context }` 주입 시)에:
+
 1. factory를 호출하여 class 인스턴스를 받고
 2. prototype 메서드를 순회하며 bind 처리 (현재 `normalizeActions` 로직)
 3. lazy interceptor가 있으면 resolve (아래 2번 참고)
@@ -52,6 +56,7 @@
 이렇게 하면 `create()`는 action factory를 호출만 하면 바로 쓸 수 있는 객체를 받고, React hook + 구독 로직에만 집중.
 
 **참고 파일:**
+
 - `packages/mucha/src/core/index.ts` — `normalizeActions` 함수 (20-46행), create 내부 factory 호출 (84-87행)
 - `packages/mucha/src/core/action.ts` — 현재 identity 함수
 
@@ -63,7 +68,7 @@
 // 시그니처
 function createInterceptor(
   factory: (ctx: { state: State; context: any }) => MethodDecorator
-): MethodDecorator  // 반환값은 "lazy decorator" — 마커만 남기고, 나중에 resolve됨
+): MethodDecorator // 반환값은 "lazy decorator" — 마커만 남기고, 나중에 resolve됨
 ```
 
 **사용 예시:**
@@ -93,14 +98,14 @@ export const todoCrudActions = action(({ state }) => {
   class TodoCrudActions {
     private model = state(todoModel)
 
-    @LoginRequired  // ← import해서 바로 사용
+    @LoginRequired // ← import해서 바로 사용
     async create(title: string) {
       this.model.todos.push(await api.createTodo({ title }))
     }
 
     @LoginRequired
     async delete(id: string) {
-      this.model.todos = this.model.todos.filter(t => t.id !== id)
+      this.model.todos = this.model.todos.filter((t) => t.id !== id)
     }
   }
   return new TodoCrudActions()
@@ -117,6 +122,7 @@ export const todoCrudActions = action(({ state }) => {
 4. SSR-safe: 모듈 스코프에는 팩토리만 존재, 실제 상태 접근은 Provider 안에서 발생
 
 **마커 구현 힌트:**
+
 - 메서드에 Symbol 기반 프로퍼티로 interceptor factory 목록을 저장하는 방식
 - 예: `method[LAZY_INTERCEPTORS] = [factory1, factory2]`
 - `createDecorator` (interceptors/utils.ts:13-18행)의 패턴을 참고하되, descriptor.value를 바로 교체하는 대신 마커를 추가
@@ -135,13 +141,13 @@ export const todoCrudActions = action(({ state }) => {
 
 ## 변경 대상 파일
 
-| 파일 | 변경 내용 |
-|---|---|
-| `packages/mucha/src/core/action.ts` | `action()`이 factory를 감싸서 호출 시 normalize + interceptor resolve 수행 |
-| `packages/mucha/src/core/index.ts` | `normalizeActions` 제거, `create()` 내부에서 action factory 호출 후 normalize 로직 삭제 (action()에 위임) |
-| `packages/mucha/src/interceptors/utils.ts` | lazy interceptor 마커용 Symbol, `createInterceptor` 함수 추가 |
-| `packages/mucha/src/interceptors/index.ts` | `createInterceptor` export 추가 |
-| 메인 export (index or barrel) | `createInterceptor` 외부 노출 |
+| 파일                                       | 변경 내용                                                                                                 |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `packages/mucha/src/core/action.ts`        | `action()`이 factory를 감싸서 호출 시 normalize + interceptor resolve 수행                                |
+| `packages/mucha/src/core/index.ts`         | `normalizeActions` 제거, `create()` 내부에서 action factory 호출 후 normalize 로직 삭제 (action()에 위임) |
+| `packages/mucha/src/interceptors/utils.ts` | lazy interceptor 마커용 Symbol, `createInterceptor` 함수 추가                                             |
+| `packages/mucha/src/interceptors/index.ts` | `createInterceptor` export 추가                                                                           |
+| 메인 export (index or barrel)              | `createInterceptor` 외부 노출                                                                             |
 
 ---
 

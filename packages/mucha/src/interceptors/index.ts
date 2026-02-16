@@ -1,10 +1,10 @@
 export {
-    type AnyFunction,
-    type Interceptor,
-    isThenable,
-    composeInterceptors,
-    createDecorator,
-    createInterceptor,
+  type AnyFunction,
+  type Interceptor,
+  isThenable,
+  composeInterceptors,
+  createDecorator,
+  createInterceptor,
 } from './utils'
 
 export { pipe } from '../utils'
