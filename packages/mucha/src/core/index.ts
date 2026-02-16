@@ -80,7 +80,7 @@ function create<S extends object, A>(
                 return bound as BoundResourceState<T>
             }
 
-            const context = registry.state ?? {}
+            const context = registry.context ?? {}
             actionsRef.current = Object.assign(
                 {},
                 ...options.actions.map(factory => normalizeActions(factory({ state, context }) as ActionModule)),

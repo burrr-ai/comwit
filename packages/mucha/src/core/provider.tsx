@@ -17,13 +17,13 @@ export type RegistryDefaults = {
 
 export type MuchaProviderProps = {
     children: React.ReactNode
-    state?: Record<string, unknown>
+    context?: Record<string, unknown>
     defaultOptions?: RegistryDefaults
 }
 
 export type StoreRegistry = {
     get<T extends object>(model: Model<T>): StoreEntry<T>
-    state?: Record<string, unknown>
+    context?: Record<string, unknown>
     queryDefaults?: RegistryDefaults['query']
     queryBinding: QueryBindingRegistry
 }
@@ -36,9 +36,9 @@ export function useStoreRegistry(): StoreRegistry {
     return ctx
 }
 
-export function MuchaProvider({ children, defaultOptions, state: initialState = {} }: MuchaProviderProps) {
+export function MuchaProvider({ children, defaultOptions, context: initialContext = {} }: MuchaProviderProps) {
     const storesRef = useRef<Map<symbol, StoreEntry>>(new Map())
-    const stateRef = useRef<Record<string, unknown>>({})
+    const contextRef = useRef<Record<string, unknown>>({})
     const queryBindingRegistryRef = useRef<QueryBindingRegistry>(createQueryBindingRegistry())
 
     const registryRef = useRef<StoreRegistry>({
@@ -68,18 +68,18 @@ export function MuchaProvider({ children, defaultOptions, state: initialState = 
         },
     })
 
-    for (const key of Object.keys(stateRef.current)) {
-        if (!initialState || !(key in initialState)) {
-            delete stateRef.current[key]
+    for (const key of Object.keys(contextRef.current)) {
+        if (!initialContext || !(key in initialContext)) {
+            delete contextRef.current[key]
         }
     }
 
-    if (initialState) {
-        Object.assign(stateRef.current, initialState)
+    if (initialContext) {
+        Object.assign(contextRef.current, initialContext)
     }
 
     registryRef.current.queryDefaults = defaultOptions?.query
-    registryRef.current.state = stateRef.current
+    registryRef.current.context = contextRef.current
 
     return (
         <StateContext.Provider value={registryRef.current}>

@@ -12,19 +12,72 @@ npm i muchajs
 
 ## Setup
 
-Wrap your app root with `MuchaProvider`.
+For Next.js App Router, keep `MuchaProvider` in a client `Providers` file.
 
 ```tsx
-import { MuchaProvider } from 'muchajs'
+// app/providers.tsx
+'use client'
 
-function App() {
+import { usePathname, useRouter } from 'next/navigation'
+import { keepPreviousData, MuchaProvider } from 'muchajs'
+import { ReactNode } from 'react'
+
+type AppContext = {
+  pathname: string
+  router: {
+    push: (href: string) => void
+  }
+}
+
+export function Providers({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const context: AppContext = {
+    pathname,
+    router,
+  }
+
   return (
-    <MuchaProvider>
-      <YourApp />
+    <MuchaProvider
+      context={context}
+      defaultOptions={{
+        query: {
+          staleTime: 30_000,
+          cacheTime: 120_000,
+          gcTime: 180_000,
+          placeholderData: keepPreviousData,
+        },
+      }}
+    >
+      {children}
     </MuchaProvider>
   )
 }
 ```
+
+Then use it in your root `app/layout.tsx` (server component).
+
+```tsx
+// app/layout.tsx (server component)
+import { Providers } from './providers'
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
+}
+```
+
+This passes app-level dependency objects to action factories via the `context` prop.
 
 ## Folder Structure
 
@@ -226,14 +279,14 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
 
-  const appState: AppActionContext = {
+  const appContext: AppActionContext = {
     router,
     pathname,
   }
 
   return (
     <MuchaProvider
-      state={appState}
+      context={appContext}
       defaultOptions={{
         query: {
           staleTime: 30_000,
