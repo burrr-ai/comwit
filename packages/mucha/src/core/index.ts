@@ -1,6 +1,6 @@
 import { useRef, useSyncExternalStore, useCallback } from 'react'
 import { model, Model } from './model'
-import { action, ActionFactory } from './action'
+import { action, ActionFactory, createActionContext } from './action'
 import { MuchaProvider, useStoreRegistry } from './provider'
 import { silent } from './silent'
 import {
@@ -11,9 +11,6 @@ import {
     Query,
     QueryDefaultOptions,
     QueryQueryOptions,
-    Resource,
-    ResourceDefaultOptions,
-    ResourceQueryOptions,
     query,
 } from './query'
 import { isEqual } from '../utils'
@@ -52,7 +49,7 @@ type AnyFunction = (...args: unknown[]) => unknown
 
 function create<S extends object, A>(
     m: Model<S>,
-    options: { actions: ActionFactory<Partial<A>>[] }
+    options: { actions: ActionFactory<Partial<A>, any>[] }
 ) {
     function useStore(): S & { actions: A }
     function useStore<R>(selector: (state: S & { actions: A }) => R): R
@@ -78,7 +75,11 @@ function create<S extends object, A>(
                 return bound as BoundResourceState<T>
             }
 
-            actionsRef.current = Object.assign({}, ...options.actions.map(factory => normalizeActions(factory({ inject }) as ActionModule))) as A
+            const context = registry.actionContext ?? {}
+            actionsRef.current = Object.assign(
+                {},
+                ...options.actions.map(factory => normalizeActions(factory({ inject, context }) as ActionModule)),
+            ) as A
         }
 
         const prevRef = useRef<unknown>(null)
@@ -108,6 +109,7 @@ function create<S extends object, A>(
 
 export {
     model,
+    createActionContext,
     action,
     create,
     silent,
@@ -117,11 +119,8 @@ export {
 }
 
 export type {
-    Resource,
     Query,
     PlaceholderData,
     QueryDefaultOptions,
     QueryQueryOptions,
-    ResourceDefaultOptions,
-    ResourceQueryOptions,
 }

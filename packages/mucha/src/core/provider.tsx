@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useRef } from 'react'
 import { createProxy, snapshot, subscribe } from './proxy'
-import type { ResourceDefaultOptions } from './query'
+import type { QueryDefaultOptions } from './query'
 import type { Model } from './model'
 import { isSilent } from './silent'
 
@@ -12,16 +12,18 @@ type StoreEntry<T extends object = any> = {
 }
 
 export type RegistryDefaults = {
-    query?: ResourceDefaultOptions
+    query?: QueryDefaultOptions
 }
 
 export type MuchaProviderProps = {
     children: React.ReactNode
+    actionContext?: Record<string, unknown>
     defaultOptions?: RegistryDefaults
 }
 
 export type StoreRegistry = {
     get<T extends object>(model: Model<T>): StoreEntry<T>
+    actionContext?: Record<string, unknown>
     queryDefaults?: RegistryDefaults['query']
 }
 
@@ -33,8 +35,9 @@ export function useStoreRegistry(): StoreRegistry {
     return ctx
 }
 
-export function MuchaProvider({ children, defaultOptions }: MuchaProviderProps) {
+export function MuchaProvider({ children, defaultOptions, actionContext }: MuchaProviderProps) {
     const storesRef = useRef<Map<symbol, StoreEntry>>(new Map())
+    const actionContextRef = useRef<Record<string, unknown>>({})
 
     const registryRef = useRef<StoreRegistry>({
         queryDefaults: defaultOptions?.query,
@@ -61,6 +64,19 @@ export function MuchaProvider({ children, defaultOptions }: MuchaProviderProps) 
             return entry
         },
     })
+
+    for (const key of Object.keys(actionContextRef.current)) {
+        if (!actionContext || !(key in actionContext)) {
+            delete actionContextRef.current[key]
+        }
+    }
+
+    if (actionContext) {
+        Object.assign(actionContextRef.current, actionContext)
+    }
+
+    registryRef.current.queryDefaults = defaultOptions?.query
+    registryRef.current.actionContext = actionContextRef.current
 
     return (
         <StateContext.Provider value={registryRef.current}>

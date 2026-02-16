@@ -1,4 +1,4 @@
-import { Resource } from 'muchajs'
+import { Query } from 'muchajs'
 
 export type DemoUser = {
     id: string
@@ -11,8 +11,8 @@ export type DemoUser = {
 }
 
 export type UserState = {
-    me: Resource<DemoUser>
-    collaborators: Resource<{
+    me: Query<DemoUser>
+    collaborators: Query<{
         data: DemoUser[]
         page: number
         totalPage: number

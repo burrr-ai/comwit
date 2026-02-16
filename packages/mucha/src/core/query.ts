@@ -25,17 +25,21 @@ export function keepPreviousData<TData, TArg = void>(_: TArg, previousData: TDat
 
 const RESOURCE_QUERY_OPTION_KEYS = new Set(['force', 'placeholderData', 'staleTime', 'cacheTime', 'gcTime'])
 
-export type ResourceDefaultOptions = {
+export type QueryDefaultOptions = {
     staleTime?: number
     cacheTime?: number
     gcTime?: number
     placeholderData?: PlaceholderData<unknown, unknown>
 }
 
-export type ResourceQueryOptions<TData, TArg> = ResourceDefaultOptions & {
+type ResourceDefaultOptions = QueryDefaultOptions
+
+export type QueryQueryOptions<TData, TArg> = QueryDefaultOptions & {
     placeholderData?: PlaceholderData<TData, TArg>
     force?: boolean
 }
+
+type ResourceQueryOptions<TData, TArg> = QueryQueryOptions<TData, TArg>
 
 export type ResourceContext<TState> = {
     state: Readonly<TState>
@@ -60,23 +64,13 @@ export type ResourceInfiniteState<TData> = ResourceBaseState<TData> & {
 export type ResourceResult<TData> = ResourceResultShape<ResourceBaseState<TData>, TData>
 
 export type Query<TData, TArg = void> = SingleResourceDescriptor<TData, TArg>
-export type Resource<TData, TArg = void> = Query<TData, TArg>
 
 export namespace Query {
     export type Single<TData, TArg = void> = Query<TData, TArg>
     export type Infinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
 }
 
-export namespace Resource {
-    export type Single<TData, TArg = void> = Query<TData, TArg>
-    export type Infinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
-}
-
-export type ResourceInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
 export type QueryInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
-
-export type QueryDefaultOptions = ResourceDefaultOptions
-export type QueryQueryOptions<TData, TArg> = ResourceQueryOptions<TData, TArg>
 
 type SingleResourceLoadResult<TData> = TData | ResourceResult<TData>
 type InfiniteResourceLoadResult<TData> = ResourceInfiniteState<TData> | ({ data: TData } & Partial<Omit<ResourceInfiniteState<TData>, 'data'>>)

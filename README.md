@@ -198,6 +198,86 @@ export const orderActions = action(({ inject }) => {
 })
 ```
 
+## App Context Injection (권장)
+
+`action` factories should not call React hooks directly. Inject routing/session-level values from app boundary instead.
+
+`action<Actions, Context>()`의 첫 제네릭은 액션 타입, 둘째 제네릭은 `context` 타입을 정교하게 지정합니다.
+제네릭을 안 쓰면 `context`는 기본값 `{}`로 추론됩니다.
+
+```ts
+// app/action-context.ts
+export type AppActionContext = {
+  router: { push(href: string): void }
+  pathname: string
+}
+```
+
+```tsx
+// app/(providers)/providers.tsx (client)
+'use client'
+
+import React from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { keepPreviousData, MuchaProvider } from 'muchajs'
+import type { AppActionContext } from '@/app/action-context'
+
+export function AppProviders({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const actionContext: AppActionContext = {
+    router,
+    pathname,
+  }
+
+  return (
+    <MuchaProvider
+      actionContext={actionContext}
+      defaultOptions={{
+        query: {
+          staleTime: 30_000,
+          cacheTime: 120_000,
+          gcTime: 180_000,
+          placeholderData: keepPreviousData,
+        },
+      }}
+    >
+      {children}
+    </MuchaProvider>
+  )
+}
+```
+
+```ts
+// state/todo/actions/navigation.ts
+import { todoModel } from '../model'
+import { action } from 'muchajs'
+import type { Todo } from '../types'
+import type { AppActionContext } from '@/app/action-context'
+
+type TodoNavigationActions = {
+  openById(id: string): Promise<Todo | null>
+}
+
+export const todoNavigationActions = action<TodoNavigationActions, AppActionContext>(({ inject, context }) => {
+  class TodoNavigationActions {
+    private model = inject(todoModel)
+
+    async openById(id: string) {
+      context.router.push(`${context.pathname}/detail/${id}`)
+      const found = this.model.todos.find(todo => todo.id === id)
+      return found ?? null
+    }
+  }
+
+  return new TodoNavigationActions()
+})
+```
+
+`action`에서 제네릭을 생략하면 `context`는 `{}`로 추론되고, `router` 같은 값은 타입으로 보이지 않습니다.
+필요한 때 `action<Actions, AppActionContext>(...)`로 두 번째 제네릭만 의미 있게 넣으면 됩니다.
+
 ## Interceptors (Decorators)
 
 ```ts
@@ -259,7 +339,7 @@ This pattern is used in the playground `TodoPage` init flow.
 
 ## Data Fetching with Query
 
-`query()` builds a single resource, `query.infinite()` builds an infinite resource.
+`query()` builds a single query, `query.infinite()` builds an infinite query.
 The fetch entrypoint is always `query(arg?, options?)`.
 
 ```ts

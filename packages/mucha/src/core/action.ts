@@ -2,14 +2,25 @@ import type { BoundResourceState } from './query'
 
 export type Inject = <T extends object>(model: Model<T>) => BoundResourceState<T>
 
-export type ActionContext = {
+export type ActionContext<TContext extends object = Record<string, never>> = {
     inject: Inject
+    context: TContext
 }
 
-export type ActionFactory<A> = (ctx: ActionContext) => A
+export type ActionFactory<A, TContext extends object = Record<string, never>> = (ctx: ActionContext<TContext>) => A
 
-export function action<A>(factory: ActionFactory<A>): ActionFactory<A> {
+export function action<A, C extends object = Record<string, never>>(
+    factory: ActionFactory<A, C>,
+): ActionFactory<A, C> {
     return factory
+}
+
+export function createActionContext<TContext extends object>() {
+    return {
+        action<A>(factory: ActionFactory<A, TContext>): ActionFactory<A, TContext> {
+            return factory
+        },
+    } as const
 }
 
 type Model<T extends object> = import('./model').Model<T>
