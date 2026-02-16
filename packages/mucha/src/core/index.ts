@@ -19,12 +19,13 @@ function create<S extends object, A>(
   function useStore<R>(selector: (state: S & { actions: A }) => R): R
   function useStore<R>(selector?: (state: S & { actions: A }) => R) {
     const actions = useAction<A>(options.actions)
+    const withActions = (state: S): S & { actions: A } => ({ ...state, actions })
 
-    if (selector) {
-      return useModel(m, (state: S) => selector({ ...state, actions } as S & { actions: A })) as R
-    }
+    const finalSelector = selector
+      ? (state: S) => selector(withActions(state))
+      : (state: S) => withActions(state) as unknown as R
 
-    return useModel(m, (state: S) => ({ ...state, actions }) as S & { actions: A })
+    return useModel(m, finalSelector)
   }
 
   return useStore
