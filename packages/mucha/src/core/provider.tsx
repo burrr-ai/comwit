@@ -5,7 +5,6 @@ import {
   type QueryDefaultOptions,
 } from './query'
 import type { Model, StoreEntry } from './model'
-import { isSilent } from './silent'
 
 export type RegistryDefaults = {
   query?: QueryDefaultOptions
@@ -48,7 +47,7 @@ export function MuchaProvider({
       const existing = storesRef.current.get(model.key)
       if (existing) return existing as StoreEntry<T>
 
-      const entry = model.createStore({ isSilent })
+      const entry = model.instance()
       storesRef.current.set(model.key, entry)
       return entry as StoreEntry<T>
     },

@@ -3,10 +3,7 @@ import { createProxy, snapshot, subscribe } from './proxy'
 import { isResourceDescriptor, ResourceDescriptorMap } from './query'
 import { useStoreRegistry } from './provider'
 import { isEqual } from '../utils'
-
-export type StoreRuntime = {
-  isSilent: () => boolean
-}
+import { isSilent } from './silent'
 
 export type StoreEntry<T extends object = any> = {
   proxy: T
@@ -17,13 +14,13 @@ export type StoreEntry<T extends object = any> = {
 export function model<T extends object>(initial: T): Model<T> {
   const resources: ResourceDescriptorMap = new Map()
   const template = normalize(initial as Record<string, unknown>, '', resources)
-  const instance = () => structuredClone(template) as T
+  const cloneState = () => structuredClone(template) as T
 
   const m: Model<T> = {
     key: Symbol(),
     resources,
-    createStore(runtime: StoreRuntime): StoreEntry<T> {
-      const p = createProxy(instance())
+    instance(): StoreEntry<T> {
+      const p = createProxy(cloneState())
       return {
         proxy: p,
         getSnapshot() {
@@ -31,7 +28,7 @@ export function model<T extends object>(initial: T): Model<T> {
         },
         subscribe(listener) {
           return subscribe(p, () => {
-            if (!runtime.isSilent()) listener()
+            if (!isSilent()) listener()
           })
         },
       }
@@ -44,7 +41,7 @@ export function model<T extends object>(initial: T): Model<T> {
 export type Model<T extends object> = {
   key: symbol
   resources: ResourceDescriptorMap
-  createStore(runtime: StoreRuntime): StoreEntry<T>
+  instance(): StoreEntry<T>
 }
 
 export function useModel<T extends object>(m: Model<T>): T
