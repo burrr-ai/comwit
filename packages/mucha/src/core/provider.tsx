@@ -52,7 +52,8 @@ export function MuchaProvider({ children, defaultOptions, context = {} }: MuchaP
     },
   })
 
-  registryRef.current.context = context
+  Object.keys(registryRef.current.context).forEach((key) => delete registryRef.current.context[key])
+  Object.assign(registryRef.current.context, context)
 
   registryRef.current.queryDefaults = defaultOptions?.query
 

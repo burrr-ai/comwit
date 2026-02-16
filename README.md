@@ -1,18 +1,18 @@
 # muchajs
 
-State management for Next.js. Built for Claude Code.
+State management for Next.js.
 
-> Give this document to Claude Code. It handles the rest.
+> Give this document to Claude Code. It sets up your project.
 
-## Install
+## 1. Install
 
 ```bash
 npm i muchajs
 ```
 
-## Setup
+## 2. Setup Provider
 
-For Next.js App Router, keep `MuchaProvider` in a client `Providers` file.
+Create `app/providers.tsx` and wrap your root layout.
 
 ```tsx
 // app/providers.tsx
@@ -23,20 +23,12 @@ import { keepPreviousData, MuchaProvider } from 'muchajs'
 import { ReactNode } from 'react'
 
 type AppContext = {
-  pathname: string
-  router: {
-    push: (href: string) => void
-  }
+  router: { push: (href: string) => void }
 }
 
 export function Providers({ children }: { children: ReactNode }) {
-  const pathname = usePathname()
   const router = useRouter()
-
-  const context: AppContext = {
-    pathname,
-    router,
-  }
+  const context: AppContext = { router }
 
   return (
     <MuchaProvider
@@ -56,10 +48,8 @@ export function Providers({ children }: { children: ReactNode }) {
 }
 ```
 
-Then use it in your root `app/layout.tsx` (server component).
-
 ```tsx
-// app/layout.tsx (server component)
+// app/layout.tsx
 import { Providers } from './providers'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -73,455 +63,319 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-This passes app-level dependency objects to action factories via the `context` prop.
+## 3. Create `state/.ai.md`
 
-## Folder Structure
+Create `src/state/.ai.md` (or `state/.ai.md`) with the full content below.
+
+## 4. Update `CLAUDE.md`
+
+Add this to your project's `CLAUDE.md`:
+
+```md
+## State Management
+
+This project uses muchajs. When working on files in state/, always read state/.ai.md first.
+```
+
+---
+
+## state/.ai.md Content
+
+Copy everything between the ````fences into your`state/.ai.md`:
+
+````md
+## Structure
 
 ```
-state/
-  todo/
-    types.ts
-    model.ts
-    actions/
-      crud.ts
-      bulk.ts
-    index.ts
+state/{domain}/
+  ├── types.ts          # State + Actions types
+  ├── model.ts          # model() with initial state
+  ├── actions/
+  │   ├── crud.ts       # CRUD operations
+  │   ├── load.ts       # Data fetching / query triggers
+  │   ├── init.ts       # SSR hydration via silent()
+  │   └── ...           # One file per concern
+  └── index.ts          # create() hook + re-exports
 ```
 
-Each domain gets its own folder with a consistent layout:
+Write order: **types.ts -> model.ts -> actions/\*.ts -> index.ts**
 
-- `types.ts` — State and Actions interfaces. Read this file to understand the entire domain.
-- `model.ts` — Factory function returning the initial state.
-- `actions/` — One file per concern. Each file exports a single action factory.
-- `index.ts` — Assembles model + actions with `create()` and re-exports types.
+## Rules
 
-## Writing Guide
+- Actions define all side effects — UI event handlers just call one action, never compose multiple
+- Actions read state internally via `state(model)` — if you already know it (user, current item), don't take it as a parameter
+- One action = one complete transaction (optimistic + API + rollback)
+- Sync list and detail in one action — update `current` and matching item in `items[]` together
+- Optimistic updates: snapshot -> mutate -> try API -> catch restore + rethrow
+- SSR data: `silent()` init, no useEffect. Client data: `query()`
+- Pass domain objects whole: `<Card post={post} />`
+- Dependencies: pages -> state -> api (one way)
 
-Write files in this order: **types → model → actions → index**.
+## File Templates
 
-### 1. types.ts
-
-Add JSDoc comments to actions — they show up in editor hover tooltips and help LLMs understand the domain from this file alone.
+### types.ts
 
 ```ts
-// state/todo/types.ts
+export type Todo = { id: string; title: string; status: 'pending' | 'done' }
+
 export type TodoState = {
   todos: Todo[]
-  errorMessage: string
+  current: Todo | null
 }
 
 export type TodoActions = {
-  /** Create a new todo and append it to the list */
+  /** Create with optimistic update */
   create(title: string): Promise<void>
-  /** Delete a todo by id */
+  /** Delete with rollback */
   delete(id: string): Promise<void>
-  /** Bulk delete todos. Requires admin permission. */
-  deleteMany(ids: string[]): Promise<void>
+  /** Init from SSR — no re-render */
+  init(todos: Todo[]): void
 }
 ```
 
-### 2. model.ts
+### model.ts
 
 ```ts
-// state/todo/model.ts
 import { model } from 'muchajs'
 import type { TodoState } from './types'
 
-export const todoModel = model<TodoState>({
+export const todo = model<TodoState>({
   todos: [],
-  errorMessage: '',
+  current: null,
 })
 ```
 
-### 3. actions/
-
-Use class-based actions with decorators.
+### actions/\*.ts
 
 ```ts
-// state/todo/actions/crud.ts
-import { action, OnError, OnSuccess, Debounce } from 'muchajs'
+import { action, OnError } from 'muchajs'
 import type { TodoActions } from '../types'
-import { todoModel } from '../model'
+import { todo } from '../model'
 
 export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>(({ state }) => {
-  class TodoCrudActionHandlers {
-    private model = state(todoModel)
+  class TodoCrudActions {
+    private model = state(todo)
 
-    @OnError((error) => {
-      sonner.error(error.message ?? 'An unexpected error occurred')
-      throw error
+    @OnError((error: unknown) => {
+      toast.error(error instanceof Error ? error.message : 'Unexpected error')
     })
     async create(title: string) {
-      const todo = await api.createTodo({ title })
-      this.model.todos.push(todo)
+      /* optimistic update -> try API -> catch rollback */
     }
-
     async delete(id: string) {
-      this.model.todos = this.model.todos.filter((t) => t.id !== id)
-      await api.deleteTodo(id)
+      /* snapshot -> remove -> try API -> catch restore */
     }
   }
-
-  return new TodoCrudActionHandlers()
+  return new TodoCrudActions()
 })
 ```
 
-### 4. index.ts
+### index.ts
 
 ```ts
-// state/todo/index.ts
 import { create } from 'muchajs'
 import type { TodoState, TodoActions } from './types'
-import { todoModel } from './model'
+import { todo } from './model'
 import { todoCrudActions } from './actions/crud'
-import { todoBulkActions } from './actions/bulk'
+import { todoInitActions } from './actions/init'
+// ...
 
-export const useTodo = create<TodoState, TodoActions>(todoModel, {
-  actions: [todoCrudActions, todoBulkActions],
+export const useTodo = create<TodoState, TodoActions>(todo, {
+  actions: [todoCrudActions, todoInitActions /* ... */],
 })
+export type { Todo, TodoState, TodoActions } from './types'
+```
 
-export type { TodoState, TodoActions } from './types'
+### Cross-Domain — Auth Check
+
+Access other domain models inside actions via `state()`. Common use: check user auth before mutations.
+
+```ts
+import { user } from '@/state/user/model'
+
+export const orderCrudActions = action<Pick<OrderActions, 'create'>>(({ state }) => {
+  class OrderCrudActions {
+    private order = state(order)
+    private user = state(user) // read user domain
+
+    async create(productId: string) {
+      if (!this.user.me) return // already known — no param needed
+      this.order.items.push(await api.createOrder({ productId }))
+    }
+  }
+  return new OrderCrudActions()
+})
+```
+
+### Context — Router / App-Level Values
+
+Inject via MuchaProvider context. Second generic: `action<Actions, AppContext>()`.
+
+```ts
+export const todoNavActions = action<NavActions, AppContext>(({ state, context }) => {
+  class NavActions {
+    private model = state(todo)
+    openDetail(id: string) {
+      context.router.push(`/todo/${id}`)
+    }
+  }
+  return new NavActions()
+})
+```
+
+## Data Loading — SSR vs Client Fetch
+
+Two patterns depending on where data comes from:
+
+| Scenario                            | Pattern                  | Loading UI?                                       |
+| ----------------------------------- | ------------------------ | ------------------------------------------------- |
+| Server already has data (SSR props) | Plain state + `silent()` | No — data is ready                                |
+| Client fetches on mount/interaction | `query()` in model       | Yes — `isLoading`, `isError`, `data` auto-managed |
+
+### SSR — Plain State + `silent()`
+
+Server component fetches, client component hydrates via `silent()` — no re-render, no loading state.
+
+```ts
+// state/user/actions/init.ts
+export const userInitActions = action<Pick<UserActions, 'init'>>(({ state }) => {
+  class UserInitActions {
+    private model = state(user)
+    init(me: User | null) {
+      silent(() => {
+        this.model.me = me
+        this.model.isAuthenticated = !!me
+      })
+    }
+  }
+  return new UserInitActions()
+})
+```
+
+```tsx
+// Server component fetches → Client component hydrates
+export default async function Page() {
+  const me = await api.user.me()
+  return <Dashboard initialUser={me} />
+}
+
+function Dashboard({ initialUser }) {
+  const { actions } = useUser((s) => ({ actions: s.actions }))
+  actions.init(initialUser) // silent — no useEffect needed
+  return <Profile />
+}
+```
+
+### Client Fetch — `query()`
+
+When the client fetches data (no SSR), use `query()`. It auto-manages `isLoading` / `isError` / `data`.
+
+```ts
+// types.ts — wrap with Query<T>
+import { Query } from 'muchajs'
+export type FeedState = {
+  posts: Query<Post[]>
+  trending: Query.Infinite<Post[]>
+}
+```
+
+```ts
+// model.ts — define queryFn
+import { model, query } from 'muchajs'
+export const feed = model<FeedState>({
+  posts: query<Post[]>({
+    initialData: [],
+    queryFn: () => api.feed.latest(),
+  }),
+  trending: query.infinite<Post[]>({
+    initialData: [],
+    queryFn: ({ cursor }) => api.feed.trending(cursor),
+  }),
+})
+```
+
+```ts
+// actions — trigger fetch
+async loadPosts() { await this.model.posts.query() }
+async loadMoreTrending() { await this.model.trending.nextFetch() }
+```
+
+Methods: `.query(arg?)` · `.refetch()` · `.set(data)` · `.nextFetch()` · `.previousFetch()`
+Flags: `isLoading` · `isFetching` · `isSuccess` · `isError` · `error`
+Options: `staleTime` · `cacheTime` · `gcTime` · `placeholderData` · `force`
+
+```tsx
+// UI — loading/error states are automatic
+function FeedList() {
+  const { posts } = useFeed((s) => ({ posts: s.posts }))
+
+  if (posts.isLoading) return <Skeleton />
+  if (posts.isError) return <p>Error: {posts.error}</p>
+  return posts.data.map((post) => <Card key={post.id} post={post} />)
+}
 ```
 
 ## Usage
 
 ```tsx
-import { useTodo } from '@/state/todo'
-
-function TodoPage() {
-  const todo = useTodo()
-
-  // read state
-  todo.count
-  todo.todos
-
-  // call actions
-  todo.actions.create({ title: 'New todo' })
-  todo.actions.increment()
-
-  return <div>{todo.count}</div>
-}
-```
-
-### Selectors
-
-Pass a selector to pick only what you need. Selectors are compared with deep equality before React emits updates, so derived objects are safe.
-
-```tsx
-const { count, todos, actions } = useTodo((s) => ({
-  count: s.count,
+const { todos, actions } = useTodo((s) => ({
   todos: s.todos,
   actions: s.actions,
 }))
 ```
 
-## State Other Domain State
+Selectors use deep equality — only re-renders when selected values change.
 
-`state()` lets one domain read/write another domain model in a controlled way.
+## List + Current Pattern
 
-```ts
-// state/order/actions/create.ts
-import { action, silent } from 'muchajs'
-import { orderModel } from '../model'
-import { userModel } from '@/state/user/model'
-
-export const orderActions = action(({ state }) => {
-  class OrderActionHandlers {
-    private order = state(orderModel)
-    private user = state(userModel)
-
-    async create(input: { productId: string }) {
-      if (!this.user.auth) return
-      const created = await api.createOrder(input)
-      this.order.items.push(created)
-    }
-
-    resetToServer(data: Order[]) {
-      silent(() => {
-        this.order.items = data
-      })
-    }
-  }
-
-  return new OrderActionHandlers()
-})
-```
-
-## App Context Injection (권장)
-
-`action` factories should not call React hooks directly. Inject routing/session-level values from app boundary instead.
-
-`action<Actions, Context>()`의 첫 제네릭은 액션 타입, 둘째 제네릭은 `context` 타입을 정교하게 지정합니다.
-제네릭을 안 쓰면 `context`는 기본값 `{}`로 추론됩니다.
+When a domain has both a list view and a detail view, manage `items[]` + `current` together as plain state. Sync both in one action — don't split into separate calls.
 
 ```ts
-// app/action-context.ts
-export type AppActionContext = {
-  router: { push(href: string): void }
-  pathname: string
+async like() {
+  if (!this.model.current) return
+  // Update detail
+  this.model.current.likeCount += 1
+  this.model.current.isLiked = true
+  // Sync list
+  const item = this.model.items.find((p) => p.id === this.model.current!.id)
+  if (item) { item.likeCount += 1; item.isLiked = true }
+  await api.like(this.model.current.id)
 }
 ```
 
-```tsx
-// app/(providers)/providers.tsx (client)
-'use client'
+## Decorators
 
-import React from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import { keepPreviousData, MuchaProvider } from 'muchajs'
-import type { AppActionContext } from '@/app/action-context'
+All from `'muchajs'`. Stack on class methods.
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const router = useRouter()
+| Decorator                       | Purpose                                               |
+| ------------------------------- | ----------------------------------------------------- |
+| `@OnError(fn)`                  | Error handler. Re-throw to propagate.                 |
+| `@OnSuccess(fn)`                | Success callback.                                     |
+| `@Debounce(ms)`                 | Debounce.                                             |
+| `@Throttle(ms)`                 | Throttle.                                             |
+| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>` |
 
-  const appContext: AppActionContext = {
-    router,
-    pathname,
-  }
-
-  return (
-    <MuchaProvider
-      context={appContext}
-      defaultOptions={{
-        query: {
-          staleTime: 30_000,
-          cacheTime: 120_000,
-          gcTime: 180_000,
-          placeholderData: keepPreviousData,
-        },
-      }}
-    >
-      {children}
-    </MuchaProvider>
-  )
-}
-```
+Reusable guard with `createInterceptor` — accesses `state`/`context` at decoration time:
 
 ```ts
-// state/todo/actions/navigation.ts
-import { todoModel } from '../model'
-import { action } from 'muchajs'
-import type { Todo } from '../types'
-import type { AppActionContext } from '@/app/action-context'
+import { createInterceptor, onAuthorized } from 'muchajs'
 
-type TodoNavigationActions = {
-  openById(id: string): Promise<Todo | null>
-}
-
-export const todoNavigationActions = action<TodoNavigationActions, AppActionContext>(
-  ({ state, context }) => {
-    class TodoNavigationActions {
-      private model = state(todoModel)
-
-      async openById(id: string) {
-        context.router.push(`${context.pathname}/detail/${id}`)
-        const found = this.model.todos.find((todo) => todo.id === id)
-        return found ?? null
-      }
-    }
-
-    return new TodoNavigationActions()
-  }
-)
-```
-
-`action`에서 제네릭을 생략하면 `context`는 `{}`로 추론되고, `router` 같은 값은 타입으로 보이지 않습니다.
-필요한 때 `action<Actions, AppActionContext>(...)`로 두 번째 제네릭만 의미 있게 넣으면 됩니다.
-
-## Interceptors (Decorators)
-
-```ts
-import { action, OnError, OnSuccess, Debounce, Transaction } from 'muchajs'
-
-export const todoActions = action(({ state }) => {
-  class TodoActions {
-    private model = state(todoModel)
-
-    @Debounce(300)
-    @OnError((error) => {
-      sonner.error(error.message ?? 'An unexpected error occurred')
-      throw error
-    })
-    @OnSuccess((result) => {
-      console.log('saved', result)
-    })
-    async save(payload: { title: string }) {
-      this.model.todos.push(await api.saveTodo(payload))
-    }
-  }
-
-  return new TodoActions()
-})
-```
-
-### @Authorized (when + onDeny)
-
-Create it inside each action factory so it can reference `state()` / `context`.
-`onDeny` runs when `when` is false and `@Authorized` returns without throwing.
-
-```ts
-import { action, Authorized, OnError, OnSuccess } from 'muchajs'
-import { userModel } from '../user/model'
-import { todoModel } from './model'
-
-export const todoActions = action(({ state, context }) => {
-  const authorize = () => {
-    const user = state(userModel)
-    return Boolean(user.me)
-  }
-
-  const LoginRequired = Authorized({
-    when: () => authorize(),
+const LoginRequired = createInterceptor(({ state, context }) =>
+  onAuthorized({
+    when: () => Boolean(state(user).me),
     onDeny: () => context.router.push('/login'),
   })
-
-  class TodoActions {
-    private model = state(todoModel)
-
-    @Authorized({
-      when: () => authorize(),
-      onDeny: () => context.router.push('/login'),
-    })
-    async create(title: string) {
-      this.model.todos = [{ id: Date.now().toString(), title }]
-    }
-
-    @LoginRequired
-    async delete(id: string) {
-      this.model.todos = this.model.todos.filter((todo) => todo.id !== id)
-    }
-  }
-
-  return new TodoActions()
-})
-```
-
-## SSR / Hydration
-
-Use `silent()` to initialize state from server data without triggering client re-renders.
-
-```ts
-import { action, silent } from 'muchajs'
-
-export const todoInitActions = action(({ state }) => {
-  class TodoInitActions {
-    private model = state(todoModel)
-
-    bootstrap(serverTodos: Todo[]) {
-      silent(() => {
-        this.model.todos = serverTodos
-      })
-    }
-  }
-
-  return new TodoInitActions()
-})
-```
-
-You can call this init action directly when hydrating from server props (instead of wrapping it in `useEffect`).
-
-```tsx
-export function TodoPage({ initialTodos }: { initialTodos: Todo[] }) {
-  const { actions } = useTodo((s) => ({ actions: s.actions }))
-  actions.init(initialTodos)
-}
-```
-
-This pattern is used in the playground `TodoPage` init flow.
-
-## Data Fetching with Query
-
-`query()` builds a single query, `query.infinite()` builds an infinite query.
-The fetch entrypoint is always `query(arg?, options?)`.
-
-```ts
-// state/todo/types.ts
-import { Query } from 'muchajs'
-
-export type Todo = { id: string; title: string; status: 'pending' | 'done' }
-export type TodoPageResult = {
-  data: Todo[]
-  page: number
-  totalPage: number
-  totalCount: number
-}
-
-export type TodoState = {
-  me: Query<Todo>
-  todos: Query<TodoPageResult, { page?: number }>
-  feed: Query.Infinite<Todo[]>
-  filter: { status: 'all' | 'pending' | 'done' }
-}
-```
-
-```ts
-// state/todo/model.ts
-import { keepPreviousData, model, query } from 'muchajs'
-import type { Todo, TodoPageResult, TodoState } from './types'
-
-export const todoModel = model<TodoState>({
-  me: query<Todo>({
-    initialData: { id: '', title: '', status: 'pending' },
-    queryFn: async () => ({ id: 'id-1', title: 'Demo', status: 'pending' }),
-    placeholderData: keepPreviousData,
-  }),
-  todos: query<TodoPageResult, { page?: number }>({
-    initialData: { data: [], page: 1, totalPage: 1, totalCount: 0 },
-    queryFn: ({ page = 1 }) => api.todo.findAll({ page }),
-    placeholderData: keepPreviousData,
-  }),
-  feed: query.infinite<Todo[]>({
-    initialData: [],
-    queryFn: ({ cursor }) => api.todo.findAfter(cursor),
-  }),
-  filter: { status: 'all' },
-})
-```
-
-```ts
-// state/todo/actions/crud.ts
-import { action } from 'muchajs'
-import { todoModel } from './model'
-
-export const todoActions = action(({ state }) => {
-  const todo = state(todoModel)
-
-  return {
-    async reloadMe() {
-      await state.me.query()
-    },
-    async loadNextTodoPage() {
-      const nextPage = Math.min(todo.todos.data.page + 1, todo.todos.data.totalPage)
-      await todo.todos.query({ page: nextPage })
-    },
-    async loadNextFeed() {
-      await todo.feed.nextFetch()
-    },
-  }
-})
-```
-
-### Builder / call options
-
-- `staleTime`: stale threshold (ms)
-- `cacheTime` / `gcTime`: cache lifetime hints
-- `placeholderData`: value or function
-- `force`: ignore stale check
-
-```ts
-await state.todos.query(
-  { page: 3 },
-  {
-    force: true,
-    staleTime: 0,
-    placeholderData: keepPreviousData,
-  }
 )
 ```
 
-`Query` state flags:
+`createInterceptor` receives `({ state, context })` like action factories, so `state()` is properly scoped. Use this when guards need to read domain state or app context.
 
-- `isLoading`, `isFetching`, `isSuccess`, `isError`, `error`
+## Key Concepts
 
-`isLoading` is `true` only while the query has not yet successfully resolved; background refetches keep `isLoading` `false` while `isFetching` is `true`.
+- `model(initial)` — global reactive store
+- `action(factory)` — factory with `state`/`context` access
+- `create(model, { actions })` — model + actions -> React hook
+- `silent(fn)` — suppress re-renders (SSR)
+- `query()` / `query.infinite()` — client fetch in model
+- `state(model)` — mutable proxy in actions
+````
