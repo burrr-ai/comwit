@@ -1,11 +1,10 @@
-import { useRef, useSyncExternalStore, useCallback } from 'react'
-import { model, Model } from './model'
-import { action, ActionFactory, createActionContext } from './action'
-import { MuchaProvider, useStoreRegistry } from './provider'
+import { isEqual } from '../utils'
+import { useRef } from 'react'
+import { model, Model, useModel } from './model'
+import { action, ActionFactory, useAction } from './action'
+import { MuchaProvider } from './provider'
 import { silent } from './silent'
 import {
-  bindResourceState,
-  BoundResourceState,
   keepPreviousData,
   PlaceholderData,
   Query,
@@ -13,7 +12,6 @@ import {
   QueryQueryOptions,
   query,
 } from './query'
-import { isEqual } from '../utils'
 
 function create<S extends object, A>(
   m: Model<S>,
@@ -22,56 +20,19 @@ function create<S extends object, A>(
   function useStore(): S & { actions: A }
   function useStore<R>(selector: (state: S & { actions: A }) => R): R
   function useStore<R>(selector?: (state: S & { actions: A }) => R) {
-    const registry = useStoreRegistry()
-    const store = registry.get(m)
-
-    const actionsRef = useRef<A | null>(null)
-    const resourceStateRef = useRef<Map<symbol, object>>(new Map())
-    if (!actionsRef.current) {
-      const state = <T extends object>(dep: Model<T>): BoundResourceState<T> => {
-        const existing = resourceStateRef.current.get(dep.key)
-        if (existing) return existing as BoundResourceState<T>
-
-        const entry = registry.get(dep)
-        if (!entry.model.resources.size) {
-          resourceStateRef.current.set(dep.key, entry.proxy)
-          return entry.proxy as BoundResourceState<T>
-        }
-
-        const bound = bindResourceState(
-          entry.proxy,
-          entry.model.resources,
-          registry.queryDefaults,
-          registry.queryBinding
-        )
-        resourceStateRef.current.set(dep.key, bound)
-        return bound as BoundResourceState<T>
-      }
-
-      const context = registry.context ?? {}
-      actionsRef.current = Object.assign(
-        {},
-        ...options.actions.map((factory) => factory({ state, context }) as A)
-      ) as A
-    }
+    const state = useModel(m)
+    const actions = useAction<A>(options.actions)
 
     const prevRef = useRef<unknown>(null)
+    const full = { ...state, actions } as S & { actions: A }
+    const next = selector ? selector(full) : full
 
-    const subscribe = useCallback((listener: () => void) => store.subscribe(listener), [store])
-
-    const getSnapshot = () => {
-      const full = { ...store.getSnapshot(), actions: actionsRef.current } as S & { actions: A }
-      const next = selector ? selector(full) : full
-
-      if (prevRef.current !== null && isEqual(prevRef.current, next)) {
-        return prevRef.current as R
-      }
-
-      prevRef.current = next
-      return next as R
+    if (prevRef.current !== null && isEqual(prevRef.current, next)) {
+      return prevRef.current as R
     }
 
-    return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+    prevRef.current = next
+    return next as R
   }
 
   return useStore
@@ -79,8 +40,9 @@ function create<S extends object, A>(
 
 export {
   model,
-  createActionContext,
   action,
+  useAction,
+  useModel,
   create,
   silent,
   MuchaProvider,

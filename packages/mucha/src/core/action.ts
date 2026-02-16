@@ -1,5 +1,8 @@
 import type { BoundResourceState } from './query'
+import { bindResourceState } from './query'
+import { useRef } from 'react'
 import { getLazyInterceptorFactories, type LazyInterceptorFactory } from '../interceptors/utils'
+import { useStoreRegistry } from './provider'
 
 export type State = <T extends object>(model: Model<T>) => BoundResourceState<T>
 
@@ -21,12 +24,42 @@ export function action<A, C extends object = Record<string, never>>(
   }
 }
 
-export function createActionContext<TContext extends object>() {
-  return {
-    action<A>(factory: ActionFactory<A, TContext>): ActionFactory<A, TContext> {
-      return action(factory)
-    },
-  } as const
+export function useAction<A, C extends object = Record<string, never>>(
+  factories: ActionFactory<Partial<A>, C>[]
+): A {
+  const registry = useStoreRegistry()
+  const actionsRef = useRef<A | null>(null)
+  const resourceStateRef = useRef<Map<symbol, object>>(new Map())
+
+  if (!actionsRef.current) {
+    const state = <T extends object>(dep: Model<T>): BoundResourceState<T> => {
+      const existing = resourceStateRef.current.get(dep.key)
+      if (existing) return existing as BoundResourceState<T>
+
+      const entry = registry.get(dep)
+      if (!entry.model.resources.size) {
+        resourceStateRef.current.set(dep.key, entry.proxy)
+        return entry.proxy as BoundResourceState<T>
+      }
+
+      const bound = bindResourceState(
+        entry.proxy,
+        entry.model.resources,
+        registry.queryDefaults,
+        registry.queryBinding
+      )
+      resourceStateRef.current.set(dep.key, bound)
+      return bound as BoundResourceState<T>
+    }
+
+    const context = (registry.context ?? {}) as C
+    actionsRef.current = Object.assign(
+      {},
+      ...factories.map((factory) => factory({ state, context }) as A)
+    ) as A
+  }
+
+  return actionsRef.current
 }
 
 type ActionModule = Record<string, unknown>

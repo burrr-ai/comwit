@@ -1,3 +1,6 @@
+import { useCallback, useRef, useSyncExternalStore } from 'react'
+import { isEqual } from '../utils'
+import { useStoreRegistry } from './provider'
 import { isResourceDescriptor, ResourceDescriptorMap } from './query'
 
 export function model<T extends object>(initial: T): Model<T> {
@@ -11,6 +14,29 @@ export function model<T extends object>(initial: T): Model<T> {
       return structuredClone(template) as T
     },
   }
+}
+
+export function useModel<T extends object>(m: Model<T>): T
+export function useModel<T extends object, R>(m: Model<T>, selector: (state: T) => R): R
+export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T) => R) {
+  const registry = useStoreRegistry()
+  const store = registry.get(m)
+
+  const prevRef = useRef<unknown>(null)
+  const subscribe = useCallback((listener: () => void) => store.subscribe(listener), [store])
+
+  const getSnapshot = () => {
+    const next = selector ? selector(store.getSnapshot()) : store.getSnapshot()
+
+    if (prevRef.current !== null && isEqual(prevRef.current, next)) {
+      return prevRef.current as R
+    }
+
+    prevRef.current = next
+    return next as R
+  }
+
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
 
 export type Model<T extends object> = {
