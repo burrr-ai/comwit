@@ -37,14 +37,14 @@ export function useAction<A, C extends object = Record<string, never>>(
       if (existing) return existing as BoundResourceState<T>
 
       const entry = registry.get(dep)
-      if (!entry.model.resources.size) {
+      if (!dep.resources.size) {
         resourceStateRef.current.set(dep.key, entry.proxy)
         return entry.proxy as BoundResourceState<T>
       }
 
       const bound = bindResourceState(
         entry.proxy,
-        entry.model.resources,
+        dep.resources,
         registry.queryDefaults,
         registry.queryBinding
       )

@@ -1,19 +1,11 @@
 import React, { createContext, useContext, useRef } from 'react'
-import { createProxy, snapshot, subscribe } from './proxy'
 import {
   createQueryBindingRegistry,
   type QueryBindingRegistry,
   type QueryDefaultOptions,
 } from './query'
-import type { Model } from './model'
+import type { Model, StoreEntry } from './model'
 import { isSilent } from './silent'
-
-type StoreEntry<T extends object = any> = {
-  model: Model<T>
-  proxy: T
-  getSnapshot(): T
-  subscribe(listener: () => void): () => void
-}
 
 export type RegistryDefaults = {
   query?: QueryDefaultOptions
@@ -56,23 +48,9 @@ export function MuchaProvider({
       const existing = storesRef.current.get(model.key)
       if (existing) return existing as StoreEntry<T>
 
-      const p = createProxy(model.instance())
-
-      const entry: StoreEntry<T> = {
-        model,
-        proxy: p,
-        getSnapshot() {
-          return snapshot(p) as T
-        },
-        subscribe(listener) {
-          return subscribe(p, () => {
-            if (!isSilent()) listener()
-          })
-        },
-      }
-
+      const entry = model.createStore({ isSilent })
       storesRef.current.set(model.key, entry)
-      return entry
+      return entry as StoreEntry<T>
     },
   })
 

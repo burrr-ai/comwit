@@ -1,32 +1,65 @@
 import { useCallback, useRef, useSyncExternalStore } from 'react'
-import { isEqual } from '../utils'
-import { useStoreRegistry } from './provider'
+import { createProxy, snapshot, subscribe } from './proxy'
 import { isResourceDescriptor, ResourceDescriptorMap } from './query'
+import { useStoreRegistry } from './provider'
+import { isEqual } from '../utils'
+
+export type StoreRuntime = {
+  isSilent: () => boolean
+}
+
+export type StoreEntry<T extends object = any> = {
+  proxy: T
+  getSnapshot(): T
+  subscribe(listener: () => void): () => void
+}
 
 export function model<T extends object>(initial: T): Model<T> {
   const resources: ResourceDescriptorMap = new Map()
   const template = normalize(initial as Record<string, unknown>, '', resources)
+  const instance = () => structuredClone(template) as T
 
-  return {
+  const m: Model<T> = {
     key: Symbol(),
     resources,
-    instance() {
-      return structuredClone(template) as T
+    createStore(runtime: StoreRuntime): StoreEntry<T> {
+      const p = createProxy(instance())
+      return {
+        proxy: p,
+        getSnapshot() {
+          return snapshot(p) as T
+        },
+        subscribe(listener) {
+          return subscribe(p, () => {
+            if (!runtime.isSilent()) listener()
+          })
+        },
+      }
     },
   }
+
+  return m
+}
+
+export type Model<T extends object> = {
+  key: symbol
+  resources: ResourceDescriptorMap
+  createStore(runtime: StoreRuntime): StoreEntry<T>
 }
 
 export function useModel<T extends object>(m: Model<T>): T
 export function useModel<T extends object, R>(m: Model<T>, selector: (state: T) => R): R
-export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T) => R) {
+export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T) => R): T | R {
   const registry = useStoreRegistry()
   const store = registry.get(m)
 
   const prevRef = useRef<unknown>(null)
+
   const subscribe = useCallback((listener: () => void) => store.subscribe(listener), [store])
 
   const getSnapshot = () => {
-    const next = selector ? selector(store.getSnapshot()) : store.getSnapshot()
+    const raw = store.getSnapshot()
+    const next = selector ? selector(raw) : raw
 
     if (prevRef.current !== null && isEqual(prevRef.current, next)) {
       return prevRef.current as R
@@ -37,12 +70,6 @@ export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T)
   }
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
-}
-
-export type Model<T extends object> = {
-  key: symbol
-  resources: ResourceDescriptorMap
-  instance(): T
 }
 
 function normalize(value: unknown, path: string, resources: ResourceDescriptorMap): unknown {
