@@ -357,6 +357,48 @@ export const todoActions = action(({ state }) => {
 })
 ```
 
+### @Authorized (when + onDeny)
+
+Create it inside each action factory so it can reference `state()` / `context`.
+`onDeny` runs when `when` is false and `@Authorized` returns without throwing.
+
+```ts
+import { action, Authorized, OnError, OnSuccess } from 'muchajs'
+import { userModel } from '../user/model'
+import { todoModel } from './model'
+
+export const todoActions = action(({ state, context }) => {
+  const authorize = () => {
+    const user = state(userModel)
+    return Boolean(user.me)
+  }
+
+  const LoginRequired = Authorized({
+    when: () => authorize(),
+    onDeny: () => context.router.push('/login'),
+  })
+
+  class TodoActions {
+    private model = state(todoModel)
+
+    @Authorized({
+      when: () => authorize(),
+      onDeny: () => context.router.push('/login'),
+    })
+    async create(title: string) {
+      this.model.todos = [{ id: Date.now().toString(), title }]
+    }
+
+    @LoginRequired
+    async delete(id: string) {
+      this.model.todos = this.model.todos.filter((todo) => todo.id !== id)
+    }
+  }
+
+  return new TodoActions()
+})
+```
+
 ## SSR / Hydration
 
 Use `silent()` to initialize state from server data without triggering client re-renders.

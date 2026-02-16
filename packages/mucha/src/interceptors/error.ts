@@ -5,7 +5,10 @@ export function onError<T extends AnyFunction>(handler: (error: unknown) => void
         try {
             const result = (next as AnyFunction).apply(this, args)
             if (!isThenable(result)) return result
-            return Promise.resolve(result).catch(error => handler(error))
+            return Promise.resolve(result).catch(error => {
+                handler(error)
+                throw error
+            })
         } catch (error) {
             handler(error)
             throw error
