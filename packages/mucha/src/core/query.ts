@@ -2,10 +2,6 @@ import { snapshot } from './proxy'
 
 const RESOURCE_BRAND = Symbol('muchajs-resource')
 
-const BOUND_RESOURCE_VALUE = new WeakMap<object, Record<string, unknown>>()
-const BOUND_PATH_PROXY = new WeakMap<object, Map<string, object>>()
-const BOUND_RESOURCE_RUNTIME = new WeakMap<object, ResourceRuntimeState>()
-
 type AsyncResult<T> = T | Promise<T>
 
 type ResourceKind = 'single' | 'infinite'
@@ -158,6 +154,20 @@ type QueryCacheEntry = {
     cursorHistory: Array<string | null>
     gcTime?: number
     state: ResourceDataLike
+}
+
+export type QueryBindingRegistry = {
+    boundResourceValue: WeakMap<object, Record<string, unknown>>
+    boundPathProxy: WeakMap<object, Map<string, object>>
+    boundResourceRuntime: WeakMap<object, ResourceRuntimeState>
+}
+
+export function createQueryBindingRegistry(): QueryBindingRegistry {
+    return {
+        boundResourceValue: new WeakMap(),
+        boundPathProxy: new WeakMap(),
+        boundResourceRuntime: new WeakMap(),
+    }
 }
 
 type ResourceRuntimeState = {
@@ -450,14 +460,20 @@ function normalizeDescriptorOptions<TData, TArg>(
     return merged
 }
 
-function createResourceAccessor(state: ResourceDataLike, descriptor: AnyResourceDescriptor, path: string, defaults?: ResourceDefaultOptions): ResourceDataLike {
-    if (BOUND_RESOURCE_VALUE.has(state)) {
-        return BOUND_RESOURCE_VALUE.get(state) as ResourceDataLike
+function createResourceAccessor(
+    state: ResourceDataLike,
+    descriptor: AnyResourceDescriptor,
+    path: string,
+    defaults: QueryDefaultOptions | undefined,
+    registry: QueryBindingRegistry,
+): ResourceDataLike {
+    if (registry.boundResourceValue.has(state)) {
+        return registry.boundResourceValue.get(state) as ResourceDataLike
     }
 
-    const runtime = BOUND_RESOURCE_RUNTIME.get(state) ?? cloneRuntime(path)
+    const runtime = registry.boundResourceRuntime.get(state) ?? cloneRuntime(path)
     runtime.path = path
-    BOUND_RESOURCE_RUNTIME.set(state, runtime)
+    registry.boundResourceRuntime.set(state, runtime)
 
     const getActiveEntry = () => {
         if (!runtime.activeKey) return
@@ -659,14 +675,14 @@ function createResourceAccessor(state: ResourceDataLike, descriptor: AnyResource
         },
     })
 
-    BOUND_RESOURCE_VALUE.set(state, bound)
+    registry.boundResourceValue.set(state, bound)
     return bound
 }
 
-function bindPath(state: object, descriptors: ResourceDescriptorMap, path = '', defaults?: ResourceDefaultOptions): any {
+function bindPath(state: object, descriptors: ResourceDescriptorMap, path = '', defaults: QueryDefaultOptions | undefined, registry: QueryBindingRegistry): any {
     if (!descriptors.size) return state
 
-    const cached = BOUND_PATH_PROXY.get(state)
+    const cached = registry.boundPathProxy.get(state)
     if (cached?.has(path)) {
         return cached.get(path) as object
     }
@@ -686,25 +702,30 @@ function bindPath(state: object, descriptors: ResourceDescriptorMap, path = '', 
             const next = Reflect.get(target, prop, receiver)
 
             if (descriptor && isRecord(next)) {
-                return createResourceAccessor(next as ResourceDataLike, descriptor, nextPath, defaults)
+                return createResourceAccessor(next as ResourceDataLike, descriptor, nextPath, defaults, registry)
             }
 
             if (isRecord(next) && hasNestedPath(descriptors, nextPath)) {
-                return bindPath(next, descriptors, nextPath, defaults)
+                return bindPath(next, descriptors, nextPath, defaults, registry)
             }
 
             return next
         },
     })
 
-    const map = BOUND_PATH_PROXY.get(state) ?? new Map<string, object>()
+    const map = registry.boundPathProxy.get(state) ?? new Map<string, object>()
     map.set(path, proxy)
-    BOUND_PATH_PROXY.set(state, map)
+    registry.boundPathProxy.set(state, map)
 
     return proxy
 }
 
-export function bindResourceState<T extends object>(modelState: T, resourceDescriptors: ResourceDescriptorMap, defaults?: ResourceDefaultOptions): T {
+export function bindResourceState<T extends object>(
+    modelState: T,
+    resourceDescriptors: ResourceDescriptorMap,
+    defaults?: QueryDefaultOptions,
+    registry: QueryBindingRegistry = createQueryBindingRegistry(),
+): T {
     if (!resourceDescriptors.size) return modelState
-    return bindPath(modelState, resourceDescriptors, '', defaults) as T
+    return bindPath(modelState, resourceDescriptors, '', defaults, registry) as T
 }

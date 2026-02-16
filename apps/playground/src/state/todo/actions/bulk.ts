@@ -14,8 +14,8 @@ function throwAfterToast(context: string, error: unknown) {
     throw error
 }
 
-export const todoBulkActions = action<Pick<TodoActions, 'clearCompleted' | 'setFilter'>>(({ inject }) => {
-    const model = inject<TodoState>(todoModel)
+export const todoBulkActions = action<Pick<TodoActions, 'clearCompleted' | 'setFilter'>>(({ state }) => {
+    const model = state<TodoState>(todoModel)
 
     class TodoBulkActions {
         constructor(private readonly model: TodoState) {}

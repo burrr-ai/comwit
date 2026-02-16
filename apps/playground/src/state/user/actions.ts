@@ -2,8 +2,8 @@ import { action } from 'muchajs'
 import type { UserActions } from './types'
 import { userModel } from './model'
 
-export const userActions = action<UserActions>(({ inject }) => {
-    const model = inject(userModel)
+export const userActions = action<UserActions>(({ state }) => {
+    const model = state(userModel)
 
     return {
         async bootstrap() {

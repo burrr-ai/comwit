@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { Toaster } from "sonner";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -20,13 +19,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistMono.variable} antialiased`}>
-        <Providers>
-          <Toaster />
-          {children}
-        </Providers>
-      </body>
-    </html>
-  );
+        <html lang="en">
+          <body className={`${geistMono.variable} antialiased`}>
+            <Providers>
+              {children}
+            </Providers>
+          </body>
+        </html>
+      );
 }

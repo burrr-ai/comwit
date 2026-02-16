@@ -94,9 +94,9 @@ import { action, OnError, OnSuccess, Debounce } from 'muchajs'
 import type { TodoActions } from '../types'
 import { todoModel } from '../model'
 
-export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>(({ inject }) => {
+export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete'>>(({ state }) => {
   class TodoCrudActionHandlers {
-    private model = inject(todoModel)
+  private model = state(todoModel)
 
     @OnError((error) => {
       sonner.error(error.message ?? 'An unexpected error occurred')
@@ -166,9 +166,9 @@ const { count, todos, actions } = useTodo(s => ({
 }))
 ```
 
-## Inject Other Domain State
+## State Other Domain State
 
-`inject()` lets one domain read/write another domain model in a controlled way.
+`state()` lets one domain read/write another domain model in a controlled way.
 
 ```ts
 // state/order/actions/create.ts
@@ -176,10 +176,10 @@ import { action, silent } from 'muchajs'
 import { orderModel } from '../model'
 import { userModel } from '@/state/user/model'
 
-export const orderActions = action(({ inject }) => {
+export const orderActions = action(({ state }) => {
   class OrderActionHandlers {
-    private order = inject(orderModel)
-    private user = inject(userModel)
+    private order = state(orderModel)
+    private user = state(userModel)
 
     async create(input: { productId: string }) {
       if (!this.user.auth) return
@@ -226,14 +226,14 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
 
-  const actionContext: AppActionContext = {
+  const appState: AppActionContext = {
     router,
     pathname,
   }
 
   return (
     <MuchaProvider
-      actionContext={actionContext}
+      state={appState}
       defaultOptions={{
         query: {
           staleTime: 30_000,
@@ -260,9 +260,9 @@ type TodoNavigationActions = {
   openById(id: string): Promise<Todo | null>
 }
 
-export const todoNavigationActions = action<TodoNavigationActions, AppActionContext>(({ inject, context }) => {
+export const todoNavigationActions = action<TodoNavigationActions, AppActionContext>(({ state, context }) => {
   class TodoNavigationActions {
-    private model = inject(todoModel)
+    private model = state(todoModel)
 
     async openById(id: string) {
       context.router.push(`${context.pathname}/detail/${id}`)
@@ -283,9 +283,9 @@ export const todoNavigationActions = action<TodoNavigationActions, AppActionCont
 ```ts
 import { action, OnError, OnSuccess, Debounce, Transaction } from 'muchajs'
 
-export const todoActions = action(({ inject }) => {
+export const todoActions = action(({ state }) => {
   class TodoActions {
-    private model = inject(todoModel)
+    private model = state(todoModel)
 
     @Debounce(300)
     @OnError((error) => {
@@ -311,9 +311,9 @@ Use `silent()` to initialize state from server data without triggering client re
 ```ts
 import { action, silent } from 'muchajs'
 
-export const todoInitActions = action(({ inject }) => {
+export const todoInitActions = action(({ state }) => {
   class TodoInitActions {
-    private model = inject(todoModel)
+    private model = state(todoModel)
 
     bootstrap(serverTodos: Todo[]) {
       silent(() => {
@@ -391,19 +391,19 @@ export const todoModel = model<TodoState>({
 import { action } from 'muchajs'
 import { todoModel } from './model'
 
-export const todoActions = action(({ inject }) => {
-  const state = inject(todoModel)
+export const todoActions = action(({ state }) => {
+  const todo = state(todoModel)
 
   return {
     async reloadMe() {
       await state.me.query()
     },
     async loadNextTodoPage() {
-      const nextPage = Math.min(state.todos.data.page + 1, state.todos.data.totalPage)
-      await state.todos.query({ page: nextPage })
+      const nextPage = Math.min(todo.todos.data.page + 1, todo.todos.data.totalPage)
+      await todo.todos.query({ page: nextPage })
     },
     async loadNextFeed() {
-      await state.feed.nextFetch()
+      await todo.feed.nextFetch()
     },
   }
 })

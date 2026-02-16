@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useRef } from 'react'
 import { createProxy, snapshot, subscribe } from './proxy'
-import type { QueryDefaultOptions } from './query'
+import { createQueryBindingRegistry, type QueryBindingRegistry, type QueryDefaultOptions } from './query'
 import type { Model } from './model'
 import { isSilent } from './silent'
 
@@ -17,14 +17,15 @@ export type RegistryDefaults = {
 
 export type MuchaProviderProps = {
     children: React.ReactNode
-    actionContext?: Record<string, unknown>
+    state?: Record<string, unknown>
     defaultOptions?: RegistryDefaults
 }
 
 export type StoreRegistry = {
     get<T extends object>(model: Model<T>): StoreEntry<T>
-    actionContext?: Record<string, unknown>
+    state?: Record<string, unknown>
     queryDefaults?: RegistryDefaults['query']
+    queryBinding: QueryBindingRegistry
 }
 
 const StateContext = createContext<StoreRegistry | null>(null)
@@ -35,12 +36,14 @@ export function useStoreRegistry(): StoreRegistry {
     return ctx
 }
 
-export function MuchaProvider({ children, defaultOptions, actionContext }: MuchaProviderProps) {
+export function MuchaProvider({ children, defaultOptions, state: initialState = {} }: MuchaProviderProps) {
     const storesRef = useRef<Map<symbol, StoreEntry>>(new Map())
-    const actionContextRef = useRef<Record<string, unknown>>({})
+    const stateRef = useRef<Record<string, unknown>>({})
+    const queryBindingRegistryRef = useRef<QueryBindingRegistry>(createQueryBindingRegistry())
 
     const registryRef = useRef<StoreRegistry>({
         queryDefaults: defaultOptions?.query,
+        queryBinding: queryBindingRegistryRef.current,
         get<T extends object>(model: Model<T>): StoreEntry<T> {
             const existing = storesRef.current.get(model.key)
             if (existing) return existing as StoreEntry<T>
@@ -65,18 +68,18 @@ export function MuchaProvider({ children, defaultOptions, actionContext }: Mucha
         },
     })
 
-    for (const key of Object.keys(actionContextRef.current)) {
-        if (!actionContext || !(key in actionContext)) {
-            delete actionContextRef.current[key]
+    for (const key of Object.keys(stateRef.current)) {
+        if (!initialState || !(key in initialState)) {
+            delete stateRef.current[key]
         }
     }
 
-    if (actionContext) {
-        Object.assign(actionContextRef.current, actionContext)
+    if (initialState) {
+        Object.assign(stateRef.current, initialState)
     }
 
     registryRef.current.queryDefaults = defaultOptions?.query
-    registryRef.current.actionContext = actionContextRef.current
+    registryRef.current.state = stateRef.current
 
     return (
         <StateContext.Provider value={registryRef.current}>

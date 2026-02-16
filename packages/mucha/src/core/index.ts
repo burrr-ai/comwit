@@ -60,7 +60,7 @@ function create<S extends object, A>(
         const actionsRef = useRef<A | null>(null)
         const resourceStateRef = useRef<Map<symbol, object>>(new Map())
         if (!actionsRef.current) {
-            const inject = <T extends object>(dep: Model<T>): BoundResourceState<T> => {
+            const state = <T extends object>(dep: Model<T>): BoundResourceState<T> => {
                 const existing = resourceStateRef.current.get(dep.key)
                 if (existing) return existing as BoundResourceState<T>
 
@@ -70,15 +70,20 @@ function create<S extends object, A>(
                     return entry.proxy as BoundResourceState<T>
                 }
 
-                const bound = bindResourceState(entry.proxy, entry.model.resources, registry.queryDefaults)
+                const bound = bindResourceState(
+                    entry.proxy,
+                    entry.model.resources,
+                    registry.queryDefaults,
+                    registry.queryBinding,
+                )
                 resourceStateRef.current.set(dep.key, bound)
                 return bound as BoundResourceState<T>
             }
 
-            const context = registry.actionContext ?? {}
+            const context = registry.state ?? {}
             actionsRef.current = Object.assign(
                 {},
-                ...options.actions.map(factory => normalizeActions(factory({ inject, context }) as ActionModule)),
+                ...options.actions.map(factory => normalizeActions(factory({ state, context }) as ActionModule)),
             ) as A
         }
 

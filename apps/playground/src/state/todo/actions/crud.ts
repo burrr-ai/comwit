@@ -18,8 +18,8 @@ function nextOptimisticId() {
     return `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete' | 'updateStatus' | 'updatePriority'>>(({ inject }) => {
-    const model = inject<TodoState>(todoModel)
+export const todoCrudActions = action<Pick<TodoActions, 'create' | 'delete' | 'updateStatus' | 'updatePriority'>>(({ state }) => {
+    const model = state<TodoState>(todoModel)
 
     class TodoCrudActions {
         constructor(private readonly model: TodoState) {}

@@ -1,9 +1,9 @@
 import type { BoundResourceState } from './query'
 
-export type Inject = <T extends object>(model: Model<T>) => BoundResourceState<T>
+export type State = <T extends object>(model: Model<T>) => BoundResourceState<T>
 
 export type ActionContext<TContext extends object = Record<string, never>> = {
-    inject: Inject
+    state: State
     context: TContext
 }
 
