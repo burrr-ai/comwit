@@ -31,40 +31,30 @@ export function useStoreRegistry(): StoreRegistry {
   return ctx
 }
 
-export function MuchaProvider({
-  children,
-  defaultOptions,
-  context: initialContext = {},
-}: MuchaProviderProps) {
-  const storesRef = useRef<Map<symbol, StoreEntry>>(new Map())
-  const contextRef = useRef<Record<string, unknown>>({})
-  const queryBindingRegistryRef = useRef<QueryBindingRegistry>(createQueryBindingRegistry())
-
-  const registryRef = useRef<StoreRegistry>({
+export function MuchaProvider({ children, defaultOptions, context = {} }: MuchaProviderProps) {
+  const registryRef = useRef<
+    StoreRegistry & {
+      stores: Map<symbol, StoreEntry>
+      context: Record<string, unknown>
+    }
+  >({
     queryDefaults: defaultOptions?.query,
-    queryBinding: queryBindingRegistryRef.current,
+    context: {},
+    stores: new Map(),
+    queryBinding: createQueryBindingRegistry(),
     get<T extends object>(model: Model<T>): StoreEntry<T> {
-      const existing = storesRef.current.get(model.key)
+      const existing = registryRef.current.stores.get(model.key)
       if (existing) return existing as StoreEntry<T>
 
       const entry = model.instance()
-      storesRef.current.set(model.key, entry)
+      registryRef.current.stores.set(model.key, entry)
       return entry as StoreEntry<T>
     },
   })
 
-  for (const key of Object.keys(contextRef.current)) {
-    if (!initialContext || !(key in initialContext)) {
-      delete contextRef.current[key]
-    }
-  }
-
-  if (initialContext) {
-    Object.assign(contextRef.current, initialContext)
-  }
+  registryRef.current.context = context
 
   registryRef.current.queryDefaults = defaultOptions?.query
-  registryRef.current.context = contextRef.current
 
   return <StateContext.Provider value={registryRef.current}>{children}</StateContext.Provider>
 }
