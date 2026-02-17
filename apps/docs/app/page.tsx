@@ -29,7 +29,10 @@ export default function Home() {
       </div>
       {/* Nav */}
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
-        <span className="text-base font-semibold tracking-tight text-foreground">comwit</span>
+        <a href="/" className="flex items-center gap-2">
+          <img src="/logo.svg" alt="comwit" width={28} height={28} />
+          <span className="text-base font-semibold tracking-tight text-foreground">comwit</span>
+        </a>
         <div className="flex items-center gap-6 text-sm">
           <a href="/docs" className="text-muted transition-colors hover:text-foreground">
             Docs

@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL('https://comwit.io'),
   icons: {
-    icon: '/favicon.ico',
+    icon: '/logo.svg',
   },
 }
 

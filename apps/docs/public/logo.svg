@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <defs>
+    <clipPath id="circle-clip">
+      <circle cx="20" cy="20" r="19"/>
+    </clipPath>
+  </defs>
+  <!-- White background circle with border -->
+  <circle cx="20" cy="20" r="19" fill="#ffffff" stroke="#0a0a0a" stroke-width="1.5"/>
+  <!-- Dot pattern -->
+  <g clip-path="url(#circle-clip)" fill="#0a0a0a" opacity="0.12">
+    <circle cx="6" cy="6" r="1"/><circle cx="14" cy="6" r="1"/><circle cx="22" cy="6" r="1"/><circle cx="30" cy="6" r="1"/><circle cx="38" cy="6" r="1"/>
+    <circle cx="2" cy="10" r="1"/><circle cx="10" cy="10" r="1"/><circle cx="18" cy="10" r="1"/><circle cx="26" cy="10" r="1"/><circle cx="34" cy="10" r="1"/>
+    <circle cx="6" cy="14" r="1"/><circle cx="14" cy="14" r="1"/><circle cx="22" cy="14" r="1"/><circle cx="30" cy="14" r="1"/><circle cx="38" cy="14" r="1"/>
+    <circle cx="2" cy="18" r="1"/><circle cx="10" cy="18" r="1"/><circle cx="18" cy="18" r="1"/><circle cx="26" cy="18" r="1"/><circle cx="34" cy="18" r="1"/>
+    <circle cx="6" cy="22" r="1"/><circle cx="14" cy="22" r="1"/><circle cx="22" cy="22" r="1"/><circle cx="30" cy="22" r="1"/><circle cx="38" cy="22" r="1"/>
+    <circle cx="2" cy="26" r="1"/><circle cx="10" cy="26" r="1"/><circle cx="18" cy="26" r="1"/><circle cx="26" cy="26" r="1"/><circle cx="34" cy="26" r="1"/>
+    <circle cx="6" cy="30" r="1"/><circle cx="14" cy="30" r="1"/><circle cx="22" cy="30" r="1"/><circle cx="30" cy="30" r="1"/><circle cx="38" cy="30" r="1"/>
+    <circle cx="2" cy="34" r="1"/><circle cx="10" cy="34" r="1"/><circle cx="18" cy="34" r="1"/><circle cx="26" cy="34" r="1"/><circle cx="34" cy="34" r="1"/>
+  </g>
+  <!-- Letter C -->
+  <text x="20" y="27" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" fill="#0a0a0a">C</text>
+</svg>

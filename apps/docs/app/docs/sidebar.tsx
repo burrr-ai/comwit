@@ -15,8 +15,9 @@ export function DocsSidebar({
 
   const navContent = (
     <>
-      <Link href="/" className="block text-base font-semibold tracking-tight text-foreground mb-6">
-        comwit
+      <Link href="/" className="flex items-center gap-2 mb-6">
+        <img src="/logo.svg" alt="comwit" width={24} height={24} />
+        <span className="text-base font-semibold tracking-tight text-foreground">comwit</span>
       </Link>
 
       <div className="w-full mb-6 border-t border-border" />
