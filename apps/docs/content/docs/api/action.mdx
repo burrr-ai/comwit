@@ -1,0 +1,99 @@
+---
+title: 'action()'
+group: 'API'
+slug: 'api/action'
+order: 4
+---
+
+# action()
+
+Factory for creating actions with access to state and context.
+
+```ts
+import { action } from 'comwit'
+```
+
+## Usage
+
+```ts
+import { action, silent, OnError, OnSuccess } from 'comwit'
+import { post } from './model'
+import { user } from '@/state/user/model'
+import type { PostActions, AppContext } from './types'
+
+export const postActions = action<Pick<PostActions, 'init' | 'loadPosts' | 'create'>, AppContext>(
+  ({ state, context }) => {
+    class PostActions {
+      private model = state(post)
+      private user = state(user) // cross-domain read
+
+      init(data: Post) {
+        silent(() => {
+          this.model.current = data
+        })
+      }
+
+      async loadPosts() {
+        await this.model.posts.query()
+      }
+
+      @OnSuccess(() => context.router.push('/posts'))
+      @OnError((e) => toast.error(e instanceof Error ? e.message : 'Failed'))
+      async create(title: string) {
+        if (!this.user.me) return
+        const created = await api.post.create({ userId: this.user.me.id, title })
+        this.model.posts.data.push(created)
+      }
+    }
+    return new PostActions()
+  }
+)
+```
+
+## Factory parameters
+
+The factory receives `{ state, context }`:
+
+- **state(model)** — returns a mutable proxy to a model's state. Call it for each model you need.
+- **context** — the shared context from `MuchaProvider` (router, auth, etc.)
+
+## Class pattern
+
+Use a class inside the factory. This gives you:
+
+- Private fields for model references (`this.model`, `this.user`)
+- [Decorator](/docs/decorators) support (`@OnError`, `@OnSuccess`, `@Debounce`, etc.)
+- Clean method signatures that match your `Actions` type
+
+## Cross-domain state
+
+Actions can read and write any model via `state()`:
+
+```ts
+const postActions = action<Pick<PostActions, 'create'>, AppContext>(({ state }) => {
+  class Actions {
+    private post = state(post)
+    private user = state(user) // different domain
+
+    async create(title: string) {
+      if (!this.user.me) return
+      // ...
+    }
+  }
+  return new Actions()
+})
+```
+
+## Splitting actions
+
+Split actions across files by concern. Each file exports one action factory with `Pick<Actions, ...>`:
+
+```ts
+// actions/crud.ts
+export const crudActions = action<Pick<PostActions, 'create' | 'update' | 'delete'>, AppContext>(...)
+
+// actions/load.ts
+export const loadActions = action<Pick<PostActions, 'loadPosts'>, AppContext>(...)
+```
+
+Combine them in [`create()`](/docs/api/create).

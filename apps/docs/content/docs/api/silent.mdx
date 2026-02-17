@@ -1,0 +1,56 @@
+---
+title: 'silent()'
+group: 'API'
+slug: 'api/silent'
+order: 7
+---
+
+# silent()
+
+Suppresses re-renders during state mutations. Used for SSR hydration.
+
+```ts
+import { silent } from 'comwit'
+```
+
+## Why
+
+When a server component passes initial data to a client component, you need to set that data into the store without triggering a re-render. `silent()` does exactly that.
+
+## Usage in actions
+
+```ts
+import { action, silent } from 'comwit'
+
+export const postActions = action<Pick<PostActions, 'init'>>(({ state }) => {
+  class Actions {
+    private model = state(post)
+
+    init(data: Post) {
+      silent(() => {
+        this.model.current = data
+      })
+    }
+  }
+  return new Actions()
+})
+```
+
+## Usage in components
+
+Call `init` directly in the component body — not inside `useEffect`. Since `silent()` prevents re-renders, this is safe:
+
+```tsx
+function PostDetail({ initialPost }: { initialPost: Post }) {
+  const { actions } = usePost((s) => ({ actions: s.actions }))
+  actions.init(initialPost)
+
+  return <Article />
+}
+```
+
+## How it works
+
+`silent(fn)` sets an internal flag that tells the proxy system to skip notifying subscribers. Mutations still happen — they just don't trigger React re-renders. The flag is reset after the callback completes.
+
+This is the bridge between Next.js server components and comwit's client-side state.

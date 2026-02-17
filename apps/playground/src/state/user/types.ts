@@ -1,4 +1,4 @@
-import { Query } from 'muchajs'
+import { Query } from 'comwit'
 
 export type DemoUser = {
   id: string

@@ -1,0 +1,147 @@
+---
+title: 'query()'
+group: 'API'
+slug: 'api/query'
+order: 6
+---
+
+# query()
+
+Declares a client-side data fetching field inside a model.
+
+```ts
+import { query } from 'comwit'
+```
+
+## Basic usage
+
+```ts
+import { model, query } from 'comwit'
+
+export const post = model<PostState>({
+  posts: query<Post[]>({
+    initialData: [],
+    queryFn: () => api.post.findAll(),
+  }),
+})
+```
+
+The type in your state should be `Query<Data>` (or `Query<Data, Arg>` if the queryFn takes an argument):
+
+```ts
+import { Query } from 'comwit'
+
+export type PostState = {
+  posts: Query<Post[]>
+  comments: Query<Comment[], string> // string = queryFn arg type
+}
+```
+
+## Methods
+
+Once accessed via `state()` in an action, query fields expose these methods:
+
+| Method         | Description                                              |
+| -------------- | -------------------------------------------------------- |
+| `.query(arg?)` | Fetch data. Respects staleTime — skips if data is fresh. |
+| `.refetch()`   | Force re-fetch with the last used argument.              |
+| `.set(data)`   | Manually set data (for optimistic updates).              |
+
+## Status flags
+
+| Flag          | Type             | Description                                  |
+| ------------- | ---------------- | -------------------------------------------- |
+| `.data`       | `T`              | The current data                             |
+| `.isLoading`  | `boolean`        | True on first fetch (no prior success/error) |
+| `.isFetching` | `boolean`        | True during any fetch                        |
+| `.isSuccess`  | `boolean`        | True after a successful fetch                |
+| `.isError`    | `boolean`        | True after a failed fetch                    |
+| `.error`      | `string \| null` | Error message if failed                      |
+
+## Options
+
+Pass options at the query definition or globally via `MuchaProvider`:
+
+| Option            | Description                                                                    |
+| ----------------- | ------------------------------------------------------------------------------ |
+| `staleTime`       | Time in ms before cached data is considered stale (default: 0)                 |
+| `cacheTime`       | Alias for gcTime                                                               |
+| `gcTime`          | Time in ms before unused cache entries are garbage collected                   |
+| `placeholderData` | Data to show while loading. Use `keepPreviousData` to retain previous results. |
+| `force`           | Skip cache and always fetch (call-time only)                                   |
+
+## queryFn context
+
+`queryFn` receives `(arg, context)` where `context.state` is a readonly snapshot of the current query state:
+
+```ts
+posts: query<Post[]>({
+  initialData: [],
+  queryFn: (_, { state }) => {
+    // state.data, state.isLoading, etc.
+    return api.post.findAll()
+  },
+})
+```
+
+---
+
+## query.infinite()
+
+For infinite scroll / pagination. Use `Query.Infinite<T>` as the type.
+
+```ts
+import { Query } from 'comwit'
+
+// types.ts
+export type PostState = {
+  trending: Query.Infinite<Post[]>
+}
+```
+
+```ts
+// model.ts
+import { query } from 'comwit'
+
+export const post = model<PostState>({
+  trending: query.infinite<Post[]>({
+    initialData: [],
+    queryFn: (_, { state }) => api.post.trending(state.cursor),
+  }),
+})
+```
+
+### Additional methods
+
+| Method             | Description                                         |
+| ------------------ | --------------------------------------------------- |
+| `.nextFetch()`     | Fetch the next page. No-op when `hasMore` is false. |
+| `.previousFetch()` | Go back to the previous cursor.                     |
+
+### Additional flags
+
+| Flag       | Type             | Description               |
+| ---------- | ---------------- | ------------------------- |
+| `.cursor`  | `string \| null` | Current pagination cursor |
+| `.hasMore` | `boolean`        | Whether more pages exist  |
+
+### Usage in actions
+
+```ts
+async loadMoreTrending() {
+  await this.model.trending.nextFetch()
+}
+```
+
+The `queryFn` return value can include `cursor` and `hasMore` to control pagination:
+
+```ts
+queryFn: async (_, { state }) => {
+  const res = await api.post.trending(state.cursor)
+  return {
+    data: res.posts,
+    cursor: res.nextCursor,
+    hasMore: res.hasNext,
+  }
+}
+```

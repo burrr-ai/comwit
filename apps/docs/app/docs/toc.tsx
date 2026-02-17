@@ -60,7 +60,7 @@ export function TableOfContents() {
 
   return (
     <nav className="space-y-2">
-      <h4 className="font-serif text-[10px] uppercase tracking-[0.25em] text-gold-dark/70 mb-3">
+      <h4 className="text-[10px] uppercase tracking-[0.25em] text-muted/70 font-medium mb-3">
         On this page
       </h4>
       {headings.map((h) => (
@@ -68,9 +68,9 @@ export function TableOfContents() {
           key={h.id}
           href={`#${h.id}`}
           className={`
-            block font-serif text-[12px] leading-tight tracking-wide transition-colors
+            block text-[12px] leading-tight tracking-wide transition-colors
             ${h.level === 3 ? 'pl-3' : ''}
-            ${activeId === h.id ? 'text-gold-dark' : 'text-foreground/40 hover:text-foreground/60'}
+            ${activeId === h.id ? 'text-foreground' : 'text-foreground/40 hover:text-foreground/60'}
           `}
         >
           {h.text}

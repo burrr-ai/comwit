@@ -1,7 +1,25 @@
 {
-  "name": "subarashi-monorepo",
+  "name": "comwit-monorepo",
   "private": true,
   "version": "0.1.0",
+  "description": "Monorepo for comwit — React state management for vibe coding",
+  "homepage": "https://comwit.io",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meursyphus/comwit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/meursyphus/comwit/issues"
+  },
+  "license": "MIT",
+  "author": "meursyphus",
+  "keywords": [
+    "react",
+    "state-management",
+    "vibe-coding",
+    "claude-code",
+    "llm"
+  ],
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -15,7 +33,7 @@
     "dev:playground": "yarn workspace playground dev --port 3001",
     "docs": "yarn workspace docs dev",
     "playground": "yarn workspace playground dev --port 3001",
-    "dev:lib": "yarn workspace muchajs dev",
+    "dev:lib": "yarn workspace comwit dev",
     "build": "yarn workspaces run build",
     "dev": "yarn workspaces run dev"
   },

@@ -1,6 +1,6 @@
 'use client'
 
-import { MuchaProvider } from 'muchajs'
+import { MuchaProvider } from 'comwit'
 import { Toaster } from 'sonner'
 
 export function Providers({ children }: { children: React.ReactNode }) {

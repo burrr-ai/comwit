@@ -1,0 +1,80 @@
+---
+title: 'create()'
+group: 'API'
+slug: 'api/create'
+order: 5
+---
+
+# create()
+
+Combines a model and its actions into a React hook.
+
+```ts
+import { create } from 'comwit'
+```
+
+## Usage
+
+```ts
+import { create } from 'comwit'
+import type { PostState, PostActions } from './types'
+import { post } from './model'
+import { crudActions } from './actions/crud'
+import { loadActions } from './actions/load'
+
+export const usePost = create<PostState, PostActions>(post, {
+  actions: [crudActions, loadActions],
+})
+```
+
+## Selector pattern
+
+The returned hook accepts an optional selector:
+
+```tsx
+// Select specific fields — only re-renders when these change
+const { posts, actions } = usePost((s) => ({
+  posts: s.posts,
+  actions: s.actions,
+}))
+
+// No selector — returns everything (re-renders on any change)
+const state = usePost()
+```
+
+## Deep equality
+
+Selectors use deep equality comparison. The component only re-renders when the selected values actually change, not on every state mutation.
+
+```tsx
+// This only re-renders when posts.data changes, not when
+// unrelated state like `current` changes
+const { posts } = usePost((s) => ({ posts: s.posts }))
+```
+
+## Reading query fields
+
+Query fields expose data and status flags:
+
+```tsx
+const { posts, actions } = usePost((s) => ({
+  posts: s.posts,
+  actions: s.actions,
+}))
+
+if (posts.isLoading) return <Skeleton />
+if (posts.isError) return <p>Error: {posts.error}</p>
+return posts.data.map((post) => <Card key={post.id} post={post} />)
+```
+
+## Calling actions
+
+Actions are available on `s.actions`:
+
+```tsx
+const { actions } = usePost((s) => ({ actions: s.actions }))
+
+useEffect(() => {
+  actions.loadPosts()
+}, [])
+```

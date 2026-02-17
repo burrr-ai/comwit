@@ -1,4 +1,4 @@
-import { model } from 'muchajs'
+import { model } from 'comwit'
 import type { TodoState } from './types'
 
 export const todoModel = model<TodoState>({

@@ -1,6 +1,6 @@
 import { snapshot } from './proxy'
 
-const RESOURCE_BRAND = Symbol('muchajs-resource')
+const RESOURCE_BRAND = Symbol('comwit-resource')
 
 type AsyncResult<T> = T | Promise<T>
 

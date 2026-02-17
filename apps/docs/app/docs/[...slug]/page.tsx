@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import { getAllDocs, getDocBySlug } from '@/lib/mdx'
+import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
 
 export function generateStaticParams() {
   const docs = getAllDocs()
@@ -15,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const doc = getDocBySlug(slug.join('/'))
   if (!doc) return {}
-  return { title: `${doc.title} — mucha docs` }
+  return { title: `${doc.title} — comwit docs` }
 }
 
 export default async function DocPage({ params }: { params: Promise<{ slug: string[] }> }) {
@@ -24,8 +26,16 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
   if (!doc) notFound()
 
   return (
-    <article className="prose prose-sm max-w-none font-serif text-foreground/70 leading-snug prose-headings:font-serif prose-headings:tracking-wide prose-headings:text-foreground prose-headings:font-normal prose-h1:text-2xl prose-h2:text-base prose-h2:italic prose-h2:text-foreground/80 prose-p:text-[13px] prose-p:leading-relaxed prose-hr:border-gold/30 prose-strong:text-foreground/90 prose-strong:font-semibold">
-      <MDXRemote source={doc.content} />
+    <article className="prose prose-neutral max-w-none text-foreground/80 prose-headings:text-foreground prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-lg prose-p:text-sm prose-p:leading-relaxed prose-hr:border-border prose-strong:text-foreground">
+      <MDXRemote
+        source={doc.content}
+        options={{
+          mdxOptions: {
+            remarkPlugins: [remarkGfm],
+            rehypePlugins: [rehypeHighlight],
+          },
+        }}
+      />
     </article>
   )
 }

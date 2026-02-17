@@ -10,7 +10,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'Mucha',
-      fileName: 'muchajs',
+      fileName: 'comwit',
       formats: ['es', 'cjs'],
     },
     rollupOptions: {

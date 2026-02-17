@@ -1,4 +1,4 @@
-import { action } from 'muchajs'
+import { action } from 'comwit'
 import type { UserActions } from './types'
 import { userModel } from './model'
 

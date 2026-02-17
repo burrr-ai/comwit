@@ -1,0 +1,81 @@
+---
+title: 'Decorators'
+group: 'API'
+slug: 'decorators'
+order: 8
+---
+
+# Decorators
+
+Stack decorators on action class methods to add cross-cutting behavior.
+
+```ts
+import { OnError, OnSuccess, Debounce, Throttle, Authorized } from 'comwit'
+```
+
+## Built-in decorators
+
+| Decorator                       | Purpose                                                   |
+| ------------------------------- | --------------------------------------------------------- |
+| `@OnError(fn)`                  | Error handler. Receives the error. Re-throw to propagate. |
+| `@OnSuccess(fn)`                | Runs after successful completion.                         |
+| `@Debounce(ms)`                 | Debounces the method call.                                |
+| `@Throttle(ms)`                 | Throttles the method call.                                |
+| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>`     |
+
+## Example
+
+```ts
+import { action, OnError, OnSuccess, Debounce } from 'comwit'
+
+export const postActions = action<Pick<PostActions, 'create' | 'search'>, AppContext>(
+  ({ state, context }) => {
+    class Actions {
+      private model = state(post)
+
+      @OnSuccess(() => context.router.push('/posts'))
+      @OnError((e) => toast.error(e instanceof Error ? e.message : 'Failed'))
+      async create(title: string) {
+        const created = await api.post.create({ title })
+        this.model.posts.data.push(created)
+      }
+
+      @Debounce(300)
+      async search(keyword: string) {
+        await this.model.posts.query(keyword)
+      }
+    }
+    return new Actions()
+  }
+)
+```
+
+## createInterceptor
+
+Build reusable decorators that have access to `state()` and `context` — just like action factories.
+
+```ts
+import { createInterceptor, onAuthorized } from 'comwit'
+import { user } from '@/state/user/model'
+
+const LoginRequired = createInterceptor<AppContext>(({ state, context }) => {
+  const u = state(user)
+  return onAuthorized({
+    when: () => Boolean(u.me),
+    onDeny: () => context.router.push('/login'),
+  })
+})
+```
+
+Use it like any other decorator:
+
+```ts
+@LoginRequired
+@OnSuccess(() => context.router.push('/posts'))
+async create(title: string) {
+  const created = await api.post.create({ title })
+  this.model.posts.data.push(created)
+}
+```
+
+This replaces manual guard checks like `if (!this.user.me) return` with a declarative, reusable pattern.

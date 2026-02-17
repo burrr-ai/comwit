@@ -7,4 +7,91 @@ order: 1
 
 # Quickstart
 
-Coming soon.
+Get comwit running in a Next.js project in under 5 minutes.
+
+## 1. Install
+
+```bash
+npm i comwit
+```
+
+## 2. Setup Provider
+
+Create `app/providers.tsx` and wrap your root layout.
+
+```tsx
+// app/providers.tsx
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { keepPreviousData, MuchaProvider } from 'comwit'
+import { ReactNode } from 'react'
+
+type AppContext = {
+  router: { push: (href: string) => void }
+}
+
+export function Providers({ children }: { children: ReactNode }) {
+  const router = useRouter()
+  const context: AppContext = { router }
+
+  return (
+    <MuchaProvider
+      context={context}
+      defaultOptions={{
+        query: {
+          staleTime: 30_000,
+          cacheTime: 120_000,
+          gcTime: 180_000,
+          placeholderData: keepPreviousData,
+        },
+      }}
+    >
+      {children}
+    </MuchaProvider>
+  )
+}
+```
+
+```tsx
+// app/layout.tsx
+import { Providers } from './providers'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
+}
+```
+
+`MuchaProvider` takes two props:
+
+- **context** — shared values (router, auth, etc.) available in all actions
+- **defaultOptions** — global query defaults (staleTime, cacheTime, placeholderData)
+
+## 3. Create `state/.ai.md`
+
+Create `src/state/.ai.md` (or `state/.ai.md`). This file tells your LLM how to write state code. Copy the full template from the [README](https://github.com/meursyphus/comwit).
+
+This is what makes comwit different — the `.ai.md` file is the documentation. Your LLM reads it and generates correct state code on the first try.
+
+## 4. Update `CLAUDE.md`
+
+Add this to your project's `CLAUDE.md`:
+
+```md
+## State Management
+
+This project uses comwit. When working on files in state/, always read state/.ai.md first.
+```
+
+That's it. Your LLM now knows how to use comwit. Start building features by describing what state you need.
+
+## Next steps
+
+- [Project Structure](/docs/guide/structure) — how to organize state domains
+- [LLM Setup](/docs/llm-setup) — the full .ai.md and CLAUDE.md workflow

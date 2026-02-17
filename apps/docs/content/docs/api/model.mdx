@@ -1,0 +1,72 @@
+---
+title: 'model()'
+group: 'API'
+slug: 'api/model'
+order: 3
+---
+
+# model()
+
+Creates a global reactive store. Each domain has one model.
+
+```ts
+import { model } from 'comwit'
+```
+
+## Usage
+
+```ts
+import { model, query } from 'comwit'
+import type { PostState } from './types'
+
+export const post = model<PostState>({
+  posts: query<Post[]>({
+    initialData: [],
+    queryFn: () => api.post.findAll(),
+  }),
+  comments: query<Comment[], string>({
+    initialData: [],
+    queryFn: (postId) => api.comment.findAll(postId),
+  }),
+  current: null,
+})
+```
+
+## How it works
+
+`model(initial)` takes an object of initial values and returns a `Model<T>`.
+
+- Fields using [`query()`](/docs/api/query) become client-fetched data with loading states
+- Plain fields (strings, objects, arrays, null) are reactive local state
+- Models initialize lazily — only when first accessed via a hook
+- Each model instance is scoped to the nearest `MuchaProvider`
+
+## In actions
+
+Access a model's state inside an action via `state()`:
+
+```ts
+const postActions = action<PostActions>(({ state }) => {
+  class Actions {
+    private model = state(post)
+
+    async loadPosts() {
+      await this.model.posts.query()
+    }
+  }
+  return new Actions()
+})
+```
+
+`state(model)` returns a mutable proxy — mutations trigger re-renders in subscribed components.
+
+## In components
+
+Use the hook created by [`create()`](/docs/api/create) to read model state:
+
+```tsx
+const { posts, current } = usePost((s) => ({
+  posts: s.posts,
+  current: s.current,
+}))
+```

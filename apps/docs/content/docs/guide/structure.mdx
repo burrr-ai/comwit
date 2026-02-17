@@ -1,0 +1,85 @@
+---
+title: 'Project Structure'
+group: 'Guide'
+slug: 'guide/structure'
+order: 2
+---
+
+# Project Structure
+
+Every feature is a self-contained domain folder under `state/`.
+
+## Folder layout
+
+```
+state/{domain}/
+  ├── types.ts          # State + Actions types
+  ├── model.ts          # model() with initial state
+  ├── actions/
+  │   ├── crud.ts       # CRUD operations
+  │   ├── load.ts       # Data fetching via query()
+  │   ├── init.ts       # SSR hydration via silent()
+  │   └── ...           # One file per concern
+  └── index.ts          # create() hook + re-exports
+```
+
+## Write order
+
+Always create files in this order: **types.ts → model.ts → actions/\*.ts → index.ts**
+
+Each file depends only on the ones before it. This is critical for LLMs — it means they can generate each file with full context from the previous ones.
+
+## Rules
+
+- **Dependencies flow one way:** pages → state → api
+- **Pass domain objects whole:** `<Card post={post} />`, not individual props
+- **One domain per feature:** don't mix concerns across domains
+- **Types first:** the types file is the contract — JSDoc on each field guides implementation
+
+## types.ts
+
+The types file defines two things: the state shape and the actions interface.
+
+```ts
+import { Query } from 'comwit'
+
+export type Post = { id: string; title: string; body: string }
+
+export type PostState = {
+  posts: Query<Post[]> // client-fetched data
+  comments: Query<Comment[], string> // second generic = queryFn arg type
+  current: Post | null // SSR-hydrated data
+}
+
+export type PostActions = {
+  /** @description Fetch posts via query() */
+  loadPosts(): Promise<void>
+  /** @description Toggle like. Optimistic update on list + current */
+  like(postId: string): Promise<void>
+}
+```
+
+- `Query<Data>` for client-fetched fields — provides `.data`, `.isLoading`, `.isError`, `.error`
+- `Query<Data, Arg>` — second generic is the `queryFn` parameter type
+- Plain types for SSR-hydrated or local state
+
+## Cross-domain access
+
+Actions can read other domains directly via `state()`:
+
+```ts
+const postActions = action<Pick<PostActions, 'create'>, AppContext>(({ state }) => {
+  class Actions {
+    private post = state(post)
+    private user = state(user) // read from user domain
+
+    async create(title: string) {
+      if (!this.user.me) return
+      // ...
+    }
+  }
+  return new Actions()
+})
+```
+
+State flows one way. No circular dependencies.

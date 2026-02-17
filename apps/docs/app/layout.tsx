@@ -1,12 +1,7 @@
 import type { Metadata } from 'next'
-import { Playfair_Display, Inter, Geist_Mono } from 'next/font/google'
+import { Inter, Geist_Mono } from 'next/font/google'
+import 'highlight.js/styles/github-dark.css'
 import './globals.css'
-
-const playfair = Playfair_Display({
-  variable: '--font-playfair',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-})
 
 const inter = Inter({
   variable: '--font-inter',
@@ -19,9 +14,45 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'muchajs — LLM-friendly state management for React',
+  title: 'comwit — React state management for vibe coding',
   description:
-    'Less tokens. Better instructions. A state management library designed for the AI era.',
+    'LLM-optimized React state management library built for vibe coding with Claude Code. Proxy reactivity, built-in data fetching, and minimal token overhead. Just pass llm.txt.',
+  keywords: [
+    'comwit',
+    'react',
+    'state management',
+    'vibe coding',
+    'claude code',
+    'llm',
+    'ai',
+    'proxy',
+    'reactivity',
+    'zustand',
+    'valtio',
+    'tanstack query',
+  ],
+  openGraph: {
+    title: 'comwit — React state management for vibe coding',
+    description:
+      'LLM-optimized React state management. Proxy reactivity, built-in data fetching, minimal token overhead. Just pass llm.txt to Claude Code.',
+    siteName: 'comwit',
+    url: 'https://comwit.io',
+    type: 'website',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'comwit — React state management for vibe coding',
+    description:
+      'LLM-optimized React state management. Proxy reactivity, built-in data fetching, minimal token overhead. Just pass llm.txt to Claude Code.',
+  },
+  other: {
+    llmstxt: 'https://comwit.io/llm.txt',
+  },
+  metadataBase: new URL('https://comwit.io'),
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({
@@ -31,9 +62,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${playfair.variable} ${inter.variable} ${geistMono.variable} antialiased`}>
-        {children}
-      </body>
+      <body className={`${inter.variable} ${geistMono.variable} antialiased`}>{children}</body>
     </html>
   )
 }
