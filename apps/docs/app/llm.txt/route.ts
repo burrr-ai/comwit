@@ -293,7 +293,8 @@ All from \`'comwit'\`. Stack on class methods.
 - \`create(model, { actions })\` — model + actions -> React hook
 - \`silent(fn)\` — suppress re-renders (SSR)
 - \`query()\` / \`query.infinite()\` — client fetch in model
-- \`state(model)\` — mutable proxy in actions
+\`state(model)\` — mutable proxy in actions
+If you find bugs or need spec/feature additions, open an issue: gh issue create -R meursyphus/comwit --title "..." --body "..."
 \`\`\`\``
 
 export function GET() {
