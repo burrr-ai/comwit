@@ -1,10 +1,23 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 export default function Home() {
   const [copied, setCopied] = useState(false)
   const [copiedInstall, setCopiedInstall] = useState(false)
+
+  const fullText = "You don't need to read docs."
+  const [displayedText, setDisplayedText] = useState('')
+
+  useEffect(() => {
+    let i = 0
+    const interval = setInterval(() => {
+      i++
+      setDisplayedText(fullText.slice(0, i))
+      if (i >= fullText.length) clearInterval(interval)
+    }, 60)
+    return () => clearInterval(interval)
+  }, [])
 
   const copyUrl = useCallback(() => {
     navigator.clipboard.writeText('https://comwit.io/llm.txt')
@@ -37,6 +50,9 @@ export default function Home() {
           <a href="/docs" className="text-muted transition-colors hover:text-foreground">
             Docs
           </a>
+          <a href="/blog" className="text-muted transition-colors hover:text-foreground">
+            Blog
+          </a>
           <a
             href="https://github.com/meursyphus/comwit"
             target="_blank"
@@ -45,21 +61,14 @@ export default function Home() {
           >
             GitHub
           </a>
-          <a
-            href="https://www.npmjs.com/package/comwit"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted transition-colors hover:text-foreground"
-          >
-            npm
-          </a>
         </div>
       </nav>
 
       {/* Hero */}
       <section className="mx-auto max-w-5xl px-6 pb-24 pt-20 md:pt-32">
         <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-          You don't need to read docs.
+          {displayedText}
+          <span className="inline-block w-[3px] h-[1em] bg-foreground align-text-bottom ml-0.5 animate-blink" />
         </h1>
         <p className="mt-4 max-w-xl text-lg text-muted">
           Pass{' '}
