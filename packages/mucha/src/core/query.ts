@@ -392,23 +392,6 @@ function parseQueryArgs(args: unknown[]) {
   }
 }
 
-function withCursor(arg: unknown, cursor: string | null | undefined) {
-  if (cursor === undefined || cursor === null) {
-    return arg
-  }
-
-  if (isRecord(arg)) {
-    return {
-      ...arg,
-      cursor,
-    }
-  }
-
-  return {
-    cursor,
-  }
-}
-
 function stableSerialize(value: unknown, seen = new WeakSet<object>()): unknown {
   if (value === null || typeof value !== 'object') return value
   if (value instanceof Date) return value.toISOString()
@@ -704,12 +687,12 @@ function createResourceAccessor(
   const nextFetch = (...rawArgs: unknown[]) => {
     const parsed = parseQueryArgs(rawArgs)
     if (descriptor.kind !== 'infinite') return
+    if (!(state as ResourceInfiniteState<unknown>).hasMore) return
     const active = getActiveEntry()
     if (!active) return
 
-    const cursor = (state as ResourceInfiniteState<unknown>).cursor
-    const nextArg = withCursor(parsed.hasArg ? parsed.arg : active.arg, cursor)
-    return executeQuery(nextArg, parsed.options, true, 'append', false)
+    const effectiveArg = parsed.hasArg ? parsed.arg : active.arg
+    return executeQuery(effectiveArg, parsed.options, true, 'append', false)
   }
 
   const previousFetch = (...rawArgs: unknown[]) => {
@@ -723,9 +706,8 @@ function createResourceAccessor(
     }
 
     active.cursorHistory.pop()
-    const prevCursor = active.cursorHistory[active.cursorHistory.length - 1]
-    const previousArg = withCursor(parsed.hasArg ? parsed.arg : active.arg, prevCursor)
-    return executeQuery(previousArg, parsed.options, true, 'replace', false)
+    const effectiveArg = parsed.hasArg ? parsed.arg : active.arg
+    return executeQuery(effectiveArg, parsed.options, true, 'replace', false)
   }
 
   const bound = new Proxy(state, {
