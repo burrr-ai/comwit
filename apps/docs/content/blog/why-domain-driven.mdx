@@ -1,0 +1,246 @@
+---
+title: 'Why Domain-Driven Design Matters More in the AI Era'
+date: '2025-02-17'
+description: 'How domain-driven architecture makes vibe coding actually work — and why comwit was built this way.'
+author: 'comwit'
+---
+
+## Your codebase will rot. The question is how fast.
+
+Day one is always fine. Any dev — or any LLM — can scaffold a CRUD page in minutes. The real test is six months later: 40 features deep, three developers gone, and the product manager just pivoted. Again.
+
+Bad architecture doesn't bite you early. It bites you on day 90, when a simple "like" button means touching 12 files across 4 directories. And nobody remembers why `formatCount` lives in a shared utils folder that three other features depend on.
+
+Domain-driven design fixes this. And it turns out, it's also the thing that makes AI-assisted development actually work at scale.
+
+## Three Traps That Kill Your Speed
+
+These aren't hypothetical. They show up in almost every growing React project.
+
+### Trap 1: Over-Abstracting Similar UIs
+
+You've got a `PostCard` and a `ProductCard`. They look similar. Someone creates a shared `CardView` component with `variant="post"` and `variant="product"`. Six months later, `CardView` has 14 props, 3 conditional branches, and nobody wants to touch it because changing the post layout might break the product page.
+
+The urge to DRY up similar-looking UI is strong. But looking similar isn't the same as being similar. Post cards and product cards change for completely different business reasons. They just happen to be rectangles with text in them.
+
+### Trap 2: Over-Separating Concerns
+
+Your API returns a follower count as `1234567`. You need to show "1.2M" in the UI. So you write a `formatFollowerCount` util and call it everywhere. Now that formatting logic is scattered across your UI layer. When product says "actually, show the exact number on hover," you're hunting through 8 components.
+
+The fix is simple: format it once, in the data layer, before it ever reaches a component.
+
+### Trap 3: Over-Splitting Cohesive Operations
+
+A user likes a post. That means: update the post in the list, update the detail view, send the API request, handle the error. You split these into four separate functions because "single responsibility." Now when you need to also update a like count in the sidebar, you have to remember to call all five functions in the right order.
+
+Someone will forget. They always do.
+
+Operations that happen together should live together.
+
+## The Real Villain Is the Person Who Changes Their Mind
+
+Look, if requirements never changed, any code structure would work. Spaghetti code, perfect layers, a single 5000-line file — wouldn't matter. You'd write it once and never touch it again.
+
+But requirements always change. The PM changes their mind. The designer tweaks the layout. A new business rule drops out of nowhere. That's not a bug in the process — that's literally the job.
+
+So the real question isn't "how do I write perfect code?" It's "how do I make change cheap?"
+
+Here's what happens when you look at how requirements actually change: they change per domain. "Add tags to posts" — that's the post domain. "Users need profile pictures" — user domain. "The cart should support discount codes" — cart domain. Nobody ever walks in and says "change every component that uses `formatDate`."
+
+## Domain-Driven Slicing
+
+The core idea is dead simple: organize code by business domain, not by technical layer.
+
+Instead of:
+
+```
+src/
+  components/
+    PostCard.tsx
+    UserAvatar.tsx
+    CartItem.tsx
+  hooks/
+    usePost.ts
+    useUser.ts
+    useCart.ts
+  api/
+    post.ts
+    user.ts
+    cart.ts
+```
+
+You get:
+
+```
+src/
+  state/
+    post/
+      types.ts
+      model.ts
+      actions/
+      index.ts
+    user/
+      types.ts
+      model.ts
+      actions/
+      index.ts
+    cart/
+      types.ts
+      model.ts
+      actions/
+      index.ts
+```
+
+When product says "add comments to posts," you open `state/post/` and everything you need is right there. You don't scatter changes across `components/`, `hooks/`, `api/`, and `store/`.
+
+This isn't a new idea. Redux slices, Feature-Sliced Design, Vertical Slice Architecture — they all land in the same place. comwit just takes it further by making the domain boundary the fundamental unit of the library.
+
+### Practical Rules
+
+These come from trial and error. They work.
+
+- **Pages can reference any domain state.** A page is a composition layer — it pulls from post, user, and cart as needed.
+- **Domain UI is NOT shared across pages.** If two pages show a post card, you have two post card components. UI is repeated; logic is reused.
+- **Domain state is always global.** No prop drilling, no context providers per domain. One store per domain, accessible anywhere.
+- **List and detail are managed together.** When a user likes a post from the list view, the detail view should update too. They share a model.
+- **Actions are stateful.** If you're on the post detail page, the action already knows which post is current. No need to pass `postId` from the UI.
+- **The API layer preprocesses data.** Raw numbers become "1.2M". Timestamps become "3 days ago". Components never format.
+- **Domain objects are passed whole.** `<PostCard post={post} />`, not `<PostCard title={post.title} date={post.date} author={post.author} />`.
+- **Dependencies flow one way.** Pages depend on state. State depends on API. Never the reverse.
+
+## How comwit Is Built Around This
+
+This isn't domain-driven design bolted on after the fact. The entire library is shaped by it. Every domain follows the same file structure, and the API is designed so these patterns are the path of least resistance.
+
+### types.ts — The Domain Contract
+
+Every domain starts here. One file that defines the shape of state and all available actions:
+
+```ts
+import { Query } from 'comwit'
+
+export type Post = { id: string; title: string /* ... */ }
+
+export type PostState = {
+  posts: Query<Post[]> // client-fetched list
+  current: Post | null // SSR-hydrated detail
+}
+
+export type PostActions = {
+  /** @description Toggle like. Optimistic on list + current */
+  like(postId: string): Promise<void>
+  /** @description Create a new post, redirect on success */
+  create(title: string): Promise<void>
+}
+```
+
+Read this file and you understand the entire domain. Every field typed. Every action described. That's the contract.
+
+### model.ts — List and Detail Together
+
+The model holds both the list and the current item in one place:
+
+```ts
+import { model, query } from 'comwit'
+
+export const post = model<PostState>({
+  posts: query<Post[]>({
+    initialData: [],
+    queryFn: () => api.post.findAll(),
+  }),
+  current: null,
+})
+```
+
+When a like action fires, it can update `this.model.posts.data` and `this.model.current` in the same operation. No event bus, no manual syncing, no forgotten updates.
+
+### actions/ — Stateful and Self-Contained
+
+Actions don't take IDs as parameters from the UI. They resolve what they need from state:
+
+```ts
+import { action, OnError, OnSuccess } from 'comwit'
+import { user } from '@/state/user/model'
+
+export const postActions = action<Pick<PostActions, 'create'>, AppContext>(({ state, context }) => {
+  class PostActions {
+    private model = state(post)
+    private user = state(user) // cross-domain access
+
+    @OnSuccess(() => context.router.push('/posts'))
+    @OnError((e) => toast.error(e instanceof Error ? e.message : 'Failed'))
+    async create(title: string) {
+      if (!this.user.me) return
+      const created = await api.post.create({
+        userId: this.user.me.id,
+        title,
+      })
+      this.model.posts.data.push(created)
+    }
+  }
+  return new PostActions()
+})
+```
+
+See `state(user)` — the post action reads auth status straight from the user domain. No prop passing, no middleware, no event system. Just `this.user.me`.
+
+The action is self-contained: auth check, API call, state update, success redirect, error handling — all in one place. The "like a post" operation doesn't get split across 4 files.
+
+### index.ts — The Clean Export
+
+The hook ties model and actions together:
+
+```ts
+import { create } from 'comwit'
+
+export const usePost = create<PostState, PostActions>(post, {
+  actions: [postActions],
+})
+```
+
+### UI Just Consumes
+
+Components select what they need and render. That's it:
+
+```tsx
+const { posts, actions } = usePost((s) => ({
+  posts: s.posts,
+  actions: s.actions,
+}))
+
+if (posts.isLoading) return <Skeleton />
+return posts.data.map((p) => <PostCard key={p.id} post={p} />)
+```
+
+No formatting logic. No derived state. No business rules. The component is a pure function of domain state.
+
+## Why This Is a Big Deal for AI
+
+Here's where it all clicks.
+
+When you ask an LLM to "add a bookmark feature to posts," it needs to understand the codebase first. In a typical React project, the LLM has to read through `components/`, `hooks/`, `api/`, `store/slices/`, and `utils/` just to piece together how posts work. It misses things. It puts code in the wrong place. It creates inconsistencies.
+
+With comwit's domain structure, the LLM reads `state/post/types.ts` and immediately knows:
+
+- What data the post domain manages
+- What actions are available
+- What each action does (via JSDoc)
+- The shape of every piece of state
+
+That's the whole contract in one file. From there, `model.ts` shows initialization, `actions/*.ts` shows implementation, and `index.ts` shows the public API. The LLM knows exactly which files to touch.
+
+This is why comwit works with just an `.ai.md` file — the structure IS the documentation. The conventions are so consistent that once an LLM gets one domain, it can correctly build the next one without hand-holding.
+
+The write order is always the same: `types.ts` -> `model.ts` -> `actions/*.ts` -> `index.ts`. The dependency flow is always the same: pages -> state -> API. The patterns are always the same: `model()` for state, `action()` for logic, `create()` for the hook, `state()` for cross-domain access.
+
+## Good Architecture Was Always the Answer
+
+Domain-driven design has been around for decades. Vertical slices have been gaining traction for years. AI didn't invent any of this.
+
+But here's what AI did: it made the cost of bad architecture impossible to ignore.
+
+When a human dev works in a messy codebase, they compensate with memory, tribal knowledge, and gut feeling. An LLM has none of that. It has exactly what you give it: file contents and instructions. If your architecture doesn't make domain boundaries obvious from the file structure alone, the LLM will struggle — and so will the next human who joins the team.
+
+comwit was built with this in mind. Code that's easy for an LLM to understand is code that's easy for everyone to understand. Domain-driven architecture with clear file conventions, typed contracts, and one-way dependencies isn't just good for vibe coding.
+
+It's just good code. The AI era didn't change that. It just made the price of ignoring it a lot steeper.

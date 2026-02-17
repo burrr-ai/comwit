@@ -39,12 +39,21 @@ export const metadata: Metadata = {
     url: 'https://comwit.io',
     type: 'website',
     locale: 'en_US',
+    images: [
+      {
+        url: '/og.png',
+        width: 1200,
+        height: 630,
+        alt: "comwit — You don't need to read docs.",
+      },
+    ],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'comwit — React state management for vibe coding',
     description:
       'LLM-optimized React state management. Proxy reactivity, built-in data fetching, minimal token overhead. Just pass llm.txt to Claude Code.',
+    images: ['/og.png'],
   },
   other: {
     llmstxt: 'https://comwit.io/llm.txt',
