@@ -10,7 +10,7 @@ export type RegistryDefaults = {
   query?: QueryDefaultOptions
 }
 
-export type MuchaProviderProps = {
+export type ComwitProviderProps = {
   children: React.ReactNode
   context?: Record<string, unknown>
   defaultOptions?: RegistryDefaults
@@ -27,11 +27,11 @@ const StateContext = createContext<StoreRegistry | null>(null)
 
 export function useStoreRegistry(): StoreRegistry {
   const ctx = useContext(StateContext)
-  if (!ctx) throw new Error('Wrap your app with <MuchaProvider>')
+  if (!ctx) throw new Error('Wrap your app with <ComwitProvider>')
   return ctx
 }
 
-export function MuchaProvider({ children, defaultOptions, context = {} }: MuchaProviderProps) {
+export function ComwitProvider({ children, defaultOptions, context = {} }: ComwitProviderProps) {
   const registryRef = useRef<
     StoreRegistry & {
       stores: Map<symbol, StoreEntry>

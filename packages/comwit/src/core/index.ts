@@ -1,6 +1,6 @@
 import { model, Model, useModel } from './model'
 import { action, ActionFactory, useAction } from './action'
-import { MuchaProvider } from './provider'
+import { ComwitProvider } from './provider'
 import { silent } from './silent'
 import {
   keepPreviousData,
@@ -38,7 +38,7 @@ export {
   useModel,
   create,
   silent,
-  MuchaProvider,
+  ComwitProvider,
   query,
   keepPreviousData,
 }

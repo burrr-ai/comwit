@@ -5,7 +5,7 @@ export {
   useModel,
   create,
   silent,
-  MuchaProvider,
+  ComwitProvider,
   keepPreviousData,
   query,
 } from './core'

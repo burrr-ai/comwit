@@ -19,7 +19,7 @@ Create `app/providers.tsx` and wrap your root layout.
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { keepPreviousData, MuchaProvider } from 'comwit'
+import { keepPreviousData, ComwitProvider } from 'comwit'
 import { ReactNode } from 'react'
 
 type AppContext = {
@@ -31,7 +31,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const context: AppContext = { router }
 
   return (
-    <MuchaProvider
+    <ComwitProvider
       context={context}
       defaultOptions={{
         query: {
@@ -43,7 +43,7 @@ export function Providers({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </MuchaProvider>
+    </ComwitProvider>
   )
 }
 ```

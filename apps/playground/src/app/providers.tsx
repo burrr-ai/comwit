@@ -1,11 +1,11 @@
 'use client'
 
-import { MuchaProvider } from 'comwit'
+import { ComwitProvider } from 'comwit'
 import { Toaster } from 'sonner'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <MuchaProvider
+    <ComwitProvider
       defaultOptions={{
         query: {
           staleTime: 60_000,
@@ -14,6 +14,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <Toaster />
       {children}
-    </MuchaProvider>
+    </ComwitProvider>
   )
 }
