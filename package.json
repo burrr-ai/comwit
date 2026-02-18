@@ -2,6 +2,7 @@
   "name": "comwit-monorepo",
   "private": true,
   "version": "0.1.0",
+  "packageManager": "yarn@1.22.22",
   "description": "Monorepo for comwit — React state management for vibe coding",
   "homepage": "https://comwit.io",
   "repository": {
@@ -25,6 +26,7 @@
     "packages/*"
   ],
   "scripts": {
+    "preinstall": "node -e \"if (process.env.npm_execpath && !process.env.npm_execpath.includes('yarn')) { console.error('Use yarn for this repository: run `yarn install`'); process.exit(1); }\"",
     "prepare": "husky",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
