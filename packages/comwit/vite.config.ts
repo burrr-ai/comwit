@@ -6,6 +6,10 @@ import dts from 'vite-plugin-dts'
 
 export default defineConfig({
   plugins: [react(), dts({ insertTypesEntry: true })],
+  test: {
+    globals: true,
+    include: ['tests/**/*.test.ts'],
+  },
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
