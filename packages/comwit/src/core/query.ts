@@ -692,19 +692,6 @@ function createResourceAccessor(
     const effectiveArg = inputArg !== undefined ? inputArg : (active?.arg ?? runtime.lastArg)
     const hasArg = inputArg !== undefined || active !== undefined
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[comwit.nextFetch]', {
-        kind: descriptor.kind,
-        hasMore: (state as ResourceInfiniteState<unknown>).hasMore,
-        cursor: (state as ResourceInfiniteState<unknown>).cursor,
-        hasActive: !!active,
-        runtimeLastArg: runtime.lastArg,
-        runtimeActiveKey: runtime.activeKey,
-        hasExplicitArg: inputArg !== undefined,
-        hasArg,
-      })
-    }
-
     return executeQuery(effectiveArg, { force: true }, hasArg, 'append', false)
   }
 
