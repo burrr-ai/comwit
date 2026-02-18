@@ -286,6 +286,30 @@ All from `'comwit'`. Stack on class methods.
 
 `createInterceptor(({ state, context }) => MethodDecorator)` — reusable decorator with `state`/`context` access, like action factories. See [actions](#actionsts) above for usage.
 
+## Infinite Query Return Shape
+
+`queryFn` for `query.infinite()` must return `{ data, cursor?, hasMore? }`:
+
+```ts
+queryFn: (_, { state }) => {
+  const res = await api.post.trending(state.cursor)
+  return { data: res.items, cursor: res.nextCursor, hasMore: res.hasNext }
+}
+```
+
+Without `hasMore: true` in the response, `nextFetch()` is a no-op.
+
+## Query Lifecycle
+
+```
+query() defined in model → .query() called in action → data loaded
+  → (infinite) response includes hasMore: true → nextFetch() enabled
+  → within staleTime → cache returned, no fetch
+  → after gcTime → cache entry deleted
+```
+
+`.query()` must be called at least once before `refetch()` or `nextFetch()` will work.
+
 ## Key Concepts
 
 - `model(initial)` — global reactive store
