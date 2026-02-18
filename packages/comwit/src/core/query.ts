@@ -127,8 +127,7 @@ interface ResourceInfiniteQueryController<TData, TArg> extends ResourceSingleQue
   TData,
   TArg
 > {
-  nextFetch(arg: TArg, options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
-  nextFetch(options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
+  nextFetch(arg?: TArg): Promise<unknown>
   previousFetch(arg: TArg, options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
   previousFetch(options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
 }
@@ -685,13 +684,13 @@ function createResourceAccessor(
   }
 
   const nextFetch = (...rawArgs: unknown[]) => {
-    const parsed = parseQueryArgs(rawArgs)
     if (descriptor.kind !== 'infinite') return
     if (!(state as ResourceInfiniteState<unknown>).hasMore) return
     const active = getActiveEntry()
+    const inputArg = rawArgs[0]
 
-    const effectiveArg = parsed.hasArg ? parsed.arg : (active?.arg ?? runtime.lastArg)
-    const hasArg = parsed.hasArg || active !== undefined
+    const effectiveArg = inputArg !== undefined ? inputArg : (active?.arg ?? runtime.lastArg)
+    const hasArg = inputArg !== undefined || active !== undefined
 
     if (process.env.NODE_ENV !== 'production') {
       console.log('[comwit.nextFetch]', {
@@ -701,12 +700,12 @@ function createResourceAccessor(
         hasActive: !!active,
         runtimeLastArg: runtime.lastArg,
         runtimeActiveKey: runtime.activeKey,
-        parsedHasArg: parsed.hasArg,
+        hasExplicitArg: inputArg !== undefined,
         hasArg,
       })
     }
 
-    return executeQuery(effectiveArg, parsed.options, hasArg, 'append', false)
+    return executeQuery(effectiveArg, { force: true }, hasArg, 'append', false)
   }
 
   const previousFetch = (...rawArgs: unknown[]) => {
