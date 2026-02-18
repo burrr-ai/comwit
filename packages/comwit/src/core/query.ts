@@ -689,9 +689,8 @@ function createResourceAccessor(
     if (descriptor.kind !== 'infinite') return
     if (!(state as ResourceInfiniteState<unknown>).hasMore) return
     const active = getActiveEntry()
-    if (!active) return
 
-    const effectiveArg = parsed.hasArg ? parsed.arg : active.arg
+    const effectiveArg = parsed.hasArg ? parsed.arg : active?.arg
     return executeQuery(effectiveArg, parsed.options, true, 'append', false)
   }
 
