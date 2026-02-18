@@ -177,7 +177,7 @@ type ResourceFactory = {
   ) => InfiniteResourceDescriptor<TData, TArg>
 }
 
-type QueryMode = 'replace' | 'append'
+type QueryMode = 'replace' | 'append' | 'restore'
 
 type QueryCacheKey = string
 
@@ -210,6 +210,7 @@ type ResourceRuntimeState = {
   path: string
   lastArg?: unknown
   activeKey?: QueryCacheKey
+  fetchId: number
   cacheEntries: Map<QueryCacheKey, QueryCacheEntry>
 }
 
@@ -430,6 +431,7 @@ function cloneRuntime(path: string): ResourceRuntimeState {
     path,
     lastArg: undefined,
     activeKey: undefined,
+    fetchId: 0,
     cacheEntries: new Map(),
   }
 }
@@ -597,7 +599,7 @@ function createResourceAccessor(
       effectiveOptions.placeholderData as PlaceholderData<unknown, unknown> | undefined
     )
 
-    if (descriptor.kind === 'infinite') {
+    if (descriptor.kind === 'infinite' && mode !== 'restore') {
       const infiniteHistory = entry.cursorHistory
       const currentCursor = (state as ResourceInfiniteState<unknown>).cursor
 
@@ -616,10 +618,12 @@ function createResourceAccessor(
       }
     }
 
-    state.isLoading = !state.isSuccess && !state.isError
-    state.isFetching = true
     state.isError = false
     state.error = null
+    state.isLoading = !state.isSuccess
+    state.isFetching = true
+
+    const currentFetchId = ++runtime.fetchId
 
     try {
       let result: unknown
@@ -630,16 +634,21 @@ function createResourceAccessor(
           queryArg as unknown,
           contextFor(state) as ResourceContext<ResourceSingleState<unknown>>
         )
-
-        if (result !== undefined) {
-          state.data = result
-        }
       } else {
         const typedDescriptor = descriptor as InfiniteResourceDescriptor<unknown, unknown>
         result = await typedDescriptor.queryFn(
           queryArg as unknown,
           contextFor(state) as ResourceContext<ResourceInfiniteState<unknown>>
         )
+      }
+
+      if (runtime.fetchId !== currentFetchId) {
+        return result
+      }
+
+      if (descriptor.kind === 'single') {
+        mergeResult(state, result)
+      } else {
         mergeResult(state, result, mode === 'append')
       }
 
@@ -649,7 +658,7 @@ function createResourceAccessor(
       entry.lastResult = result
       updateCachedState(entry, state)
 
-      if (descriptor.kind === 'infinite') {
+      if (descriptor.kind === 'infinite' && mode !== 'restore') {
         const infiniteHistory = entry.cursorHistory
         const nextCursor = (state as ResourceInfiniteState<unknown>).cursor
 
@@ -662,13 +671,18 @@ function createResourceAccessor(
 
       return result
     } catch (error) {
+      if (runtime.fetchId !== currentFetchId) {
+        throw error
+      }
       state.isError = true
       state.isSuccess = false
       state.error = normalizeError(error)
       throw error
     } finally {
-      state.isLoading = false
-      state.isFetching = false
+      if (runtime.fetchId === currentFetchId) {
+        state.isLoading = false
+        state.isFetching = false
+      }
     }
   }
 
@@ -707,7 +721,7 @@ function createResourceAccessor(
 
     active.cursorHistory.pop()
     const effectiveArg = parsed.hasArg ? parsed.arg : active.arg
-    return executeQuery(effectiveArg, parsed.options, true, 'replace', false)
+    return executeQuery(effectiveArg, parsed.options, true, 'restore', false)
   }
 
   const bound = new Proxy(state, {
@@ -733,6 +747,12 @@ function createResourceAccessor(
           target.isSuccess = true
           target.isError = false
           target.error = null
+
+          const activeEntry = getActiveEntry()
+          if (activeEntry) {
+            updateCachedState(activeEntry, target)
+          }
+
           return next
         }
       }
