@@ -1,6 +1,6 @@
-import { model, Model, useModel } from './model'
+import { model, Model, useModel, type ModelOptions, type ValidationState } from './model'
 import { action, ActionFactory, useAction } from './action'
-import { ComwitProvider } from './provider'
+import { ComwitProvider, type RegistryDefaults } from './provider'
 import { silent } from './silent'
 import {
   keepPreviousData,
@@ -43,4 +43,12 @@ export {
   keepPreviousData,
 }
 
-export type { Query, PlaceholderData, QueryDefaultOptions, QueryQueryOptions }
+export type {
+  Query,
+  PlaceholderData,
+  QueryDefaultOptions,
+  QueryQueryOptions,
+  RegistryDefaults,
+  ModelOptions,
+  ValidationState,
+}

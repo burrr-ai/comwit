@@ -53,10 +53,14 @@ export function useAction<A, C extends object = Record<string, never>>(
     }
 
     const context = (registry.context ?? {}) as C
-    actionsRef.current = Object.assign(
+    const merged = Object.assign(
       {},
       ...factories.map((factory) => factory({ state, context }) as A)
     ) as A
+
+    actionsRef.current = registry.globalInterceptors?.length
+      ? (applyGlobalInterceptors(merged as ActionModule, registry.globalInterceptors) as A)
+      : merged
   }
 
   return actionsRef.current
@@ -133,6 +137,33 @@ function resolveLazyInterceptors<C extends object = Record<string, never>>(
   }
 
   return next
+}
+
+function applyGlobalInterceptors(
+  module: ActionModule,
+  interceptors: MethodDecorator[]
+): ActionModule {
+  const out: ActionModule = {}
+  for (const key of Object.keys(module)) {
+    const value = module[key]
+    if (typeof value !== 'function') {
+      out[key] = value
+      continue
+    }
+    let fn = value as AnyFunction
+    for (const decorator of interceptors) {
+      const descriptor: TypedPropertyDescriptor<AnyFunction> = {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: fn,
+      }
+      decorator({}, '__global-interceptor' as any, descriptor as any)
+      fn = descriptor.value as AnyFunction
+    }
+    out[key] = fn
+  }
+  return out
 }
 
 type Model<T extends object> = import('./model').Model<T>

@@ -8,6 +8,7 @@ import type { Model, StoreEntry } from './model'
 
 export type RegistryDefaults = {
   query?: QueryDefaultOptions
+  interceptors?: MethodDecorator[]
 }
 
 export type ComwitProviderProps = {
@@ -21,6 +22,7 @@ export type StoreRegistry = {
   context?: Record<string, unknown>
   queryDefaults?: RegistryDefaults['query']
   queryBinding: QueryBindingRegistry
+  globalInterceptors?: MethodDecorator[]
 }
 
 const StateContext = createContext<StoreRegistry | null>(null)
@@ -56,6 +58,7 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
   Object.assign(registryRef.current.context, context)
 
   registryRef.current.queryDefaults = defaultOptions?.query
+  registryRef.current.globalInterceptors = defaultOptions?.interceptors
 
   return <StateContext.Provider value={registryRef.current}>{children}</StateContext.Provider>
 }
