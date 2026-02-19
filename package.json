@@ -26,7 +26,6 @@
     "packages/*"
   ],
   "scripts": {
-    "preinstall": "node -e \"if (process.env.npm_execpath && !process.env.npm_execpath.includes('yarn')) { console.error('Use yarn for this repository: run `yarn install`'); process.exit(1); }\"",
     "prepare": "husky",
     "format": "prettier . --write",
     "format:check": "prettier . --check",

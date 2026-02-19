@@ -73,7 +73,6 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "es-toolkit": "^1.44.0",
-    "valtio": "^2.3.0"
+    "es-toolkit": "^1.44.0"
   }
 }
