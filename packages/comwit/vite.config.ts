@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react(), dts({ insertTypesEntry: true })],
   test: {
     globals: true,
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
   },
   build: {
     lib: {

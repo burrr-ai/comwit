@@ -3,7 +3,15 @@ import { OnSuccess } from '../src/interceptors/success'
 import { Authorized } from '../src/interceptors/authorized'
 import { Debounce } from '../src/interceptors/debounce'
 import { Throttle } from '../src/interceptors/throttle'
-import { composeInterceptors, isThenable, intercept } from '../src/interceptors/utils'
+import { Retry } from '../src/interceptors/retry'
+import { Queue } from '../src/interceptors/queue'
+import { Log } from '../src/interceptors/log'
+import {
+  composeInterceptors,
+  isThenable,
+  intercept,
+  getLazyInterceptorFactories,
+} from '../src/interceptors/utils'
 
 describe('OnError', () => {
   test('calls handler with error and re-throws on sync error', () => {
@@ -630,5 +638,405 @@ describe('intercept', () => {
 
     // Factory should NOT have been called at decoration time
     expect(factory).not.toHaveBeenCalled()
+  })
+
+  test('lazy factory stores interceptor factories on the method', () => {
+    const factory = vi.fn(() => ({
+      onBefore: () => {},
+    }))
+
+    const Lazy = intercept(factory)
+
+    class Actions {
+      @Lazy
+      doSomething() {
+        return 'result'
+      }
+    }
+
+    const descriptor = Object.getOwnPropertyDescriptor(Actions.prototype, 'doSomething')
+    const factories = getLazyInterceptorFactories(descriptor!.value)
+
+    expect(factories).toHaveLength(1)
+    expect(typeof factories[0]).toBe('function')
+  })
+
+  test('lazy factory receives ActionContext when resolved', () => {
+    const innerFactory = vi.fn(() => ({
+      onBefore: () => {},
+    }))
+
+    const Lazy = intercept(innerFactory)
+
+    class Actions {
+      @Lazy
+      doSomething() {
+        return 'result'
+      }
+    }
+
+    const descriptor = Object.getOwnPropertyDescriptor(Actions.prototype, 'doSomething')
+    const factories = getLazyInterceptorFactories(descriptor!.value)
+
+    const mockCtx = { state: vi.fn(), context: { token: 'abc' } }
+    factories[0](mockCtx as any)
+
+    expect(innerFactory).toHaveBeenCalledWith(mockCtx)
+  })
+
+  test('lazy factory hooks work after manual resolution', () => {
+    const onBefore = vi.fn()
+    const onSuccess = vi.fn()
+
+    const Lazy = intercept(() => ({ onBefore, onSuccess }))
+
+    class Actions {
+      @Lazy
+      doSomething(x: number) {
+        return x * 3
+      }
+    }
+
+    const descriptor = Object.getOwnPropertyDescriptor(Actions.prototype, 'doSomething')
+    const factories = getLazyInterceptorFactories(descriptor!.value)
+
+    const mockCtx = { state: vi.fn(), context: {} }
+    const methodDecorator = factories[0](mockCtx as any)
+
+    // Apply the resolved decorator to a fresh descriptor
+    const testDescriptor: TypedPropertyDescriptor<any> = {
+      value: function (x: number) {
+        return x + 10
+      },
+      writable: true,
+      enumerable: false,
+      configurable: true,
+    }
+
+    methodDecorator(Actions.prototype, 'testMethod', testDescriptor)
+
+    const result = testDescriptor.value(5)
+
+    expect(onBefore).toHaveBeenCalledWith(5)
+    expect(onSuccess).toHaveBeenCalledWith(15, 5)
+    expect(result).toBe(15)
+  })
+
+  test('lazy class decorator stores factories on all prototype methods', () => {
+    const factory = vi.fn(() => ({
+      onBefore: () => {},
+    }))
+
+    const Lazy = intercept(factory)
+
+    @Lazy
+    class Actions {
+      doA() {
+        return 'a'
+      }
+      doB() {
+        return 'b'
+      }
+    }
+
+    const factoriesA = getLazyInterceptorFactories(
+      Object.getOwnPropertyDescriptor(Actions.prototype, 'doA')!.value
+    )
+    const factoriesB = getLazyInterceptorFactories(
+      Object.getOwnPropertyDescriptor(Actions.prototype, 'doB')!.value
+    )
+
+    expect(factoriesA).toHaveLength(1)
+    expect(factoriesB).toHaveLength(1)
+    // Factory should not have been called at decoration time
+    expect(factory).not.toHaveBeenCalled()
+  })
+
+  test('multiple lazy interceptors can be stacked', () => {
+    const factoryA = vi.fn(() => ({
+      onBefore: () => {},
+    }))
+    const factoryB = vi.fn(() => ({
+      onSuccess: () => {},
+    }))
+
+    const LazyA = intercept(factoryA)
+    const LazyB = intercept(factoryB)
+
+    class Actions {
+      @LazyA
+      @LazyB
+      doSomething() {
+        return 'result'
+      }
+    }
+
+    const descriptor = Object.getOwnPropertyDescriptor(Actions.prototype, 'doSomething')
+    const factories = getLazyInterceptorFactories(descriptor!.value)
+
+    expect(factories).toHaveLength(2)
+    expect(factoryA).not.toHaveBeenCalled()
+    expect(factoryB).not.toHaveBeenCalled()
+
+    // Resolve both and verify they call the correct inner factories
+    const mockCtx = { state: vi.fn(), context: {} }
+    factories[0](mockCtx as any)
+    factories[1](mockCtx as any)
+
+    expect(factoryB).toHaveBeenCalledWith(mockCtx)
+    expect(factoryA).toHaveBeenCalledWith(mockCtx)
+  })
+})
+
+describe('Retry', () => {
+  test('retries on failure and succeeds on nth attempt', async () => {
+    let attempt = 0
+
+    class Actions {
+      @Retry(3)
+      async doSomething() {
+        attempt++
+        if (attempt < 3) throw new Error('fail')
+        return 'success'
+      }
+    }
+
+    const actions = new Actions()
+    const result = await actions.doSomething()
+
+    expect(result).toBe('success')
+    expect(attempt).toBe(3)
+  })
+
+  test('throws last error after all retries exhausted', async () => {
+    class Actions {
+      @Retry(2)
+      async doSomething() {
+        throw new Error('always fails')
+      }
+    }
+
+    const actions = new Actions()
+    await expect(actions.doSomething()).rejects.toThrow('always fails')
+  })
+
+  test('respects delay between retries', async () => {
+    vi.useFakeTimers()
+    let attempt = 0
+
+    class Actions {
+      @Retry(2, { delay: 100 })
+      async doSomething() {
+        attempt++
+        if (attempt < 3) throw new Error('fail')
+        return 'ok'
+      }
+    }
+
+    const actions = new Actions()
+    const promise = actions.doSomething()
+
+    // First attempt fails immediately
+    await vi.advanceTimersByTimeAsync(0)
+    expect(attempt).toBe(1)
+
+    // Wait for first delay
+    await vi.advanceTimersByTimeAsync(100)
+    expect(attempt).toBe(2)
+
+    // Wait for second delay
+    await vi.advanceTimersByTimeAsync(100)
+    const result = await promise
+    expect(result).toBe('ok')
+    expect(attempt).toBe(3)
+
+    vi.useRealTimers()
+  })
+
+  test('exponential backoff increases delay', async () => {
+    vi.useFakeTimers()
+    let attempt = 0
+
+    class Actions {
+      @Retry(3, { delay: 100, backoff: 'exponential' })
+      async doSomething() {
+        attempt++
+        if (attempt < 4) throw new Error('fail')
+        return 'ok'
+      }
+    }
+
+    const actions = new Actions()
+    const promise = actions.doSomething()
+
+    // First attempt fails immediately
+    await vi.advanceTimersByTimeAsync(0)
+    expect(attempt).toBe(1)
+
+    // First retry: delay = 100 * 2^0 = 100ms
+    await vi.advanceTimersByTimeAsync(100)
+    expect(attempt).toBe(2)
+
+    // Second retry: delay = 100 * 2^1 = 200ms
+    await vi.advanceTimersByTimeAsync(200)
+    expect(attempt).toBe(3)
+
+    // Third retry: delay = 100 * 2^2 = 400ms
+    await vi.advanceTimersByTimeAsync(400)
+    const result = await promise
+    expect(result).toBe('ok')
+    expect(attempt).toBe(4)
+
+    vi.useRealTimers()
+  })
+})
+
+describe('Queue', () => {
+  test("'drop' ignores concurrent calls", async () => {
+    let resolveFirst!: (value: string) => void
+    let callCount = 0
+
+    class Actions {
+      @Queue('drop')
+      async doSomething(id: number) {
+        callCount++
+        if (id === 1) {
+          return new Promise<string>((resolve) => {
+            resolveFirst = resolve
+          })
+        }
+        return `result-${id}`
+      }
+    }
+
+    const actions = new Actions()
+    const first = actions.doSomething(1)
+    const second = actions.doSomething(2)
+
+    // second call should return same promise as first (dropped)
+    resolveFirst('first-done')
+    const result1 = await first
+    const result2 = await second
+
+    expect(result1).toBe('first-done')
+    // The second call was dropped, so it got the first call's result
+    expect(result2).toBe('first-done')
+    expect(callCount).toBe(1)
+  })
+
+  test("'queue' executes sequentially", async () => {
+    const order: number[] = []
+    let resolvers: Array<() => void> = []
+
+    class Actions {
+      @Queue('queue')
+      async doSomething(id: number) {
+        await new Promise<void>((resolve) => {
+          resolvers.push(resolve)
+        })
+        order.push(id)
+        return `result-${id}`
+      }
+    }
+
+    const actions = new Actions()
+    const p1 = actions.doSomething(1)
+    const p2 = actions.doSomething(2)
+
+    // First call is executing, second is queued
+    await vi.waitFor(() => expect(resolvers).toHaveLength(1))
+    resolvers[0]()
+
+    await vi.waitFor(() => expect(resolvers).toHaveLength(2))
+    resolvers[1]()
+
+    const r1 = await p1
+    const r2 = await p2
+
+    expect(r1).toBe('result-1')
+    expect(r2).toBe('result-2')
+    expect(order).toEqual([1, 2])
+  })
+
+  test("'replace' only latest result is kept", async () => {
+    let resolvers: Array<(value: string) => void> = []
+
+    class Actions {
+      @Queue('replace')
+      async doSomething(id: number) {
+        return new Promise<string>((resolve) => {
+          resolvers.push((val) => resolve(val))
+        })
+      }
+    }
+
+    const actions = new Actions()
+    const p1 = actions.doSomething(1)
+    const p2 = actions.doSomething(2)
+
+    // Resolve in order: first, then second
+    resolvers[0]('first-result')
+    resolvers[1]('second-result')
+
+    const r1 = await p1
+    const r2 = await p2
+
+    // First call's result is discarded (stale)
+    expect(r1).toBeUndefined()
+    // Latest call's result is kept
+    expect(r2).toBe('second-result')
+  })
+})
+
+describe('Log', () => {
+  test('logs method name and args on call', () => {
+    const spy = vi.spyOn(console, 'info').mockImplementation(() => {})
+
+    class Actions {
+      @Log()
+      doSomething(a: number, b: string) {
+        return `${a}-${b}`
+      }
+    }
+
+    const actions = new Actions()
+    actions.doSomething(1, 'hello')
+
+    expect(spy).toHaveBeenCalledWith('called with', [1, 'hello'])
+    spy.mockRestore()
+  })
+
+  test('logs result on success', () => {
+    const spy = vi.spyOn(console, 'info').mockImplementation(() => {})
+
+    class Actions {
+      @Log()
+      doSomething() {
+        return 42
+      }
+    }
+
+    const actions = new Actions()
+    actions.doSomething()
+
+    expect(spy).toHaveBeenCalledWith('returned', 42)
+    spy.mockRestore()
+  })
+
+  test('logs error on failure', () => {
+    const spy = vi.spyOn(console, 'info').mockImplementation(() => {})
+
+    class Actions {
+      @Log()
+      doSomething() {
+        throw new Error('boom')
+      }
+    }
+
+    const actions = new Actions()
+    expect(() => actions.doSomething()).toThrow('boom')
+
+    expect(spy).toHaveBeenCalledWith('threw', expect.objectContaining({ message: 'boom' }))
+    spy.mockRestore()
   })
 })

@@ -1,6 +1,24 @@
 import { ThrottleOptions, throttle as throttleUtil } from '../utils'
 import { AnyFunction, Interceptor, intercept } from './utils'
 
+/**
+ * Higher-order function that wraps a function with throttle behavior.
+ * Ensures the function is called at most once per `waitMs` milliseconds.
+ * The first call executes immediately, and subsequent calls within the
+ * throttle window are deferred until the window elapses.
+ *
+ * @param waitMs - The throttle interval in milliseconds.
+ * @param options - Optional throttle configuration (e.g. leading/trailing edge).
+ * @returns An interceptor that applies throttle behavior.
+ *
+ * @example
+ * ```ts
+ * import { throttle } from 'comwit'
+ *
+ * const throttledScroll = throttle(200)(handleScroll)
+ * window.addEventListener('scroll', throttledScroll)
+ * ```
+ */
 export function throttle<T extends AnyFunction>(
   waitMs: number,
   options?: ThrottleOptions
@@ -18,6 +36,26 @@ export function throttle<T extends AnyFunction>(
   }
 }
 
+/**
+ * Method decorator that throttles the decorated method. Ensures the method is
+ * called at most once per `waitMs` milliseconds. The first call executes
+ * immediately, and subsequent calls within the throttle window are deferred
+ * until the window elapses.
+ *
+ * @param waitMs - The throttle interval in milliseconds.
+ * @param options - Optional throttle configuration (e.g. leading/trailing edge).
+ * @returns A method decorator.
+ *
+ * @example
+ * ```ts
+ * class UiController {
+ *   @Throttle(200)
+ *   onScroll(event: Event) {
+ *     this.updateScrollPosition(event)
+ *   }
+ * }
+ * ```
+ */
 export function Throttle(waitMs: number, options?: ThrottleOptions): MethodDecorator {
   let throttledFn: Function | null = null
   return intercept({
