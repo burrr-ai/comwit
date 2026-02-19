@@ -68,10 +68,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
+You can also configure global interceptors that apply to all action methods:
+
+```tsx
+import { OnError, Log, ComwitProvider } from 'comwit'
+
+<ComwitProvider
+  context={context}
+  defaultOptions={{
+    query: { staleTime: 30_000 },
+    interceptors: [
+      OnError((e) => Sentry.captureException(e)),
+      Log('info'),
+    ],
+  }}
+>
+```
+
 `ComwitProvider` takes two props:
 
 - **context** — shared values (router, auth, etc.) available in all actions
-- **defaultOptions** — global query defaults (staleTime, cacheTime, placeholderData)
+- **defaultOptions.query** — global query defaults (staleTime, cacheTime, placeholderData)
+- **defaultOptions.interceptors** — global interceptors applied to all action methods
+
+Execution order: Provider interceptors (outermost) -> Class interceptors -> Method interceptors -> actual method.
 
 ## 3. Create `state/.ai.md`
 

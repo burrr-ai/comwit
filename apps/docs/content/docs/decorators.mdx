@@ -10,18 +10,32 @@ order: 8
 Stack decorators on action class methods to add cross-cutting behavior.
 
 ```ts
-import { OnError, OnSuccess, Debounce, Throttle, Authorized } from 'comwit'
+import {
+  OnError,
+  OnSuccess,
+  Debounce,
+  Throttle,
+  Authorized,
+  Retry,
+  Queue,
+  Log,
+  Validate,
+} from 'comwit'
 ```
 
 ## Built-in decorators
 
-| Decorator                       | Purpose                                                   |
-| ------------------------------- | --------------------------------------------------------- |
-| `@OnError(fn)`                  | Error handler. Receives the error. Re-throw to propagate. |
-| `@OnSuccess(fn)`                | Runs after successful completion.                         |
-| `@Debounce(ms)`                 | Debounces the method call.                                |
-| `@Throttle(ms)`                 | Throttles the method call.                                |
-| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>`     |
+| Decorator                       | Purpose                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| `@OnError(fn)`                  | Error handler. Receives the error. Re-throw to propagate.                     |
+| `@OnSuccess(fn)`                | Runs after successful completion.                                             |
+| `@Debounce(ms)`                 | Debounces the method call.                                                    |
+| `@Throttle(ms)`                 | Throttles the method call.                                                    |
+| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>`                         |
+| `@Retry({ times, delay? })`     | Retries on error up to `times`. Optional `delay` between retries.             |
+| `@Queue()`                      | Queues concurrent calls, executing one at a time.                             |
+| `@Log(level?)`                  | Logs method execution with timing. Levels: `'info'` \| `'debug'` \| `'warn'`. |
+| `@Validate(validators)`         | Validates arguments before execution. Throws `ValidationError` on failure.    |
 
 ## Example
 
@@ -50,20 +64,47 @@ export const postActions = action<Pick<PostActions, 'create' | 'search'>, AppCon
 )
 ```
 
-## createInterceptor
+## Custom Decorators with intercept()
 
-Build reusable decorators that have access to `state()` and `context` — just like action factories.
+Build reusable decorators with full lifecycle control.
 
 ```ts
-import { createInterceptor, onAuthorized } from 'comwit'
-import { user } from '@/state/user/model'
+import { intercept } from 'comwit'
+```
 
-const LoginRequired = createInterceptor<AppContext>(({ state, context }) => {
+`intercept()` supports two modes:
+
+- **Immediate mode** — hooks applied at decoration time. Use when you don't need runtime context.
+- **Lazy mode** — factory receives `ActionContext` with `state` and `context`, resolved when the action binds to a provider.
+
+### Immediate mode
+
+```ts
+const MyLog = intercept({
+  onBefore: (...args) => console.log('called with', args),
+  onSuccess: (result) => console.log('returned', result),
+  onError: (err) => console.error('failed', err),
+})
+```
+
+Available hooks: `onBefore`, `onSuccess`, `onError`, `onSettled`, `intercept`.
+
+### Lazy mode
+
+Use when the decorator needs access to model state or provider context.
+
+```ts
+const LoginRequired = intercept<AppContext>(({ state, context }) => {
   const u = state(user)
-  return onAuthorized({
-    when: () => Boolean(u.me),
-    onDeny: () => context.router.push('/login'),
-  })
+  return {
+    intercept: (execute, args) => {
+      if (!u.me) {
+        context.router.push('/login')
+        return
+      }
+      return execute(...args)
+    },
+  }
 })
 ```
 
@@ -78,4 +119,37 @@ async create(title: string) {
 }
 ```
 
-This replaces manual guard checks like `if (!this.user.me) return` with a declarative, reusable pattern.
+### Decorators with arguments
+
+Create parameterized decorators by wrapping `intercept()` in a function:
+
+```ts
+function MinLength(field: string, min: number) {
+  return intercept({
+    intercept: (execute, args) => {
+      if (args[0]?.length < min) throw new Error(`${field} must be at least ${min} chars`)
+      return execute(...args)
+    },
+  })
+}
+```
+
+## @Validate
+
+Validates arguments before execution. Validators map keys to argument positions.
+
+```ts
+import { Validate, ValidationError } from 'comwit'
+
+class TodoActions {
+  @Validate({
+    title: (v) => (typeof v === 'string' && v.length > 0) || 'Title required',
+    priority: (v) => [1, 2, 3].includes(v) || 'Priority must be 1-3',
+  })
+  async createTodo(title: string, priority: number) {
+    // ...
+  }
+}
+```
+
+Each validator returns `true` for pass, or a string error message. On failure, throws `ValidationError` with an `.errors` record containing all failed validations.

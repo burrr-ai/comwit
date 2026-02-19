@@ -41,6 +41,78 @@ export const post = model<PostState>({
 - Models initialize lazily — only when first accessed via a hook
 - Each model instance is scoped to the nearest `ComwitProvider`
 
+## Derived State
+
+Define computed values that update reactively when their dependencies change.
+
+```ts
+const cart = model(
+  {
+    items: [] as CartItem[],
+    coupon: null as Coupon | null,
+  },
+  {
+    derive: (state) => ({
+      subtotal: () => state.items.reduce((sum, i) => sum + i.price * i.qty, 0),
+      discount: () =>
+        state.coupon?.type === 'percent'
+          ? state.subtotal * (state.coupon.value / 100)
+          : (state.coupon?.value ?? 0),
+      total: () => Math.max(0, state.subtotal - state.discount),
+      isEmpty: () => state.items.length === 0,
+    }),
+  }
+)
+```
+
+- Derived values are lazily evaluated — computed on access
+- Results update reactively when dependencies change
+- Derived fields are **read-only** — throw on mutation attempt
+- Derived fields can depend on other derived fields
+- Accessed the same way as regular state in components and actions
+
+## Validation Rules
+
+Attach validation rules to model fields. Validation state updates reactively as the model changes.
+
+```ts
+const profile = model(
+  {
+    name: '',
+    email: '',
+  },
+  {
+    rules: {
+      name: (v) => v.length > 0 || 'Name is required',
+      email: (v) => v.includes('@') || 'Invalid email format',
+    },
+  }
+)
+```
+
+- `$validation.errors` — `{ name: null, email: 'Invalid email format' }` (null = passed)
+- `$validation.isValid` — `true` when all rules pass
+- Reactively updates when state changes
+- No new hooks — accessed via existing `useModel`
+
+```ts
+const { name, email, $validation } = useProfile()
+// $validation.errors.name → null (valid)
+// $validation.errors.email → 'Invalid email format'
+// $validation.isValid → false
+```
+
+## Options
+
+The second argument to `model()` accepts optional configuration:
+
+```ts
+model(initial, {
+  derive?: (state) => ({ key: () => value }),
+  rules?: { field: (value) => true | 'error message' },
+})
+```
+
 ## In actions
 
 Access a model's state inside an action via `state()`:
