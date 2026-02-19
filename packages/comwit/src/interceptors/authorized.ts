@@ -1,4 +1,4 @@
-import { AnyFunction, createDecorator, isThenable } from './utils'
+import { AnyFunction, isThenable, intercept } from './utils'
 
 type AuthorizedOptions = {
   when: () => boolean | Promise<boolean>
@@ -38,5 +38,34 @@ export function onAuthorized<T extends AnyFunction>(options: AuthorizedOptions):
 }
 
 export function Authorized(options: AuthorizedOptions): MethodDecorator {
-  return createDecorator(onAuthorized(options))
+  return intercept({
+    intercept: (execute, args) => {
+      const denied = () => {
+        if (!options.onDeny) {
+          return undefined
+        }
+
+        const result = options.onDeny()
+        return isThenable(result) ? result.then(() => undefined) : undefined
+      }
+
+      const decided = options.when()
+
+      if (isThenable(decided)) {
+        return Promise.resolve(decided).then((ok) => {
+          if (ok) {
+            return execute(...args)
+          }
+
+          return denied()
+        })
+      }
+
+      if (!decided) {
+        return denied()
+      }
+
+      return execute(...args)
+    },
+  }) as MethodDecorator
 }

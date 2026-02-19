@@ -1,4 +1,4 @@
-import { createDecorator, Interceptor } from './utils'
+import { intercept } from './utils'
 
 /**
  * Experimental placeholder.
@@ -17,5 +17,5 @@ export function transaction(): <T extends (...args: any[]) => any>(next: T) => T
 }
 
 export function Transaction(): MethodDecorator {
-  return createDecorator(transaction())
+  return intercept({}) as MethodDecorator
 }

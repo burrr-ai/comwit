@@ -1,4 +1,4 @@
-import { AnyFunction, createDecorator, isThenable } from './utils'
+import { AnyFunction, isThenable, intercept } from './utils'
 
 export function onError<T extends AnyFunction>(handler: (error: unknown) => void): (next: T) => T {
   return ((next: T) =>
@@ -18,5 +18,5 @@ export function onError<T extends AnyFunction>(handler: (error: unknown) => void
 }
 
 export function OnError(handler: (error: unknown) => any): MethodDecorator {
-  return createDecorator(onError(handler))
+  return intercept({ onError: (err) => handler(err) }) as MethodDecorator
 }

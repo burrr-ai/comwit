@@ -1,5 +1,5 @@
 import { DebounceOptions, debounce as debounceUtil } from '../utils'
-import { AnyFunction, createDecorator, Interceptor } from './utils'
+import { AnyFunction, Interceptor, intercept } from './utils'
 
 export function debounce<T extends AnyFunction>(
   waitMs: number,
@@ -19,5 +19,13 @@ export function debounce<T extends AnyFunction>(
 }
 
 export function Debounce(waitMs: number, options?: DebounceOptions): MethodDecorator {
-  return createDecorator(debounce(waitMs, options))
+  let debouncedFn: Function | null = null
+  return intercept({
+    intercept: (execute, args) => {
+      if (!debouncedFn) {
+        debouncedFn = debounceUtil((...a: any[]) => execute(...a), waitMs, options)
+      }
+      return debouncedFn(...args)
+    },
+  }) as MethodDecorator
 }

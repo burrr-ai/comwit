@@ -1,4 +1,4 @@
-import { AnyFunction, createDecorator, isThenable } from './utils'
+import { AnyFunction, isThenable, intercept } from './utils'
 
 export function onSuccess<T extends AnyFunction>(
   handler: (result: Awaited<ReturnType<T>>) => void
@@ -19,5 +19,5 @@ export function onSuccess<T extends AnyFunction>(
 }
 
 export function OnSuccess<R>(handler: (result: R) => void): MethodDecorator {
-  return createDecorator(onSuccess(handler))
+  return intercept({ onSuccess: (result) => handler(result) }) as MethodDecorator
 }

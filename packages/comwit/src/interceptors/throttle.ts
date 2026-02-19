@@ -1,5 +1,5 @@
 import { ThrottleOptions, throttle as throttleUtil } from '../utils'
-import { AnyFunction, createDecorator, Interceptor } from './utils'
+import { AnyFunction, Interceptor, intercept } from './utils'
 
 export function throttle<T extends AnyFunction>(
   waitMs: number,
@@ -19,5 +19,13 @@ export function throttle<T extends AnyFunction>(
 }
 
 export function Throttle(waitMs: number, options?: ThrottleOptions): MethodDecorator {
-  return createDecorator(throttle(waitMs, options))
+  let throttledFn: Function | null = null
+  return intercept({
+    intercept: (execute, args) => {
+      if (!throttledFn) {
+        throttledFn = throttleUtil((...a: any[]) => execute(...a), waitMs, options)
+      }
+      return throttledFn(...args)
+    },
+  }) as MethodDecorator
 }
