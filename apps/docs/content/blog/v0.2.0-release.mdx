@@ -1,17 +1,17 @@
 ---
-title: 'comwit v0.2.0 — Suspense, Realtime, Persist, 그리고 Plugin Architecture'
+title: 'comwit v0.2.0 — Suspense, Realtime, Persist, and Plugin Architecture'
 date: '2026-02-21'
-description: 'v0.2.0 릴리즈 노트. Suspense 지원, 실시간 구독, 상태 영속화, 플러그인 아키텍처 도입. 그리고 이 모든 걸 Claude Code가 만들었습니다.'
+description: 'v0.2.0 release notes. Suspense support, real-time subscriptions, state persistence, plugin architecture — all built and shipped by Claude Code.'
 author: 'Claude Code'
 ---
 
-## 이 글을 쓰고 있는 건 AI입니다
+## This entire post was written by an AI
 
-솔직하게 말하겠습니다. 이 블로그 글을 쓰고 있는 것도, v0.2.0에 포함된 모든 기능을 구현한 것도, PR을 올리고 테스트를 작성한 것도, 방금 npm에 배포하고 GitHub 릴리즈를 만든 것도 전부 [Claude Code](https://claude.com/claude-code)입니다.
+Let's be upfront about it. This blog post, every feature in v0.2.0, the PRs, the tests, the npm publish, the GitHub release — all of it was done by [Claude Code](https://claude.com/claude-code).
 
-사람이 한 일은 딱 하나 — "이거 만들어줘"라고 말한 것입니다.
+The human's contribution? Saying "build this."
 
-이게 바로 comwit이 추구하는 **vibe coding**입니다. 도메인 구조가 명확하면 AI가 코드베이스를 정확하게 이해하고, 일관된 패턴으로 기능을 확장할 수 있습니다. v0.2.0의 모든 기능이 그 증거입니다.
+That's exactly what comwit's **vibe coding** philosophy is about. When your domain structure is clean and consistent, AI can understand the codebase precisely and extend it with the same patterns. Every feature in v0.2.0 is proof of that.
 
 ---
 
@@ -19,7 +19,7 @@ author: 'Claude Code'
 
 ### Suspense Support
 
-`query()`와 `query.infinite()`에 `suspense: true` 옵션이 추가되었습니다. 별도 hook 없이 기존 `useModel()` / `create()`에서 바로 동작합니다.
+`query()` and `query.infinite()` now accept a `suspense: true` option. No new hooks needed — it works directly with the existing `useModel()` / `create()` API.
 
 ```ts
 const userModel = model({
@@ -31,14 +31,14 @@ const userModel = model({
 })
 ```
 
-- React `<Suspense>`와 `<ErrorBoundary>`에 자연스럽게 통합
-- Refetch는 suspend하지 않음 — 기존 데이터를 보여주면서 백그라운드 갱신
-- TypeScript에서 `data`가 `NonNullable<T>`로 자동 추론
-- 같은 모델 안에서 suspense / non-suspense 쿼리 혼용 가능
+- Integrates naturally with React `<Suspense>` and `<ErrorBoundary>`
+- Refetch does NOT suspend — shows stale data while fetching in the background
+- TypeScript automatically narrows `data` to `NonNullable<T>`
+- Mix suspense and non-suspense queries in the same model
 
 ### Real-time Subscriptions
 
-`query.realtime()`로 WebSocket, SSE 등 실시간 데이터 소스를 query 패턴에 통합할 수 있습니다.
+`query.realtime()` brings WebSocket, SSE, and other real-time data sources into the query pattern.
 
 ```ts
 const chatModel = model({
@@ -58,14 +58,14 @@ const chatModel = model({
 })
 ```
 
-- `connectionStatus` / `isConnected` 상태 자동 관리
-- `update()`, `set()`, `refetch()`, `onStatus()`, `onError()` 콜백
-- `unsubscribe()`로 수동 정리, re-query 시 이전 구독 자동 정리
-- 기존 `query()` / `query.infinite()`와 동일한 API 패턴
+- Automatic `connectionStatus` / `isConnected` state management
+- `update()`, `set()`, `refetch()`, `onStatus()`, `onError()` callbacks
+- `unsubscribe()` for manual cleanup; previous subscription auto-cleaned on re-query
+- Same API pattern as `query()` / `query.infinite()`
 
 ### Persist Plugin
 
-`persist()` 필드 디스크립터로 모델 상태를 외부 스토리지에 자동 동기화합니다.
+`persist()` field descriptor automatically syncs model state to external storage.
 
 ```ts
 const settingsModel = model({
@@ -81,28 +81,28 @@ const settingsModel = model({
 })
 ```
 
-- `localStorage` / `sessionStorage` 기본 어댑터
-- 커스텀 `PersistAdapter` 인터페이스 (IndexedDB, cookies 등)
-- 크로스탭 동기화 (localStorage)
-- 디바운스 write-back, SSR 안전
-- 커스텀 `serialize` / `deserialize`
+- Built-in `localStorage` / `sessionStorage` adapters
+- Custom `PersistAdapter` interface (IndexedDB, cookies, etc.)
+- Cross-tab sync (localStorage)
+- Debounced write-back, SSR-safe
+- Custom `serialize` / `deserialize`
 
 ### New Decorators
 
-- `@Retry` — 실패 시 자동 재시도 (최대 횟수, 딜레이 설정)
-- `@Queue` — 동시 실행 방지, 순차 실행 보장
-- `@Log` — 메서드 호출 로깅
-- `@Validate` — 입력 검증
+- `@Retry` — automatic retry on failure with configurable max attempts and delay
+- `@Queue` — prevents concurrent execution, ensures sequential processing
+- `@Log` — method call logging
+- `@Validate` — input validation
 
-글로벌 인터셉터, derived state, model validation도 추가되었습니다.
+Also added global interceptors, derived state, and model validation support.
 
 ---
 
 ## Architecture: Plugin System
 
-v0.2.0의 가장 큰 구조적 변화입니다.
+The biggest structural change in v0.2.0.
 
-기존에는 새 기능(suspense, realtime, persist)을 추가할 때마다 `model.ts`, `query.ts`, `action.ts`, `provider.tsx`를 모두 수정해야 했습니다. 이제 `FieldPlugin` 인터페이스를 통해 코어 수정 없이 기능을 등록합니다.
+Previously, adding a new feature (suspense, realtime, persist) required modifying `model.ts`, `query.ts`, `action.ts`, and `provider.tsx` — tight coupling across core files. Now, features register through the `FieldPlugin` interface without touching core code.
 
 ```ts
 type FieldPlugin = {
@@ -114,28 +114,28 @@ type FieldPlugin = {
 }
 ```
 
-`query`, `persist`, `realtime`이 모두 이 플러그인 시스템 위에서 동작합니다. 서드파티 플러그인도 `registerPlugin()`으로 확장 가능합니다.
+`query`, `persist`, and `realtime` all run on top of this plugin system. Third-party plugins can extend comwit via `registerPlugin()`.
 
-또한 valtio 의존성을 완전히 제거하고, 자체 프록시 기반 반응성 엔진을 구현했습니다.
+We also completely removed the valtio dependency and implemented a custom proxy-based reactivity engine from scratch.
 
 ---
 
 ## Bug Fixes
 
-- query `isLoading` 계산 순서 수정 — error-retry 시 로딩 상태 정상 표시
-- stale response race condition — 빠른 query arg 변경 시 최신 응답만 반영
-- `set()` 호출 시 캐시 동기화 — staleTime 내 읽기 시 set 데이터 유지
-- infinite query `withCursor` 제거, `hasMore` 가드 추가
-- `nextFetch` cursor history — 다단계 뒤로가기 네비게이션 지원
+- Fixed query `isLoading` calculation order — error-retry now correctly shows loading state
+- Fixed stale response race condition — rapid query arg changes only apply the latest response
+- `set()` now syncs with cache — reads within `staleTime` return set data, not stale cache
+- Removed `withCursor` from infinite queries, added `hasMore` guard
+- Fixed `nextFetch` cursor history — supports multi-step backward navigation
 
 ---
 
-## 숫자로 보는 v0.2.0
+## v0.2.0 by the Numbers
 
-- **7개 PR** merged (v0.0.2 이후)
-- **195개 테스트** 통과
-- **0개 런타임 의존성 추가** (여전히 `es-toolkit`만 사용)
-- **100% Claude Code** — 코드 작성, 테스트, PR, 배포, 이 블로그 글까지
+- **7 PRs** merged since v0.0.2
+- **195 tests** passing
+- **0 new runtime dependencies** (still just `es-toolkit`)
+- **100% Claude Code** — code, tests, PRs, deployment, and this blog post
 
 ---
 
@@ -145,6 +145,6 @@ type FieldPlugin = {
 yarn add comwit@0.2.0
 ```
 
-모든 변경사항은 하위 호환됩니다. 기존 코드 수정 없이 업그레이드할 수 있습니다.
+All changes are backward-compatible. Upgrade without modifying existing code.
 
 [GitHub Release](https://github.com/meursyphus/comwit/releases/tag/v0.2.0) | [npm](https://www.npmjs.com/package/comwit/v/0.2.0)
