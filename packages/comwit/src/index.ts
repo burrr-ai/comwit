@@ -8,6 +8,7 @@ export {
   ComwitProvider,
   keepPreviousData,
   query,
+  persist,
 } from './core'
 export type {
   Query,
@@ -16,5 +17,8 @@ export type {
   PlaceholderData,
   ModelOptions,
   ValidationState,
+  PersistAdapter,
+  PersistOptions,
+  PersistDefaults,
 } from './core'
 export * from './interceptors'
