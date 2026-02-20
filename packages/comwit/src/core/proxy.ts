@@ -37,6 +37,10 @@ export function createProxy<T extends object>(initialValue: T): T {
   function wrap(obj: any): any {
     if (!canProxy(obj)) return obj
 
+    if (Object.isFrozen(obj)) {
+      obj = Array.isArray(obj) ? [...obj] : { ...obj }
+    }
+
     if (Array.isArray(obj)) {
       for (let i = 0; i < obj.length; i++) {
         if (canProxy(obj[i])) obj[i] = wrap(obj[i])

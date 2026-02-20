@@ -454,4 +454,41 @@ describe('query', () => {
       expect(bound.data).toBe('second')
     })
   })
+
+  describe('Frozen state regression (#35)', () => {
+    it('should not throw on second query() call when data is an array', async () => {
+      let callCount = 0
+      const bound = createBound({
+        initialData: [] as string[],
+        queryFn: vi.fn().mockImplementation(() => {
+          callCount++
+          return Promise.resolve([`item-${callCount}`])
+        }),
+      })
+
+      await bound.query()
+      expect(bound.data).toEqual(['item-1'])
+
+      // Second call should NOT throw "Cannot assign to read only property"
+      await bound.query({ force: true })
+      expect(bound.data).toEqual(['item-2'])
+    })
+
+    it('should not throw on second query() call when data is a nested object', async () => {
+      let callCount = 0
+      const bound = createBound({
+        initialData: { items: [] as string[], total: 0 },
+        queryFn: vi.fn().mockImplementation(() => {
+          callCount++
+          return Promise.resolve({ data: { items: [`item-${callCount}`], total: callCount } })
+        }),
+      })
+
+      await bound.query()
+      expect(bound.data).toEqual({ items: ['item-1'], total: 1 })
+
+      await bound.query({ force: true })
+      expect(bound.data).toEqual({ items: ['item-2'], total: 2 })
+    })
+  })
 })
