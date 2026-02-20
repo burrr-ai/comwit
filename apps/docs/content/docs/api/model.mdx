@@ -32,11 +32,23 @@ export const post = model<PostState>({
 })
 ```
 
+```ts
+// With persist fields
+import { model, query, persist } from 'comwit'
+
+export const app = model<AppState>({
+  posts: query<Post[]>({ initialData: [], queryFn: () => api.post.findAll() }),
+  theme: persist({ key: 'theme', defaultValue: 'light' }),
+  current: null,
+})
+```
+
 ## How it works
 
 `model(initial)` takes an object of initial values and returns a `Model<T>`.
 
 - Fields using [`query()`](/docs/api/query) become client-fetched data with loading states
+- Fields using [`persist()`](/docs/api/persist) are automatically synced to storage
 - Plain fields (strings, objects, arrays, null) are reactive local state
 - Models initialize lazily — only when first accessed via a hook
 - Each model instance is scoped to the nearest `ComwitProvider`

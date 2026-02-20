@@ -145,3 +145,79 @@ queryFn: async (_, { state }) => {
   }
 }
 ```
+
+---
+
+## query.realtime()
+
+For real-time data with WebSocket/SSE subscriptions. Use `Query.Realtime<T>` as the type.
+
+After the initial `queryFn` fetch succeeds, a `subscribe` function is called with callbacks to push live updates.
+
+```ts
+import { Query } from 'comwit'
+
+// types.ts
+export type ChatState = {
+  messages: Query.Realtime<Message[]>
+}
+```
+
+```ts
+// model.ts
+import { query } from 'comwit'
+
+export const chat = model<ChatState>({
+  messages: query.realtime<Message[]>({
+    initialData: [],
+    queryFn: (roomId) => api.chat.history(roomId),
+    subscribe: (callbacks) => {
+      const ws = new WebSocket(`wss://api.example.com/chat`)
+      ws.onmessage = (e) => {
+        callbacks.update((prev) => [...prev, JSON.parse(e.data)])
+      }
+      ws.onopen = () => callbacks.onStatus('connected')
+      ws.onclose = () => callbacks.onStatus('disconnected')
+      ws.onerror = (e) => callbacks.onError(e)
+      return () => ws.close()
+    },
+  }),
+})
+```
+
+### Subscribe callbacks
+
+The `subscribe` function receives an object with these callbacks and must return a cleanup function:
+
+| Callback    | Signature                              | Description                        |
+| ----------- | -------------------------------------- | ---------------------------------- |
+| `update`    | `(updater: (prev: T) => T) => void`   | Merge data using updater function  |
+| `set`       | `(data: T) => void`                   | Replace data entirely              |
+| `refetch`   | `() => void`                           | Re-execute the queryFn             |
+| `onStatus`  | `(status: ConnectionStatus) => void`   | Update connection status           |
+| `onError`   | `(error: unknown) => void`             | Set error state                    |
+
+### Additional methods
+
+| Method           | Description                                                        |
+| ---------------- | ------------------------------------------------------------------ |
+| `.unsubscribe()` | Stop the live subscription. Sets status to `'disconnected'`.       |
+
+### Additional flags
+
+| Flag               | Type               | Description                          |
+| ------------------ | ------------------ | ------------------------------------ |
+| `.connectionStatus`| `ConnectionStatus` | `'connecting' \| 'connected' \| 'disconnected' \| 'reconnecting'` |
+| `.isConnected`     | `boolean`          | True when status is `'connected'`    |
+
+### Usage in actions
+
+```ts
+async connectChat(roomId: string) {
+  await this.model.messages.query(roomId) // fetches + starts subscription
+}
+
+disconnect() {
+  this.model.messages.unsubscribe()
+}
+```
