@@ -1,5 +1,5 @@
 import type { BoundResourceState } from './query'
-import { bindResourceState } from './query'
+import { getPlugins } from './plugin'
 import { useRef } from 'react'
 import { getLazyInterceptorFactories, type LazyInterceptorFactory } from '../interceptors/utils'
 import { useStoreRegistry } from './provider'
@@ -37,19 +37,21 @@ export function useAction<A, C extends object = Record<string, never>>(
       if (existing) return existing as BoundResourceState<T>
 
       const entry = registry.get(dep)
-      if (!dep.resources.size) {
-        resourceStateRef.current.set(dep.key, entry.proxy)
-        return entry.proxy as BoundResourceState<T>
+      let proxy: object = entry.proxy
+
+      // Apply plugin bindState in order
+      const plugins = getPlugins()
+      for (const plugin of plugins) {
+        const bag = dep.pluginBags.get(plugin.name)
+        if (!bag || bag.size === 0) continue
+
+        const registryState = registry.pluginStates.get(plugin.name)
+        const defaults = registry.pluginDefaults.get(plugin.name)
+        proxy = plugin.bindState(proxy, bag, registryState, defaults)
       }
 
-      const bound = bindResourceState(
-        entry.proxy,
-        dep.resources,
-        registry.queryDefaults,
-        registry.queryBinding
-      )
-      resourceStateRef.current.set(dep.key, bound)
-      return bound as BoundResourceState<T>
+      resourceStateRef.current.set(dep.key, proxy)
+      return proxy as BoundResourceState<T>
     }
 
     const context = (registry.context ?? {}) as C

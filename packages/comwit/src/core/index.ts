@@ -11,6 +11,10 @@ import {
   query,
 } from './query'
 
+// Plugin system
+export { registerPlugin, getPlugins } from './plugin'
+export type { FieldPlugin, PluginBag } from './plugin'
+
 function create<S extends object, A>(
   m: Model<S>,
   options: { actions: ActionFactory<Partial<A>, any>[] }
@@ -19,7 +23,10 @@ function create<S extends object, A>(
   function useStore<R>(selector: (state: S & { actions: A }) => R): R
   function useStore<R>(selector?: (state: S & { actions: A }) => R) {
     const actions = useAction<A>(options.actions)
-    const withActions = (state: S): S & { actions: A } => ({ ...state, actions })
+    const withActions = (state: S): S & { actions: A } => ({
+      ...state,
+      actions,
+    })
 
     const finalSelector = selector
       ? (state: S) => selector(withActions(state))
