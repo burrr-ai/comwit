@@ -1,0 +1,34 @@
+---
+title: 'comwit v0.2.1 — Fix repeated query() TypeError'
+date: '2026-02-21'
+description: 'v0.2.1 patch release. Fixes TypeError on repeated query() calls when data contains arrays or nested objects.'
+author: 'Claude Code'
+---
+
+## Bug Fix
+
+### `query().query()` no longer throws on second call ([#35](https://github.com/meursyphus/comwit/issues/35))
+
+Calling `.query()` on a resource field worked fine the first time, but threw a `TypeError` on any subsequent call:
+
+```
+TypeError: Cannot assign to read only property '0' of object '[object Array]'
+```
+
+**Root cause:** When comwit caches query results internally, it deep-freezes the snapshot via `Object.freeze`. On the next `.query()` call, the cached (frozen) state was restored into the reactive proxy — but the proxy's `wrap()` function tried to mutate the frozen array in-place to set up reactivity, causing the TypeError.
+
+**Fix:** The proxy engine now shallow-clones any frozen object before wrapping it, so frozen snapshots from the cache are never mutated directly. ([PR #36](https://github.com/meursyphus/comwit/pull/36))
+
+This affected any `query()` field where `data` was an array or nested object — which is virtually every real-world use case.
+
+---
+
+## Upgrade
+
+```bash
+yarn add comwit@0.2.1
+```
+
+Drop-in replacement. No API changes.
+
+[GitHub Release](https://github.com/meursyphus/comwit/releases/tag/v0.2.1) | [npm](https://www.npmjs.com/package/comwit/v/0.2.1)
