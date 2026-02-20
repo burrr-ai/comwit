@@ -1,0 +1,103 @@
+---
+title: 'persist()'
+group: 'API'
+slug: 'api/persist'
+order: 7
+---
+
+# persist()
+
+Declares a persisted field inside a model. Values are automatically synced to storage.
+
+```ts
+import { persist } from 'comwit'
+```
+
+## Basic usage
+
+```ts
+import { model, persist } from 'comwit'
+
+export const settings = model<SettingsState>({
+  theme: persist({ key: 'theme', defaultValue: 'light' }),
+  lang: persist({ key: 'lang', defaultValue: 'en', storage: 'sessionStorage' }),
+})
+```
+
+No special type needed — persist fields are plain values in your state type:
+
+```ts
+export type SettingsState = {
+  theme: string
+  lang: string
+}
+```
+
+## Options
+
+| Option        | Type                                                    | Description                                        |
+| ------------- | ------------------------------------------------------- | -------------------------------------------------- |
+| `key`         | `string`                                                | **Required.** Storage key.                         |
+| `defaultValue`| `T`                                                     | **Required.** Value when storage is empty.         |
+| `storage`     | `'localStorage' \| 'sessionStorage' \| PersistAdapter`  | Storage backend. Default `'localStorage'`.         |
+| `serialize`   | `(value: T) => string`                                  | Custom serializer. Default `JSON.stringify`.       |
+| `deserialize` | `(raw: string) => T`                                    | Custom deserializer. Default `JSON.parse`.         |
+
+## How it works
+
+1. **Hydration** — On model creation, reads stored value. Uses `defaultValue` if empty.
+2. **Write-back** — When proxy value changes, debounced-writes to storage (default 100ms).
+3. **Cross-tab sync** — With localStorage, changes from other tabs auto-update via `StorageEvent`.
+4. **SSR safe** — Returns `defaultValue` when `window` is unavailable.
+
+## Provider defaults
+
+Configure debounce timing globally:
+
+```tsx
+<ComwitProvider
+  defaultOptions={{
+    persist: { debounceMs: 200 },
+  }}
+>
+```
+
+## Custom adapter
+
+Implement `PersistAdapter<T>` for custom storage backends:
+
+```ts
+import { type PersistAdapter } from 'comwit'
+
+const indexedDBAdapter: PersistAdapter<UserPrefs> = {
+  get(key) { /* read from IndexedDB */ },
+  set(key, value) { /* write to IndexedDB */ },
+  remove(key) { /* delete from IndexedDB */ },
+  subscribe(key, callback) {
+    // optional: listen for external changes
+    return () => { /* cleanup */ }
+  },
+}
+
+const settings = model({
+  prefs: persist({
+    key: 'user-prefs',
+    defaultValue: { fontSize: 14 },
+    storage: indexedDBAdapter,
+  }),
+})
+```
+
+## In actions
+
+Persist fields work like regular state — mutations auto-persist:
+
+```ts
+class SettingsActions {
+  private s = state(settings)
+
+  setTheme(theme: string) {
+    this.s.theme = theme // automatically persisted
+  }
+}
+```

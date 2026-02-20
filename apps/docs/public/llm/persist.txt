@@ -1,0 +1,122 @@
+# comwit — Persist Reference
+
+> Full API reference for `persist()` field plugin, storage adapters, and cross-tab sync.
+
+## persist(options)
+
+Creates a persisted field descriptor for use inside `model()`. The field value is automatically synced to storage.
+
+```ts
+import { model, persist } from 'comwit'
+
+const settings = model({
+  theme: persist({ key: 'theme', defaultValue: 'light' }),
+  lang: persist({ key: 'lang', defaultValue: 'en', storage: 'sessionStorage' }),
+  preferences: persist({
+    key: 'prefs',
+    defaultValue: { fontSize: 14, darkMode: false },
+    storage: customAdapter,
+  }),
+})
+```
+
+### Options
+
+| Option        | Type                                       | Description                                                    |
+| ------------- | ------------------------------------------ | -------------------------------------------------------------- |
+| `key`         | `string`                                   | **Required.** Storage key for persistence.                     |
+| `defaultValue`| `T`                                        | **Required.** Value used when storage is empty.                |
+| `storage`     | `'localStorage' \| 'sessionStorage' \| PersistAdapter<T>` | Storage backend. Default `'localStorage'`. |
+| `serialize`   | `(value: T) => string`                     | Custom serializer. Default `JSON.stringify`.                   |
+| `deserialize` | `(raw: string) => T`                       | Custom deserializer. Default `JSON.parse`.                     |
+
+## Behavior
+
+### Hydration
+On model creation, each persist field reads from storage:
+- If a value exists → uses the stored value
+- If storage is empty → uses `defaultValue`
+- SSR safe: returns `defaultValue` when `window` is unavailable
+
+### Write-back
+When a persist field's proxy value changes, the new value is debounced-written to storage.
+
+Default debounce: 100ms. Configure via provider:
+```ts
+<ComwitProvider defaultOptions={{ persist: { debounceMs: 200 } }}>
+```
+
+### Cross-tab Sync
+With `localStorage`, changes from other tabs are automatically detected via the `StorageEvent` API. When another tab writes to the same key, the current tab's proxy state is silently updated (no re-render flicker).
+
+`sessionStorage` does not support cross-tab sync (browser limitation).
+
+## Custom Adapters
+
+Implement the `PersistAdapter<T>` interface for custom storage backends:
+
+```ts
+import { type PersistAdapter } from 'comwit'
+
+const indexedDBAdapter: PersistAdapter<MyData> = {
+  get(key) { /* read from IndexedDB */ },
+  set(key, value) { /* write to IndexedDB */ },
+  remove(key) { /* delete from IndexedDB */ },
+  // Optional: enable external change detection
+  subscribe(key, callback) {
+    // Listen for changes and call callback(newValue)
+    return () => { /* cleanup */ }
+  },
+}
+```
+
+### PersistAdapter<T>
+
+| Method      | Signature                                          | Required | Description                        |
+| ----------- | -------------------------------------------------- | -------- | ---------------------------------- |
+| `get`       | `(key: string) => T \| null`                       | Yes      | Read value from storage.           |
+| `set`       | `(key: string, value: T) => void`                  | Yes      | Write value to storage.            |
+| `remove`    | `(key: string) => void`                            | Yes      | Remove value from storage.         |
+| `subscribe` | `(key: string, callback: (value: T) => void) => () => void` | No | Listen for external changes. |
+
+## Full Example
+
+```ts
+// types.ts
+export type SettingsState = {
+  theme: string
+  lang: string
+  recentSearches: string[]
+}
+
+// model.ts
+import { model, persist } from 'comwit'
+
+export const settings = model<SettingsState>({
+  theme: persist({ key: 'app-theme', defaultValue: 'light' }),
+  lang: persist({ key: 'app-lang', defaultValue: 'en' }),
+  recentSearches: persist({ key: 'recent-searches', defaultValue: [] }),
+})
+
+// actions/settings.ts
+import { action } from 'comwit'
+
+export const settingsActions = action<SettingsActions>(({ state }) => {
+  class SettingsActions {
+    private s = state(settings)
+
+    setTheme(theme: string) {
+      this.s.theme = theme  // automatically persisted
+    }
+
+    setLang(lang: string) {
+      this.s.lang = lang  // automatically persisted
+    }
+
+    addSearch(query: string) {
+      this.s.recentSearches = [query, ...this.s.recentSearches.slice(0, 9)]
+    }
+  }
+  return new SettingsActions()
+})
+```

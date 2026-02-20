@@ -81,7 +81,7 @@ This project uses comwit. When working on files in state/, always read state/.ai
 
 ## state/.ai.md Content
 
-Copy everything between the `fences into your `state/.ai.md`:
+Copy everything between the fences into your `state/.ai.md`:
 
 ````md
 ## Structure
@@ -153,6 +153,36 @@ export const post = model<PostState>({
 })
 ```
 
+#### Derived State & Validation
+
+`model()` accepts an optional second argument with `derive` and `rules`:
+
+```ts
+import { model, query } from 'comwit'
+
+export const cart = model<CartState, CartDerived>(
+  {
+    items: [],
+    coupon: '',
+  },
+  {
+    // derive: computed fields — recalculated on every read
+    derive: (state) => ({
+      total: () => state.items.reduce((sum, i) => sum + i.price * i.qty, 0),
+      itemCount: () => state.items.reduce((sum, i) => sum + i.qty, 0),
+    }),
+    // rules: per-field validation — accessed via state.$validation
+    rules: {
+      coupon: (v) => (v.length <= 20) || 'Coupon too long',
+      items: (v) => (v.length > 0) || 'Cart is empty',
+    },
+  }
+)
+```
+
+- Derived fields are readonly and throw if assigned.
+- Validation is accessed via `state.$validation`: `{ errors: { [field]: string | null }, isValid: boolean }`.
+
 ### actions/\*.ts
 
 Actions are self-contained — resolve state via `state()`, side effects via decorators/context. UI only calls.
@@ -190,16 +220,18 @@ export const postActions = action<Pick<PostActions, '...'>, AppContext>(({ state
 })
 ```
 
-The pattern above can be automated with `createInterceptor`. See [Decorators](#decorators) below.
+The pattern above can be automated with `intercept()` in lazy mode. See [Decorators](#decorators) below.
 
 ```ts
 // reusable guard — state() must be initialized in the factory body
-const LoginRequired = createInterceptor<AppContext>(({ state, context }) => {
+const LoginRequired = intercept<AppContext>(({ state, context }) => {
   const u = state(user)
-  return onAuthorized({
-    when: () => Boolean(u.me),
-    onDeny: () => context.router.push('/login'),
-  })
+  return {
+    intercept: (execute, args) => {
+      if (!u.me) { context.router.push('/login'); return }
+      return execute(...args)
+    },
+  }
 })
 
 // replaces the manual if (!this.user.me) check above:
@@ -230,30 +262,39 @@ export const usePost = create<PostState, PostActions>(post, {
 })
 ```
 
-## query() Reference
+## query() Summary
 
-Methods: `.query(arg?)` · `.refetch()` · `.set(data)` · `.nextFetch()` · `.previousFetch()`
-Flags: `isLoading` · `isFetching` · `isSuccess` · `isError` · `error`
-Infinite-only flags: `cursor` · `hasMore` (nextFetch is no-op when `hasMore` is false)
-Options: `staleTime` · `cacheTime` · `gcTime` · `placeholderData` · `force`
+`query()`, `query.infinite()`, and `query.realtime()` create resource descriptors for client-side fetching inside `model()`.
 
-`queryFn` receives `(arg, context)` where `context.state` is a readonly snapshot of the current query state (includes `data`, `cursor`, etc.).
+- Methods: `.query(arg?)` · `.refetch()` · `.set(data)` · `.nextFetch()` · `.previousFetch()`
+- Flags: `isLoading` · `isFetching` · `isSuccess` · `isError` · `error`
+- Infinite-only: `cursor` · `hasMore`
+- Realtime methods: `.query()` · `.refetch()` · `.set()` · `.unsubscribe()`
+- Realtime-only: `connectionStatus` · `isConnected`
+- Subscribe callbacks: `update` · `set` · `refetch` · `onStatus` · `onError`
+- Options: `staleTime` · `cacheTime` · `gcTime` · `placeholderData` · `force`
+- Suspense: `Query.Suspense<T>` · `Query.SuspenseInfinite<T>` · `{ suspense: true }`
 
-Infinite scroll — use `Query.Infinite<T>` + `query.infinite()`:
+For full API details, see the [Query System Reference](/llm/query.txt).
+
+## persist() Summary
+
+`persist()` creates a persisted field descriptor inside `model()`. Values are automatically synced to storage.
 
 ```ts
-// types
-trending: Query.Infinite<Post[]>
+import { model, persist } from 'comwit'
 
-// model — cursor-based pagination
-trending: query.infinite<Post[]>({
-  initialData: [],
-  queryFn: (_, { state }) => api.post.trending(state.cursor),
+const settings = model({
+  theme: persist({ key: 'theme', defaultValue: 'light' }),
+  lang: persist({ key: 'lang', defaultValue: 'en', storage: 'sessionStorage' }),
 })
-
-// action
-async loadMoreTrending() { await this.model.trending.nextFetch() }
 ```
+
+- Storage: `'localStorage'` (default) · `'sessionStorage'` · custom `PersistAdapter`
+- Features: auto-hydration · debounced write-back · cross-tab sync (localStorage) · SSR safe
+- Provider defaults: `<ComwitProvider defaultOptions={{ persist: { debounceMs: 100 } }}>`
+
+For full API details, see the [Persist Reference](/llm/persist.txt).
 
 ## Usage
 
@@ -276,46 +317,45 @@ Selectors use deep equality — only re-renders when selected values change.
 
 All from `'comwit'`. Stack on class methods.
 
-| Decorator                       | Purpose                                               |
-| ------------------------------- | ----------------------------------------------------- |
-| `@OnError(fn)`                  | Error handler. Re-throw to propagate.                 |
-| `@OnSuccess(fn)`                | Success callback.                                     |
-| `@Debounce(ms)`                 | Debounce.                                             |
-| `@Throttle(ms)`                 | Throttle.                                             |
-| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>` |
+| Decorator                              | Purpose                                                           |
+| -------------------------------------- | ----------------------------------------------------------------- |
+| `@OnError(fn)`                         | Error handler. Re-throw to propagate.                             |
+| `@OnSuccess(fn)`                       | Success callback.                                                 |
+| `@Debounce(ms)`                        | Debounce.                                                         |
+| `@Throttle(ms)`                        | Throttle.                                                         |
+| `@Authorized({ when, onDeny })`        | Auth guard. `when: () => boolean \| Promise<boolean>`             |
+| `@Transaction()`                       | Transactional execution (experimental, currently no-op).          |
+| `@Retry(count, options?)`              | Retry on failure with fixed or exponential backoff.               |
+| `@Queue(strategy?)`                    | Concurrency control: `'drop'`, `'queue'`, or `'replace'`.        |
+| `@Log(level?)`                         | Console logging of calls, results, and errors.                    |
+| `@Validate(validators)`               | Argument validation before execution. Throws `ValidationError`.   |
 
-`createInterceptor(({ state, context }) => MethodDecorator)` — reusable decorator with `state`/`context` access, like action factories. See [actions](#actionsts) above for usage.
+`intercept(hooks | factory)` — create custom decorators with lifecycle hooks. Supports immediate mode (hooks object) and lazy mode (factory with `state`/`context` access).
 
-## Infinite Query Return Shape
+Global interceptors via `<ComwitProvider defaultOptions={{ interceptors: [...] }}>`.
 
-`queryFn` for `query.infinite()` must return `{ data, cursor?, hasMore? }`:
-
-```ts
-queryFn: (_, { state }) => {
-  const res = await api.post.trending(state.cursor)
-  return { data: res.items, cursor: res.nextCursor, hasMore: res.hasNext }
-}
-```
-
-Without `hasMore: true` in the response, `nextFetch()` is a no-op.
-
-## Query Lifecycle
-
-```
-query() defined in model → .query() called in action → data loaded
-  → (infinite) response includes hasMore: true → nextFetch() enabled
-  → within staleTime → cache returned, no fetch
-  → after gcTime → cache entry deleted
-```
-
-`.query()` must be called at least once before `refetch()` or `nextFetch()` will work.
+For full API details, see the [Decorator Reference](/llm/decorator.txt).
 
 ## Key Concepts
 
-- `model(initial)` — global reactive store
+- `model(initial, options?)` — global reactive store, with optional `derive` and `rules`
 - `action(factory)` — factory with `state`/`context` access
 - `create(model, { actions })` — model + actions -> React hook
 - `silent(fn)` — suppress re-renders (SSR)
 - `query()` / `query.infinite()` — client fetch in model
+- `query.realtime()` — real-time subscription in model
+- `persist()` — persisted field in model
 - `state(model)` — mutable proxy in actions
+- `intercept()` — custom decorator builder (immediate or lazy mode)
+
+## References
+
+- [Query System Reference](/llm/query.txt) — query(), query.infinite(), query.realtime(), suspense, caching
+- [Decorator Reference](/llm/decorator.txt) — interceptors, guards, lifecycle hooks
+- [Persist Reference](/llm/persist.txt) — persist(), storage adapters, cross-tab sync
+
+## Feedback
+
+If you encounter a bug or have a feature request, file an issue:
+`gh issue create --repo meursyphus/comwit --title '...' --body '...'`
 ````
