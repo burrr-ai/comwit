@@ -1,0 +1,315 @@
+# comwit — Query System Reference
+
+> Full API reference for `query()`, `query.infinite()`, Suspense support, caching, and resource state.
+
+## query(opts)
+
+Creates a single resource descriptor for client-side data fetching. Used inside `model()`.
+
+```ts
+import { model, query } from 'comwit'
+
+export const post = model<PostState>({
+  posts: query<Post[]>({
+    initialData: [],
+    queryFn: () => api.post.findAll(),
+  }),
+  comments: query<Comment[], string>({
+    initialData: [],
+    queryFn: (postId) => api.comment.findAll(postId),
+  }),
+})
+```
+
+### Options
+
+| Option            | Type                                        | Description                                                          |
+| ----------------- | ------------------------------------------- | -------------------------------------------------------------------- |
+| `initialData`     | `TData`                                     | **Required.** Initial value before any fetch.                        |
+| `queryFn`         | `(arg, context) => TData \| Promise<TData>` | **Required.** Fetcher function.                                      |
+| `suspense`        | `boolean`                                   | Enable React Suspense integration. Default `false`.                  |
+| `staleTime`       | `number`                                    | Milliseconds before cached data is considered stale. Default `0`.    |
+| `cacheTime`       | `number`                                    | Alias for `gcTime`. Milliseconds before cache entry is garbage collected. |
+| `gcTime`          | `number`                                    | Milliseconds before cache entry is garbage collected.                |
+| `placeholderData` | `TData \| (arg, previousData) => TData`     | Data shown while fetching. Use `keepPreviousData` helper.            |
+
+### queryFn Signature
+
+```ts
+queryFn: (arg: TArg, context: { state: Readonly<ResourceSingleState<TData>> }) => TData | Promise<TData>
+```
+
+- `arg` — the argument passed to `.query(arg)`. Type is the second generic: `Query<TData, TArg>`.
+- `context.state` — a readonly snapshot of the current resource state (includes `data`, `isLoading`, etc.).
+
+The return value can be:
+- Plain data (`TData`) — assigned to `.data`
+- An object with `data` key plus optional state overrides
+
+## query.infinite(opts)
+
+Creates an infinite/paginated resource descriptor. Use with `Query.Infinite<T>` type.
+
+```ts
+import { model, query } from 'comwit'
+
+export const feed = model<FeedState>({
+  trending: query.infinite<Post[]>({
+    initialData: [],
+    queryFn: (_, { state }) => api.post.trending(state.cursor),
+  }),
+})
+```
+
+### queryFn Return Shape (Infinite)
+
+`queryFn` for `query.infinite()` must return an object with `data`, and optionally `cursor` and `hasMore`:
+
+```ts
+queryFn: async (_, { state }) => {
+  const res = await api.post.trending(state.cursor)
+  return { data: res.items, cursor: res.nextCursor, hasMore: res.hasNext }
+}
+```
+
+Without `hasMore: true` in the response, `nextFetch()` becomes a no-op.
+
+## Types
+
+```ts
+import { Query } from 'comwit'
+
+// Single query — fetched client-side
+posts: Query<Post[]>
+
+// Single query with argument
+comments: Query<Comment[], string>
+
+// Infinite query
+trending: Query.Infinite<Post[]>
+
+// Suspense variants — data is NonNullable, throws promise during loading
+posts: Query.Suspense<Post[]>
+trending: Query.SuspenseInfinite<Post[]>
+```
+
+## Suspense Support
+
+Enable suspense per-query by passing `{ suspense: true }`:
+
+```ts
+const post = model<PostState>({
+  posts: query<Post[]>({
+    initialData: [],
+    suspense: true,
+    queryFn: () => api.post.findAll(),
+  }),
+})
+```
+
+Use `Query.Suspense<T>` or `Query.SuspenseInfinite<T>` as the type. With suspense enabled:
+- During initial load, a Promise is thrown (caught by React `<Suspense>`).
+- On error, the error is thrown (caught by React `<ErrorBoundary>`).
+- After success, `data` is guaranteed non-nullable.
+- Refetches do NOT trigger Suspense — only the initial load does.
+
+```tsx
+function PostList() {
+  const { posts } = usePost((s) => ({ posts: s.posts }))
+  // No need for isLoading check — Suspense handles it
+  return posts.data.map((post) => <Card key={post.id} post={post} />)
+}
+
+// Wrap with Suspense boundary
+<Suspense fallback={<Skeleton />}>
+  <PostList />
+</Suspense>
+```
+
+## Methods
+
+All methods are available on resource fields after binding (i.e., when accessed through `state(model)` in actions or via `useModel`/`create` hooks).
+
+### .query(arg?, options?)
+
+Triggers the fetch. Must be called at least once before `.refetch()` or `.nextFetch()` will work.
+
+```ts
+// No argument
+await this.model.posts.query()
+
+// With argument
+await this.model.comments.query(postId)
+
+// With options
+await this.model.posts.query({ force: true })
+
+// With argument and options
+await this.model.comments.query(postId, { staleTime: 60_000 })
+```
+
+**Options:**
+- `force: boolean` — Bypass cache staleness check and always fetch.
+- `staleTime`, `cacheTime`, `gcTime`, `placeholderData` — Override defaults per call.
+
+### .refetch()
+
+Re-fetches using the last argument. No-op if `.query()` has never been called.
+
+```ts
+await this.model.posts.refetch()
+```
+
+### .set(data)
+
+Manually set resource data without fetching. Marks the resource as successful.
+
+```ts
+// Set just the data
+this.model.posts.set([newPost, ...this.model.posts.data])
+
+// Set data + state overrides
+this.model.posts.set({ data: [], isSuccess: true })
+```
+
+### .nextFetch(arg?)
+
+**Infinite queries only.** Fetches the next page. Appends results to existing data. No-op when `hasMore` is `false`.
+
+```ts
+await this.model.trending.nextFetch()
+```
+
+### .previousFetch(arg?, options?)
+
+**Infinite queries only.** Navigates back through cursor history. Restores the previous cursor state.
+
+```ts
+await this.model.trending.previousFetch()
+```
+
+## State Flags
+
+| Flag         | Type              | Description                                               |
+| ------------ | ----------------- | --------------------------------------------------------- |
+| `data`       | `TData`           | The fetched data (or `initialData` before first fetch).   |
+| `isLoading`  | `boolean`         | `true` during the initial fetch (before first success).   |
+| `isFetching` | `boolean`         | `true` during any fetch (including refetches).            |
+| `isSuccess`  | `boolean`         | `true` after at least one successful fetch.               |
+| `isError`    | `boolean`         | `true` when the last fetch failed.                        |
+| `error`      | `string \| null`  | Error message from the last failed fetch.                 |
+
+### Infinite-only flags
+
+| Flag      | Type              | Description                                          |
+| --------- | ----------------- | ---------------------------------------------------- |
+| `cursor`  | `string \| null`  | Current pagination cursor.                           |
+| `hasMore` | `boolean`         | Whether more pages are available. `nextFetch()` is a no-op when `false`. |
+
+## Cache Lifecycle
+
+```
+query() defined in model
+  -> .query(arg) called in action
+    -> queryFn executes, data loaded
+    -> cache entry created with key = serialized arg
+    -> within staleTime -> cached data returned, no fetch
+    -> after staleTime -> re-fetch triggered
+    -> after gcTime -> cache entry deleted entirely
+```
+
+- Each unique argument produces a separate cache entry (keyed by serialized arg).
+- Switching between arguments restores the cached state for that argument.
+- `placeholderData` is applied when switching to an argument with no cache.
+
+## keepPreviousData
+
+Helper for `placeholderData` that keeps the previous data while fetching new data:
+
+```ts
+import { keepPreviousData, ComwitProvider } from 'comwit'
+
+<ComwitProvider
+  defaultOptions={{
+    query: {
+      placeholderData: keepPreviousData,
+    },
+  }}
+>
+```
+
+Or per-query:
+
+```ts
+query<Post[]>({
+  initialData: [],
+  placeholderData: keepPreviousData,
+  queryFn: () => api.post.findAll(),
+})
+```
+
+## Full Example
+
+```ts
+// types.ts
+import { Query } from 'comwit'
+
+export type FeedState = {
+  posts: Query<Post[]>
+  trending: Query.Infinite<Post[]>
+  postById: Query<Post | null, string>
+}
+
+// model.ts
+import { model, query } from 'comwit'
+
+export const feed = model<FeedState>({
+  posts: query<Post[]>({
+    initialData: [],
+    staleTime: 30_000,
+    queryFn: () => api.post.findAll(),
+  }),
+  trending: query.infinite<Post[]>({
+    initialData: [],
+    queryFn: async (_, { state }) => {
+      const res = await api.post.trending(state.cursor)
+      return { data: res.items, cursor: res.nextCursor, hasMore: res.hasNext }
+    },
+  }),
+  postById: query<Post | null, string>({
+    initialData: null,
+    queryFn: (id) => api.post.findById(id),
+  }),
+})
+
+// actions/load.ts
+import { action } from 'comwit'
+
+export const feedLoader = action<Pick<FeedActions, 'loadPosts' | 'loadMore' | 'loadPost'>>(({ state }) => {
+  class FeedLoader {
+    private model = state(feed)
+
+    async loadPosts() {
+      await this.model.posts.query()
+    }
+
+    async loadMore() {
+      await this.model.trending.nextFetch()
+    }
+
+    async loadPost(id: string) {
+      await this.model.postById.query(id)
+    }
+  }
+  return new FeedLoader()
+})
+
+// usage in component
+const { posts, trending } = useFeed((s) => ({
+  posts: s.posts,
+  trending: s.trending,
+}))
+
+if (posts.isLoading) return <Skeleton />
+if (posts.isError) return <p>Error: {posts.error}</p>
+```

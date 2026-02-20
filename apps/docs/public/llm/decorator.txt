@@ -1,0 +1,434 @@
+# comwit — Decorator / Interceptor Reference
+
+> Full API reference for all built-in decorators, custom interceptor creation, and composition patterns.
+
+All decorators are imported from `'comwit'`.
+
+## Built-in Decorators
+
+| Decorator                              | Import           | Purpose                                                           |
+| -------------------------------------- | ---------------- | ----------------------------------------------------------------- |
+| `@OnError(handler)`                    | `OnError`        | Error handler. Error is re-thrown after handler runs.              |
+| `@OnSuccess(handler)`                  | `OnSuccess`      | Success callback. Original return value preserved.                |
+| `@Debounce(ms, options?)`              | `Debounce`       | Debounce. Only last call within wait window executes.             |
+| `@Throttle(ms, options?)`              | `Throttle`       | Throttle. At most one call per interval.                          |
+| `@Authorized({ when, onDeny })`        | `Authorized`     | Auth guard. Blocks execution when `when()` returns `false`.       |
+| `@Transaction()`                       | `Transaction`    | Transactional execution (experimental, currently no-op).          |
+| `@Retry(count, options?)`              | `Retry`          | Retry on failure with fixed or exponential backoff.               |
+| `@Queue(strategy?)`                    | `Queue`          | Concurrency control: `'drop'`, `'queue'`, or `'replace'`.        |
+| `@Log(level?)`                         | `Log`            | Console logging of calls, results, and errors.                    |
+| `@Validate(validators)`               | `Validate`       | Argument validation before execution. Throws `ValidationError`.   |
+
+---
+
+## @OnError(handler)
+
+Intercepts errors thrown by the decorated method. Calls `handler` with the caught error, then re-throws.
+
+```ts
+import { OnError } from 'comwit'
+
+class PostActions {
+  @OnError((err) => toast.error(err instanceof Error ? err.message : 'Failed'))
+  async create(title: string) {
+    await api.post.create({ title })
+  }
+}
+```
+
+**Signature:** `OnError(handler: (error: unknown) => any): MethodDecorator`
+
+---
+
+## @OnSuccess(handler)
+
+Intercepts successful results. Calls `handler` with the return value (or resolved value for async). Original return value is preserved.
+
+```ts
+import { OnSuccess } from 'comwit'
+
+class PostActions {
+  @OnSuccess((user) => cache.set(user.id, user))
+  async fetchUser(id: string) {
+    const res = await fetch(`/api/users/${id}`)
+    return res.json()
+  }
+}
+```
+
+**Signature:** `OnSuccess<R>(handler: (result: R) => void): MethodDecorator`
+
+---
+
+## @Debounce(ms, options?)
+
+Debounces the method. Delays invocation until `ms` milliseconds have elapsed since the last call. Rapid calls reset the timer.
+
+```ts
+import { Debounce } from 'comwit'
+
+class SearchActions {
+  @Debounce(300)
+  onSearchInput(query: string) {
+    this.fetchResults(query)
+  }
+}
+```
+
+**Signature:** `Debounce(waitMs: number, options?: DebounceOptions): MethodDecorator`
+
+`DebounceOptions` supports `leading` and `trailing` edge configuration (from `es-toolkit`).
+
+---
+
+## @Throttle(ms, options?)
+
+Throttles the method. At most one call per `ms` milliseconds. First call executes immediately.
+
+```ts
+import { Throttle } from 'comwit'
+
+class UiActions {
+  @Throttle(200)
+  onScroll(event: Event) {
+    this.updateScrollPosition(event)
+  }
+}
+```
+
+**Signature:** `Throttle(waitMs: number, options?: ThrottleOptions): MethodDecorator`
+
+---
+
+## @Authorized({ when, onDeny })
+
+Authorization guard. Evaluates `when()` before execution. If `false`, calls `onDeny()` and returns `undefined`. Both `when` and `onDeny` can be sync or async.
+
+```ts
+import { Authorized } from 'comwit'
+
+class PostActions {
+  @Authorized({
+    when: () => !!sessionStorage.getItem('token'),
+    onDeny: () => router.push('/login'),
+  })
+  async createPost(title: string) {
+    await api.post.create({ title })
+  }
+}
+```
+
+**Signature:** `Authorized(options: { when: () => boolean | Promise<boolean>; onDeny: () => void | Promise<void> }): MethodDecorator`
+
+---
+
+## @Transaction()
+
+Marks a method for transactional execution. **Experimental:** Currently a no-op placeholder. The decorator API is stable, but rollback behavior will be implemented once a scoped proxy snapshot strategy is finalized.
+
+```ts
+import { Transaction } from 'comwit'
+
+class Store {
+  @Transaction()
+  async transferFunds(from: string, to: string, amount: number) {
+    await this.debit(from, amount)
+    await this.credit(to, amount)
+  }
+}
+```
+
+**Signature:** `Transaction(): MethodDecorator`
+
+---
+
+## @Retry(count, options?)
+
+Retries the method on failure up to `count` times. Supports fixed and exponential backoff.
+
+```ts
+import { Retry } from 'comwit'
+
+class Api {
+  @Retry(3, { delay: 1000, backoff: 'exponential' })
+  async fetchUser(id: string) {
+    const res = await fetch(`/api/users/${id}`)
+    if (!res.ok) throw new Error('fetch failed')
+    return res.json()
+  }
+}
+```
+
+**Signature:** `Retry(count: number, options?: number | { delay?: number; backoff?: 'fixed' | 'exponential' }): MethodDecorator`
+
+- `count` — Maximum retry attempts (not counting the initial call).
+- `options` — A number (shorthand for `{ delay: ms }`) or an object.
+  - `delay` — Milliseconds between retries. Default `0`.
+  - `backoff` — `'fixed'` (default) or `'exponential'` (delay doubles each attempt).
+
+---
+
+## @Queue(strategy?)
+
+Prevents concurrent execution. Three strategies:
+
+- `'drop'` (default) — Ignores new calls while a previous one is running.
+- `'queue'` — Chains calls sequentially.
+- `'replace'` — Allows new calls but discards stale results.
+
+```ts
+import { Queue } from 'comwit'
+
+class Api {
+  @Queue('drop')
+  async save(data: Record<string, unknown>) {
+    await fetch('/api/save', { method: 'POST', body: JSON.stringify(data) })
+  }
+}
+```
+
+**Signature:** `Queue(strategy?: 'drop' | 'queue' | 'replace'): MethodDecorator`
+
+---
+
+## @Log(level?)
+
+Logs method calls for debugging. Logs name + args on call, result on success, error on failure.
+
+```ts
+import { Log } from 'comwit'
+
+class Api {
+  @Log('debug')
+  async fetchUser(id: string) {
+    const res = await fetch(`/api/users/${id}`)
+    return res.json()
+  }
+}
+```
+
+**Signature:** `Log(level?: 'debug' | 'info' | 'warn' | 'error'): MethodDecorator`
+
+Default level is `'info'`.
+
+---
+
+## @Validate(validators)
+
+Validates method arguments before execution. Each key maps to an argument by position. If any validator returns a string (error message), a `ValidationError` is thrown.
+
+```ts
+import { Validate } from 'comwit'
+
+class TodoActions {
+  @Validate({
+    title: (v) => (typeof v === 'string' && v.length > 0) || 'Title required',
+    priority: (v) => [1, 2, 3].includes(v) || 'Priority must be 1-3',
+  })
+  createTodo(title: string, priority: number) {
+    // ...
+  }
+}
+```
+
+**Signature:** `Validate(validators: Record<string, (value: any) => true | string>): MethodDecorator`
+
+Throws `ValidationError` (extends `Error`) with an `errors` property containing `Record<string, string>`.
+
+```ts
+import { ValidationError } from 'comwit'
+
+try {
+  actions.createTodo('', 5)
+} catch (e) {
+  if (e instanceof ValidationError) {
+    console.log(e.errors) // { title: 'Title required', priority: 'Priority must be 1-3' }
+  }
+}
+```
+
+---
+
+## Custom Interceptors with intercept()
+
+The `intercept()` function is the foundation for all decorators. It creates method or class decorators with lifecycle hooks.
+
+### Immediate Mode
+
+Pass an `InterceptorHooks` object directly:
+
+```ts
+import { intercept } from 'comwit'
+
+const LogCalls = intercept({
+  onBefore: (...args) => console.log('call', args),
+  onSuccess: (result) => console.log('ok', result),
+  onError: (err) => console.error('fail', err),
+  onSettled: () => console.log('done'),
+})
+
+class Api {
+  @LogCalls
+  fetchUser(id: string) { ... }
+}
+```
+
+### Lazy Mode
+
+Pass a factory function that receives `ActionContext`. The factory is stored and resolved when the action binds to a context (inside `useAction`/`create`). Use this when hooks need runtime state or context.
+
+```ts
+import { intercept } from 'comwit'
+
+const WithAuth = intercept((ctx) => ({
+  intercept: (execute, args) => {
+    const { token } = ctx.context
+    if (!token) throw new Error('unauthorized')
+    return execute(...args)
+  },
+}))
+```
+
+### Parameterized Custom Decorators
+
+Create decorators that accept arguments by wrapping `intercept()`:
+
+```ts
+function RetryCustom(times: number) {
+  return intercept({
+    intercept: async (execute, args) => {
+      for (let i = 0; i < times; i++) {
+        try { return await execute(...args) }
+        catch (e) { if (i === times - 1) throw e }
+      }
+    },
+  })
+}
+```
+
+### Reusable Guards with Lazy Mode
+
+Combine lazy mode with `state()` access for reusable cross-domain guards:
+
+```ts
+import { intercept, onAuthorized } from 'comwit'
+import { user } from '@/state/user/model'
+
+// createInterceptor pattern — intercept() in lazy mode with state access
+const LoginRequired = intercept(({ state, context }) => {
+  const u = state(user)
+  return {
+    intercept: (execute, args) => {
+      if (!u.me) {
+        context.router.push('/login')
+        return
+      }
+      return execute(...args)
+    },
+  }
+})
+
+class PostActions {
+  @LoginRequired
+  async create(title: string) { ... }
+}
+```
+
+### Class-level Decorators
+
+Apply to all methods on a class:
+
+```ts
+@intercept({ onBefore: () => console.log('any method called') })
+class Actions {
+  doA() { ... }
+  doB() { ... }
+}
+```
+
+## InterceptorHooks API
+
+```ts
+type InterceptorHooks = {
+  onBefore?: (...args: any[]) => void
+  onSuccess?: (result: any, ...args: any[]) => void
+  onError?: (error: unknown, ...args: any[]) => void
+  onSettled?: (...args: any[]) => void
+  intercept?: (execute: (...args: any[]) => any, args: any[]) => any
+}
+```
+
+### Hook Lifecycle
+
+```
+onBefore(...args)
+  |
+  v
+intercept(execute, args)   // or execute(...args) if no intercept hook
+  |
+  +--> onSuccess(result, ...args)   // on success
+  |
+  +--> onError(error, ...args)      // on error (error is re-thrown)
+  |
+  v
+onSettled(...args)                   // always called (finally semantics)
+```
+
+## Functional Interceptors
+
+Each decorator has a lowercase functional counterpart for use outside of classes:
+
+```ts
+import { onError, onSuccess, debounce, throttle, onAuthorized, retry, queue, log } from 'comwit'
+
+// Higher-order functions: wrap a function
+const withRetry = retry(3, { delay: 1000, backoff: 'exponential' })
+const resilientFetch = withRetry(fetchData)
+
+const withQueue = queue('drop')
+const safeSave = withQueue(saveData)
+
+const withLog = log('debug')
+const loggedFetch = withLog(fetchUser)
+```
+
+## Global Interceptors
+
+Apply interceptors to all action methods via `ComwitProvider`:
+
+```tsx
+import { ComwitProvider, intercept } from 'comwit'
+
+const GlobalLogger = intercept({
+  onError: (err) => Sentry.captureException(err),
+})
+
+<ComwitProvider
+  defaultOptions={{
+    interceptors: [GlobalLogger],
+  }}
+>
+  {children}
+</ComwitProvider>
+```
+
+Global interceptors are applied after per-method decorators.
+
+## Composition Patterns
+
+Stack multiple decorators on a single method. They execute top-to-bottom (outermost first):
+
+```ts
+class PostActions {
+  @LoginRequired
+  @OnSuccess(() => context.router.push('/posts'))
+  @OnError((e) => toast.error(e instanceof Error ? e.message : 'Failed'))
+  @Retry(2, { delay: 500 })
+  @Queue('drop')
+  async create(title: string) {
+    await api.post.create({ title })
+  }
+}
+```
+
+Execution order: LoginRequired -> OnSuccess -> OnError -> Retry -> Queue -> original method.
