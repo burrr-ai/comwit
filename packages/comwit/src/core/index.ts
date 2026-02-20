@@ -12,8 +12,13 @@ import {
 } from './query'
 
 // Plugin system
+import { registerPlugin } from './plugin'
+import { queryPlugin } from './query/plugin'
 export { registerPlugin, getPlugins } from './plugin'
 export type { FieldPlugin, PluginBag } from './plugin'
+
+// Register built-in plugins
+registerPlugin(queryPlugin)
 
 function create<S extends object, A>(
   m: Model<S>,

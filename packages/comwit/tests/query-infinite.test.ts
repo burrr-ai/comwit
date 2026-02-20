@@ -1,4 +1,4 @@
-import { model } from '../src/core/model'
+import { model } from '../src/core'
 import { query, bindResourceState, createQueryBindingRegistry } from '../src/core/query'
 
 function deferred<T = void>() {
@@ -22,7 +22,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       expect(bound.feed.data).toEqual([])
       expect(bound.feed.cursor).toBeNull()
@@ -46,7 +51,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       await bound.feed.query()
 
@@ -74,7 +84,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       await bound.feed.query()
       expect(bound.feed.data).toEqual(['a', 'b'])
@@ -97,7 +112,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       await bound.feed.query()
       expect(bound.feed.cursor).toBe('c1')
@@ -117,7 +137,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       await bound.feed.query()
       expect(bound.feed.hasMore).toBe(false)
@@ -141,7 +166,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       await bound.feed.query('topic-1')
       await bound.feed.nextFetch()
@@ -165,7 +195,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       await bound.feed.query()
       expect(bound.feed.data).toEqual(['a', 'b'])
@@ -196,7 +231,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       await bound.feed.query()
       await bound.feed.nextFetch()
@@ -218,7 +258,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       await bound.feed.query()
 
@@ -242,7 +287,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       await bound.feed.query('arg1')
       await bound.feed.nextFetch()
@@ -262,7 +312,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
       return { bound, store, registry, m }
     }
 
@@ -351,7 +406,12 @@ describe('query.infinite()', () => {
       })
       const store = m.instance()
       const registry = createQueryBindingRegistry()
-      const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+      const bound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        undefined,
+        registry
+      ) as any
 
       const promise = bound.feed.query()
       expect(bound.feed.isLoading).toBe(true)

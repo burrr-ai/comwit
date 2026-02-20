@@ -1,4 +1,4 @@
-import { model } from '../src/core/model'
+import { model } from '../src/core'
 import {
   query,
   bindResourceState,
@@ -35,7 +35,12 @@ function createBound<TData>(opts: {
   })
   const store = m.instance()
   const registry = createQueryBindingRegistry()
-  const bound = bindResourceState(store.proxy, m.resources, undefined, registry) as any
+  const bound = bindResourceState(
+    store.proxy,
+    m.pluginBags.get('query')!,
+    undefined,
+    registry
+  ) as any
   return bound.resource as BoundSingleResourceState<TData, any>
 }
 

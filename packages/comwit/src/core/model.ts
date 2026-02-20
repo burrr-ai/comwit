@@ -1,14 +1,9 @@
 import { useCallback, useRef, useSyncExternalStore } from 'react'
 import { createProxy, snapshot, subscribe } from './proxy'
-import { registerPlugin, getPlugins, type PluginBag } from './plugin'
-import { queryPlugin } from './query/plugin'
+import { getPlugins, type PluginBag } from './plugin'
 import { useStoreRegistry } from './provider'
 import { isEqual } from '../utils'
 import { isSilent } from './silent'
-import type { ResourceDescriptorMap } from './query'
-
-// Register built-in plugins
-registerPlugin(queryPlugin)
 
 export type StoreEntry<T extends object = any> = {
   proxy: T
@@ -45,15 +40,9 @@ export function model<T extends object, D extends object = {}>(
   const template = normalize(initial as Record<string, unknown>, '', pluginBags)
   const cloneState = () => structuredClone(template) as T
 
-  const resources: ResourceDescriptorMap = (pluginBags.get('query') ??
-    new Map()) as ResourceDescriptorMap
-
   const m: Model<T & Readonly<D>> = {
     key: Symbol(),
     pluginBags,
-    get resources() {
-      return resources
-    },
     instance(): StoreEntry<T & Readonly<D>> {
       const p = createProxy(cloneState())
 
@@ -148,8 +137,6 @@ function computeValidation<T extends object>(
 export type Model<T extends object> = {
   key: symbol
   pluginBags: Map<string, PluginBag>
-  /** @deprecated Use pluginBags.get('query') instead */
-  resources: ResourceDescriptorMap
   instance(): StoreEntry<T>
 }
 
@@ -177,7 +164,7 @@ export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T)
 
   const result = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
-  // Run plugin onRender hooks (e.g. suspense checks)
+  // Run plugin onRender hooks
   const plugins = getPlugins()
   for (const plugin of plugins) {
     const bag = m.pluginBags.get(plugin.name)

@@ -1,13 +1,12 @@
-import { model } from '../src/core/model'
-import { silent, isSilent } from '../src/core/silent'
-import { query } from '../src/core/query'
+import { model, silent, query } from '../src/core'
+import { isSilent } from '../src/core/silent'
 
 describe('model()', () => {
-  test('creates a Model with key, resources, and instance()', () => {
+  test('creates a Model with key, pluginBags, and instance()', () => {
     const m = model({ count: 0 })
 
     expect(typeof m.key).toBe('symbol')
-    expect(m.resources).toBeInstanceOf(Map)
+    expect(m.pluginBags).toBeInstanceOf(Map)
     expect(typeof m.instance).toBe('function')
   })
 
@@ -115,7 +114,7 @@ describe('model()', () => {
     expect(store.getSnapshot().user.name).toBe('Bob')
   })
 
-  test('model with query descriptors extracts resources into resources Map', () => {
+  test('model with query descriptors extracts into pluginBags', () => {
     const m = model({
       name: 'test',
       items: query({
@@ -124,8 +123,9 @@ describe('model()', () => {
       }),
     })
 
-    expect(m.resources.size).toBe(1)
-    expect(m.resources.has('items')).toBe(true)
+    const queryBag = m.pluginBags.get('query')!
+    expect(queryBag.size).toBe(1)
+    expect(queryBag.has('items')).toBe(true)
 
     const store = m.instance()
     expect(store.getSnapshot().items).toEqual({
