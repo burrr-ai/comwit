@@ -17,8 +17,12 @@ import { queryPlugin } from './query/plugin'
 export { registerPlugin, getPlugins } from './plugin'
 export type { FieldPlugin, PluginBag } from './plugin'
 
+import { persistPlugin } from './persist'
+import { persist, type PersistAdapter, type PersistOptions, type PersistDefaults } from './persist'
+
 // Register built-in plugins
 registerPlugin(queryPlugin)
+registerPlugin(persistPlugin)
 
 function create<S extends object, A>(
   m: Model<S>,
@@ -53,6 +57,7 @@ export {
   ComwitProvider,
   query,
   keepPreviousData,
+  persist,
 }
 
 export type {
@@ -63,4 +68,7 @@ export type {
   RegistryDefaults,
   ModelOptions,
   ValidationState,
+  PersistAdapter,
+  PersistOptions,
+  PersistDefaults,
 }
