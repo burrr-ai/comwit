@@ -1,348 +1,23 @@
-import { snapshot } from './proxy'
-
-const RESOURCE_BRAND = Symbol('comwit-resource')
-
-type AsyncResult<T> = T | Promise<T>
-
-type ResourceKind = 'single' | 'infinite'
-
-type ResourceDataLike = Record<string, unknown>
-
-type ResourceResultShape<
-  TState extends ResourceDataLike,
-  TData = TState extends { data: infer T } ? T : never,
-> = TState | ({ data: TData } & Partial<Omit<TState, 'data'>>) | undefined
-
-export type PlaceholderData<TData, TArg = void> =
-  | TData
-  | ((arg: TArg, previousData: TData) => TData)
-
-export function keepPreviousData<TData, TArg = void>(_: TArg, previousData: TData): TData {
-  return previousData
-}
-
-const RESOURCE_QUERY_OPTION_KEYS = new Set([
-  'force',
-  'placeholderData',
-  'staleTime',
-  'cacheTime',
-  'gcTime',
-])
-
-export type QueryDefaultOptions = {
-  staleTime?: number
-  cacheTime?: number
-  gcTime?: number
-  placeholderData?: PlaceholderData<unknown, unknown>
-}
-
-type ResourceDefaultOptions = QueryDefaultOptions
-
-export type QueryQueryOptions<TData, TArg> = QueryDefaultOptions & {
-  placeholderData?: PlaceholderData<TData, TArg>
-  force?: boolean
-}
-
-type ResourceQueryOptions<TData, TArg> = QueryQueryOptions<TData, TArg>
-
-export type ResourceContext<TState> = {
-  state: Readonly<TState>
-}
-
-export type ResourceBaseState<TData> = {
-  data: TData
-  isLoading: boolean
-  isFetching: boolean
-  isSuccess: boolean
-  isError: boolean
-  error: string | null
-}
-
-export type ResourceSingleState<TData> = ResourceBaseState<TData>
-
-export type ResourceInfiniteState<TData> = ResourceBaseState<TData> & {
-  cursor: string | null
-  hasMore: boolean
-}
-
-export type ResourceResult<TData> = ResourceResultShape<ResourceBaseState<TData>, TData>
-
-export type Query<TData, TArg = void> = SingleResourceDescriptor<TData, TArg>
-
-export namespace Query {
-  export type Single<TData, TArg = void> = Query<TData, TArg>
-  export type Infinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
-  export type Suspense<TData, TArg = void> = SingleResourceDescriptor<TData, TArg, true>
-  export type SuspenseInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg, true>
-}
-
-export type QueryInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
-
-type SingleResourceLoadResult<TData> = TData | ResourceResult<TData>
-type InfiniteResourceLoadResult<TData> =
-  | ResourceInfiniteState<TData>
-  | ({ data: TData } & Partial<Omit<ResourceInfiniteState<TData>, 'data'>>)
-
-type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TResult> = {
-  [RESOURCE_BRAND]: true
-  kind: ResourceKind
-  suspense?: boolean
-  initialState: TState
-  options: Omit<
-    ResourceQueryOptions<TState extends ResourceBaseState<infer TData> ? TData : never, unknown>,
-    'force'
-  >
-  queryFn: (arg: TArg, context: ResourceContext<TState>) => AsyncResult<TResult>
-}
-
-type SingleResourceDescriptor<
-  TData,
-  TArg = void,
-  TSuspense extends boolean = false,
-> = BaseResourceDescriptor<ResourceSingleState<TData>, TArg, SingleResourceLoadResult<TData>> &
-  ResourceSingleState<TData> & {
-    kind: 'single'
-    __suspense?: TSuspense
-  }
-
-type InfiniteResourceDescriptor<
-  TData,
-  TArg = void,
-  TSuspense extends boolean = false,
-> = BaseResourceDescriptor<ResourceInfiniteState<TData>, TArg, InfiniteResourceLoadResult<TData>> &
-  ResourceInfiniteState<TData> & {
-    kind: 'infinite'
-    __suspense?: TSuspense
-  }
-
-export type AnyResourceDescriptor =
-  | SingleResourceDescriptor<unknown, unknown>
-  | InfiniteResourceDescriptor<unknown, unknown>
-
-export type ResourceDescriptorMap = Map<string, AnyResourceDescriptor>
-
-interface ResourceSingleQueryController<TData, TArg> {
-  query(arg: TArg, options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
-  query(options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
-  refetch(): Promise<unknown>
-  set(next: unknown): unknown
-}
-
-interface ResourceInfiniteQueryController<TData, TArg> extends ResourceSingleQueryController<
-  TData,
-  TArg
-> {
-  nextFetch(arg?: TArg): Promise<unknown>
-  previousFetch(arg: TArg, options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
-  previousFetch(options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
-}
-
-export type BoundSingleResourceState<TData, TArg = unknown> = ResourceSingleState<TData> &
-  ResourceSingleQueryController<TData, TArg>
-export type BoundInfiniteResourceState<TData, TArg = unknown> = ResourceInfiniteState<TData> &
-  ResourceInfiniteQueryController<TData, TArg>
-
-type SuspenseSingleResourceState<TData, TArg = unknown> = Omit<
-  BoundSingleResourceState<TData, TArg>,
-  'data'
-> & { data: NonNullable<TData> }
-type SuspenseInfiniteResourceState<TData, TArg = unknown> = Omit<
-  BoundInfiniteResourceState<TData, TArg>,
-  'data'
-> & { data: NonNullable<TData> }
-
-export type BoundResourceState<T> =
-  T extends InfiniteResourceDescriptor<infer TData, infer TArg, infer TSuspense>
-    ? TSuspense extends true
-      ? SuspenseInfiniteResourceState<TData, TArg>
-      : BoundInfiniteResourceState<TData, TArg>
-    : T extends SingleResourceDescriptor<infer TData, infer TArg, infer TSuspense>
-      ? TSuspense extends true
-        ? SuspenseSingleResourceState<TData, TArg>
-        : BoundSingleResourceState<TData, TArg>
-      : T extends ResourceInfiniteState<infer TData>
-        ? BoundInfiniteResourceState<TData, unknown>
-        : T extends ResourceSingleState<infer TData>
-          ? BoundSingleResourceState<TData, unknown>
-          : T extends (infer U)[]
-            ? BoundResourceState<U>[]
-            : T extends object
-              ? { [K in keyof T]: BoundResourceState<T[K]> }
-              : T
-
-type SingleResourceBuilderOptions<TData, TArg = void> = {
-  initialData: TData
-  suspense?: boolean
-  queryFn: (
-    arg: TArg,
-    context: ResourceContext<ResourceSingleState<TData>>
-  ) => AsyncResult<SingleResourceLoadResult<TData>>
-} & Omit<ResourceQueryOptions<TData, TArg>, 'force'>
-
-type InfiniteResourceBuilderOptions<TData, TArg = void> = {
-  initialData: TData
-  suspense?: boolean
-  queryFn: (
-    arg: TArg,
-    context: ResourceContext<ResourceInfiniteState<TData>>
-  ) => AsyncResult<InfiniteResourceLoadResult<TData>>
-} & Omit<ResourceQueryOptions<TData, TArg>, 'force'>
-
-type ResourceFactory = {
-  <TData, TArg = void>(
-    opts: SingleResourceBuilderOptions<TData, TArg> & { suspense: true }
-  ): SingleResourceDescriptor<TData, TArg, true>
-  <TData, TArg = void>(
-    opts: SingleResourceBuilderOptions<TData, TArg>
-  ): SingleResourceDescriptor<TData, TArg>
-  infinite: {
-    <TData, TArg = void>(
-      opts: InfiniteResourceBuilderOptions<TData, TArg> & { suspense: true }
-    ): InfiniteResourceDescriptor<TData, TArg, true>
-    <TData, TArg = void>(
-      opts: InfiniteResourceBuilderOptions<TData, TArg>
-    ): InfiniteResourceDescriptor<TData, TArg>
-  }
-}
-
-type QueryMode = 'replace' | 'append' | 'restore'
-
-type QueryCacheKey = string
-
-type QueryCacheEntry = {
-  key: QueryCacheKey
-  arg: unknown
-  hasQueried: boolean
-  lastFetchedAt: number
-  lastResult?: unknown
-  cursorHistory: Array<string | null>
-  gcTime?: number
-  state: ResourceDataLike
-}
-
-export type SuspenseState = {
-  promise: Promise<unknown> | null
-  error: Error | null
-}
-
-export type QueryBindingRegistry = {
-  boundResourceValue: WeakMap<object, Record<string, unknown>>
-  boundPathProxy: WeakMap<object, Map<string, object>>
-  boundResourceRuntime: WeakMap<object, ResourceRuntimeState>
-  suspense: Map<string, SuspenseState>
-}
-
-export function createQueryBindingRegistry(): QueryBindingRegistry {
-  return {
-    boundResourceValue: new WeakMap(),
-    boundPathProxy: new WeakMap(),
-    boundResourceRuntime: new WeakMap(),
-    suspense: new Map(),
-  }
-}
-
-type ResourceRuntimeState = {
-  path: string
-  lastArg?: unknown
-  activeKey?: QueryCacheKey
-  fetchId: number
-  cacheEntries: Map<QueryCacheKey, QueryCacheEntry>
-}
-
-function createSingleDescriptor<TData, TArg = void>(
-  opts: SingleResourceBuilderOptions<TData, TArg>
-): SingleResourceDescriptor<TData, TArg> {
-  const initialState: ResourceSingleState<TData> = {
-    data: opts.initialData,
-    isLoading: false,
-    isFetching: false,
-    isSuccess: false,
-    isError: false,
-    error: null,
-  }
-
-  const {
-    initialData: _initialData,
-    suspense,
-    queryFn,
-    ...optionValues
-  } = opts as SingleResourceBuilderOptions<TData, TArg>
-
-  return {
-    ...initialState,
-    kind: 'single',
-    suspense: suspense ?? false,
-    [RESOURCE_BRAND]: true,
-    initialState,
-    options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
-    queryFn,
-  }
-}
-
-function createInfiniteDescriptor<TData, TArg = void>(
-  opts: InfiniteResourceBuilderOptions<TData, TArg>
-): InfiniteResourceDescriptor<TData, TArg> {
-  const initialState: ResourceInfiniteState<TData> = {
-    data: opts.initialData,
-    cursor: null,
-    hasMore: false,
-    isLoading: false,
-    isFetching: false,
-    isSuccess: false,
-    isError: false,
-    error: null,
-  }
-
-  const {
-    initialData: _initialData,
-    suspense,
-    queryFn,
-    ...optionValues
-  } = opts as InfiniteResourceBuilderOptions<TData, TArg>
-
-  return {
-    ...initialState,
-    kind: 'infinite',
-    suspense: suspense ?? false,
-    [RESOURCE_BRAND]: true,
-    initialState,
-    options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
-    queryFn,
-  }
-}
-
-export const query: ResourceFactory = Object.assign(
-  (opts: SingleResourceBuilderOptions<unknown, unknown>) => createSingleDescriptor(opts),
-  {
-    infinite: createInfiniteDescriptor,
-  }
-) as ResourceFactory
-
-export function isResourceDescriptor(value: unknown): value is AnyResourceDescriptor {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    (value as { [RESOURCE_BRAND]?: unknown })[RESOURCE_BRAND] === true
-  )
-}
-
-function hasNestedPath(pathMap: ResourceDescriptorMap, basePath: string) {
-  const dotPrefix = `${basePath}.`
-  const bracketPrefix = `${basePath}[`
-
-  for (const key of pathMap.keys()) {
-    if (key === basePath) return true
-    if (key.startsWith(dotPrefix)) return true
-    if (key.startsWith(bracketPrefix)) return true
-  }
-
-  return false
-}
-
-function normalizeError(error: unknown) {
-  if (error instanceof Error) return error.message
-  return 'Unknown error'
-}
+import { snapshot } from '../proxy'
+import {
+  RESOURCE_QUERY_OPTION_KEYS,
+  type AnyResourceDescriptor,
+  type InfiniteResourceDescriptor,
+  type PlaceholderData,
+  type QueryBindingRegistry,
+  type QueryCacheEntry,
+  type QueryCacheKey,
+  type QueryDefaultOptions,
+  type QueryMode,
+  type ResourceBaseState,
+  type ResourceContext,
+  type ResourceDataLike,
+  type ResourceInfiniteState,
+  type ResourceQueryOptions,
+  type ResourceRuntimeState,
+  type ResourceSingleState,
+  type SingleResourceDescriptor,
+} from './types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -352,21 +27,24 @@ function isResourceQueryCallOptions(
   value: unknown
 ): value is ResourceQueryOptions<unknown, unknown> {
   if (!isRecord(value)) return false
-
   for (const key of Object.keys(value)) {
     if (RESOURCE_QUERY_OPTION_KEYS.has(key)) return true
   }
-
   return false
 }
 
-function resolveGcTime(options: ResourceDefaultOptions): number | undefined {
+function normalizeError(error: unknown) {
+  if (error instanceof Error) return error.message
+  return 'Unknown error'
+}
+
+function resolveGcTime(options: QueryDefaultOptions): number | undefined {
   if (typeof options.cacheTime === 'number') return options.cacheTime
   if (typeof options.gcTime === 'number') return options.gcTime
   return undefined
 }
 
-function mergeResult(state: ResourceDataLike, result: unknown, appendData = false) {
+export function mergeResult(state: ResourceDataLike, result: unknown, appendData = false) {
   if (result === undefined) return
 
   if (Array.isArray(result)) {
@@ -536,7 +214,7 @@ function applyPlaceholderData<TData, TArg>(
 
 function normalizeDescriptorOptions<TData, TArg>(
   descriptor: AnyResourceDescriptor,
-  defaultOptions: ResourceDefaultOptions | undefined,
+  defaultOptions: QueryDefaultOptions | undefined,
   callOptions: unknown
 ) {
   const descriptorOptions = descriptor.options as Omit<
@@ -558,7 +236,7 @@ function normalizeDescriptorOptions<TData, TArg>(
   return merged
 }
 
-function createResourceAccessor(
+export function createResourceAccessor(
   state: ResourceDataLike,
   descriptor: AnyResourceDescriptor,
   path: string,
@@ -760,7 +438,7 @@ function createResourceAccessor(
     }
   }
 
-  const query = (...rawArgs: unknown[]) => {
+  const queryFn = (...rawArgs: unknown[]) => {
     const parsed = parseQueryArgs(rawArgs)
     return executeQuery(parsed.arg, parsed.options, parsed.hasArg, 'replace', false)
   }
@@ -800,7 +478,7 @@ function createResourceAccessor(
 
   const bound = new Proxy(state, {
     get(target, prop) {
-      if (prop === 'query') return query
+      if (prop === 'query') return queryFn
       if (prop === 'refetch') return refetch
       if (prop === 'nextFetch') {
         if (descriptor.kind === 'infinite') return nextFetch
@@ -837,90 +515,4 @@ function createResourceAccessor(
 
   registry.boundResourceValue.set(state, bound)
   return bound
-}
-
-function bindPath(
-  state: object,
-  descriptors: ResourceDescriptorMap,
-  path = '',
-  defaults: QueryDefaultOptions | undefined,
-  registry: QueryBindingRegistry
-): any {
-  if (!descriptors.size) return state
-
-  const cached = registry.boundPathProxy.get(state)
-  if (cached?.has(path)) {
-    return cached.get(path) as object
-  }
-
-  const proxy = new Proxy(state, {
-    get(target, prop, receiver) {
-      if (typeof prop === 'symbol') return Reflect.get(target, prop, receiver)
-
-      const key = String(prop)
-      const nextPath = path ? (Array.isArray(target) ? `${path}[${key}]` : `${path}.${key}`) : key
-
-      const descriptor = descriptors.get(nextPath)
-      const next = Reflect.get(target, prop, receiver)
-
-      if (descriptor && isRecord(next)) {
-        return createResourceAccessor(
-          next as ResourceDataLike,
-          descriptor,
-          nextPath,
-          defaults,
-          registry
-        )
-      }
-
-      if (isRecord(next) && hasNestedPath(descriptors, nextPath)) {
-        return bindPath(next, descriptors, nextPath, defaults, registry)
-      }
-
-      return next
-    },
-  })
-
-  const map = registry.boundPathProxy.get(state) ?? new Map<string, object>()
-  map.set(path, proxy)
-  registry.boundPathProxy.set(state, map)
-
-  return proxy
-}
-
-export function bindResourceState<T extends object>(
-  modelState: T,
-  resourceDescriptors: ResourceDescriptorMap,
-  defaults?: QueryDefaultOptions,
-  registry: QueryBindingRegistry = createQueryBindingRegistry()
-): T {
-  if (!resourceDescriptors.size) return modelState
-  return bindPath(modelState, resourceDescriptors, '', defaults, registry) as T
-}
-
-/**
- * Check suspense state for a model's resources and throw if needed.
- * Call this during React render (after useSyncExternalStore) to trigger Suspense/ErrorBoundary.
- */
-export function checkSuspense(
-  resourceDescriptors: ResourceDescriptorMap,
-  registry: QueryBindingRegistry
-): void {
-  for (const [path, descriptor] of resourceDescriptors) {
-    if (!descriptor.suspense) continue
-
-    const entry = registry.suspense.get(path)
-    if (!entry) continue
-
-    // If there's an error, throw it for ErrorBoundary
-    // Keep the entry so React's retry renders also throw
-    if (entry.error) {
-      throw entry.error
-    }
-
-    // If there's a pending promise, throw it for Suspense
-    if (entry.promise) {
-      throw entry.promise
-    }
-  }
 }

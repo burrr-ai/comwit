@@ -1,11 +1,10 @@
-import type { BoundResourceState } from '../core/query'
 import type { Model } from '../core/model'
 
 export type AnyFunction = (...args: any[]) => any
 
 export type Interceptor<T extends AnyFunction = AnyFunction> = (next: T) => T
 
-type ActionState = <T extends object>(model: Model<T>) => BoundResourceState<T>
+type ActionState = <T extends object>(model: Model<T>) => T
 
 export type ActionContext<TContext extends object = Record<string, never>> = {
   state: ActionState

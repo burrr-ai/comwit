@@ -1,10 +1,9 @@
-import type { BoundResourceState } from './query'
-import { bindResourceState } from './query'
+import { getPlugins } from './plugin'
 import { useRef } from 'react'
 import { getLazyInterceptorFactories, type LazyInterceptorFactory } from '../interceptors/utils'
 import { useStoreRegistry } from './provider'
 
-export type State = <T extends object>(model: Model<T>) => BoundResourceState<T>
+export type State = <T extends object>(model: Model<T>) => T
 
 export type ActionContext<TContext extends object = Record<string, never>> = {
   state: State
@@ -32,24 +31,31 @@ export function useAction<A, C extends object = Record<string, never>>(
   const resourceStateRef = useRef<Map<symbol, object>>(new Map())
 
   if (!actionsRef.current) {
-    const state = <T extends object>(dep: Model<T>): BoundResourceState<T> => {
+    const state = <T extends object>(dep: Model<T>): T => {
       const existing = resourceStateRef.current.get(dep.key)
-      if (existing) return existing as BoundResourceState<T>
+      if (existing) return existing as T
 
       const entry = registry.get(dep)
-      if (!dep.resources.size) {
-        resourceStateRef.current.set(dep.key, entry.proxy)
-        return entry.proxy as BoundResourceState<T>
+      let proxy: object = entry.proxy
+
+      // Apply plugin bindState in order
+      const plugins = getPlugins()
+      for (const plugin of plugins) {
+        const bag = dep.pluginBags.get(plugin.name)
+        if (!bag || bag.size === 0) continue
+
+        const registryState = registry.pluginStates.get(plugin.name)
+        const defaults = registry.pluginDefaults.get(plugin.name)
+        proxy = plugin.bindState(
+          proxy,
+          bag,
+          registryState,
+          defaults as Record<string, unknown> | undefined
+        )
       }
 
-      const bound = bindResourceState(
-        entry.proxy,
-        dep.resources,
-        registry.queryDefaults,
-        registry.queryBinding
-      )
-      resourceStateRef.current.set(dep.key, bound)
-      return bound as BoundResourceState<T>
+      resourceStateRef.current.set(dep.key, proxy)
+      return proxy as T
     }
 
     const context = (registry.context ?? {}) as C

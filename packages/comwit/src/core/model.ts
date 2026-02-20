@@ -1,6 +1,6 @@
 import { useCallback, useRef, useSyncExternalStore } from 'react'
 import { createProxy, snapshot, subscribe } from './proxy'
-import { isResourceDescriptor, ResourceDescriptorMap, checkSuspense } from './query'
+import { getPlugins, type PluginBag } from './plugin'
 import { useStoreRegistry } from './provider'
 import { isEqual } from '../utils'
 import { isSilent } from './silent'
@@ -30,13 +30,19 @@ export function model<T extends object, D extends object = {}>(
   initial: T,
   options?: ModelOptions<T, D>
 ): Model<T & Readonly<D>> {
-  const resources: ResourceDescriptorMap = new Map()
-  const template = normalize(initial as Record<string, unknown>, '', resources)
+  const pluginBags = new Map<string, PluginBag>()
+  const plugins = getPlugins()
+
+  for (const plugin of plugins) {
+    pluginBags.set(plugin.name, new Map())
+  }
+
+  const template = normalize(initial as Record<string, unknown>, '', pluginBags)
   const cloneState = () => structuredClone(template) as T
 
   const m: Model<T & Readonly<D>> = {
     key: Symbol(),
-    resources,
+    pluginBags,
     instance(): StoreEntry<T & Readonly<D>> {
       const p = createProxy(cloneState())
 
@@ -130,7 +136,7 @@ function computeValidation<T extends object>(
 
 export type Model<T extends object> = {
   key: symbol
-  resources: ResourceDescriptorMap
+  pluginBags: Map<string, PluginBag>
   instance(): StoreEntry<T>
 }
 
@@ -158,31 +164,40 @@ export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T)
 
   const result = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
-  // Check suspense state — throws promise for Suspense or error for ErrorBoundary
-  if (m.resources.size > 0) {
-    checkSuspense(m.resources, registry.queryBinding)
+  // Run plugin onRender hooks
+  const plugins = getPlugins()
+  for (const plugin of plugins) {
+    const bag = m.pluginBags.get(plugin.name)
+    if (bag && bag.size > 0 && plugin.onRender) {
+      const registryState = registry.pluginStates.get(plugin.name)
+      plugin.onRender(bag, registryState)
+    }
   }
 
   return result
 }
 
-function normalize(value: unknown, path: string, resources: ResourceDescriptorMap): unknown {
-  if (isResourceDescriptor(value)) {
-    if (!path) throw new Error('query() entry must be assigned to a model field')
-    resources.set(path, value)
-    return value.initialState
+function normalize(value: unknown, path: string, pluginBags: Map<string, PluginBag>): unknown {
+  const plugins = getPlugins()
+  for (const plugin of plugins) {
+    const bag = pluginBags.get(plugin.name)
+    if (!bag) continue
+    const result = plugin.detect(value, path, bag)
+    if (result !== null) {
+      return result.initialValue
+    }
   }
 
   if (!value || typeof value !== 'object') return value
 
   if (Array.isArray(value)) {
-    return value.map((item, index) => normalize(item, `${path}[${index}]`, resources))
+    return value.map((item, index) => normalize(item, `${path}[${index}]`, pluginBags))
   }
 
   const out: Record<string, unknown> = {}
   for (const key of Object.keys(value)) {
     const nextPath = path ? `${path}.${key}` : key
-    out[key] = normalize((value as Record<string, unknown>)[key], nextPath, resources)
+    out[key] = normalize((value as Record<string, unknown>)[key], nextPath, pluginBags)
   }
 
   return out
