@@ -3,9 +3,12 @@ import {
   type AnyResourceDescriptor,
   type InfiniteResourceBuilderOptions,
   type InfiniteResourceDescriptor,
+  type RealtimeResourceBuilderOptions,
+  type RealtimeResourceDescriptor,
   type ResourceFactory,
   type ResourceInfiniteState,
   type ResourceQueryOptions,
+  type ResourceRealtimeState,
   type ResourceSingleState,
   type SingleResourceBuilderOptions,
   type SingleResourceDescriptor,
@@ -73,10 +76,36 @@ export function createInfiniteDescriptor<TData, TArg = void>(
   }
 }
 
+export function createRealtimeDescriptor<TData, TArg = void>(
+  opts: RealtimeResourceBuilderOptions<TData, TArg>
+): RealtimeResourceDescriptor<TData, TArg> {
+  const initialState: ResourceRealtimeState<TData> = {
+    data: opts.initialData,
+    isLoading: false,
+    isFetching: false,
+    isSuccess: false,
+    isError: false,
+    error: null,
+    connectionStatus: 'disconnected',
+    isConnected: false,
+  }
+  const { initialData: _initialData, queryFn, subscribe, ...optionValues } = opts
+  return {
+    ...initialState,
+    kind: 'realtime',
+    [RESOURCE_BRAND]: true,
+    initialState,
+    options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
+    queryFn,
+    subscribe,
+  }
+}
+
 export const query: ResourceFactory = Object.assign(
   (opts: SingleResourceBuilderOptions<unknown, unknown>) => createSingleDescriptor(opts),
   {
     infinite: createInfiniteDescriptor,
+    realtime: createRealtimeDescriptor,
   }
 ) as ResourceFactory
 

@@ -2,6 +2,7 @@ import { snapshot } from '../proxy'
 import {
   RESOURCE_QUERY_OPTION_KEYS,
   type AnyResourceDescriptor,
+  type ConnectionStatus,
   type InfiniteResourceDescriptor,
   type PlaceholderData,
   type QueryBindingRegistry,
@@ -9,14 +10,17 @@ import {
   type QueryCacheKey,
   type QueryDefaultOptions,
   type QueryMode,
+  type RealtimeResourceDescriptor,
   type ResourceBaseState,
   type ResourceContext,
   type ResourceDataLike,
   type ResourceInfiniteState,
   type ResourceQueryOptions,
+  type ResourceRealtimeState,
   type ResourceRuntimeState,
   type ResourceSingleState,
   type SingleResourceDescriptor,
+  type SubscribeCallbacks,
 } from './types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -356,7 +360,7 @@ export function createResourceAccessor(
     try {
       let result: unknown
 
-      if (descriptor.kind === 'single') {
+      if (descriptor.kind === 'single' || descriptor.kind === 'realtime') {
         const typedDescriptor = descriptor as SingleResourceDescriptor<unknown, unknown>
         result = await typedDescriptor.queryFn(
           queryArg as unknown,
@@ -374,7 +378,7 @@ export function createResourceAccessor(
         return result
       }
 
-      if (descriptor.kind === 'single') {
+      if (descriptor.kind === 'single' || descriptor.kind === 'realtime') {
         mergeResult(state, result)
       } else {
         mergeResult(state, result, mode === 'append')
@@ -395,6 +399,10 @@ export function createResourceAccessor(
         } else if (mode === 'replace' && infiniteHistory.length > 0) {
           infiniteHistory[infiniteHistory.length - 1] = nextCursor
         }
+      }
+
+      if (descriptor.kind === 'realtime') {
+        startSubscription()
       }
 
       return result
@@ -476,10 +484,64 @@ export function createResourceAccessor(
     return executeQuery(effectiveArg, parsed.options, true, 'restore', false)
   }
 
+  const startSubscription = () => {
+    if (descriptor.kind !== 'realtime') return
+    const realtimeDescriptor = descriptor as RealtimeResourceDescriptor<unknown, unknown>
+    const realtimeState = state as unknown as ResourceRealtimeState<unknown>
+
+    // Clean up existing subscription
+    if (runtime.subscriptionCleanup) {
+      runtime.subscriptionCleanup()
+      runtime.subscriptionCleanup = undefined
+    }
+
+    realtimeState.connectionStatus = 'connecting'
+    realtimeState.isConnected = false
+
+    const callbacks: SubscribeCallbacks<unknown> = {
+      update: (updater: (prev: unknown) => unknown) => {
+        state.data = updater(state.data)
+      },
+      set: (data: unknown) => {
+        state.data = data
+      },
+      refetch: () => {
+        return queryFn() as unknown as void
+      },
+      onStatus: (status: ConnectionStatus) => {
+        realtimeState.connectionStatus = status
+        realtimeState.isConnected = status === 'connected'
+      },
+      onError: (error: unknown) => {
+        state.isError = true
+        state.error = normalizeError(error)
+      },
+    }
+
+    const cleanup = realtimeDescriptor.subscribe(callbacks)
+    runtime.subscriptionCleanup = cleanup
+  }
+
+  const unsubscribe = () => {
+    if (runtime.subscriptionCleanup) {
+      runtime.subscriptionCleanup()
+      runtime.subscriptionCleanup = undefined
+    }
+    if (descriptor.kind === 'realtime') {
+      const realtimeState = state as unknown as ResourceRealtimeState<unknown>
+      realtimeState.connectionStatus = 'disconnected'
+      realtimeState.isConnected = false
+    }
+  }
+
   const bound = new Proxy(state, {
     get(target, prop) {
       if (prop === 'query') return queryFn
       if (prop === 'refetch') return refetch
+      if (prop === 'unsubscribe') {
+        if (descriptor.kind === 'realtime') return unsubscribe
+        return undefined
+      }
       if (prop === 'nextFetch') {
         if (descriptor.kind === 'infinite') return nextFetch
         return undefined

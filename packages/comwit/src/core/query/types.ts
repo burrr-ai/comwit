@@ -2,7 +2,9 @@ export const RESOURCE_BRAND = Symbol('comwit-resource')
 
 export type AsyncResult<T> = T | Promise<T>
 
-export type ResourceKind = 'single' | 'infinite'
+export type ResourceKind = 'single' | 'infinite' | 'realtime'
+
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting'
 
 export type ResourceDataLike = Record<string, unknown>
 
@@ -59,6 +61,19 @@ export type ResourceInfiniteState<TData> = ResourceBaseState<TData> & {
   hasMore: boolean
 }
 
+export type ResourceRealtimeState<TData> = ResourceBaseState<TData> & {
+  connectionStatus: ConnectionStatus
+  isConnected: boolean
+}
+
+export type SubscribeCallbacks<TData> = {
+  update: (updater: (prev: TData) => TData) => void
+  set: (data: TData) => void
+  refetch: () => void
+  onStatus: (status: ConnectionStatus) => void
+  onError: (error: unknown) => void
+}
+
 export type ResourceResult<TData> = ResourceResultShape<ResourceBaseState<TData>, TData>
 
 export type Query<TData, TArg = void> = SingleResourceDescriptor<TData, TArg>
@@ -68,9 +83,11 @@ export namespace Query {
   export type Infinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
   export type Suspense<TData, TArg = void> = SingleResourceDescriptor<TData, TArg, true>
   export type SuspenseInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg, true>
+  export type Realtime<TData, TArg = void> = RealtimeResourceDescriptor<TData, TArg>
 }
 
 export type QueryInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
+export type QueryRealtime<TData, TArg = void> = RealtimeResourceDescriptor<TData, TArg>
 
 export type SingleResourceLoadResult<TData> = TData | ResourceResult<TData>
 export type InfiniteResourceLoadResult<TData> =
@@ -109,9 +126,20 @@ export type InfiniteResourceDescriptor<
     __suspense?: TSuspense
   }
 
+export type RealtimeResourceDescriptor<TData, TArg = void> = BaseResourceDescriptor<
+  ResourceRealtimeState<TData>,
+  TArg,
+  SingleResourceLoadResult<TData>
+> &
+  ResourceRealtimeState<TData> & {
+    kind: 'realtime'
+    subscribe: (callbacks: SubscribeCallbacks<TData>) => () => void
+  }
+
 export type AnyResourceDescriptor =
   | SingleResourceDescriptor<unknown, unknown>
   | InfiniteResourceDescriptor<unknown, unknown>
+  | RealtimeResourceDescriptor<unknown, unknown>
 
 export type ResourceDescriptorMap = Map<string, AnyResourceDescriptor>
 
@@ -131,10 +159,19 @@ interface ResourceInfiniteQueryController<TData, TArg> extends ResourceSingleQue
   previousFetch(options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
 }
 
+interface ResourceRealtimeQueryController<TData, TArg> extends ResourceSingleQueryController<
+  TData,
+  TArg
+> {
+  unsubscribe(): void
+}
+
 export type BoundSingleResourceState<TData, TArg = unknown> = ResourceSingleState<TData> &
   ResourceSingleQueryController<TData, TArg>
 export type BoundInfiniteResourceState<TData, TArg = unknown> = ResourceInfiniteState<TData> &
   ResourceInfiniteQueryController<TData, TArg>
+export type BoundRealtimeResourceState<TData, TArg = unknown> = ResourceRealtimeState<TData> &
+  ResourceRealtimeQueryController<TData, TArg>
 
 type SuspenseSingleResourceState<TData, TArg = unknown> = Omit<
   BoundSingleResourceState<TData, TArg>,
@@ -146,23 +183,27 @@ type SuspenseInfiniteResourceState<TData, TArg = unknown> = Omit<
 > & { data: NonNullable<TData> }
 
 export type BoundResourceState<T> =
-  T extends InfiniteResourceDescriptor<infer TData, infer TArg, infer TSuspense>
-    ? TSuspense extends true
-      ? SuspenseInfiniteResourceState<TData, TArg>
-      : BoundInfiniteResourceState<TData, TArg>
-    : T extends SingleResourceDescriptor<infer TData, infer TArg, infer TSuspense>
+  T extends RealtimeResourceDescriptor<infer TData, infer TArg>
+    ? BoundRealtimeResourceState<TData, TArg>
+    : T extends InfiniteResourceDescriptor<infer TData, infer TArg, infer TSuspense>
       ? TSuspense extends true
-        ? SuspenseSingleResourceState<TData, TArg>
-        : BoundSingleResourceState<TData, TArg>
-      : T extends ResourceInfiniteState<infer TData>
-        ? BoundInfiniteResourceState<TData, unknown>
-        : T extends ResourceSingleState<infer TData>
-          ? BoundSingleResourceState<TData, unknown>
-          : T extends (infer U)[]
-            ? BoundResourceState<U>[]
-            : T extends object
-              ? { [K in keyof T]: BoundResourceState<T[K]> }
-              : T
+        ? SuspenseInfiniteResourceState<TData, TArg>
+        : BoundInfiniteResourceState<TData, TArg>
+      : T extends SingleResourceDescriptor<infer TData, infer TArg, infer TSuspense>
+        ? TSuspense extends true
+          ? SuspenseSingleResourceState<TData, TArg>
+          : BoundSingleResourceState<TData, TArg>
+        : T extends ResourceRealtimeState<infer TData>
+          ? BoundRealtimeResourceState<TData, unknown>
+          : T extends ResourceInfiniteState<infer TData>
+            ? BoundInfiniteResourceState<TData, unknown>
+            : T extends ResourceSingleState<infer TData>
+              ? BoundSingleResourceState<TData, unknown>
+              : T extends (infer U)[]
+                ? BoundResourceState<U>[]
+                : T extends object
+                  ? { [K in keyof T]: BoundResourceState<T[K]> }
+                  : T
 
 export type SingleResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
@@ -182,6 +223,15 @@ export type InfiniteResourceBuilderOptions<TData, TArg = void> = {
   ) => AsyncResult<InfiniteResourceLoadResult<TData>>
 } & Omit<ResourceQueryOptions<TData, TArg>, 'force'>
 
+export type RealtimeResourceBuilderOptions<TData, TArg = void> = {
+  initialData: TData
+  queryFn: (
+    arg: TArg,
+    context: ResourceContext<ResourceRealtimeState<TData>>
+  ) => AsyncResult<SingleResourceLoadResult<TData>>
+  subscribe: (callbacks: SubscribeCallbacks<TData>) => () => void
+} & Omit<ResourceQueryOptions<TData, TArg>, 'force'>
+
 export type ResourceFactory = {
   <TData, TArg = void>(
     opts: SingleResourceBuilderOptions<TData, TArg> & { suspense: true }
@@ -197,6 +247,9 @@ export type ResourceFactory = {
       opts: InfiniteResourceBuilderOptions<TData, TArg>
     ): InfiniteResourceDescriptor<TData, TArg>
   }
+  realtime: <TData, TArg = void>(
+    opts: RealtimeResourceBuilderOptions<TData, TArg>
+  ) => RealtimeResourceDescriptor<TData, TArg>
 }
 
 export type QueryMode = 'replace' | 'append' | 'restore'
@@ -232,4 +285,5 @@ export type ResourceRuntimeState = {
   activeKey?: QueryCacheKey
   fetchId: number
   cacheEntries: Map<QueryCacheKey, QueryCacheEntry>
+  subscriptionCleanup?: () => void
 }
