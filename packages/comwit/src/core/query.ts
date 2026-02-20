@@ -72,6 +72,8 @@ export type Query<TData, TArg = void> = SingleResourceDescriptor<TData, TArg>
 export namespace Query {
   export type Single<TData, TArg = void> = Query<TData, TArg>
   export type Infinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
+  export type Suspense<TData, TArg = void> = SingleResourceDescriptor<TData, TArg, true>
+  export type SuspenseInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg, true>
 }
 
 export type QueryInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
@@ -84,6 +86,7 @@ type InfiniteResourceLoadResult<TData> =
 type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TResult> = {
   [RESOURCE_BRAND]: true
   kind: ResourceKind
+  suspense?: boolean
   initialState: TState
   options: Omit<
     ResourceQueryOptions<TState extends ResourceBaseState<infer TData> ? TData : never, unknown>,
@@ -92,22 +95,24 @@ type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TResult> = {
   queryFn: (arg: TArg, context: ResourceContext<TState>) => AsyncResult<TResult>
 }
 
-type SingleResourceDescriptor<TData, TArg = void> = BaseResourceDescriptor<
-  ResourceSingleState<TData>,
-  TArg,
-  SingleResourceLoadResult<TData>
-> &
+type SingleResourceDescriptor<
+  TData,
+  TArg = void,
+  TSuspense extends boolean = false,
+> = BaseResourceDescriptor<ResourceSingleState<TData>, TArg, SingleResourceLoadResult<TData>> &
   ResourceSingleState<TData> & {
     kind: 'single'
+    __suspense?: TSuspense
   }
 
-type InfiniteResourceDescriptor<TData, TArg = void> = BaseResourceDescriptor<
-  ResourceInfiniteState<TData>,
-  TArg,
-  InfiniteResourceLoadResult<TData>
-> &
+type InfiniteResourceDescriptor<
+  TData,
+  TArg = void,
+  TSuspense extends boolean = false,
+> = BaseResourceDescriptor<ResourceInfiniteState<TData>, TArg, InfiniteResourceLoadResult<TData>> &
   ResourceInfiniteState<TData> & {
     kind: 'infinite'
+    __suspense?: TSuspense
   }
 
 export type AnyResourceDescriptor =
@@ -137,11 +142,24 @@ export type BoundSingleResourceState<TData, TArg = unknown> = ResourceSingleStat
 export type BoundInfiniteResourceState<TData, TArg = unknown> = ResourceInfiniteState<TData> &
   ResourceInfiniteQueryController<TData, TArg>
 
+type SuspenseSingleResourceState<TData, TArg = unknown> = Omit<
+  BoundSingleResourceState<TData, TArg>,
+  'data'
+> & { data: NonNullable<TData> }
+type SuspenseInfiniteResourceState<TData, TArg = unknown> = Omit<
+  BoundInfiniteResourceState<TData, TArg>,
+  'data'
+> & { data: NonNullable<TData> }
+
 export type BoundResourceState<T> =
-  T extends InfiniteResourceDescriptor<infer TData, infer TArg>
-    ? BoundInfiniteResourceState<TData, TArg>
-    : T extends SingleResourceDescriptor<infer TData, infer TArg>
-      ? BoundSingleResourceState<TData, TArg>
+  T extends InfiniteResourceDescriptor<infer TData, infer TArg, infer TSuspense>
+    ? TSuspense extends true
+      ? SuspenseInfiniteResourceState<TData, TArg>
+      : BoundInfiniteResourceState<TData, TArg>
+    : T extends SingleResourceDescriptor<infer TData, infer TArg, infer TSuspense>
+      ? TSuspense extends true
+        ? SuspenseSingleResourceState<TData, TArg>
+        : BoundSingleResourceState<TData, TArg>
       : T extends ResourceInfiniteState<infer TData>
         ? BoundInfiniteResourceState<TData, unknown>
         : T extends ResourceSingleState<infer TData>
@@ -154,6 +172,7 @@ export type BoundResourceState<T> =
 
 type SingleResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
+  suspense?: boolean
   queryFn: (
     arg: TArg,
     context: ResourceContext<ResourceSingleState<TData>>
@@ -162,6 +181,7 @@ type SingleResourceBuilderOptions<TData, TArg = void> = {
 
 type InfiniteResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
+  suspense?: boolean
   queryFn: (
     arg: TArg,
     context: ResourceContext<ResourceInfiniteState<TData>>
@@ -170,11 +190,19 @@ type InfiniteResourceBuilderOptions<TData, TArg = void> = {
 
 type ResourceFactory = {
   <TData, TArg = void>(
+    opts: SingleResourceBuilderOptions<TData, TArg> & { suspense: true }
+  ): SingleResourceDescriptor<TData, TArg, true>
+  <TData, TArg = void>(
     opts: SingleResourceBuilderOptions<TData, TArg>
   ): SingleResourceDescriptor<TData, TArg>
-  infinite: <TData, TArg = void>(
-    opts: InfiniteResourceBuilderOptions<TData, TArg>
-  ) => InfiniteResourceDescriptor<TData, TArg>
+  infinite: {
+    <TData, TArg = void>(
+      opts: InfiniteResourceBuilderOptions<TData, TArg> & { suspense: true }
+    ): InfiniteResourceDescriptor<TData, TArg, true>
+    <TData, TArg = void>(
+      opts: InfiniteResourceBuilderOptions<TData, TArg>
+    ): InfiniteResourceDescriptor<TData, TArg>
+  }
 }
 
 type QueryMode = 'replace' | 'append' | 'restore'
@@ -192,10 +220,16 @@ type QueryCacheEntry = {
   state: ResourceDataLike
 }
 
+export type SuspenseState = {
+  promise: Promise<unknown> | null
+  error: Error | null
+}
+
 export type QueryBindingRegistry = {
   boundResourceValue: WeakMap<object, Record<string, unknown>>
   boundPathProxy: WeakMap<object, Map<string, object>>
   boundResourceRuntime: WeakMap<object, ResourceRuntimeState>
+  suspense: Map<string, SuspenseState>
 }
 
 export function createQueryBindingRegistry(): QueryBindingRegistry {
@@ -203,6 +237,7 @@ export function createQueryBindingRegistry(): QueryBindingRegistry {
     boundResourceValue: new WeakMap(),
     boundPathProxy: new WeakMap(),
     boundResourceRuntime: new WeakMap(),
+    suspense: new Map(),
   }
 }
 
@@ -228,6 +263,7 @@ function createSingleDescriptor<TData, TArg = void>(
 
   const {
     initialData: _initialData,
+    suspense,
     queryFn,
     ...optionValues
   } = opts as SingleResourceBuilderOptions<TData, TArg>
@@ -235,6 +271,7 @@ function createSingleDescriptor<TData, TArg = void>(
   return {
     ...initialState,
     kind: 'single',
+    suspense: suspense ?? false,
     [RESOURCE_BRAND]: true,
     initialState,
     options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
@@ -258,6 +295,7 @@ function createInfiniteDescriptor<TData, TArg = void>(
 
   const {
     initialData: _initialData,
+    suspense,
     queryFn,
     ...optionValues
   } = opts as InfiniteResourceBuilderOptions<TData, TArg>
@@ -265,6 +303,7 @@ function createInfiniteDescriptor<TData, TArg = void>(
   return {
     ...initialState,
     kind: 'infinite',
+    suspense: suspense ?? false,
     [RESOURCE_BRAND]: true,
     initialState,
     options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
@@ -623,6 +662,17 @@ function createResourceAccessor(
     state.isLoading = !state.isSuccess
     state.isFetching = true
 
+    // Track suspense promise for initial loads (not refetches)
+    if (descriptor.suspense && state.isLoading && !isRefetch) {
+      let resolvePromise!: () => void
+      const promise = new Promise<unknown>((resolve) => {
+        resolvePromise = resolve as () => void
+      })
+      registry.suspense.set(path, { promise, error: null })
+      // Store resolver on the state object for later cleanup
+      ;(registry.suspense.get(path) as any).__resolve = resolvePromise
+    }
+
     const currentFetchId = ++runtime.fetchId
 
     try {
@@ -677,11 +727,35 @@ function createResourceAccessor(
       state.isError = true
       state.isSuccess = false
       state.error = normalizeError(error)
+
+      // Store error in suspense state for ErrorBoundary
+      if (descriptor.suspense) {
+        const suspenseEntry = registry.suspense.get(path)
+        if (suspenseEntry) {
+          suspenseEntry.error = error instanceof Error ? error : new Error(normalizeError(error))
+          // Don't re-throw — let checkSuspense throw it during render
+          return
+        }
+      }
+
       throw error
     } finally {
       if (runtime.fetchId === currentFetchId) {
         state.isLoading = false
         state.isFetching = false
+
+        // Resolve suspense promise so React can re-render
+        if (descriptor.suspense) {
+          const suspenseEntry = registry.suspense.get(path)
+          if (suspenseEntry) {
+            const resolve = (suspenseEntry as any).__resolve as (() => void) | undefined
+            if (resolve) resolve()
+            // Only clean up if no error — error entries are cleaned up in checkSuspense
+            if (!suspenseEntry.error) {
+              registry.suspense.delete(path)
+            }
+          }
+        }
       }
     }
   }
@@ -822,4 +896,31 @@ export function bindResourceState<T extends object>(
 ): T {
   if (!resourceDescriptors.size) return modelState
   return bindPath(modelState, resourceDescriptors, '', defaults, registry) as T
+}
+
+/**
+ * Check suspense state for a model's resources and throw if needed.
+ * Call this during React render (after useSyncExternalStore) to trigger Suspense/ErrorBoundary.
+ */
+export function checkSuspense(
+  resourceDescriptors: ResourceDescriptorMap,
+  registry: QueryBindingRegistry
+): void {
+  for (const [path, descriptor] of resourceDescriptors) {
+    if (!descriptor.suspense) continue
+
+    const entry = registry.suspense.get(path)
+    if (!entry) continue
+
+    // If there's an error, throw it for ErrorBoundary
+    // Keep the entry so React's retry renders also throw
+    if (entry.error) {
+      throw entry.error
+    }
+
+    // If there's a pending promise, throw it for Suspense
+    if (entry.promise) {
+      throw entry.promise
+    }
+  }
 }

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useSyncExternalStore } from 'react'
 import { createProxy, snapshot, subscribe } from './proxy'
-import { isResourceDescriptor, ResourceDescriptorMap } from './query'
+import { isResourceDescriptor, ResourceDescriptorMap, checkSuspense } from './query'
 import { useStoreRegistry } from './provider'
 import { isEqual } from '../utils'
 import { isSilent } from './silent'
@@ -156,7 +156,14 @@ export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T)
     return next as R
   }
 
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+  const result = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+
+  // Check suspense state — throws promise for Suspense or error for ErrorBoundary
+  if (m.resources.size > 0) {
+    checkSuspense(m.resources, registry.queryBinding)
+  }
+
+  return result
 }
 
 function normalize(value: unknown, path: string, resources: ResourceDescriptorMap): unknown {
