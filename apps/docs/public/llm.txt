@@ -264,15 +264,37 @@ export const usePost = create<PostState, PostActions>(post, {
 
 ## query() Summary
 
-`query()` and `query.infinite()` create resource descriptors for client-side fetching inside `model()`.
+`query()`, `query.infinite()`, and `query.realtime()` create resource descriptors for client-side fetching inside `model()`.
 
 - Methods: `.query(arg?)` · `.refetch()` · `.set(data)` · `.nextFetch()` · `.previousFetch()`
 - Flags: `isLoading` · `isFetching` · `isSuccess` · `isError` · `error`
 - Infinite-only: `cursor` · `hasMore`
+- Realtime methods: `.query()` · `.refetch()` · `.set()` · `.unsubscribe()`
+- Realtime-only: `connectionStatus` · `isConnected`
+- Subscribe callbacks: `update` · `set` · `refetch` · `onStatus` · `onError`
 - Options: `staleTime` · `cacheTime` · `gcTime` · `placeholderData` · `force`
 - Suspense: `Query.Suspense<T>` · `Query.SuspenseInfinite<T>` · `{ suspense: true }`
 
 For full API details, see the [Query System Reference](/llm/query.txt).
+
+## persist() Summary
+
+`persist()` creates a persisted field descriptor inside `model()`. Values are automatically synced to storage.
+
+```ts
+import { model, persist } from 'comwit'
+
+const settings = model({
+  theme: persist({ key: 'theme', defaultValue: 'light' }),
+  lang: persist({ key: 'lang', defaultValue: 'en', storage: 'sessionStorage' }),
+})
+```
+
+- Storage: `'localStorage'` (default) · `'sessionStorage'` · custom `PersistAdapter`
+- Features: auto-hydration · debounced write-back · cross-tab sync (localStorage) · SSR safe
+- Provider defaults: `<ComwitProvider defaultOptions={{ persist: { debounceMs: 100 } }}>`
+
+For full API details, see the [Persist Reference](/llm/persist.txt).
 
 ## Usage
 
@@ -321,13 +343,16 @@ For full API details, see the [Decorator Reference](/llm/decorator.txt).
 - `create(model, { actions })` — model + actions -> React hook
 - `silent(fn)` — suppress re-renders (SSR)
 - `query()` / `query.infinite()` — client fetch in model
+- `query.realtime()` — real-time subscription in model
+- `persist()` — persisted field in model
 - `state(model)` — mutable proxy in actions
 - `intercept()` — custom decorator builder (immediate or lazy mode)
 
 ## References
 
-- [Query System Reference](/llm/query.txt) — query(), query.infinite(), suspense, caching
+- [Query System Reference](/llm/query.txt) — query(), query.infinite(), query.realtime(), suspense, caching
 - [Decorator Reference](/llm/decorator.txt) — interceptors, guards, lifecycle hooks
+- [Persist Reference](/llm/persist.txt) — persist(), storage adapters, cross-tab sync
 
 ## Feedback
 

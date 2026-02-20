@@ -1,6 +1,6 @@
 # comwit — Query System Reference
 
-> Full API reference for `query()`, `query.infinite()`, Suspense support, caching, and resource state.
+> Full API reference for `query()`, `query.infinite()`, `query.realtime()`, Suspense support, caching, and resource state.
 
 ## query(opts)
 
@@ -74,6 +74,76 @@ queryFn: async (_, { state }) => {
 
 Without `hasMore: true` in the response, `nextFetch()` becomes a no-op.
 
+## query.realtime(opts)
+
+Creates a real-time resource descriptor that combines initial data fetching with live subscription updates. After `queryFn` succeeds, the `subscribe` function is called with callbacks to push live updates.
+
+```ts
+import { model, query } from 'comwit'
+
+export const chat = model<ChatState>({
+  messages: query.realtime<Message[]>({
+    initialData: [],
+    queryFn: (roomId) => api.chat.history(roomId),
+    subscribe: (callbacks) => {
+      const ws = new WebSocket(`/ws/chat/${roomId}`)
+      ws.onmessage = (e) => {
+        callbacks.update((prev) => [...prev, JSON.parse(e.data)])
+      }
+      ws.onopen = () => callbacks.onStatus('connected')
+      ws.onclose = () => callbacks.onStatus('disconnected')
+      ws.onerror = (e) => callbacks.onError(e)
+      return () => ws.close()
+    },
+  }),
+})
+```
+
+### Options
+
+| Option      | Type                                        | Description                                         |
+| ----------- | ------------------------------------------- | --------------------------------------------------- |
+| `initialData` | `TData`                                   | **Required.** Initial value before any fetch.       |
+| `queryFn`   | `(arg, context) => TData \| Promise<TData>` | **Required.** Initial data fetcher.                 |
+| `subscribe` | `(callbacks) => () => void`                 | **Required.** Sets up live subscription. Returns cleanup function. |
+
+### Subscribe Callbacks
+
+| Callback    | Signature                              | Description                                         |
+| ----------- | -------------------------------------- | --------------------------------------------------- |
+| `update`    | `(updater: (prev: TData) => TData) => void` | Merge data using updater function.             |
+| `set`       | `(data: TData) => void`               | Replace data entirely.                              |
+| `refetch`   | `() => void`                           | Re-execute the queryFn.                             |
+| `onStatus`  | `(status: ConnectionStatus) => void`   | Update connection status.                           |
+| `onError`   | `(error: unknown) => void`             | Set error state.                                    |
+
+### ConnectionStatus
+
+`'connecting' | 'connected' | 'disconnected' | 'reconnecting'`
+
+### Methods
+
+- `.query(arg?)` — Fetches initial data and starts subscription.
+- `.refetch()` — Re-fetches data (re-subscribes after success).
+- `.set(data)` — Manually set data.
+- `.unsubscribe()` — Stops the live subscription. Sets `connectionStatus` to `'disconnected'`.
+
+### Realtime-only Flags
+
+| Flag               | Type               | Description                              |
+| ------------------ | ------------------ | ---------------------------------------- |
+| `connectionStatus` | `ConnectionStatus` | Current connection state.                |
+| `isConnected`      | `boolean`          | `true` when status is `'connected'`.     |
+
+### Type
+
+```ts
+import { Query } from 'comwit'
+
+messages: Query.Realtime<Message[]>
+messages: Query.Realtime<Message[], string>  // with argument
+```
+
 ## Types
 
 ```ts
@@ -87,6 +157,9 @@ comments: Query<Comment[], string>
 
 // Infinite query
 trending: Query.Infinite<Post[]>
+
+// Realtime query
+messages: Query.Realtime<Message[]>
 
 // Suspense variants — data is NonNullable, throws promise during loading
 posts: Query.Suspense<Post[]>
