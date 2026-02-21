@@ -104,6 +104,15 @@ export type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TResul
     'force'
   >
   queryFn: (arg: TArg, context: ResourceContext<TState>) => AsyncResult<TResult>
+  enabled?: (state: any) => boolean
+  dependsOn?: (state: any) => any
+  refetchInterval?:
+    | number
+    | false
+    | ((
+        data: TState extends ResourceBaseState<infer TData> ? TData : never,
+        error?: Error
+      ) => number | false)
 }
 
 export type SingleResourceDescriptor<
@@ -205,6 +214,12 @@ export type BoundResourceState<T> =
                   ? { [K in keyof T]: BoundResourceState<T[K]> }
                   : T
 
+export type DependentQueryOptions<TData> = {
+  enabled?: (state: any) => boolean
+  dependsOn?: (state: any) => any
+  refetchInterval?: number | false | ((data: TData, error?: Error) => number | false)
+}
+
 export type SingleResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
   suspense?: boolean
@@ -212,7 +227,8 @@ export type SingleResourceBuilderOptions<TData, TArg = void> = {
     arg: TArg,
     context: ResourceContext<ResourceSingleState<TData>>
   ) => AsyncResult<SingleResourceLoadResult<TData>>
-} & Omit<ResourceQueryOptions<TData, TArg>, 'force'>
+} & Omit<ResourceQueryOptions<TData, TArg>, 'force'> &
+  DependentQueryOptions<TData>
 
 export type InfiniteResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
@@ -221,7 +237,8 @@ export type InfiniteResourceBuilderOptions<TData, TArg = void> = {
     arg: TArg,
     context: ResourceContext<ResourceInfiniteState<TData>>
   ) => AsyncResult<InfiniteResourceLoadResult<TData>>
-} & Omit<ResourceQueryOptions<TData, TArg>, 'force'>
+} & Omit<ResourceQueryOptions<TData, TArg>, 'force'> &
+  DependentQueryOptions<TData>
 
 export type RealtimeResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
@@ -286,4 +303,5 @@ export type ResourceRuntimeState = {
   fetchId: number
   cacheEntries: Map<QueryCacheKey, QueryCacheEntry>
   subscriptionCleanup?: () => void
+  refetchIntervalId?: ReturnType<typeof setInterval>
 }

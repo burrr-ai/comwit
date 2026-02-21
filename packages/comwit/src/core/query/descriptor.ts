@@ -30,6 +30,9 @@ export function createSingleDescriptor<TData, TArg = void>(
     initialData: _initialData,
     suspense,
     queryFn,
+    enabled,
+    dependsOn,
+    refetchInterval,
     ...optionValues
   } = opts as SingleResourceBuilderOptions<TData, TArg>
 
@@ -41,6 +44,9 @@ export function createSingleDescriptor<TData, TArg = void>(
     initialState,
     options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
     queryFn,
+    enabled,
+    dependsOn,
+    refetchInterval,
   }
 }
 
@@ -62,6 +68,9 @@ export function createInfiniteDescriptor<TData, TArg = void>(
     initialData: _initialData,
     suspense,
     queryFn,
+    enabled,
+    dependsOn,
+    refetchInterval,
     ...optionValues
   } = opts as InfiniteResourceBuilderOptions<TData, TArg>
 
@@ -73,6 +82,9 @@ export function createInfiniteDescriptor<TData, TArg = void>(
     initialState,
     options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
     queryFn,
+    enabled,
+    dependsOn,
+    refetchInterval,
   }
 }
 
