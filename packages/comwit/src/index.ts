@@ -9,6 +9,7 @@ export {
   keepPreviousData,
   query,
   persist,
+  computed,
 } from './core'
 export type {
   Query,
