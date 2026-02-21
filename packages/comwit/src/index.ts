@@ -10,6 +10,7 @@ export {
   query,
   persist,
   computed,
+  initDevTools,
 } from './core'
 export type {
   Query,

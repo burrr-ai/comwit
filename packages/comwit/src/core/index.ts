@@ -19,6 +19,7 @@ export type { FieldPlugin, PluginBag } from './plugin'
 
 import { persistPlugin } from './persist'
 import { persist, type PersistAdapter, type PersistOptions, type PersistDefaults } from './persist'
+import { initDevTools } from './devtools'
 
 import { computedPlugin } from './computed'
 import { computed } from './computed'
@@ -63,6 +64,7 @@ export {
   keepPreviousData,
   persist,
   computed,
+  initDevTools,
 }
 
 export type {

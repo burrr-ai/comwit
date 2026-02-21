@@ -2,6 +2,7 @@ import React, { createContext, useContext, useRef } from 'react'
 import { getPlugins } from './plugin'
 import type { Model, StoreEntry } from './model'
 import type { StageMethodDecorator } from '../interceptors/utils'
+import { getDevTools, initDevTools } from './devtools'
 
 export type RegistryDefaults = {
   interceptors?: StageMethodDecorator[]
@@ -56,6 +57,10 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
       pluginStates.set(plugin.name, plugin.createRegistryState(defaults))
     }
 
+    if (process.env.NODE_ENV !== 'production') {
+      initDevTools()
+    }
+
     registryRef.current = {
       context: {},
       stores: new Map(),
@@ -68,6 +73,11 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
 
         const entry = model.instance()
         registryRef.current.stores.set(model.key, entry)
+
+        if (process.env.NODE_ENV !== 'production') {
+          getDevTools()?.registerStore(model, entry)
+        }
+
         return entry as StoreEntry<T>
       },
       getLifecycle(model: Model<any>): LifecycleState {
