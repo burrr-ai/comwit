@@ -14,8 +14,14 @@ export type ComwitProviderProps = {
   defaultOptions?: RegistryDefaults
 }
 
+export type LifecycleState = {
+  subscriberCount: number
+  cleanup: (() => void) | null
+}
+
 export type StoreRegistry = {
   get<T extends object>(model: Model<T>): StoreEntry<T>
+  getLifecycle(model: Model<any>): LifecycleState
   context?: Record<string, unknown>
   pluginStates: Map<string, unknown>
   pluginDefaults: Map<string, unknown>
@@ -34,6 +40,7 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
   const registryRef = useRef<
     StoreRegistry & {
       stores: Map<symbol, StoreEntry>
+      lifecycles: Map<symbol, LifecycleState>
       context: Record<string, unknown>
     }
   >(null!)
@@ -52,6 +59,7 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
     registryRef.current = {
       context: {},
       stores: new Map(),
+      lifecycles: new Map(),
       pluginStates,
       pluginDefaults,
       get<T extends object>(model: Model<T>): StoreEntry<T> {
@@ -61,6 +69,13 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
         const entry = model.instance()
         registryRef.current.stores.set(model.key, entry)
         return entry as StoreEntry<T>
+      },
+      getLifecycle(model: Model<any>): LifecycleState {
+        const existing = registryRef.current.lifecycles.get(model.key)
+        if (existing) return existing
+        const state: LifecycleState = { subscriberCount: 0, cleanup: null }
+        registryRef.current.lifecycles.set(model.key, state)
+        return state
       },
     }
   }
