@@ -89,6 +89,14 @@ function contextFor<TState>(state: TState) {
   return { state: snapshot(state as ResourceDataLike) as Readonly<TState> }
 }
 
+function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Symbol.asyncIterator in (value as Record<symbol, unknown>)
+  )
+}
+
 function parseQueryArgs(args: unknown[]) {
   if (args.length === 1 && isResourceQueryCallOptions(args[0])) {
     return {
@@ -295,6 +303,23 @@ export function createResourceAccessor(
     mode: QueryMode,
     isRefetch = false
   ): Promise<unknown> => {
+    // Check enabled condition
+    if (descriptor.enabled && modelState) {
+      if (!descriptor.enabled(modelState)) {
+        return
+      }
+    }
+
+    // Check dependsOn condition
+    if (descriptor.dependsOn && modelState) {
+      const dep = descriptor.dependsOn(modelState)
+      if (dep && typeof dep === 'object' && 'isSuccess' in dep) {
+        if (!dep.isSuccess) return
+      } else if (dep === null || dep === undefined) {
+        return
+      }
+    }
+
     const activeEntryBefore = getActiveEntry()
     if (isRefetch && !activeEntryBefore?.hasQueried) {
       return
@@ -400,6 +425,12 @@ export function createResourceAccessor(
       ;(registry.suspense.get(path) as any).__resolve = resolvePromise
     }
 
+    // Abort any active stream before starting a new query
+    if (runtime.streamAbortController) {
+      runtime.streamAbortController.abort()
+      runtime.streamAbortController = undefined
+    }
+
     const currentFetchId = ++runtime.fetchId
 
     try {
@@ -423,6 +454,60 @@ export function createResourceAccessor(
         return result
       }
 
+      // Handle AsyncIterable (streaming) results
+      if (isAsyncIterable(result)) {
+        // Mark as queried so refetch() works during streaming
+        entry.hasQueried = true
+
+        const abortController = new AbortController()
+        runtime.streamAbortController = abortController
+        const batchInterval = descriptor.streamBatchInterval
+
+        let lastYield: unknown
+        try {
+          let lastBatchTime = 0
+          for await (const chunk of result) {
+            if (abortController.signal.aborted || runtime.fetchId !== currentFetchId) {
+              return lastYield
+            }
+
+            // Apply batch interval coalescing
+            if (batchInterval && batchInterval > 0) {
+              const now = Date.now()
+              const elapsed = now - lastBatchTime
+              if (elapsed < batchInterval && lastBatchTime > 0) {
+                await new Promise<void>((resolve) => setTimeout(resolve, batchInterval - elapsed))
+                if (abortController.signal.aborted || runtime.fetchId !== currentFetchId) {
+                  return lastYield
+                }
+              }
+              lastBatchTime = Date.now()
+            }
+
+            lastYield = chunk
+            mergeResult(state, chunk)
+          }
+        } catch (streamError) {
+          if (abortController.signal.aborted) {
+            return lastYield
+          }
+          throw streamError
+        } finally {
+          if (runtime.streamAbortController === abortController) {
+            runtime.streamAbortController = undefined
+          }
+        }
+
+        state.isSuccess = true
+        entry.lastFetchedAt = Date.now()
+        entry.lastResult = lastYield
+        updateCachedState(entry, state)
+
+        scheduleRefetchInterval()
+        return lastYield
+      }
+
+      // Non-streaming path (original behavior)
       if (descriptor.kind === 'single' || descriptor.kind === 'realtime') {
         mergeResult(state, result)
       } else {

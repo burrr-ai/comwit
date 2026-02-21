@@ -1,6 +1,6 @@
 export const RESOURCE_BRAND = Symbol('comwit-resource')
 
-export type AsyncResult<T> = T | Promise<T>
+export type AsyncResult<T> = T | Promise<T> | AsyncIterable<T>
 
 export type ResourceKind = 'single' | 'infinite' | 'realtime'
 
@@ -98,6 +98,7 @@ export type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TResul
   [RESOURCE_BRAND]: true
   kind: ResourceKind
   suspense?: boolean
+  streamBatchInterval?: number
   initialState: TState
   options: Omit<
     ResourceQueryOptions<TState extends ResourceBaseState<infer TData> ? TData : never, unknown>,
@@ -223,6 +224,7 @@ export type DependentQueryOptions<TData> = {
 export type SingleResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
   suspense?: boolean
+  streamBatchInterval?: number
   queryFn: (
     arg: TArg,
     context: ResourceContext<ResourceSingleState<TData>>
@@ -233,6 +235,7 @@ export type SingleResourceBuilderOptions<TData, TArg = void> = {
 export type InfiniteResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
   suspense?: boolean
+  streamBatchInterval?: number
   queryFn: (
     arg: TArg,
     context: ResourceContext<ResourceInfiniteState<TData>>
@@ -304,4 +307,5 @@ export type ResourceRuntimeState = {
   cacheEntries: Map<QueryCacheKey, QueryCacheEntry>
   subscriptionCleanup?: () => void
   refetchIntervalId?: ReturnType<typeof setInterval>
+  streamAbortController?: AbortController
 }

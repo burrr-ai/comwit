@@ -29,6 +29,7 @@ export function createSingleDescriptor<TData, TArg = void>(
   const {
     initialData: _initialData,
     suspense,
+    streamBatchInterval,
     queryFn,
     enabled,
     dependsOn,
@@ -40,6 +41,7 @@ export function createSingleDescriptor<TData, TArg = void>(
     ...initialState,
     kind: 'single',
     suspense: suspense ?? false,
+    streamBatchInterval,
     [RESOURCE_BRAND]: true,
     initialState,
     options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
@@ -67,6 +69,7 @@ export function createInfiniteDescriptor<TData, TArg = void>(
   const {
     initialData: _initialData,
     suspense,
+    streamBatchInterval,
     queryFn,
     enabled,
     dependsOn,
@@ -78,6 +81,7 @@ export function createInfiniteDescriptor<TData, TArg = void>(
     ...initialState,
     kind: 'infinite',
     suspense: suspense ?? false,
+    streamBatchInterval,
     [RESOURCE_BRAND]: true,
     initialState,
     options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
