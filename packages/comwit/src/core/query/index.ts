@@ -26,6 +26,7 @@ export type {
   RealtimeResourceBuilderOptions,
   SuspenseState,
   QueryBindingRegistry,
+  DependentQueryOptions,
 } from './types'
 
 // Descriptor factory + helpers

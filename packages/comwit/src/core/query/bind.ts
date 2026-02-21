@@ -30,7 +30,8 @@ function bindPath(
   descriptors: ResourceDescriptorMap,
   path = '',
   defaults: QueryDefaultOptions | undefined,
-  registry: QueryBindingRegistry
+  registry: QueryBindingRegistry,
+  modelState?: object
 ): any {
   if (!descriptors.size) return state
 
@@ -55,12 +56,13 @@ function bindPath(
           descriptor as AnyResourceDescriptor,
           nextPath,
           defaults,
-          registry
+          registry,
+          modelState
         )
       }
 
       if (isRecord(next) && hasNestedPath(descriptors, nextPath)) {
-        return bindPath(next, descriptors, nextPath, defaults, registry)
+        return bindPath(next, descriptors, nextPath, defaults, registry, modelState)
       }
 
       return next
@@ -81,5 +83,5 @@ export function bindResourceState<T extends object>(
   registry: QueryBindingRegistry = createQueryBindingRegistry()
 ): T {
   if (!resourceDescriptors.size) return modelState
-  return bindPath(modelState, resourceDescriptors, '', defaults, registry) as T
+  return bindPath(modelState, resourceDescriptors, '', defaults, registry, modelState) as T
 }
