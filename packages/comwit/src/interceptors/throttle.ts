@@ -1,5 +1,5 @@
 import { ThrottleOptions, throttle as throttleUtil } from '../utils'
-import { AnyFunction, Interceptor, intercept } from './utils'
+import { AnyFunction, Interceptor, intercept, type StageMethodDecorator } from './utils'
 
 /**
  * Higher-order function that wraps a function with throttle behavior.
@@ -56,7 +56,7 @@ export function throttle<T extends AnyFunction>(
  * }
  * ```
  */
-export function Throttle(waitMs: number, options?: ThrottleOptions): MethodDecorator {
+export function Throttle(waitMs: number, options?: ThrottleOptions): StageMethodDecorator {
   let throttledFn: Function | null = null
   return intercept({
     intercept: (execute, args) => {
@@ -65,5 +65,5 @@ export function Throttle(waitMs: number, options?: ThrottleOptions): MethodDecor
       }
       return throttledFn(...args)
     },
-  }) as MethodDecorator
+  }) as unknown as StageMethodDecorator
 }

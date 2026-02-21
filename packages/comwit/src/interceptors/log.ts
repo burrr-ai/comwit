@@ -1,4 +1,4 @@
-import { AnyFunction, Interceptor, intercept } from './utils'
+import { AnyFunction, Interceptor, intercept, type StageMethodDecorator } from './utils'
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -67,7 +67,7 @@ export function log(level: LogLevel = 'info'): Interceptor {
  * }
  * ```
  */
-export function Log(level: LogLevel = 'info'): MethodDecorator {
+export function Log(level: LogLevel = 'info'): StageMethodDecorator {
   return intercept({
     onBefore: (...args: any[]) => {
       console[level](`called with`, args)
@@ -78,5 +78,5 @@ export function Log(level: LogLevel = 'info'): MethodDecorator {
     onError: (error: unknown, ...args: any[]) => {
       console[level](`threw`, error)
     },
-  }) as MethodDecorator
+  }) as unknown as StageMethodDecorator
 }

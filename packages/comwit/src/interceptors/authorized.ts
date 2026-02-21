@@ -1,4 +1,4 @@
-import { AnyFunction, isThenable, intercept } from './utils'
+import { AnyFunction, isThenable, intercept, type StageMethodDecorator } from './utils'
 
 type AuthorizedOptions = {
   when: () => boolean | Promise<boolean>
@@ -86,7 +86,7 @@ export function onAuthorized<T extends AnyFunction>(options: AuthorizedOptions):
  * }
  * ```
  */
-export function Authorized(options: AuthorizedOptions): MethodDecorator {
+export function Authorized(options: AuthorizedOptions): StageMethodDecorator {
   return intercept({
     intercept: (execute, args) => {
       const denied = () => {
@@ -116,5 +116,5 @@ export function Authorized(options: AuthorizedOptions): MethodDecorator {
 
       return execute(...args)
     },
-  }) as MethodDecorator
+  }) as unknown as StageMethodDecorator
 }

@@ -1,0 +1,79 @@
+---
+title: 'comwit v0.2.2 — Stage 3 Decorators & Type Safety Improvements'
+date: '2026-02-21'
+description: 'v0.2.2 patch release. Migrates interceptors to TC39 Stage 3 decorators with legacy backward compatibility, fixes proxy type errors, and adds BoundResourceState typing for action state().'
+author: 'Claude Code'
+---
+
+## What's New
+
+### TC39 Stage 3 Decorator Support
+
+The interceptor/decorator system now uses the **TC39 Stage 3 decorator** specification — the standard that TypeScript 5.0+ supports out of the box, no flags needed.
+
+```json
+// tsconfig.json — no longer required!
+{
+  "compilerOptions": {
+    // "experimentalDecorators": true  ← DELETE THIS
+  }
+}
+```
+
+All built-in decorators (`@OnError`, `@OnSuccess`, `@Debounce`, `@Throttle`, `@Retry`, `@Queue`, `@Log`, `@Authorized`, `@Transaction`, `@Validate`) and the core `intercept()` function now work with Stage 3 natively.
+
+**Dual-mode compatibility** — If your project still uses `experimentalDecorators: true` (e.g. Next.js with SWC), everything continues to work. The decorator runtime detects which calling convention is being used and adapts automatically:
+
+```ts
+// Works with Stage 3 (no flag)
+class Actions {
+  @OnError((err) => console.error(err))
+  async fetchUser() { ... }
+}
+
+// Also works with legacy (experimentalDecorators: true)
+class Actions {
+  @OnError((err) => console.error(err))
+  async fetchUser() { ... }
+}
+```
+
+Zero migration effort for existing users.
+
+### Typed `state()` in Actions
+
+`state(model)` inside `action()` now returns `BoundResourceState<T>` instead of raw `T`. This means query fields are properly typed with their runtime methods:
+
+```ts
+const userModel = model({
+  me: query<User>({ ... }),
+})
+
+const userActions = action(({ state }) => ({
+  async loadUser() {
+    // Before: TS error — "Property 'query' does not exist on type 'Query<User>'"
+    // After:  ✅ properly typed as BoundSingleResourceState<User>
+    await state(userModel).me.query()
+  },
+}))
+```
+
+No more `// @ts-ignore` or manual casts when calling `.query()`, `.refetch()`, or `.set()` on resource fields inside actions.
+
+### Proxy Type Fix
+
+Fixed a long-standing TypeScript strict mode error in the proxy engine where `Object.keys()` iteration on type-guarded objects produced `TS7053` ("Element implicitly has an 'any' type").
+
+---
+
+## Breaking Changes
+
+None. This is a fully backward-compatible patch release.
+
+## Upgrading
+
+```bash
+yarn add comwit@0.2.2
+```
+
+Optionally remove `experimentalDecorators: true` from your `tsconfig.json` — it's no longer required but still supported.

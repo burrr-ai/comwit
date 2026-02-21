@@ -46,8 +46,9 @@ export function createProxy<T extends object>(initialValue: T): T {
         if (canProxy(obj[i])) obj[i] = wrap(obj[i])
       }
     } else {
-      for (const key of Object.keys(obj)) {
-        if (canProxy(obj[key])) obj[key] = wrap(obj[key])
+      const record = obj as Record<string, unknown>
+      for (const key of Object.keys(record)) {
+        if (canProxy(record[key])) record[key] = wrap(record[key])
       }
     }
 

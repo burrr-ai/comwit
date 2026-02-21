@@ -1,5 +1,5 @@
 import { DebounceOptions, debounce as debounceUtil } from '../utils'
-import { AnyFunction, Interceptor, intercept } from './utils'
+import { AnyFunction, Interceptor, intercept, type StageMethodDecorator } from './utils'
 
 /**
  * Higher-order function that wraps a function with debounce behavior.
@@ -58,7 +58,7 @@ export function debounce<T extends AnyFunction>(
  * }
  * ```
  */
-export function Debounce(waitMs: number, options?: DebounceOptions): MethodDecorator {
+export function Debounce(waitMs: number, options?: DebounceOptions): StageMethodDecorator {
   let debouncedFn: Function | null = null
   return intercept({
     intercept: (execute, args) => {
@@ -67,5 +67,5 @@ export function Debounce(waitMs: number, options?: DebounceOptions): MethodDecor
       }
       return debouncedFn(...args)
     },
-  }) as MethodDecorator
+  }) as unknown as StageMethodDecorator
 }

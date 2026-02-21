@@ -1,4 +1,4 @@
-import { intercept } from './utils'
+import { intercept, type StageMethodDecorator } from './utils'
 
 /**
  * Higher-order function placeholder for transactional method execution.
@@ -46,6 +46,6 @@ export function transaction(): <T extends (...args: any[]) => any>(next: T) => T
  * }
  * ```
  */
-export function Transaction(): MethodDecorator {
-  return intercept({}) as MethodDecorator
+export function Transaction(): StageMethodDecorator {
+  return intercept({}) as unknown as StageMethodDecorator
 }

@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useRef } from 'react'
 import { getPlugins } from './plugin'
 import type { Model, StoreEntry } from './model'
+import type { StageMethodDecorator } from '../interceptors/utils'
 
 export type RegistryDefaults = {
-  interceptors?: MethodDecorator[]
+  interceptors?: StageMethodDecorator[]
   [pluginName: string]: unknown
 }
 
@@ -18,7 +19,7 @@ export type StoreRegistry = {
   context?: Record<string, unknown>
   pluginStates: Map<string, unknown>
   pluginDefaults: Map<string, unknown>
-  globalInterceptors?: MethodDecorator[]
+  globalInterceptors?: StageMethodDecorator[]
 }
 
 const StateContext = createContext<StoreRegistry | null>(null)
@@ -67,9 +68,7 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
   Object.keys(registryRef.current.context).forEach((key) => delete registryRef.current.context[key])
   Object.assign(registryRef.current.context, context)
 
-  registryRef.current.globalInterceptors = defaultOptions?.interceptors as
-    | MethodDecorator[]
-    | undefined
+  registryRef.current.globalInterceptors = defaultOptions?.interceptors
 
   // Update plugin defaults on each render
   const plugins = getPlugins()

@@ -1,19 +1,30 @@
 import type { Model } from '../core/model'
+import type { BoundResourceState } from '../core/query/types'
 
 export type AnyFunction = (...args: any[]) => any
 
 export type Interceptor<T extends AnyFunction = AnyFunction> = (next: T) => T
 
-type ActionState = <T extends object>(model: Model<T>) => T
+type ActionState = <T extends object>(model: Model<T>) => BoundResourceState<T>
 
 export type ActionContext<TContext extends object = Record<string, never>> = {
   state: ActionState
   context: TContext
 }
 
+/**
+ * Dual-mode method decorator type. Compatible with both legacy
+ * (`experimentalDecorators`) and TC39 Stage 3 decorator calling conventions.
+ */
+export type StageMethodDecorator = (
+  valueOrTarget: any,
+  contextOrKey?: any,
+  maybeDescriptor?: any
+) => any
+
 export type LazyInterceptorFactory<TContext extends object = Record<string, never>> = (
   ctx: ActionContext<TContext>
-) => MethodDecorator
+) => StageMethodDecorator
 
 const LAZY_INTERCEPTORS = Symbol('mucha.lazyInterceptors')
 
@@ -63,12 +74,8 @@ export type InterceptorHooks = {
   intercept?: (execute: (...args: any[]) => any, args: any[]) => any
 }
 
-function applyToMethod(hooks: InterceptorHooks, descriptor: TypedPropertyDescriptor<any>): void {
-  if (!descriptor || typeof descriptor.value !== 'function') return
-
-  const original = descriptor.value
-
-  descriptor.value = cloneLazyInterceptors(original, function (this: any, ...args: any[]) {
+function wrapWithHooks(hooks: InterceptorHooks, original: Function): Function {
+  return cloneLazyInterceptors(original, function (this: any, ...args: any[]) {
     const { onBefore, onSuccess, onError, onSettled, intercept: interceptHook } = hooks
 
     if (onBefore) onBefore(...args)
@@ -105,6 +112,17 @@ function applyToMethod(hooks: InterceptorHooks, descriptor: TypedPropertyDescrip
     if (onSettled) onSettled(...args)
     return result
   })
+}
+
+/**
+ * Detect whether the decorator is being called with Stage 3 (TC39) or legacy
+ * (experimentalDecorators) convention.
+ *
+ * Stage 3: `(value: Function, context: { kind: 'method' | 'class', ... })`
+ * Legacy:  `(target, propertyKey?, descriptor?)` where propertyKey is string|symbol or undefined
+ */
+function isStage3Context(arg: unknown): arg is ClassMethodDecoratorContext | ClassDecoratorContext {
+  return arg !== null && typeof arg === 'object' && 'kind' in (arg as any)
 }
 
 /**
@@ -193,76 +211,108 @@ function applyToMethod(hooks: InterceptorHooks, descriptor: TypedPropertyDescrip
  *   for deferred (lazy) resolution.
  * @returns A decorator that can be applied to a method or a class.
  */
-export function intercept(hooks: InterceptorHooks): MethodDecorator & ClassDecorator
+export function intercept(hooks: InterceptorHooks): StageMethodDecorator
 export function intercept<TContext extends object = Record<string, never>>(
   factory: (ctx: ActionContext<TContext>) => InterceptorHooks
-): MethodDecorator & ClassDecorator
+): StageMethodDecorator
 export function intercept(
   hooksOrFactory: InterceptorHooks | ((ctx: ActionContext<any>) => InterceptorHooks)
-): MethodDecorator & ClassDecorator {
+): StageMethodDecorator {
   if (typeof hooksOrFactory === 'function') {
     // Lazy path: store a factory that resolves hooks when ActionContext is available.
     const lazyFactory: LazyInterceptorFactory = (ctx: ActionContext<any>) => {
       const hooks = hooksOrFactory(ctx)
-      return intercept(hooks) as MethodDecorator
+      return intercept(hooks) as unknown as StageMethodDecorator
     }
 
-    return ((
-      target: any,
-      propertyKey?: string | symbol,
-      descriptor?: TypedPropertyDescriptor<any>
+    return (
+      valueOrTarget: any,
+      contextOrKey?: any,
+      maybeDescriptor?: TypedPropertyDescriptor<any>
     ): any => {
-      if (propertyKey === undefined || propertyKey === null) {
-        // Class decorator: store factory on every method
-        const constructor = target as Function
-        const proto = constructor.prototype
-        const keys = Object.getOwnPropertyNames(proto).filter((k) => k !== 'constructor')
-        for (const key of keys) {
-          const desc = Object.getOwnPropertyDescriptor(proto, key)
-          if (desc && typeof desc.value === 'function') {
-            const fn = desc.value as LazyInterceptorHost
-            fn[LAZY_INTERCEPTORS] = [
-              ...(getLazyInterceptorFactories(fn) as UnscopedLazyInterceptorFactory[]),
-              lazyFactory as UnscopedLazyInterceptorFactory,
-            ]
-            Object.defineProperty(proto, key, desc)
-          }
+      if (isStage3Context(contextOrKey)) {
+        // --- Stage 3 ---
+        if (contextOrKey.kind === 'method') {
+          storeLazyFactory(valueOrTarget, lazyFactory)
+        } else if (contextOrKey.kind === 'class') {
+          storeLazyFactoryOnPrototype(valueOrTarget, lazyFactory)
         }
-        return constructor
-      } else {
-        // Method decorator: store factory on the method
-        if (!descriptor || typeof descriptor.value !== 'function') return
-        const fn = descriptor.value as LazyInterceptorHost
-        fn[LAZY_INTERCEPTORS] = [
-          ...(getLazyInterceptorFactories(fn) as UnscopedLazyInterceptorFactory[]),
-          lazyFactory as UnscopedLazyInterceptorFactory,
-        ]
+        return
       }
-    }) as MethodDecorator & ClassDecorator
+
+      // --- Legacy ---
+      if (contextOrKey === undefined || contextOrKey === null) {
+        // Legacy class decorator
+        storeLazyFactoryOnPrototype(valueOrTarget, lazyFactory)
+        return valueOrTarget
+      } else {
+        // Legacy method decorator
+        if (!maybeDescriptor || typeof maybeDescriptor.value !== 'function') return
+        storeLazyFactory(maybeDescriptor.value, lazyFactory)
+      }
+    }
   }
 
-  // Immediate path: apply hooks directly via applyToMethod.
-  return function (
-    target: any,
-    propertyKey?: string | symbol,
-    descriptor?: TypedPropertyDescriptor<any>
-  ): any {
-    if (propertyKey === undefined || propertyKey === null) {
-      // Class decorator
-      const constructor = target as Function
-      const proto = constructor.prototype
-      const keys = Object.getOwnPropertyNames(proto).filter((k) => k !== 'constructor')
-      for (const key of keys) {
-        const desc = Object.getOwnPropertyDescriptor(proto, key)
-        if (desc && typeof desc.value === 'function') {
-          applyToMethod(hooksOrFactory as InterceptorHooks, desc)
-          Object.defineProperty(proto, key, desc)
-        }
+  // Immediate path: apply hooks directly.
+  return (
+    valueOrTarget: any,
+    contextOrKey?: any,
+    maybeDescriptor?: TypedPropertyDescriptor<any>
+  ): any => {
+    const hooks = hooksOrFactory as InterceptorHooks
+
+    if (isStage3Context(contextOrKey)) {
+      // --- Stage 3 ---
+      if (contextOrKey.kind === 'method') {
+        return wrapWithHooks(hooks, valueOrTarget)
+      } else if (contextOrKey.kind === 'class') {
+        patchPrototypeMethods(valueOrTarget, hooks)
       }
-      return constructor
-    } else {
-      // Method decorator
-      applyToMethod(hooksOrFactory as InterceptorHooks, descriptor!)
+      return
     }
-  } as MethodDecorator & ClassDecorator
+
+    // --- Legacy ---
+    if (contextOrKey === undefined || contextOrKey === null) {
+      // Legacy class decorator
+      patchPrototypeMethods(valueOrTarget, hooks)
+      return valueOrTarget
+    } else {
+      // Legacy method decorator
+      if (!maybeDescriptor || typeof maybeDescriptor.value !== 'function') return
+      maybeDescriptor.value = wrapWithHooks(hooks, maybeDescriptor.value) as any
+    }
+  }
+}
+
+function storeLazyFactory(fn: Function, factory: LazyInterceptorFactory): void {
+  const existing = getLazyInterceptorFactories(fn) as UnscopedLazyInterceptorFactory[]
+  Object.defineProperty(fn, LAZY_INTERCEPTORS, {
+    value: [...existing, factory as UnscopedLazyInterceptorFactory],
+    configurable: true,
+    enumerable: false,
+    writable: true,
+  })
+}
+
+function storeLazyFactoryOnPrototype(constructor: Function, factory: LazyInterceptorFactory): void {
+  const proto = constructor.prototype
+  const keys = Object.getOwnPropertyNames(proto).filter((k) => k !== 'constructor')
+  for (const key of keys) {
+    const desc = Object.getOwnPropertyDescriptor(proto, key)
+    if (desc && typeof desc.value === 'function') {
+      storeLazyFactory(desc.value, factory)
+    }
+  }
+}
+
+function patchPrototypeMethods(constructor: Function, hooks: InterceptorHooks): void {
+  const proto = constructor.prototype
+  const keys = Object.getOwnPropertyNames(proto).filter((k) => k !== 'constructor')
+  for (const key of keys) {
+    const desc = Object.getOwnPropertyDescriptor(proto, key)
+    if (desc && typeof desc.value === 'function') {
+      desc.value = wrapWithHooks(hooks, desc.value)
+      Object.defineProperty(proto, key, desc)
+    }
+  }
 }

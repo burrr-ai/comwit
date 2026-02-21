@@ -1,4 +1,4 @@
-import { AnyFunction, isThenable, intercept } from './utils'
+import { AnyFunction, isThenable, intercept, type StageMethodDecorator } from './utils'
 
 /**
  * Higher-order function that wraps a function to intercept errors.
@@ -53,6 +53,6 @@ export function onError<T extends AnyFunction>(handler: (error: unknown) => void
  * }
  * ```
  */
-export function OnError(handler: (error: unknown) => any): MethodDecorator {
-  return intercept({ onError: (err) => handler(err) }) as MethodDecorator
+export function OnError(handler: (error: unknown) => any): StageMethodDecorator {
+  return intercept({ onError: (err) => handler(err) }) as unknown as StageMethodDecorator
 }

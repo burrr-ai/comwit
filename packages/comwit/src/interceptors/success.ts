@@ -1,4 +1,4 @@
-import { AnyFunction, isThenable, intercept } from './utils'
+import { AnyFunction, isThenable, intercept, type StageMethodDecorator } from './utils'
 
 /**
  * Higher-order function that wraps a function to intercept successful results.
@@ -55,6 +55,6 @@ export function onSuccess<T extends AnyFunction>(
  * }
  * ```
  */
-export function OnSuccess<R>(handler: (result: R) => void): MethodDecorator {
-  return intercept({ onSuccess: (result) => handler(result) }) as MethodDecorator
+export function OnSuccess<R>(handler: (result: R) => void): StageMethodDecorator {
+  return intercept({ onSuccess: (result) => handler(result) }) as unknown as StageMethodDecorator
 }

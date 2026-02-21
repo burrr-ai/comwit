@@ -1,4 +1,4 @@
-import { AnyFunction, Interceptor, intercept } from './utils'
+import { AnyFunction, Interceptor, intercept, type StageMethodDecorator } from './utils'
 
 type QueueStrategy = 'drop' | 'queue' | 'replace'
 
@@ -84,7 +84,7 @@ export function queue(strategy: QueueStrategy = 'drop'): Interceptor {
  * }
  * ```
  */
-export function Queue(strategy: QueueStrategy = 'drop'): MethodDecorator {
+export function Queue(strategy: QueueStrategy = 'drop'): StageMethodDecorator {
   let running: Promise<any> | null = null
   let callId = 0
   let chain: Promise<any> = Promise.resolve()
@@ -114,5 +114,5 @@ export function Queue(strategy: QueueStrategy = 'drop'): MethodDecorator {
         return value
       })
     },
-  }) as MethodDecorator
+  }) as unknown as StageMethodDecorator
 }

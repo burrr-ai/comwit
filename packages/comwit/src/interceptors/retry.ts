@@ -1,4 +1,4 @@
-import { AnyFunction, Interceptor, intercept } from './utils'
+import { AnyFunction, Interceptor, intercept, type StageMethodDecorator } from './utils'
 
 type RetryOptions = { delay?: number; backoff?: 'fixed' | 'exponential' }
 
@@ -90,7 +90,7 @@ export function retry(count: number, options?: number | RetryOptions): Intercept
  * }
  * ```
  */
-export function Retry(count: number, options?: number | RetryOptions): MethodDecorator {
+export function Retry(count: number, options?: number | RetryOptions): StageMethodDecorator {
   const { delay, backoff } = resolveOptions(options)
 
   return intercept({
@@ -111,5 +111,5 @@ export function Retry(count: number, options?: number | RetryOptions): MethodDec
       }
       throw lastError
     },
-  }) as MethodDecorator
+  }) as unknown as StageMethodDecorator
 }

@@ -2,6 +2,7 @@ export {
   type AnyFunction,
   type Interceptor,
   type InterceptorHooks,
+  type StageMethodDecorator,
   isThenable,
   composeInterceptors,
   intercept,

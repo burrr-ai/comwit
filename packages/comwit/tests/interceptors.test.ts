@@ -703,19 +703,14 @@ describe('intercept', () => {
     const mockCtx = { state: vi.fn(), context: {} }
     const methodDecorator = factories[0](mockCtx as any)
 
-    // Apply the resolved decorator to a fresh descriptor
-    const testDescriptor: TypedPropertyDescriptor<any> = {
-      value: function (x: number) {
-        return x + 10
-      },
-      writable: true,
-      enumerable: false,
-      configurable: true,
+    // Apply the resolved Stage 3 decorator to a test function
+    const testFn = function (x: number) {
+      return x + 10
     }
 
-    methodDecorator(Actions.prototype, 'testMethod', testDescriptor)
+    const wrapped = methodDecorator(testFn, { kind: 'method', name: 'testMethod' } as any) ?? testFn
 
-    const result = testDescriptor.value(5)
+    const result = (wrapped as any)(5)
 
     expect(onBefore).toHaveBeenCalledWith(5)
     expect(onSuccess).toHaveBeenCalledWith(15, 5)

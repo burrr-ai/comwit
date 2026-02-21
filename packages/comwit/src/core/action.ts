@@ -1,9 +1,14 @@
 import { getPlugins } from './plugin'
 import { useRef } from 'react'
-import { getLazyInterceptorFactories, type LazyInterceptorFactory } from '../interceptors/utils'
+import {
+  getLazyInterceptorFactories,
+  type LazyInterceptorFactory,
+  type StageMethodDecorator,
+} from '../interceptors/utils'
 import { useStoreRegistry } from './provider'
+import type { BoundResourceState } from './query/types'
 
-export type State = <T extends object>(model: Model<T>) => T
+export type State = <T extends object>(model: Model<T>) => BoundResourceState<T>
 
 export type ActionContext<TContext extends object = Record<string, never>> = {
   state: State
@@ -31,7 +36,7 @@ export function useAction<A, C extends object = Record<string, never>>(
   const resourceStateRef = useRef<Map<symbol, object>>(new Map())
 
   if (!actionsRef.current) {
-    const state = <T extends object>(dep: Model<T>): T => {
+    const state: State = (<T extends object>(dep: Model<T>) => {
       const existing = resourceStateRef.current.get(dep.key)
       if (existing) return existing as T
 
@@ -56,7 +61,7 @@ export function useAction<A, C extends object = Record<string, never>>(
 
       resourceStateRef.current.set(dep.key, proxy)
       return proxy as T
-    }
+    }) as State
 
     const context = (registry.context ?? {}) as C
     const merged = Object.assign(
@@ -131,15 +136,11 @@ function resolveLazyInterceptors<C extends object = Record<string, never>>(
   for (const factory of factories) {
     const decorator = factory({ state: ctx.state, context: ctx.context })
     if (typeof decorator !== 'function') continue
-    const descriptor: TypedPropertyDescriptor<AnyFunction> = {
-      configurable: true,
-      enumerable: true,
-      writable: true,
-      value: next,
-    }
-
-    decorator({}, '__mucha-action', descriptor)
-    next = descriptor.value as AnyFunction
+    const result = decorator(next, {
+      kind: 'method',
+      name: '__mucha-action',
+    } as ClassMethodDecoratorContext)
+    next = (result ?? next) as AnyFunction
   }
 
   return next
@@ -147,7 +148,7 @@ function resolveLazyInterceptors<C extends object = Record<string, never>>(
 
 function applyGlobalInterceptors(
   module: ActionModule,
-  interceptors: MethodDecorator[]
+  interceptors: StageMethodDecorator[]
 ): ActionModule {
   const out: ActionModule = {}
   for (const key of Object.keys(module)) {
@@ -158,14 +159,11 @@ function applyGlobalInterceptors(
     }
     let fn = value as AnyFunction
     for (const decorator of interceptors) {
-      const descriptor: TypedPropertyDescriptor<AnyFunction> = {
-        configurable: true,
-        enumerable: true,
-        writable: true,
-        value: fn,
-      }
-      decorator({}, '__global-interceptor' as any, descriptor as any)
-      fn = descriptor.value as AnyFunction
+      const result = decorator(fn, {
+        kind: 'method',
+        name: key,
+      } as ClassMethodDecoratorContext)
+      fn = (result ?? fn) as AnyFunction
     }
     out[key] = fn
   }
