@@ -78,7 +78,7 @@ export function mergeResult(state: ResourceDataLike, result: unknown, appendData
       return
     }
 
-    Object.assign(state, result)
+    state.data = result
     return
   }
 
