@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'comwit — React state management for vibe coding',
   description:
-    'LLM-optimized React state management library built for vibe coding with Claude Code. Proxy reactivity, built-in data fetching, and minimal token overhead. Just pass llm.txt.',
+    'LLM-optimized React state management library built for vibe coding with Claude Code. Proxy reactivity, built-in data fetching, and minimal token overhead. Just pass llms.txt.',
   keywords: [
     'comwit',
     'react',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'comwit — React state management for vibe coding',
     description:
-      'LLM-optimized React state management. Proxy reactivity, built-in data fetching, minimal token overhead. Just pass llm.txt to Claude Code.',
+      'LLM-optimized React state management. Proxy reactivity, built-in data fetching, minimal token overhead. Just pass llms.txt to Claude Code.',
     siteName: 'comwit',
     url: 'https://comwit.io',
     type: 'website',
@@ -52,11 +52,11 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'comwit — React state management for vibe coding',
     description:
-      'LLM-optimized React state management. Proxy reactivity, built-in data fetching, minimal token overhead. Just pass llm.txt to Claude Code.',
+      'LLM-optimized React state management. Proxy reactivity, built-in data fetching, minimal token overhead. Just pass llms.txt to Claude Code.',
     images: ['/og.png'],
   },
   other: {
-    llmstxt: 'https://comwit.io/llm.txt',
+    llmstxt: 'https://comwit.io/llms.txt',
   },
   metadataBase: new URL('https://comwit.io'),
   icons: {
