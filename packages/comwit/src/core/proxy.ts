@@ -83,19 +83,22 @@ export function createProxy<T extends object>(initialValue: T): T {
 function deepClone(value: any): any {
   if (value === null || typeof value !== 'object') return value
   if (Array.isArray(value)) return value.map(deepClone)
+  if (!canProxy(value)) return value
+  const record = value as Record<string, unknown>
   const out: Record<string, unknown> = {}
-  for (const key of Object.keys(value)) {
-    out[key] = deepClone(value[key])
+  for (const key of Object.keys(record)) {
+    out[key] = deepClone(record[key])
   }
   return out
 }
 
 function deepFreeze<T>(value: T): T {
   if (value === null || typeof value !== 'object') return value
-  Object.freeze(value)
   if (Array.isArray(value)) {
+    Object.freeze(value)
     value.forEach(deepFreeze)
-  } else {
+  } else if (canProxy(value)) {
+    Object.freeze(value)
     for (const key of Object.keys(value as object)) {
       deepFreeze((value as any)[key])
     }

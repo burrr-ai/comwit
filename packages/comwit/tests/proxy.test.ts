@@ -234,6 +234,99 @@ describe('new nested objects assigned to proxy', () => {
   })
 })
 
+describe('non-proxyable objects (File, Blob, Date, Map, etc.)', () => {
+  test('File stored in proxy state is not wrapped in Proxy', () => {
+    const file = new File(['hello'], 'test.txt', { type: 'text/plain' })
+    const state = createProxy<{ file: File | null }>({ file: null })
+
+    state.file = file
+
+    expect(state.file).toBeInstanceOf(File)
+    expect(state.file!.name).toBe('test.txt')
+    expect(state.file!.size).toBe(5)
+    // The stored File should be the exact same reference (not proxied)
+    expect(state.file).toBe(file)
+  })
+
+  test('Blob stored in proxy state is not wrapped in Proxy', () => {
+    const blob = new Blob(['data'], { type: 'application/octet-stream' })
+    const state = createProxy<{ blob: Blob | null }>({ blob: null })
+
+    state.blob = blob
+
+    expect(state.blob).toBeInstanceOf(Blob)
+    expect(state.blob!.size).toBe(4)
+    expect(state.blob).toBe(blob)
+  })
+
+  test('File in nested object is preserved as-is', () => {
+    const file = new File(['content'], 'doc.pdf', { type: 'application/pdf' })
+    const state = createProxy<{ form: { attachment: File | null } }>({
+      form: { attachment: null },
+    })
+
+    state.form.attachment = file
+
+    expect(state.form.attachment).toBe(file)
+    expect(state.form.attachment.name).toBe('doc.pdf')
+  })
+
+  test('File inside array is preserved as-is', () => {
+    const file1 = new File(['a'], 'a.txt', { type: 'text/plain' })
+    const file2 = new File(['b'], 'b.txt', { type: 'text/plain' })
+    const state = createProxy<{ files: File[] }>({ files: [] })
+
+    state.files = [file1, file2]
+
+    expect(state.files[0]).toBe(file1)
+    expect(state.files[1]).toBe(file2)
+  })
+
+  test('Date stored in proxy state is not wrapped in Proxy', () => {
+    const date = new Date('2024-01-01')
+    const state = createProxy<{ date: Date | null }>({ date: null })
+
+    state.date = date
+
+    expect(state.date).toBeInstanceOf(Date)
+    expect(state.date!.getFullYear()).toBe(2024)
+    expect(state.date).toBe(date)
+  })
+
+  test('Map stored in proxy state is not wrapped in Proxy', () => {
+    const map = new Map([['key', 'value']])
+    const state = createProxy<{ map: Map<string, string> | null }>({ map: null })
+
+    state.map = map
+
+    expect(state.map).toBeInstanceOf(Map)
+    expect(state.map!.get('key')).toBe('value')
+    expect(state.map).toBe(map)
+  })
+
+  test('snapshot preserves non-proxyable objects by reference', () => {
+    const file = new File(['hello'], 'test.txt', { type: 'text/plain' })
+    const state = createProxy<{ file: File | null }>({ file })
+
+    const snap = snapshot(state)
+
+    // snapshot's deepClone skips non-plain-objects, so File should be preserved
+    expect(snap.file).toBeInstanceOf(File)
+    expect(snap.file!.name).toBe('test.txt')
+  })
+
+  test('setting File triggers notification', async () => {
+    const state = createProxy<{ file: File | null }>({ file: null })
+    const listener = vi.fn()
+
+    subscribe(state, listener)
+    state.file = new File(['hello'], 'test.txt', { type: 'text/plain' })
+
+    await Promise.resolve()
+    expect(listener).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('array mutation methods', () => {
   test('push triggers notification', async () => {
     const state = createProxy({ items: ['a'] })
