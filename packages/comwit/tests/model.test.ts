@@ -111,6 +111,31 @@ describe('model()', () => {
     expect(store.getSnapshot().user.name).toBe('Bob')
   })
 
+  test('preserves Date objects in initial state', () => {
+    const date = new Date('2024-01-15')
+    const m = model({ createdAt: date })
+    const store = m.instance()
+
+    const snap = store.getSnapshot()
+    expect(snap.createdAt).toBeInstanceOf(Date)
+    expect(snap.createdAt.toISOString()).toBe(date.toISOString())
+  })
+
+  test('preserves nested Date objects in initial state', () => {
+    const date = new Date('2024-06-01')
+    const m = model({
+      form: {
+        name: 'test',
+        launchedAt: date,
+      },
+    })
+    const store = m.instance()
+
+    const snap = store.getSnapshot()
+    expect(snap.form.launchedAt).toBeInstanceOf(Date)
+    expect(snap.form.launchedAt.toISOString()).toBe(date.toISOString())
+  })
+
   test('model with query descriptors extracts into pluginBags', () => {
     const m = model({
       name: 'test',

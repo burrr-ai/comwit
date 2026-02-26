@@ -194,6 +194,10 @@ function normalize(value: unknown, path: string, pluginBags: Map<string, PluginB
     return value.map((item, index) => normalize(item, `${path}[${index}]`, pluginBags))
   }
 
+  // Preserve native objects (Date, File, Blob, Map, Set, etc.)
+  const proto = Object.getPrototypeOf(value)
+  if (proto !== Object.prototype && proto !== null) return value
+
   const out: Record<string, unknown> = {}
   for (const key of Object.keys(value)) {
     const nextPath = path ? `${path}.${key}` : key
