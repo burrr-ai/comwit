@@ -3,7 +3,6 @@ const PROXY_STATE = Symbol('proxy-state')
 type ProxyState = {
   listeners: Set<() => void>
   version: number
-  notifyScheduled: boolean
 }
 
 const proxyStateMap = new WeakMap<object, ProxyState>()
@@ -18,19 +17,12 @@ export function createProxy<T extends object>(initialValue: T): T {
   const state: ProxyState = {
     listeners: new Set(),
     version: 0,
-    notifyScheduled: false,
   }
 
-  function scheduleNotify() {
-    if (!state.notifyScheduled) {
-      state.notifyScheduled = true
-      Promise.resolve().then(() => {
-        state.notifyScheduled = false
-        state.version++
-        for (const listener of state.listeners) {
-          listener()
-        }
-      })
+  function notify() {
+    state.version++
+    for (const listener of state.listeners) {
+      listener()
     }
   }
 
@@ -62,12 +54,12 @@ export function createProxy<T extends object>(initialValue: T): T {
         if (Object.is(old, value)) return true
         if (canProxy(value)) value = wrap(value)
         Reflect.set(target, prop, value)
-        scheduleNotify()
+        notify()
         return true
       },
       deleteProperty(target, prop) {
         Reflect.deleteProperty(target, prop)
-        scheduleNotify()
+        notify()
         return true
       },
     }

@@ -41,7 +41,7 @@ describe('model()', () => {
     }).toThrow()
   })
 
-  test('subscribe fires listener on proxy mutation', async () => {
+  test('subscribe fires listener on proxy mutation', () => {
     const m = model({ count: 0 })
     const store = m.instance()
     const listener = vi.fn()
@@ -49,11 +49,10 @@ describe('model()', () => {
     store.subscribe(listener)
     store.proxy.count = 1
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalled()
   })
 
-  test('subscribe returns unsubscribe function that stops notifications', async () => {
+  test('subscribe returns unsubscribe function that stops notifications', () => {
     const m = model({ count: 0 })
     const store = m.instance()
     const listener = vi.fn()
@@ -62,7 +61,6 @@ describe('model()', () => {
     unsubscribe()
 
     store.proxy.count = 5
-    await Promise.resolve()
 
     expect(listener).not.toHaveBeenCalled()
   })
@@ -101,7 +99,7 @@ describe('model()', () => {
     expect(store2.getSnapshot().count).toBe(0)
   })
 
-  test('nested object mutations trigger subscribe', async () => {
+  test('nested object mutations trigger subscribe', () => {
     const m = model({ user: { name: 'Alice', age: 30 } })
     const store = m.instance()
     const listener = vi.fn()
@@ -109,7 +107,6 @@ describe('model()', () => {
     store.subscribe(listener)
     store.proxy.user.name = 'Bob'
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalled()
     expect(store.getSnapshot().user.name).toBe('Bob')
   })

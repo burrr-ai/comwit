@@ -15,14 +15,13 @@ describe('createProxy()', () => {
     expect(state.user.address.city).toBe('NYC')
   })
 
-  test('property mutations are tracked', async () => {
+  test('property mutations are tracked', () => {
     const state = createProxy({ count: 0 })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.count = 1
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalledTimes(1)
     expect(state.count).toBe(1)
   })
@@ -70,21 +69,17 @@ describe('snapshot()', () => {
 })
 
 describe('subscribe()', () => {
-  test('fires listener asynchronously after proxy mutation', async () => {
+  test('fires listener synchronously after proxy mutation', () => {
     const state = createProxy({ count: 0 })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.count = 1
 
-    // listener should not have fired synchronously
-    expect(listener).not.toHaveBeenCalled()
-
-    await Promise.resolve()
     expect(listener).toHaveBeenCalledTimes(1)
   })
 
-  test('returns unsubscribe function that stops notifications', async () => {
+  test('returns unsubscribe function that stops notifications', () => {
     const state = createProxy({ count: 0 })
     const listener = vi.fn()
 
@@ -92,12 +87,11 @@ describe('subscribe()', () => {
     unsub()
 
     state.count = 5
-    await Promise.resolve()
 
     expect(listener).not.toHaveBeenCalled()
   })
 
-  test('multiple listeners all get notified', async () => {
+  test('multiple listeners all get notified', () => {
     const state = createProxy({ count: 0 })
     const listener1 = vi.fn()
     const listener2 = vi.fn()
@@ -106,31 +100,28 @@ describe('subscribe()', () => {
     subscribe(state, listener2)
     state.count = 1
 
-    await Promise.resolve()
     expect(listener1).toHaveBeenCalledTimes(1)
     expect(listener2).toHaveBeenCalledTimes(1)
   })
 
-  test('nested object mutations trigger notification', async () => {
+  test('nested object mutations trigger notification', () => {
     const state = createProxy({ user: { name: 'Alice' } })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.user.name = 'Bob'
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalledTimes(1)
     expect(state.user.name).toBe('Bob')
   })
 
-  test('setting same value (Object.is) does NOT trigger notification', async () => {
+  test('setting same value (Object.is) does NOT trigger notification', () => {
     const state = createProxy({ count: 0 })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.count = 0
 
-    await Promise.resolve()
     expect(listener).not.toHaveBeenCalled()
   })
 
@@ -140,7 +131,7 @@ describe('subscribe()', () => {
     }).toThrow('[comwit] subscribe() called on a non-proxy object')
   })
 
-  test('multiple rapid mutations batch into single notification', async () => {
+  test('each mutation triggers a separate notification (synchronous)', () => {
     const state = createProxy({ count: 0 })
     const listener = vi.fn()
 
@@ -149,19 +140,17 @@ describe('subscribe()', () => {
     state.count = 2
     state.count = 3
 
-    await Promise.resolve()
-    expect(listener).toHaveBeenCalledTimes(1)
+    expect(listener).toHaveBeenCalledTimes(3)
     expect(state.count).toBe(3)
   })
 
-  test('deleteProperty triggers notification', async () => {
+  test('deleteProperty triggers notification', () => {
     const state = createProxy<{ a?: number; b: number }>({ a: 1, b: 2 })
     const listener = vi.fn()
 
     subscribe(state, listener)
     delete state.a
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalledTimes(1)
     expect(state.a).toBeUndefined()
   })
@@ -175,14 +164,13 @@ describe('array values', () => {
     expect(state.items.length).toBe(3)
   })
 
-  test('array mutations trigger notification', async () => {
+  test('array mutations trigger notification', () => {
     const state = createProxy({ items: ['a', 'b'] })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.items.push('c')
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalled()
     expect(state.items).toEqual(['a', 'b', 'c'])
   })
@@ -199,36 +187,32 @@ describe('array values', () => {
 })
 
 describe('new nested objects assigned to proxy', () => {
-  test('new nested objects are also reactive', async () => {
+  test('new nested objects are also reactive', () => {
     const state = createProxy<{ nested?: { value: number } }>({ nested: undefined })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.nested = { value: 1 }
 
-    await Promise.resolve()
     listener.mockClear()
 
     state.nested!.value = 42
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalledTimes(1)
     expect(state.nested!.value).toBe(42)
   })
 
-  test('deeply nested objects assigned later become reactive', async () => {
+  test('deeply nested objects assigned later become reactive', () => {
     const state = createProxy<{ a?: { b?: { c: number } } }>({})
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.a = { b: { c: 1 } }
 
-    await Promise.resolve()
     listener.mockClear()
 
     state.a!.b!.c = 99
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalledTimes(1)
     expect(state.a!.b!.c).toBe(99)
   })
@@ -315,135 +299,123 @@ describe('non-proxyable objects (File, Blob, Date, Map, etc.)', () => {
     expect(snap.file!.name).toBe('test.txt')
   })
 
-  test('setting File triggers notification', async () => {
+  test('setting File triggers notification', () => {
     const state = createProxy<{ file: File | null }>({ file: null })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.file = new File(['hello'], 'test.txt', { type: 'text/plain' })
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('array mutation methods', () => {
-  test('push triggers notification', async () => {
+  test('push triggers notification', () => {
     const state = createProxy({ items: ['a'] })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.items.push('b')
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalled()
     expect(state.items).toEqual(['a', 'b'])
   })
 
-  test('splice removes and inserts correctly', async () => {
+  test('splice removes and inserts correctly', () => {
     const state = createProxy({ items: ['a', 'b', 'c', 'd'] })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.items.splice(1, 2, 'x')
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalled()
     expect(state.items).toEqual(['a', 'x', 'd'])
   })
 
-  test('pop triggers notification', async () => {
+  test('pop triggers notification', () => {
     const state = createProxy({ items: [1, 2, 3] })
     const listener = vi.fn()
 
     subscribe(state, listener)
     const popped = state.items.pop()
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalled()
     expect(popped).toBe(3)
     expect(state.items).toEqual([1, 2])
   })
 
-  test('shift triggers notification', async () => {
+  test('shift triggers notification', () => {
     const state = createProxy({ items: [1, 2, 3] })
     const listener = vi.fn()
 
     subscribe(state, listener)
     const shifted = state.items.shift()
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalled()
     expect(shifted).toBe(1)
     expect(state.items).toEqual([2, 3])
   })
 
-  test('unshift triggers notification', async () => {
+  test('unshift triggers notification', () => {
     const state = createProxy({ items: [2, 3] })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.items.unshift(1)
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalled()
     expect(state.items).toEqual([1, 2, 3])
   })
 
-  test('sort triggers notification', async () => {
+  test('sort triggers notification', () => {
     const state = createProxy({ items: [3, 1, 2] })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.items.sort()
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalled()
     expect(state.items).toEqual([1, 2, 3])
   })
 
-  test('replacing array entirely triggers notification', async () => {
+  test('replacing array entirely triggers notification', () => {
     const state = createProxy({ items: [1, 2] })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.items = [10, 20, 30]
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalledTimes(1)
     expect(state.items).toEqual([10, 20, 30])
   })
 
-  test('new array assigned is also deeply proxied', async () => {
+  test('new array assigned is also deeply proxied', () => {
     const state = createProxy<{ items: { id: number }[] }>({ items: [] })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.items = [{ id: 1 }, { id: 2 }]
 
-    await Promise.resolve()
     listener.mockClear()
 
     state.items[0].id = 99
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalledTimes(1)
     expect(state.items[0].id).toBe(99)
   })
 
-  test('objects pushed into array become reactive', async () => {
+  test('objects pushed into array become reactive', () => {
     const state = createProxy<{ items: { name: string }[] }>({ items: [] })
     const listener = vi.fn()
 
     subscribe(state, listener)
     state.items.push({ name: 'Alice' })
 
-    await Promise.resolve()
     listener.mockClear()
 
     state.items[0].name = 'Bob'
 
-    await Promise.resolve()
     expect(listener).toHaveBeenCalledTimes(1)
     expect(state.items[0].name).toBe('Bob')
   })
