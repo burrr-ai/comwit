@@ -78,7 +78,7 @@ export function mergeResult(state: ResourceDataLike, result: unknown, appendData
       return
     }
 
-    Object.assign(state, result)
+    state.data = result
     return
   }
 
@@ -245,7 +245,8 @@ export function createResourceAccessor(
   descriptor: AnyResourceDescriptor,
   path: string,
   defaults: QueryDefaultOptions | undefined,
-  registry: QueryBindingRegistry
+  registry: QueryBindingRegistry,
+  modelState?: object
 ): ResourceDataLike {
   if (registry.boundResourceValue.has(state)) {
     return registry.boundResourceValue.get(state) as ResourceDataLike
@@ -260,6 +261,33 @@ export function createResourceAccessor(
     return runtime.cacheEntries.get(runtime.activeKey)
   }
 
+  function clearRefetchInterval() {
+    if (runtime.refetchIntervalId != null) {
+      clearInterval(runtime.refetchIntervalId)
+      runtime.refetchIntervalId = undefined
+    }
+  }
+
+  function scheduleRefetchInterval() {
+    clearRefetchInterval()
+    const ri = descriptor.refetchInterval
+    if (ri === undefined || ri === false) return
+    let ms: number | false
+    if (typeof ri === 'function') {
+      const error = state.isError ? new Error(state.error as string) : undefined
+      ms = (ri as (data: unknown, error?: Error) => number | false)(state.data, error)
+    } else {
+      ms = ri
+    }
+    if (ms === false || ms <= 0) return
+    runtime.refetchIntervalId = setInterval(() => {
+      const result = refetch()
+      if (result && typeof (result as Promise<unknown>).catch === 'function') {
+        ;(result as Promise<unknown>).catch(() => {})
+      }
+    }, ms)
+  }
+
   const executeQuery = async (
     arg: unknown,
     rawOptions: ResourceQueryOptions<unknown, unknown> | undefined,
@@ -270,6 +298,23 @@ export function createResourceAccessor(
     const activeEntryBefore = getActiveEntry()
     if (isRefetch && !activeEntryBefore?.hasQueried) {
       return
+    }
+
+    // Check enabled condition
+    if (descriptor.enabled && modelState) {
+      if (!descriptor.enabled(modelState)) {
+        return
+      }
+    }
+
+    // Check dependsOn condition
+    if (descriptor.dependsOn && modelState) {
+      const dep = descriptor.dependsOn(modelState)
+      if (dep && typeof dep === 'object' && 'isSuccess' in dep) {
+        if (!dep.isSuccess) return
+      } else if (dep === null || dep === undefined) {
+        return
+      }
     }
 
     const effectiveOptions = normalizeDescriptorOptions<unknown, unknown>(
@@ -405,6 +450,8 @@ export function createResourceAccessor(
         startSubscription()
       }
 
+      scheduleRefetchInterval()
+
       return result
     } catch (error) {
       if (runtime.fetchId !== currentFetchId) {
@@ -420,10 +467,12 @@ export function createResourceAccessor(
         if (suspenseEntry) {
           suspenseEntry.error = error instanceof Error ? error : new Error(normalizeError(error))
           // Don't re-throw — let checkSuspense throw it during render
+          scheduleRefetchInterval()
           return
         }
       }
 
+      scheduleRefetchInterval()
       throw error
     } finally {
       if (runtime.fetchId === currentFetchId) {
