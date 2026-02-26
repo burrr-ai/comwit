@@ -1,6 +1,6 @@
 {
   "name": "comwit",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "private": false,
   "homepage": "https://comwit.io",
   "repository": {
@@ -53,7 +53,8 @@
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "yarn build && yarn test"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"
