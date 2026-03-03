@@ -1,6 +1,6 @@
 {
   "name": "comwit",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "private": false,
   "homepage": "https://comwit.io",
   "repository": {
@@ -74,6 +74,7 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "es-toolkit": "^1.44.0"
+    "es-toolkit": "^1.44.0",
+    "valtio": "^2.3.0"
   }
 }

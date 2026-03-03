@@ -107,7 +107,7 @@ describe('model() with derive', () => {
     expect(Object.isFrozen(snap)).toBe(true)
   })
 
-  test('subscribe still fires on proxy mutation with derive', () => {
+  test('subscribe still fires on proxy mutation with derive', async () => {
     const m = model(
       { count: 0 },
       {
@@ -122,6 +122,7 @@ describe('model() with derive', () => {
     store.subscribe(listener)
     store.proxy.count = 5
 
+    await new Promise((r) => setTimeout(r))
     expect(listener).toHaveBeenCalled()
     expect(store.getSnapshot().doubled).toBe(10)
   })
