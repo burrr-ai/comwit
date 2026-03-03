@@ -230,7 +230,61 @@ describe('new nested objects assigned to proxy', () => {
   })
 })
 
-describe('non-proxyable objects (Date, Map, etc.)', () => {
+describe('non-proxyable objects (File, Blob, Date, Map, etc.)', () => {
+  test('File stored in proxy state is not wrapped in Proxy', () => {
+    const file = new File(['hello'], 'test.txt', { type: 'text/plain' })
+    const state = createProxy<{ file: File | null }>({ file: null })
+
+    state.file = file
+
+    expect(state.file).toBeInstanceOf(File)
+    expect(state.file!.name).toBe('test.txt')
+    expect(state.file!.size).toBe(5)
+    expect(state.file).toBe(file)
+  })
+
+  test('Blob stored in proxy state is not wrapped in Proxy', () => {
+    const blob = new Blob(['data'], { type: 'application/octet-stream' })
+    const state = createProxy<{ blob: Blob | null }>({ blob: null })
+
+    state.blob = blob
+
+    expect(state.blob).toBeInstanceOf(Blob)
+    expect(state.blob!.size).toBe(4)
+    expect(state.blob).toBe(blob)
+  })
+
+  test('File in nested object is preserved as-is', () => {
+    const file = new File(['content'], 'doc.pdf', { type: 'application/pdf' })
+    const state = createProxy<{ form: { attachment: File | null } }>({
+      form: { attachment: null },
+    })
+
+    state.form.attachment = file
+
+    expect(state.form.attachment).toBe(file)
+    expect(state.form.attachment.name).toBe('doc.pdf')
+  })
+
+  test('File inside array is preserved as-is', () => {
+    const file1 = new File(['a'], 'a.txt', { type: 'text/plain' })
+    const file2 = new File(['b'], 'b.txt', { type: 'text/plain' })
+    const state = createProxy<{ files: File[] }>({ files: [] })
+
+    state.files = [file1, file2]
+
+    expect(state.files[0]).toBe(file1)
+    expect(state.files[1]).toBe(file2)
+  })
+
+  test('File in initial state is preserved', () => {
+    const file = new File(['hello'], 'init.txt', { type: 'text/plain' })
+    const state = createProxy<{ file: File }>({ file })
+
+    expect(state.file).toBe(file)
+    expect(state.file.name).toBe('init.txt')
+  })
+
   test('Date stored in proxy state is not wrapped in Proxy', () => {
     const date = new Date('2024-01-01')
     const state = createProxy<{ date: Date | null }>({ date: null })
