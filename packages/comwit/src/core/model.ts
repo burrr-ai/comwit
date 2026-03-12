@@ -15,6 +15,7 @@ export type StoreEntry<T extends object = any> = {
 export type ModelOptions<T extends object, D extends object = {}> = {
   derive?: (state: T) => { [K in keyof D]: () => D[K] }
   rules?: { [K in keyof T]?: (value: T[K]) => true | string }
+  onObserve?: (state: T) => void | (() => void)
 }
 
 export type ValidationState<T> = {
@@ -44,6 +45,7 @@ export function model<T extends object, D extends object = {}>(
   const m: Model<T & Readonly<D>> = {
     key: Symbol(),
     pluginBags,
+    onObserve: options?.onObserve as Model<T & Readonly<D>>['onObserve'],
     instance(): StoreEntry<T & Readonly<D>> {
       const p = createProxy(cloneState())
 
@@ -150,6 +152,7 @@ function computeValidation<T extends object>(
 export type Model<T extends object> = {
   key: symbol
   pluginBags: Map<string, PluginBag>
+  onObserve?: (state: T) => void | (() => void)
   instance(): StoreEntry<T>
 }
 
@@ -171,7 +174,27 @@ export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T)
   const selectorRef = useRef(selector)
   selectorRef.current = selector
 
-  const subscribe = useCallback((listener: () => void) => store.subscribe(listener), [store])
+  const lifecycle = registry.getLifecycle(m)
+
+  const subscribe = useCallback(
+    (listener: () => void) => {
+      lifecycle.subscriberCount++
+      if (lifecycle.subscriberCount === 1 && m.onObserve) {
+        const result = m.onObserve(store.proxy)
+        lifecycle.cleanup = typeof result === 'function' ? result : null
+      }
+      const unsubProxy = store.subscribe(listener)
+      return () => {
+        unsubProxy()
+        lifecycle.subscriberCount--
+        if (lifecycle.subscriberCount === 0 && lifecycle.cleanup) {
+          lifecycle.cleanup()
+          lifecycle.cleanup = null
+        }
+      }
+    },
+    [store, lifecycle, m]
+  )
 
   const getSnapshot = useCallback(() => {
     const raw = store.getSnapshot()
