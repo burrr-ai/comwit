@@ -1,4 +1,4 @@
-import { useCallback, useRef, useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react'
 import { createProxy, snapshot, subscribe } from './proxy'
 import { getPlugins, type PluginBag } from './plugin'
 import { useStoreRegistry } from './provider'
@@ -143,16 +143,26 @@ export type Model<T extends object> = {
 export function useModel<T extends object>(m: Model<T>): T
 export function useModel<T extends object, R>(m: Model<T>, selector: (state: T) => R): R
 export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T) => R): T | R {
+  if (process.env.NODE_ENV !== 'production' && !selector) {
+    console.warn(
+      '[comwit] useModel() without a selector subscribes to the entire state tree, ' +
+        'which may cause unnecessary re-renders. Consider using a selector: ' +
+        'useModel(model, s => s.field)'
+    )
+  }
+
   const registry = useStoreRegistry()
   const store = registry.get(m)
 
   const prevRef = useRef<unknown>(null)
+  const selectorRef = useRef(selector)
+  selectorRef.current = selector
 
   const subscribe = useCallback((listener: () => void) => store.subscribe(listener), [store])
 
-  const getSnapshot = () => {
+  const getSnapshot = useCallback(() => {
     const raw = store.getSnapshot()
-    const next = selector ? selector(raw) : raw
+    const next = selectorRef.current ? selectorRef.current(raw) : raw
 
     if (prevRef.current !== null && isEqual(prevRef.current, next)) {
       return prevRef.current as R
@@ -160,7 +170,7 @@ export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T)
 
     prevRef.current = next
     return next as R
-  }
+  }, [store])
 
   const result = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
