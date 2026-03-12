@@ -20,9 +20,13 @@ export type { FieldPlugin, PluginBag } from './plugin'
 import { persistPlugin } from './persist'
 import { persist, type PersistAdapter, type PersistOptions, type PersistDefaults } from './persist'
 
+import { computedPlugin } from './computed'
+import { computed } from './computed'
+
 // Register built-in plugins
 registerPlugin(queryPlugin)
 registerPlugin(persistPlugin)
+registerPlugin(computedPlugin)
 
 function create<S extends object, A>(
   m: Model<S>,
@@ -58,6 +62,7 @@ export {
   query,
   keepPreviousData,
   persist,
+  computed,
 }
 
 export type {

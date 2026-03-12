@@ -4,6 +4,7 @@ import { getPlugins, type PluginBag } from './plugin'
 import { useStoreRegistry } from './provider'
 import { isEqual } from '../utils'
 import { isSilent } from './silent'
+import { COMPUTED_PLUGIN_NAME, createComputedProxy, getComputedSnapshot } from './computed'
 
 export type StoreEntry<T extends object = any> = {
   proxy: T
@@ -56,11 +57,19 @@ export function model<T extends object, D extends object = {}>(
         derivedKeys = new Set(Object.keys(derivedGetters))
       }
 
-      const hasExtensions = derivedGetters != null || rules != null
+      const computedBag = pluginBags.get(COMPUTED_PLUGIN_NAME)
+      const hasComputed = computedBag != null && computedBag.size > 0
+      const hasExtensions = derivedGetters != null || rules != null || hasComputed
 
+      let computedProxyRef: object | null = null
       let publicProxy: unknown = p
-      if (hasExtensions) {
-        publicProxy = new Proxy(p as object, {
+      if (hasComputed) {
+        computedProxyRef = createComputedProxy(p as object, computedBag!)
+        publicProxy = computedProxyRef
+      }
+      if (derivedGetters || rules) {
+        const base = publicProxy as object
+        publicProxy = new Proxy(base, {
           get(target, prop, receiver) {
             if (typeof prop === 'string' && derivedKeys?.has(prop)) {
               return derivedGetters![prop]()
@@ -89,6 +98,10 @@ export function model<T extends object, D extends object = {}>(
 
           const base = snapshot(p)
           const result: Record<string, unknown> = { ...(base as object) }
+
+          if (hasComputed) {
+            getComputedSnapshot(result, computedProxyRef!, computedBag!)
+          }
 
           if (derivedGetters) {
             for (const [key, getter] of Object.entries(derivedGetters)) {
