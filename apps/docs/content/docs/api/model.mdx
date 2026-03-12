@@ -114,6 +114,44 @@ const { name, email, $validation } = useProfile()
 // $validation.isValid → false
 ```
 
+## Lifecycle Hooks
+
+Run side effects when a model gains its first subscriber (component mount) and clean up when the last subscriber leaves (unmount).
+
+```ts
+const chat = model(
+  { messages: [] as Message[], roomId: null as string | null },
+  {
+    onObserve(state) {
+      // Fires once when first component subscribes (0 → 1)
+      const ws = new WebSocket(`wss://api.example.com/chat`)
+      ws.onmessage = (e) => {
+        state.messages = [...state.messages, JSON.parse(e.data)]
+      }
+
+      // Return cleanup — fires when last subscriber unmounts (1 → 0)
+      return () => ws.close()
+    },
+  }
+)
+```
+
+### Behavior
+
+- `onObserve` fires **once** when the subscriber count goes from 0 to 1
+- Does **not** fire again when additional components subscribe
+- The cleanup function runs when the **last** subscriber unmounts
+- Receives the mutable proxy — mutations trigger re-renders
+- Scoped per `ComwitProvider` — each provider has independent lifecycle
+- Returning `undefined` (no cleanup) is fine
+
+### Use cases
+
+- Opening/closing WebSocket connections
+- Starting/stopping polling intervals
+- Initializing analytics or logging
+- Subscribing to external event sources
+
 ## Options
 
 The second argument to `model()` accepts optional configuration:
@@ -122,6 +160,7 @@ The second argument to `model()` accepts optional configuration:
 model(initial, {
   derive?: (state) => ({ key: () => value }),
   rules?: { field: (value) => true | 'error message' },
+  onObserve?: (state) => void | (() => void),
 })
 ```
 

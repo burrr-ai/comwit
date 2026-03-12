@@ -1,0 +1,101 @@
+---
+title: 'computed()'
+group: 'API'
+slug: 'api/computed'
+order: 8
+---
+
+# computed()
+
+Declares a computed (derived) field inside a model. The value is lazily evaluated from other state.
+
+```ts
+import { computed } from 'comwit'
+```
+
+## Basic usage
+
+```ts
+import { model, computed } from 'comwit'
+
+const cart = model({
+  items: [] as CartItem[],
+  total: computed((state) => state.items.reduce((sum, i) => sum + i.price * i.qty, 0)),
+  isEmpty: computed((state) => state.items.length === 0),
+})
+```
+
+No special type needed — computed fields are typed by the selector return value:
+
+```ts
+type CartState = {
+  items: CartItem[]
+  total: number
+  isEmpty: boolean
+}
+```
+
+## How it works
+
+- **Lazy** — evaluated on every access, not eagerly cached
+- **Reactive** — returns the latest value when dependencies change
+- **Read-only** — throws `Cannot set computed field "..."` on mutation attempt
+- **Composable** — computed fields can depend on other computed fields
+
+```ts
+const stats = model({
+  count: 3,
+  doubled: computed((state) => state.count * 2),
+  quadrupled: computed((state) => state.doubled * 2), // depends on doubled
+})
+```
+
+## In components
+
+Accessed the same way as regular state:
+
+```tsx
+const { total, isEmpty } = useCart((s) => ({
+  total: s.total,
+  isEmpty: s.isEmpty,
+}))
+```
+
+## In actions
+
+Read computed values through `state()`:
+
+```ts
+class CartActions {
+  private cart = state(cart)
+
+  checkout() {
+    if (this.cart.isEmpty) return
+    processPayment(this.cart.total)
+  }
+}
+```
+
+## computed() vs derive
+
+Both create derived values. Use whichever fits your style:
+
+|            | `computed()`                  | `derive` (model option)                   |
+| ---------- | ----------------------------- | ----------------------------------------- |
+| Definition | Inline in model initial state | Second argument to `model()`              |
+| Syntax     | `computed((state) => ...)`    | `derive: (state) => ({ key: () => ... })` |
+| Behavior   | Identical                     | Identical                                 |
+
+```ts
+// computed() style
+const cart = model({
+  items: [] as CartItem[],
+  total: computed((state) => state.items.reduce((s, i) => s + i.price * i.qty, 0)),
+})
+
+// derive style
+const cart = model(
+  { items: [] as CartItem[] },
+  { derive: (state) => ({ total: () => state.items.reduce((s, i) => s + i.price * i.qty, 0) }) }
+)
+```

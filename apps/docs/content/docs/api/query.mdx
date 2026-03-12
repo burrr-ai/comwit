@@ -69,6 +69,10 @@ Pass options at the query definition or globally via `ComwitProvider`:
 | `gcTime`          | Time in ms before unused cache entries are garbage collected                   |
 | `placeholderData` | Data to show while loading. Use `keepPreviousData` to retain previous results. |
 | `force`           | Skip cache and always fetch (call-time only)                                   |
+| `enabled`         | `(state) => boolean` — skip query when condition is false                      |
+| `dependsOn`       | `(state) => any` — block query until dependency is truthy/resolved             |
+| `refetchInterval` | `number \| false \| (data, error?) => number \| false` — auto-poll interval    |
+| `suspense`        | `boolean` — enable React Suspense integration                                  |
 
 ## queryFn context
 
@@ -189,26 +193,26 @@ export const chat = model<ChatState>({
 
 The `subscribe` function receives an object with these callbacks and must return a cleanup function:
 
-| Callback    | Signature                              | Description                        |
-| ----------- | -------------------------------------- | ---------------------------------- |
-| `update`    | `(updater: (prev: T) => T) => void`   | Merge data using updater function  |
-| `set`       | `(data: T) => void`                   | Replace data entirely              |
-| `refetch`   | `() => void`                           | Re-execute the queryFn             |
-| `onStatus`  | `(status: ConnectionStatus) => void`   | Update connection status           |
-| `onError`   | `(error: unknown) => void`             | Set error state                    |
+| Callback   | Signature                            | Description                       |
+| ---------- | ------------------------------------ | --------------------------------- |
+| `update`   | `(updater: (prev: T) => T) => void`  | Merge data using updater function |
+| `set`      | `(data: T) => void`                  | Replace data entirely             |
+| `refetch`  | `() => void`                         | Re-execute the queryFn            |
+| `onStatus` | `(status: ConnectionStatus) => void` | Update connection status          |
+| `onError`  | `(error: unknown) => void`           | Set error state                   |
 
 ### Additional methods
 
-| Method           | Description                                                        |
-| ---------------- | ------------------------------------------------------------------ |
-| `.unsubscribe()` | Stop the live subscription. Sets status to `'disconnected'`.       |
+| Method           | Description                                                  |
+| ---------------- | ------------------------------------------------------------ |
+| `.unsubscribe()` | Stop the live subscription. Sets status to `'disconnected'`. |
 
 ### Additional flags
 
-| Flag               | Type               | Description                          |
-| ------------------ | ------------------ | ------------------------------------ |
-| `.connectionStatus`| `ConnectionStatus` | `'connecting' \| 'connected' \| 'disconnected' \| 'reconnecting'` |
-| `.isConnected`     | `boolean`          | True when status is `'connected'`    |
+| Flag                | Type               | Description                                                       |
+| ------------------- | ------------------ | ----------------------------------------------------------------- |
+| `.connectionStatus` | `ConnectionStatus` | `'connecting' \| 'connected' \| 'disconnected' \| 'reconnecting'` |
+| `.isConnected`      | `boolean`          | True when status is `'connected'`                                 |
 
 ### Usage in actions
 
@@ -221,3 +225,126 @@ disconnect() {
   this.model.messages.unsubscribe()
 }
 ```
+
+---
+
+## Dependent Queries
+
+### enabled
+
+Conditionally skip a query based on model state. The `queryFn` won't fire until `enabled` returns `true`.
+
+```ts
+const user = model({
+  isLoggedIn: false,
+  profile: query<Profile | null>({
+    initialData: null,
+    queryFn: () => api.user.profile(),
+    enabled: (state) => state.isLoggedIn,
+  }),
+})
+```
+
+When `isLoggedIn` is `false`, calling `profile.query()` is a no-op. Once the flag changes and `query()` is called again, the fetch fires.
+
+### dependsOn
+
+Block a query until another query (or any state) is resolved. Useful for chained data fetching.
+
+```ts
+const post = model({
+  detail: query<Post | null, string>({
+    initialData: null,
+    queryFn: (id) => api.post.findById(id),
+  }),
+  comments: query<Comment[]>({
+    initialData: [],
+    queryFn: () => api.comment.findAll(post.detail.data.id),
+    dependsOn: (state) => state.detail, // waits for detail.isSuccess
+  }),
+})
+```
+
+`dependsOn` checks:
+
+- If the returned value has `isSuccess` (a query field) — waits until `isSuccess` is `true`
+- If the returned value is `null` or `undefined` — blocks the query
+- Otherwise (truthy) — allows the query
+
+---
+
+## refetchInterval
+
+Auto-poll at a fixed or dynamic interval.
+
+```ts
+// Fixed interval (ms)
+notifications: query({
+  initialData: [],
+  queryFn: () => api.notifications.list(),
+  refetchInterval: 5000, // poll every 5 seconds
+})
+```
+
+```ts
+// Dynamic — stop polling on error
+notifications: query({
+  initialData: [],
+  queryFn: () => api.notifications.list(),
+  refetchInterval: (data, error) => {
+    if (error) return false // stop on error
+    return 5000
+  },
+})
+```
+
+Set `refetchInterval: false` to disable polling.
+
+---
+
+## Suspense
+
+Integrate with React `<Suspense>` boundaries. The component suspends on initial load and renders once data is available.
+
+```ts
+import { query } from 'comwit'
+import type { Query } from 'comwit'
+
+// types.ts
+type PostState = {
+  posts: Query.Suspense<Post[]>
+}
+
+// model.ts
+const post = model<PostState>({
+  posts: query<Post[]>({
+    initialData: [],
+    queryFn: () => api.post.findAll(),
+    suspense: true,
+  }),
+})
+```
+
+```tsx
+// component.tsx
+function PostList() {
+  const posts = usePost((s) => s.posts.data)
+  // data is guaranteed non-null here — Suspense handles the loading state
+  return posts.map((p) => <div key={p.id}>{p.title}</div>)
+}
+
+function Page() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <PostList />
+    </Suspense>
+  )
+}
+```
+
+### Behavior
+
+- Initial `.query()` call suspends (throws a Promise for React to catch)
+- `refetch()` does **not** suspend — uses background fetching with `isFetching`
+- Errors are thrown to the nearest `ErrorBoundary`
+- Use `Query.Suspense<T>` or `Query.SuspenseInfinite<T>` for correct typing (`data` is `NonNullable`)
