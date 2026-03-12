@@ -143,6 +143,14 @@ export type Model<T extends object> = {
 export function useModel<T extends object>(m: Model<T>): T
 export function useModel<T extends object, R>(m: Model<T>, selector: (state: T) => R): R
 export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T) => R): T | R {
+  if (process.env.NODE_ENV !== 'production' && !selector) {
+    console.warn(
+      '[comwit] useModel() without a selector subscribes to the entire state tree, ' +
+        'which may cause unnecessary re-renders. Consider using a selector: ' +
+        'useModel(model, s => s.field)'
+    )
+  }
+
   const registry = useStoreRegistry()
   const store = registry.get(m)
 
