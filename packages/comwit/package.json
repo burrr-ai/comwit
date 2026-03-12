@@ -1,6 +1,6 @@
 {
   "name": "comwit",
-  "version": "0.2.10",
+  "version": "0.3.0",
   "private": false,
   "homepage": "https://comwit.io",
   "repository": {
@@ -22,7 +22,6 @@
     "claude-code",
     "llm",
     "next.js",
-    "valtio",
     "zustand",
     "tanstack-query",
     "oop",
