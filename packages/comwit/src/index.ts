@@ -5,7 +5,6 @@ export {
   useModel,
   create,
   silent,
-  toPlain,
   ComwitProvider,
   keepPreviousData,
   query,

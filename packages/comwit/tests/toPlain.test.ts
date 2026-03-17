@@ -1,28 +1,26 @@
-import { createProxy, toPlain } from '../src/core/proxy'
+import { createProxy } from '../src/core/proxy'
 
-describe('toPlain()', () => {
-  test('converts a proxy to a plain object', () => {
+describe('proxy.snapshot()', () => {
+  test('returns a frozen snapshot of the proxy', () => {
     const state = createProxy({ count: 0, name: 'Alice' })
-    const plain = toPlain(state)
+    const snap = state.snapshot()
 
-    expect(plain).toEqual({ count: 0, name: 'Alice' })
-    expect(Object.isExtensible(plain)).toBe(true)
+    expect(snap).toEqual({ count: 0, name: 'Alice' })
+    // snapshot is frozen (not extensible)
+    expect(Object.isExtensible(snap)).toBe(false)
     // Should be a new object, not the proxy
-    expect(plain).not.toBe(state)
+    expect(snap).not.toBe(state)
   })
 
-  test('deeply unwraps nested proxy objects', () => {
+  test('deeply snapshots nested proxy objects', () => {
     const state = createProxy({
       user: { name: 'Alice', address: { city: 'NYC' } },
     })
-    const plain = toPlain(state)
+    const snap = state.snapshot()
 
-    expect(plain).toEqual({
+    expect(snap).toEqual({
       user: { name: 'Alice', address: { city: 'NYC' } },
     })
-    // Nested objects should also be plain
-    expect(Object.isExtensible(plain.user)).toBe(true)
-    expect(Object.isExtensible(plain.user.address)).toBe(true)
   })
 
   test('handles arrays in proxy state', () => {
@@ -32,46 +30,21 @@ describe('toPlain()', () => {
         { id: '2', text: 'world' },
       ],
     })
-    const plain = toPlain(state)
+    const snap = state.snapshot()
 
-    expect(plain.items).toEqual([
+    expect(snap.items).toEqual([
       { id: '1', text: 'hello' },
       { id: '2', text: 'world' },
     ])
-    expect(Array.isArray(plain.items)).toBe(true)
-  })
-
-  test('handles nested array element', () => {
-    const state = createProxy({
-      items: [{ id: '1', tags: ['a', 'b'] }],
-    })
-    const plain = toPlain(state.items[0])
-
-    expect(plain).toEqual({ id: '1', tags: ['a', 'b'] })
-  })
-
-  test('passes through primitives', () => {
-    expect(toPlain(42)).toBe(42)
-    expect(toPlain('hello')).toBe('hello')
-    expect(toPlain(true)).toBe(true)
-    expect(toPlain(null)).toBe(null)
-    expect(toPlain(undefined)).toBe(undefined)
-  })
-
-  test('works on plain objects (non-proxy)', () => {
-    const obj = { a: 1, b: { c: 2 } }
-    const plain = toPlain(obj)
-
-    expect(plain).toEqual({ a: 1, b: { c: 2 } })
-    expect(plain).not.toBe(obj)
+    expect(Array.isArray(snap.items)).toBe(true)
   })
 
   test('preserves Date objects', () => {
     const date = new Date('2024-01-01')
     const state = createProxy({ createdAt: date })
-    const plain = toPlain(state)
+    const snap = state.snapshot()
 
-    expect(plain.createdAt).toBe(date)
+    expect(snap.createdAt).toBe(date)
   })
 
   test('result is JSON-serializable', () => {
@@ -80,10 +53,10 @@ describe('toPlain()', () => {
       items: [{ id: '1' }, { id: '2' }],
       active: true,
     })
-    const plain = toPlain(state)
+    const snap = state.snapshot()
 
-    expect(() => JSON.stringify(plain)).not.toThrow()
-    expect(JSON.parse(JSON.stringify(plain))).toEqual({
+    expect(() => JSON.stringify(snap)).not.toThrow()
+    expect(JSON.parse(JSON.stringify(snap))).toEqual({
       user: { name: 'Alice', age: 30 },
       items: [{ id: '1' }, { id: '2' }],
       active: true,
@@ -93,8 +66,8 @@ describe('toPlain()', () => {
   test('reflects latest mutations', () => {
     const state = createProxy({ count: 0 })
     state.count = 42
-    const plain = toPlain(state)
+    const snap = state.snapshot()
 
-    expect(plain.count).toBe(42)
+    expect(snap.count).toBe(42)
   })
 })

@@ -2,7 +2,6 @@ import { model, Model, useModel, type ModelOptions, type ValidationState } from 
 import { action, ActionFactory, useAction } from './action'
 import { ComwitProvider, type RegistryDefaults } from './provider'
 import { silent } from './silent'
-import { toPlain } from './proxy'
 import {
   keepPreviousData,
   PlaceholderData,
@@ -60,7 +59,6 @@ export {
   useModel,
   create,
   silent,
-  toPlain,
   ComwitProvider,
   query,
   keepPreviousData,
