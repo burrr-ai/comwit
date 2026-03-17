@@ -104,6 +104,7 @@ Write order: **types.ts -> model.ts -> actions/\*.ts -> index.ts**
 
 - Dependencies: pages → state → api (one way)
 - Pass domain objects whole: `<Card post={post} />`
+- **Server actions**: wrap with `toPlain()` when passing state to server actions (proxy → plain object)
 
 ## File Templates
 
@@ -342,11 +343,21 @@ For full API details, see the [Decorator Reference](/llm/decorator.txt).
 - `action(factory)` — factory with `state`/`context` access
 - `create(model, { actions })` — model + actions -> React hook
 - `silent(fn)` — suppress re-renders (SSR)
+- `toPlain(value)` — convert proxy to a plain serializable object (for server actions)
 - `query()` / `query.infinite()` — client fetch in model
 - `query.realtime()` — real-time subscription in model
 - `persist()` — persisted field in model
 - `state(model)` — mutable proxy in actions
 - `intercept()` — custom decorator builder (immediate or lazy mode)
+
+## Passing State to Server Actions
+
+`state(model)` returns a Proxy, which is fine for normal use. When passing state to server actions (or other APIs that require plain objects), wrap with `toPlain()`:
+
+```ts
+import { toPlain } from 'comwit'
+await savePostAction(toPlain(item))   // unwraps proxy → plain object
+```
 
 ## References
 
