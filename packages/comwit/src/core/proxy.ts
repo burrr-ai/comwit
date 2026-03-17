@@ -101,6 +101,12 @@ function createHandler<T extends object>(
   return {
     get(target: T, prop: string | symbol, receiver: object) {
       if (prop === $state) return proxyState
+      if (prop === 'snapshot') {
+        return () => {
+          const [t, ensureVersion] = proxyState
+          return createSnapshot(t, ensureVersion())
+        }
+      }
       return Reflect.get(target, prop, receiver)
     },
     deleteProperty(target: T, prop: string | symbol) {
@@ -249,8 +255,10 @@ function proxyInner<T extends object>(baseObject: T): T {
 
 // --- public API ---
 
-export function createProxy<T extends object>(initialValue: T): T {
-  return proxyInner(initialValue)
+export type Snapshotable<T> = T & { snapshot(): T }
+
+export function createProxy<T extends object>(initialValue: T): Snapshotable<T> {
+  return proxyInner(initialValue) as Snapshotable<T>
 }
 
 export function snapshot<T extends object>(state: T): T {

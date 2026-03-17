@@ -104,6 +104,7 @@ Write order: **types.ts -> model.ts -> actions/\*.ts -> index.ts**
 
 - Dependencies: pages → state → api (one way)
 - Pass domain objects whole: `<Card post={post} />`
+- **Server actions**: call `.snapshot()` on proxy state when passing to server actions (proxy → plain object)
 
 ## File Templates
 
@@ -342,11 +343,20 @@ For full API details, see the [Decorator Reference](/llm/decorator.txt).
 - `action(factory)` — factory with `state`/`context` access
 - `create(model, { actions })` — model + actions -> React hook
 - `silent(fn)` — suppress re-renders (SSR)
+- `proxy.snapshot()` — returns a frozen plain object from proxy state (for server actions, logging)
 - `query()` / `query.infinite()` — client fetch in model
 - `query.realtime()` — real-time subscription in model
 - `persist()` — persisted field in model
 - `state(model)` — mutable proxy in actions
 - `intercept()` — custom decorator builder (immediate or lazy mode)
+
+## Passing State to Server Actions
+
+`state(model)` returns a Proxy, which is fine for normal use. When passing state to server actions (or other APIs that require plain objects), call `.snapshot()`:
+
+```ts
+await savePostAction(item.snapshot())   // proxy → frozen plain object
+```
 
 ## References
 
