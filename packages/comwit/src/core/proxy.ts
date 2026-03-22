@@ -275,17 +275,11 @@ export function subscribe<T extends object>(state: T, callback: () => void): () 
   if (!proxyState) {
     throw new Error('Please use proxy object')
   }
-  let promise: Promise<void> | undefined
   const addListener = proxyState[2]
   let isListenerActive = false
   const listener: Listener = () => {
-    if (!promise) {
-      promise = Promise.resolve().then(() => {
-        promise = undefined
-        if (isListenerActive) {
-          callback()
-        }
-      })
+    if (isListenerActive) {
+      callback()
     }
   }
   const removeListener = addListener(listener)
