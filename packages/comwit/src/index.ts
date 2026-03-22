@@ -3,6 +3,7 @@ export {
   action,
   useAction,
   useModel,
+  useModelInput,
   create,
   silent,
   ComwitProvider,
