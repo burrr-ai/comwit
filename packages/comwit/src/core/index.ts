@@ -1,5 +1,4 @@
 import { model, Model, useModel, type ModelOptions, type ValidationState } from './model'
-import { useModelInput } from './useModelInput'
 import { action, ActionFactory, useAction } from './action'
 import { ComwitProvider, type RegistryDefaults } from './provider'
 import { silent } from './silent'
@@ -58,7 +57,6 @@ export {
   action,
   useAction,
   useModel,
-  useModelInput,
   create,
   silent,
   ComwitProvider,

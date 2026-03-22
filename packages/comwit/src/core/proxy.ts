@@ -262,7 +262,11 @@ export function snapshot<T extends object>(state: T): T {
   return createSnapshot(target, ensureVersion()) as T
 }
 
-export function subscribe<T extends object>(state: T, callback: () => void): () => void {
+export function subscribe<T extends object>(
+  state: T,
+  callback: () => void,
+  notifyInSync?: boolean
+): () => void {
   const proxyState = getProxyState(state)
   if (!proxyState) {
     throw new Error('Please use proxy object')
@@ -271,6 +275,12 @@ export function subscribe<T extends object>(state: T, callback: () => void): () 
   const addListener = proxyState[2]
   let isListenerActive = false
   const listener: Listener = () => {
+    if (notifyInSync) {
+      if (isListenerActive) {
+        callback()
+      }
+      return
+    }
     if (!promise) {
       promise = Promise.resolve().then(() => {
         promise = undefined
