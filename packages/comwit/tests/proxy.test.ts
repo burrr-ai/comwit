@@ -137,7 +137,7 @@ describe('subscribe()', () => {
     }).toThrow()
   })
 
-  test('multiple synchronous mutations are batched into one notification', async () => {
+  test('each synchronous mutation fires a notification', () => {
     const state = createProxy({ count: 0 })
     const listener = vi.fn()
 
@@ -146,8 +146,7 @@ describe('subscribe()', () => {
     state.count = 2
     state.count = 3
 
-    await flush()
-    expect(listener).toHaveBeenCalledTimes(1)
+    expect(listener).toHaveBeenCalledTimes(3)
     expect(state.count).toBe(3)
   })
 

@@ -118,13 +118,9 @@ export function model<T extends object, D extends object = {}>(
           return Object.freeze(result) as T & Readonly<D>
         },
         subscribe(listener) {
-          return subscribe(
-            p,
-            () => {
-              if (!isSilent()) listener()
-            },
-            true
-          )
+          return subscribe(p, () => {
+            if (!isSilent()) listener()
+          })
         },
       }
     },
