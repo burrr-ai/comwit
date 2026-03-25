@@ -10,7 +10,23 @@ State management for Next.js.
 npm i comwit
 ```
 
-## 2. Setup Provider
+## 2. Enable Decorators
+
+Add `experimentalDecorators` to your `tsconfig.json`. Without this, Next.js production builds (SWC) will fail to parse `@OnError`, `@Retry`, etc.
+
+```jsonc
+// tsconfig.json
+{
+  "compilerOptions": {
+    "experimentalDecorators": true
+    // ... other options
+  }
+}
+```
+
+> **Why?** Next.js reads this flag and passes it to SWC as `jsc.parser.decorators: true`. Without it, the `@` token is not recognized and the build fails with "Unexpected token '@'". Dev mode (Turbopack) may work without it, but production builds will not.
+
+## 3. Setup Provider
 
 Create `app/providers.tsx` and wrap your root layout.
 
@@ -63,11 +79,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-## 3. Create `state/.ai.md`
+## 4. Create `state/.ai.md`
 
 Create `src/state/.ai.md` (or `state/.ai.md`) with the full content below.
 
-## 4. Update `CLAUDE.md`
+## 5. Update `CLAUDE.md`
 
 Add this to your project's `CLAUDE.md`:
 
