@@ -384,6 +384,15 @@ export function createResourceAccessor(
       applyCachedState(state, entry)
     }
 
+    // Determine if args changed (new cache entry, not a refetch)
+    const isArgChange = !isRefetch && !entry.hasQueried && activeEntryBefore?.hasQueried
+    const hasPlaceholderData = effectiveOptions.placeholderData !== undefined
+
+    // When args change and no placeholderData, reset to initial state
+    if (isArgChange && !hasPlaceholderData) {
+      Object.assign(state, descriptor.initialState)
+    }
+
     applyPlaceholderData(
       state as ResourceBaseState<unknown>,
       queryArg as never,
@@ -411,7 +420,14 @@ export function createResourceAccessor(
 
     state.isError = false
     state.error = null
-    state.isLoading = !state.isSuccess
+    // When args changed without placeholderData, this is a fresh load (isLoading=true)
+    // When args changed with placeholderData, previous data is kept (isLoading=false)
+    // When refetching same arg, data is kept (isLoading=false)
+    if (isArgChange && !hasPlaceholderData) {
+      state.isLoading = true
+    } else {
+      state.isLoading = !state.isSuccess
+    }
     state.isFetching = true
 
     // Track suspense promise for initial loads (not refetches)
