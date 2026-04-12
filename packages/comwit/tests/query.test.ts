@@ -455,6 +455,124 @@ describe('query', () => {
     })
   })
 
+  describe('Arg change reset behavior', () => {
+    it('Case 1: without keepPreviousData, changing arg resets data to initialData and sets isLoading=true', async () => {
+      const dA = deferred<string>()
+      const dB = deferred<string>()
+      const queryFn = vi.fn().mockReturnValueOnce(dA.promise).mockReturnValueOnce(dB.promise)
+
+      const bound = createBound({
+        initialData: 'init',
+        queryFn,
+      })
+
+      // query('a') succeeds
+      const promiseA = bound.query('a')
+      expect(bound.isLoading).toBe(true)
+      expect(bound.isFetching).toBe(true)
+      dA.resolve('resultA')
+      await promiseA
+      expect(bound.data).toBe('resultA')
+      expect(bound.isLoading).toBe(false)
+      expect(bound.isSuccess).toBe(true)
+
+      // query('b') called — data should reset to initialData, isLoading=true
+      const promiseB = bound.query('b')
+      expect(bound.data).toBe('init')
+      expect(bound.isLoading).toBe(true)
+      expect(bound.isFetching).toBe(true)
+      expect(bound.isSuccess).toBe(false)
+
+      dB.resolve('resultB')
+      await promiseB
+      expect(bound.data).toBe('resultB')
+      expect(bound.isLoading).toBe(false)
+      expect(bound.isSuccess).toBe(true)
+    })
+
+    it('Case 2: with keepPreviousData, changing arg keeps previous data and sets isFetching=true', async () => {
+      const dA = deferred<string>()
+      const dB = deferred<string>()
+      const queryFn = vi.fn().mockReturnValueOnce(dA.promise).mockReturnValueOnce(dB.promise)
+
+      const bound = createBound({
+        initialData: 'init',
+        queryFn,
+        placeholderData: keepPreviousData,
+      })
+
+      // query('a') succeeds
+      const promiseA = bound.query('a')
+      dA.resolve('resultA')
+      await promiseA
+      expect(bound.data).toBe('resultA')
+      expect(bound.isLoading).toBe(false)
+      expect(bound.isSuccess).toBe(true)
+
+      // query('b') called — previous data kept, isLoading=false, isFetching=true
+      const promiseB = bound.query('b')
+      expect(bound.data).toBe('resultA')
+      expect(bound.isLoading).toBe(false)
+      expect(bound.isFetching).toBe(true)
+
+      dB.resolve('resultB')
+      await promiseB
+      expect(bound.data).toBe('resultB')
+      expect(bound.isLoading).toBe(false)
+      expect(bound.isFetching).toBe(false)
+    })
+
+    it('Case 3: same arg refetch keeps data regardless of keepPreviousData', async () => {
+      const dRefetch = deferred<string>()
+      const queryFn = vi.fn().mockResolvedValueOnce('resultA').mockReturnValueOnce(dRefetch.promise)
+
+      const bound = createBound({
+        initialData: 'init',
+        queryFn,
+      })
+
+      // query('a') succeeds
+      await bound.query('a')
+      expect(bound.data).toBe('resultA')
+      expect(bound.isSuccess).toBe(true)
+
+      // refetch() — data stays, isLoading=false, isFetching=true
+      const refetchPromise = bound.refetch()
+      expect(bound.data).toBe('resultA')
+      expect(bound.isLoading).toBe(false)
+      expect(bound.isFetching).toBe(true)
+
+      dRefetch.resolve('resultA-refreshed')
+      await refetchPromise
+      expect(bound.data).toBe('resultA-refreshed')
+      expect(bound.isLoading).toBe(false)
+      expect(bound.isFetching).toBe(false)
+    })
+
+    it('Case 3 with keepPreviousData: same arg refetch keeps data', async () => {
+      const dRefetch = deferred<string>()
+      const queryFn = vi.fn().mockResolvedValueOnce('resultA').mockReturnValueOnce(dRefetch.promise)
+
+      const bound = createBound({
+        initialData: 'init',
+        queryFn,
+        placeholderData: keepPreviousData,
+      })
+
+      await bound.query('a')
+      expect(bound.data).toBe('resultA')
+
+      const refetchPromise = bound.refetch()
+      expect(bound.data).toBe('resultA')
+      expect(bound.isLoading).toBe(false)
+      expect(bound.isFetching).toBe(true)
+
+      dRefetch.resolve('resultA-refreshed')
+      await refetchPromise
+      expect(bound.data).toBe('resultA-refreshed')
+    })
+  })
+
   describe('Frozen state regression (#35)', () => {
     it('should not throw on second query() call when data is an array', async () => {
       let callCount = 0
