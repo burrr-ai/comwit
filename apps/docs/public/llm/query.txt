@@ -28,10 +28,12 @@ export const post = model<PostState>({
 | `initialData`     | `TData`                                     | **Required.** Initial value before any fetch.                        |
 | `queryFn`         | `(arg, context) => TData \| Promise<TData>` | **Required.** Fetcher function.                                      |
 | `suspense`        | `boolean`                                   | Enable React Suspense integration. Default `false`.                  |
-| `staleTime`       | `number`                                    | Milliseconds before cached data is considered stale. Default `0`.    |
+| `staleTime`       | `number`                                    | Milliseconds before cached data is considered stale. Default `0` unless overridden by `ComwitProvider`. |
 | `cacheTime`       | `number`                                    | Alias for `gcTime`. Milliseconds before cache entry is garbage collected. |
 | `gcTime`          | `number`                                    | Milliseconds before cache entry is garbage collected.                |
 | `placeholderData` | `TData \| (arg, previousData) => TData`     | Data shown while fetching. Use `keepPreviousData` helper.            |
+
+Provider defaults are merged first. Per-query and call-time options override `ComwitProvider` defaults when set explicitly.
 
 ### queryFn Signature
 

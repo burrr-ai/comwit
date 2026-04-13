@@ -23,6 +23,9 @@ function createBound<TData>(opts: {
   staleTime?: number
   gcTime?: number
   placeholderData?: any
+  defaults?: {
+    staleTime?: number
+  }
 }) {
   const m = model({
     resource: query({
@@ -38,7 +41,7 @@ function createBound<TData>(opts: {
   const bound = bindResourceState(
     store.proxy,
     m.pluginBags.get('query')!,
-    undefined,
+    opts.defaults,
     registry
   ) as any
   return bound.resource as BoundSingleResourceState<TData, any>
@@ -134,6 +137,24 @@ describe('query', () => {
   })
 
   describe('Cache', () => {
+    it('should call queryFn again on same arg when staleTime defaults to 0', async () => {
+      const queryFn = vi
+        .fn()
+        .mockImplementation((arg: { id: string; page: number }) =>
+          Promise.resolve([arg.id, arg.page])
+        )
+      const bound = createBound({
+        initialData: [] as Array<string | number>,
+        queryFn,
+        placeholderData: keepPreviousData,
+      })
+
+      await bound.query({ id: '123', page: 1 })
+      await bound.query({ id: '123', page: 1 })
+
+      expect(queryFn).toHaveBeenCalledTimes(2)
+    })
+
     it('should return cached result within staleTime without calling queryFn again', async () => {
       const queryFn = vi.fn().mockResolvedValue(['alice'])
       const bound = createBound({
@@ -234,6 +255,68 @@ describe('query', () => {
       expect(queryFn).toHaveBeenCalledTimes(3)
 
       vi.restoreAllMocks()
+    })
+
+    it('should respect provider default staleTime across rebinds with the same arg', async () => {
+      const queryFn = vi
+        .fn()
+        .mockImplementation((arg: { id: string; page: number }) =>
+          Promise.resolve([arg.id, arg.page])
+        )
+
+      const m = model({
+        resource: query({
+          initialData: [] as Array<string | number>,
+          queryFn,
+          placeholderData: keepPreviousData,
+        }),
+      })
+      const store = m.instance()
+      const registry = createQueryBindingRegistry()
+      const defaults = { staleTime: 60_000 }
+
+      const firstBind = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        defaults,
+        registry
+      ) as any
+
+      await firstBind.resource.query({ id: '123', page: 1 })
+      expect(queryFn).toHaveBeenCalledTimes(1)
+
+      const rebound = bindResourceState(
+        store.proxy,
+        m.pluginBags.get('query')!,
+        defaults,
+        registry
+      ) as any
+
+      await rebound.resource.query({ id: '123', page: 1 })
+      expect(queryFn).toHaveBeenCalledTimes(1)
+
+      await rebound.resource.query({ id: '123', page: 1 }, { force: true })
+      expect(queryFn).toHaveBeenCalledTimes(2)
+    })
+
+    it('should let descriptor staleTime override provider default staleTime', async () => {
+      const queryFn = vi
+        .fn()
+        .mockImplementation((arg: { id: string; page: number }) =>
+          Promise.resolve([arg.id, arg.page])
+        )
+      const bound = createBound({
+        initialData: [] as Array<string | number>,
+        queryFn,
+        staleTime: 0,
+        placeholderData: keepPreviousData,
+        defaults: { staleTime: 60_000 },
+      })
+
+      await bound.query({ id: '123', page: 1 })
+      await bound.query({ id: '123', page: 1 })
+
+      expect(queryFn).toHaveBeenCalledTimes(2)
     })
   })
 
