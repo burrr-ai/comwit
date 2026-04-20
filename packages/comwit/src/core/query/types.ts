@@ -192,6 +192,14 @@ type SuspenseInfiniteResourceState<TData, TArg = unknown> = Omit<
   'data'
 > & { data: NonNullable<TData> }
 
+/**
+ * Recursively projects a model's state shape into the proxy-bound runtime
+ * shape. Plain objects and arrays additionally expose a `.snapshot()` method
+ * that returns the un-decorated shape (see `Snapshotable` for details).
+ *
+ * Array element types are intentionally not recursed into so that mutating
+ * methods (`push`, `[i] =`, etc.) keep accepting the plain element type.
+ */
 export type BoundResourceState<T> =
   T extends RealtimeResourceDescriptor<infer TData, infer TArg>
     ? BoundRealtimeResourceState<TData, TArg>
@@ -209,11 +217,13 @@ export type BoundResourceState<T> =
             ? BoundInfiniteResourceState<TData, unknown>
             : T extends ResourceSingleState<infer TData>
               ? BoundSingleResourceState<TData, unknown>
-              : T extends (infer U)[]
-                ? BoundResourceState<U>[]
-                : T extends object
-                  ? { [K in keyof T]: BoundResourceState<T[K]> }
-                  : T
+              : T extends (...args: any[]) => any
+                ? T
+                : T extends ReadonlyArray<unknown>
+                  ? T & { snapshot(): T }
+                  : T extends object
+                    ? { [K in keyof T]: BoundResourceState<T[K]> } & { snapshot(): T }
+                    : T
 
 export type DependentQueryOptions<TData> = {
   enabled?: (state: any) => boolean

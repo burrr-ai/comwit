@@ -255,7 +255,26 @@ function proxyInner<T extends object>(baseObject: T): T {
 
 // --- public API ---
 
-export type Snapshotable<T> = T & { snapshot(): T }
+/**
+ * Recursively decorates `T` so every nested plain object / array exposes a
+ * `.snapshot()` method that returns the original (un-decorated) shape.
+ *
+ * - Functions are passed through (proxies don't wrap them).
+ * - Array element types are intentionally NOT recursed into, because doing so
+ *   would force callers of `Array.prototype.push`, `[i] =`, etc. to provide
+ *   the decorated element type. Use the standalone `snapshot()` function for
+ *   array elements (e.g. `snapshot(state.items[0])`).
+ * - Class instances (non-`Object.prototype`) get `.snapshot()` added at the
+ *   type level even though they aren't proxied at runtime — wrap them with
+ *   `ref()` if you need to keep the original type intact.
+ */
+export type Snapshotable<T> = T extends (...args: any[]) => any
+  ? T
+  : T extends ReadonlyArray<unknown>
+    ? T & { snapshot(): T }
+    : T extends object
+      ? { [K in keyof T]: Snapshotable<T[K]> } & { snapshot(): T }
+      : T
 
 export function createProxy<T extends object>(initialValue: T): Snapshotable<T> {
   return proxyInner(initialValue) as Snapshotable<T>
