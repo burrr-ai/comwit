@@ -120,7 +120,7 @@ Write order: **types.ts -> model.ts -> actions/\*.ts -> index.ts**
 
 - Dependencies: pages → state → api (one way)
 - Pass domain objects whole: `<Card post={post} />`
-- **Server actions**: call `.snapshot()` on proxy state when passing to server actions (proxy → plain object)
+- **Server actions**: convert proxy → plain object before passing. Use `state.snapshot()` for the top-level model, and the standalone `snapshot(state.slice)` helper for nested slices.
 
 ## File Templates
 
@@ -359,7 +359,7 @@ For full API details, see the [Decorator Reference](/llm/decorator.txt).
 - `action(factory)` — factory with `state`/`context` access
 - `create(model, { actions })` — model + actions -> React hook
 - `silent(fn)` — suppress re-renders (SSR)
-- `proxy.snapshot()` — returns a frozen plain object from proxy state (for server actions, logging)
+- `state.snapshot()` — top-level proxy → frozen plain object. For nested slices use the standalone `snapshot(state.slice)` helper (for server actions, logging)
 - `query()` / `query.infinite()` — client fetch in model
 - `query.realtime()` — real-time subscription in model
 - `persist()` — persisted field in model
@@ -368,10 +368,19 @@ For full API details, see the [Decorator Reference](/llm/decorator.txt).
 
 ## Passing State to Server Actions
 
-`state(model)` returns a Proxy, which is fine for normal use. When passing state to server actions (or other APIs that require plain objects), call `.snapshot()`:
+`state(model)` returns a Proxy, which is fine for normal use. When passing state to server actions (or other APIs that require plain objects), convert to a snapshot first.
+
+- **Top-level model**: call `.snapshot()` directly.
+- **Nested slice** (e.g. `state.filter`, `state.list.data`): use the standalone `snapshot()` helper, imported from `'comwit'`. This is the type-safe path — `.snapshot()` is only typed on the top-level proxy to keep plain assignments like `state.user = userFromApi` working.
 
 ```ts
-await savePostAction(item.snapshot())   // proxy → frozen plain object
+import { snapshot } from 'comwit'
+
+// top-level
+await savePostAction(this.model.snapshot())
+
+// nested slice
+await fetchCoders({ filter: snapshot(this.model.filter) })
 ```
 
 ## References

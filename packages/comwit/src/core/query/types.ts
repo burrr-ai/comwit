@@ -193,29 +193,16 @@ type SuspenseInfiniteResourceState<TData, TArg = unknown> = Omit<
 > & { data: NonNullable<TData> }
 
 /**
- * Built-in object types that the runtime proxy refuses to wrap. Mirrors the
- * exclusion list in `Snapshotable<T>` to keep plain `Date`/`Map`/etc.
- * assignable inside actions.
- */
-type BoundBuiltInObject =
-  | Date
-  | RegExp
-  | Error
-  | Promise<unknown>
-  | Map<unknown, unknown>
-  | Set<unknown>
-  | WeakMap<object, unknown>
-  | WeakSet<object>
-  | ArrayBuffer
-  | DataView
-
-/**
  * Recursively projects a model's state shape into the proxy-bound runtime
- * shape. Plain objects and arrays additionally expose a `.snapshot()` method
- * that returns the un-decorated shape (see `Snapshotable` for details).
+ * shape. Resource descriptors are replaced with their bound query controllers;
+ * everything else passes through.
  *
- * Array element types are intentionally not recursed into so that mutating
- * methods (`push`, `[i] =`, etc.) keep accepting the plain element type.
+ * `.snapshot()` is intentionally NOT injected at every nested level — adding
+ * it via intersection (`T & { snapshot(): T }`) would make plain values
+ * un-assignable to state fields (`this.model.user = userFromApi` would fail).
+ * Nested proxies still expose `.snapshot()` at runtime via the proxy `get`
+ * trap; at the type level, prefer the standalone `snapshot()` helper for
+ * nested slices: `snapshot(state.filter)`.
  */
 export type BoundResourceState<T> =
   T extends RealtimeResourceDescriptor<infer TData, infer TArg>
@@ -234,15 +221,11 @@ export type BoundResourceState<T> =
             ? BoundInfiniteResourceState<TData, unknown>
             : T extends ResourceSingleState<infer TData>
               ? BoundSingleResourceState<TData, unknown>
-              : T extends (...args: any[]) => any
-                ? T
-                : T extends BoundBuiltInObject
-                  ? T
-                  : T extends ReadonlyArray<unknown>
-                    ? T & { snapshot(): T }
-                    : T extends object
-                      ? { [K in keyof T]: BoundResourceState<T[K]> } & { snapshot(): T }
-                      : T
+              : T extends (infer U)[]
+                ? BoundResourceState<U>[]
+                : T extends object
+                  ? { [K in keyof T]: BoundResourceState<T[K]> }
+                  : T
 
 export type DependentQueryOptions<TData> = {
   enabled?: (state: any) => boolean

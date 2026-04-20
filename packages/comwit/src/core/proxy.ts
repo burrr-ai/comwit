@@ -256,42 +256,17 @@ function proxyInner<T extends object>(baseObject: T): T {
 // --- public API ---
 
 /**
- * Built-in object types that the runtime proxy refuses to wrap (only plain
- * objects with `Object.prototype` and arrays are proxied). Excluding these
- * from recursion keeps `Date`, `Map`, etc. assignable from their plain forms.
- */
-type BuiltInObject =
-  | Date
-  | RegExp
-  | Error
-  | Promise<unknown>
-  | Map<unknown, unknown>
-  | Set<unknown>
-  | WeakMap<object, unknown>
-  | WeakSet<object>
-  | ArrayBuffer
-  | DataView
-
-/**
- * Recursively decorates `T` so every nested plain object / array exposes a
- * `.snapshot()` method that returns the original (un-decorated) shape.
+ * Decorates the top-level proxy `T` with a `.snapshot()` method that returns
+ * the un-decorated shape. Nested proxies still expose `.snapshot()` at runtime
+ * (the proxy `get` trap intercepts it for any plain-object property), but at
+ * the type level only the top-level is decorated — recursing here would make
+ * `T & { snapshot(): T }` unassignable from plain `T` and break common
+ * patterns like `state.user = userFromApi`.
  *
- * - Functions and built-in objects (Date, Map, …) pass through unchanged so
- *   plain values stay assignable.
- * - Array element types are intentionally NOT recursed into, because doing so
- *   would force callers of `Array.prototype.push`, `[i] =`, etc. to provide
- *   the decorated element type. Use the standalone `snapshot()` function for
- *   array elements (e.g. `snapshot(state.items[0])`).
+ * For nested slices, prefer the standalone `snapshot()` helper:
+ *   `snapshot(state.filter)` instead of `state.filter.snapshot()`.
  */
-export type Snapshotable<T> = T extends (...args: any[]) => any
-  ? T
-  : T extends BuiltInObject
-    ? T
-    : T extends ReadonlyArray<unknown>
-      ? T & { snapshot(): T }
-      : T extends object
-        ? { [K in keyof T]: Snapshotable<T[K]> } & { snapshot(): T }
-        : T
+export type Snapshotable<T> = T & { snapshot(): T }
 
 export function createProxy<T extends object>(initialValue: T): Snapshotable<T> {
   return proxyInner(initialValue) as Snapshotable<T>

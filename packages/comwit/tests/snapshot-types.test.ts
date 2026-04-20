@@ -2,9 +2,11 @@ import { expectTypeOf, test } from 'vitest'
 import { action, model, query, snapshot } from '../src'
 import { createProxy } from '../src/core/proxy'
 
-// Pure type-level tests: nested proxies should expose `.snapshot()` so callers
-// can convert sub-trees to plain objects without casting (the runtime already
-// supports this via the proxy `get` trap).
+// `.snapshot()` is exposed on the top-level proxy at the type level. For
+// nested slices, the runtime still intercepts `.snapshot()` (see proxy.ts
+// `get` trap), but the recommended type-safe pattern is the standalone
+// `snapshot()` helper — adding `.snapshot()` recursively would break plain
+// assignments like `state.user = userFromApi`.
 
 test('top-level proxy exposes .snapshot()', () => {
   const state = createProxy({ count: 0 })
@@ -12,29 +14,27 @@ test('top-level proxy exposes .snapshot()', () => {
   expectTypeOf(state.snapshot()).toEqualTypeOf<{ count: number }>()
 })
 
-test('nested object proxies expose .snapshot()', () => {
+test('standalone snapshot() works on nested object slices', () => {
   const state = createProxy({
     filter: { tags: [] as string[], keyword: '' },
   })
 
-  expectTypeOf(state.filter.snapshot).toBeFunction()
-  expectTypeOf(state.filter.snapshot()).toEqualTypeOf<{
+  // `state.filter` is typed as the plain shape — use the standalone helper.
+  expectTypeOf(snapshot(state.filter)).toEqualTypeOf<{
     tags: string[]
     keyword: string
   }>()
 })
 
-test('array proxies expose .snapshot()', () => {
+test('standalone snapshot() works on array slices', () => {
   const state = createProxy({ tags: ['a', 'b'] })
 
-  expectTypeOf(state.tags.snapshot).toBeFunction()
-  expectTypeOf(state.tags.snapshot()).toEqualTypeOf<string[]>()
+  expectTypeOf(snapshot(state.tags)).toEqualTypeOf<string[]>()
 })
 
 test('array methods still accept the plain element type', () => {
   const state = createProxy({ items: [] as { id: string }[] })
 
-  // No cast needed — element type is not transformed
   state.items.push({ id: 'x' })
   expectTypeOf(state.items[0]).toEqualTypeOf<{ id: string }>()
 })
@@ -42,38 +42,26 @@ test('array methods still accept the plain element type', () => {
 test('standalone snapshot() handles array elements', () => {
   const state = createProxy({ items: [{ id: 'x' }] })
 
-  // Use the standalone helper for array elements (no `.snapshot()` on items)
   expectTypeOf(snapshot(state.items[0])).toEqualTypeOf<{ id: string }>()
 })
 
-test('functions are not decorated', () => {
-  const state = createProxy({ fn: (x: number) => x + 1 })
-  expectTypeOf(state.fn).toEqualTypeOf<(x: number) => number>()
-})
-
-// Built-in object types like Date are not proxied at runtime (canProxy() is
-// false for non-Object.prototype prototypes). They must pass through the type
-// unchanged so that plain values stay assignable.
-test('built-in objects (Date, Map, …) are not decorated', () => {
-  type User = { id: string; createdAt: Date; tags: Map<string, number> }
+// Plain values must remain assignable to state fields — adding `.snapshot()`
+// at every nested level would break this.
+test('plain values are assignable to nested state fields', () => {
+  type User = { id: string; createdAt: Date; tags: string[] }
   const state = createProxy({
-    user: { id: 'a', createdAt: new Date(), tags: new Map<string, number>() } satisfies User,
+    user: { id: 'a', createdAt: new Date(), tags: [] as string[] } satisfies User,
   })
 
-  // Outer plain object still gets `.snapshot()`
-  expectTypeOf(state.user.snapshot()).toEqualTypeOf<User>()
-  // Date / Map fields stay as their original built-in types
+  state.user = { id: 'b', createdAt: new Date(), tags: ['x'] }
+  state.user.tags = ['y', 'z']
   expectTypeOf(state.user.createdAt).toEqualTypeOf<Date>()
-  expectTypeOf(state.user.tags).toEqualTypeOf<Map<string, number>>()
-
-  // Plain Date/Map values must remain assignable through actions
-  state.user = { id: 'b', createdAt: new Date(), tags: new Map() }
 })
 
-// Integration: the action `state()` accessor returns BoundResourceState<T>,
-// which must also expose `.snapshot()` on nested objects so callers can pass
-// state slices to RSC server actions without manual cloning.
-test('action state() exposes .snapshot() on nested objects', () => {
+// Integration: the action `state()` accessor returns BoundResourceState<T>.
+// `state.filter` is the plain shape; use standalone `snapshot()` to safely
+// pass nested slices to RSC server actions.
+test('action state() — standalone snapshot() converts nested slices', () => {
   type Filter = { tags: string[]; keyword: string }
   type Pageable<T> = { items: T[]; total: number }
 
@@ -87,8 +75,8 @@ test('action state() exposes .snapshot() on nested objects', () => {
 
   action(({ state }) => {
     const s = state(m)
-    expectTypeOf(s.filter.snapshot()).toEqualTypeOf<Filter>()
-    expectTypeOf(s.list.data.items.snapshot()).toEqualTypeOf<{ id: string }[]>()
+    expectTypeOf(snapshot(s.filter)).toEqualTypeOf<Filter>()
+    expectTypeOf(snapshot(s.list.data.items)).toEqualTypeOf<{ id: string }[]>()
     return {}
   })
 })
