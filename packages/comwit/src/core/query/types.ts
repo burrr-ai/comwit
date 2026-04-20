@@ -193,6 +193,23 @@ type SuspenseInfiniteResourceState<TData, TArg = unknown> = Omit<
 > & { data: NonNullable<TData> }
 
 /**
+ * Built-in object types that the runtime proxy refuses to wrap. Mirrors the
+ * exclusion list in `Snapshotable<T>` to keep plain `Date`/`Map`/etc.
+ * assignable inside actions.
+ */
+type BoundBuiltInObject =
+  | Date
+  | RegExp
+  | Error
+  | Promise<unknown>
+  | Map<unknown, unknown>
+  | Set<unknown>
+  | WeakMap<object, unknown>
+  | WeakSet<object>
+  | ArrayBuffer
+  | DataView
+
+/**
  * Recursively projects a model's state shape into the proxy-bound runtime
  * shape. Plain objects and arrays additionally expose a `.snapshot()` method
  * that returns the un-decorated shape (see `Snapshotable` for details).
@@ -219,11 +236,13 @@ export type BoundResourceState<T> =
               ? BoundSingleResourceState<TData, unknown>
               : T extends (...args: any[]) => any
                 ? T
-                : T extends ReadonlyArray<unknown>
-                  ? T & { snapshot(): T }
-                  : T extends object
-                    ? { [K in keyof T]: BoundResourceState<T[K]> } & { snapshot(): T }
-                    : T
+                : T extends BoundBuiltInObject
+                  ? T
+                  : T extends ReadonlyArray<unknown>
+                    ? T & { snapshot(): T }
+                    : T extends object
+                      ? { [K in keyof T]: BoundResourceState<T[K]> } & { snapshot(): T }
+                      : T
 
 export type DependentQueryOptions<TData> = {
   enabled?: (state: any) => boolean

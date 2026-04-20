@@ -51,6 +51,25 @@ test('functions are not decorated', () => {
   expectTypeOf(state.fn).toEqualTypeOf<(x: number) => number>()
 })
 
+// Built-in object types like Date are not proxied at runtime (canProxy() is
+// false for non-Object.prototype prototypes). They must pass through the type
+// unchanged so that plain values stay assignable.
+test('built-in objects (Date, Map, …) are not decorated', () => {
+  type User = { id: string; createdAt: Date; tags: Map<string, number> }
+  const state = createProxy({
+    user: { id: 'a', createdAt: new Date(), tags: new Map<string, number>() } satisfies User,
+  })
+
+  // Outer plain object still gets `.snapshot()`
+  expectTypeOf(state.user.snapshot()).toEqualTypeOf<User>()
+  // Date / Map fields stay as their original built-in types
+  expectTypeOf(state.user.createdAt).toEqualTypeOf<Date>()
+  expectTypeOf(state.user.tags).toEqualTypeOf<Map<string, number>>()
+
+  // Plain Date/Map values must remain assignable through actions
+  state.user = { id: 'b', createdAt: new Date(), tags: new Map() }
+})
+
 // Integration: the action `state()` accessor returns BoundResourceState<T>,
 // which must also expose `.snapshot()` on nested objects so callers can pass
 // state slices to RSC server actions without manual cloning.
