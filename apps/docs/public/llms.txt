@@ -255,6 +255,14 @@ const LoginRequired = intercept<AppContext>(({ state, context }) => {
 @LoginRequired
 @OnSuccess(() => context.router.push('/posts'))
 async create(title: string) { /* ... */ }
+
+// or apply to the whole class — every method inherits the guard
+@LoginRequired
+class PostCrudActions {
+  async create(title: string) { /* ... */ }
+  async update(id: string, title: string) { /* ... */ }
+  async delete(id: string) { /* ... */ }
+}
 ```
 
 ```tsx
