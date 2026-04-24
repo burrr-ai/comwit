@@ -11,6 +11,7 @@ export {
   persist,
   computed,
   initDevTools,
+  snapshot,
 } from './core'
 export type {
   Query,
@@ -22,5 +23,6 @@ export type {
   PersistAdapter,
   PersistOptions,
   PersistDefaults,
+  Snapshotable,
 } from './core'
 export * from './interceptors'

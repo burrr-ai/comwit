@@ -2,6 +2,7 @@ import { model, Model, useModel, type ModelOptions, type ValidationState } from 
 import { action, ActionFactory, useAction } from './action'
 import { ComwitProvider, type RegistryDefaults } from './provider'
 import { silent } from './silent'
+import { snapshot, type Snapshotable } from './proxy'
 import {
   keepPreviousData,
   PlaceholderData,
@@ -65,6 +66,7 @@ export {
   persist,
   computed,
   initDevTools,
+  snapshot,
 }
 
 export type {
@@ -78,4 +80,5 @@ export type {
   PersistAdapter,
   PersistOptions,
   PersistDefaults,
+  Snapshotable,
 }

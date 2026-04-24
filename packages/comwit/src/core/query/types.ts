@@ -192,6 +192,18 @@ type SuspenseInfiniteResourceState<TData, TArg = unknown> = Omit<
   'data'
 > & { data: NonNullable<TData> }
 
+/**
+ * Recursively projects a model's state shape into the proxy-bound runtime
+ * shape. Resource descriptors are replaced with their bound query controllers;
+ * everything else passes through.
+ *
+ * `.snapshot()` is intentionally NOT injected at every nested level — adding
+ * it via intersection (`T & { snapshot(): T }`) would make plain values
+ * un-assignable to state fields (`this.model.user = userFromApi` would fail).
+ * Nested proxies still expose `.snapshot()` at runtime via the proxy `get`
+ * trap; at the type level, prefer the standalone `snapshot()` helper for
+ * nested slices: `snapshot(state.filter)`.
+ */
 export type BoundResourceState<T> =
   T extends RealtimeResourceDescriptor<infer TData, infer TArg>
     ? BoundRealtimeResourceState<TData, TArg>

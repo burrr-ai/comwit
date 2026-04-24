@@ -255,6 +255,17 @@ function proxyInner<T extends object>(baseObject: T): T {
 
 // --- public API ---
 
+/**
+ * Decorates the top-level proxy `T` with a `.snapshot()` method that returns
+ * the un-decorated shape. Nested proxies still expose `.snapshot()` at runtime
+ * (the proxy `get` trap intercepts it for any plain-object property), but at
+ * the type level only the top-level is decorated — recursing here would make
+ * `T & { snapshot(): T }` unassignable from plain `T` and break common
+ * patterns like `state.user = userFromApi`.
+ *
+ * For nested slices, prefer the standalone `snapshot()` helper:
+ *   `snapshot(state.filter)` instead of `state.filter.snapshot()`.
+ */
 export type Snapshotable<T> = T & { snapshot(): T }
 
 export function createProxy<T extends object>(initialValue: T): Snapshotable<T> {
