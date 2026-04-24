@@ -336,7 +336,9 @@ class PostActions {
 
 ### Class-level Decorators
 
-Apply to all methods on a class:
+Apply to all methods on a class — works with both immediate and lazy mode.
+
+**Immediate mode** — no state access needed:
 
 ```ts
 @intercept({ onBefore: () => console.log('any method called') })
@@ -345,6 +347,36 @@ class Actions {
   doB() { ... }
 }
 ```
+
+**Lazy mode** — shares `state()`/`context` access across every method on the class. Useful when every action in a group has the same precondition (e.g. all mutations require login):
+
+```ts
+import { intercept } from 'comwit'
+import { user } from '@/state/user/model'
+
+const LoginRequired = intercept(({ state, context }) => {
+  const u = state(user)
+  return {
+    intercept: (execute, args) => {
+      if (!u.me) {
+        context.router.push('/login')
+        return
+      }
+      return execute(...args)
+    },
+  }
+})
+
+// applies to every method on the class — no need to repeat @LoginRequired per method
+@LoginRequired
+class PostCrudActions {
+  async create(title: string) { ... }
+  async update(id: string, title: string) { ... }
+  async delete(id: string) { ... }
+}
+```
+
+When class-level and method-level decorators coexist, both run — the method-level decorator wraps first, then the class-level decorator wraps the result.
 
 ## InterceptorHooks API
 
