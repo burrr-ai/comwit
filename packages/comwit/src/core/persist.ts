@@ -12,8 +12,17 @@ export type PersistAdapter<T = unknown> = {
   subscribe?(key: string, callback: (value: T) => void): () => void
 }
 
+/**
+ * Persist key. Either a static string fixed at model-definition time, or a
+ * thunk evaluated each time the storage is touched (hydrate / write-back /
+ * cross-tab subscribe). The thunk form lets a single model field map to a
+ * runtime-derived key (e.g. per-route, per-project, per-tenant) without
+ * recreating the model.
+ */
+export type PersistKey = string | (() => string)
+
 export type PersistOptions<T> = {
-  key: string
+  key: PersistKey
   defaultValue: T
   storage?: 'localStorage' | 'sessionStorage' | PersistAdapter<T>
   serialize?: (value: T) => string
@@ -22,11 +31,15 @@ export type PersistOptions<T> = {
 
 export type PersistDescriptor<T = unknown> = {
   [PERSIST_BRAND]: true
-  key: string
+  key: PersistKey
   defaultValue: T
   adapter: PersistAdapter<T>
   serialize: (value: T) => string
   deserialize: (raw: string) => T
+}
+
+function resolveKey(key: PersistKey): string {
+  return typeof key === 'function' ? key() : key
 }
 
 export type PersistDefaults = {
@@ -166,8 +179,15 @@ export function bindPersistState(
     const { key, adapter, defaultValue } = descriptor
     const cleanups: Array<() => void> = []
 
+    // Resolve the key once at bind time for hydrate + cross-tab subscribe
+    // (the storage event listener can only register against a concrete key).
+    // Write-back also resolves it lazily — see below — so callers can change
+    // what the thunk returns later (e.g. when projectId becomes known) and
+    // subsequent writes will go to the new key.
+    const initialKey = resolveKey(key)
+
     // Hydrate from storage
-    const stored = adapter.get(key)
+    const stored = adapter.get(initialKey)
     silent(() => {
       if (stored !== null) {
         setNestedValue(proxy, path, stored)
@@ -176,10 +196,12 @@ export function bindPersistState(
       }
     })
 
-    // Subscribe to proxy changes and write back (debounced)
+    // Subscribe to proxy changes and write back (debounced).
+    // For dynamic keys, resolve at write time so writes follow the current
+    // identity (e.g. projectId switched between hydrate and a later mutation).
     const writeBack = debounce(() => {
       const currentValue = getNestedValue(proxy, path)
-      adapter.set(key, currentValue)
+      adapter.set(resolveKey(key), currentValue)
     }, debounceMs)
 
     const unsub = subscribe(proxy, () => {
@@ -188,9 +210,11 @@ export function bindPersistState(
     cleanups.push(unsub)
     cleanups.push(() => writeBack.cancel())
 
-    // Cross-tab sync
+    // Cross-tab sync — the storage event API is keyed by string, so we can
+    // only listen on a snapshot of the key. For dynamic keys this means
+    // cross-tab sync tracks whatever key was active at bind time.
     if (adapter.subscribe) {
-      const unsubStorage = adapter.subscribe(key, (newValue) => {
+      const unsubStorage = adapter.subscribe(initialKey, (newValue) => {
         silent(() => {
           setNestedValue(proxy, path, newValue)
         })

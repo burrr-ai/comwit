@@ -147,6 +147,66 @@ describe('persist', () => {
     })
   })
 
+  describe('dynamic key (function form)', () => {
+    it('hydrates using the key returned by the thunk at bind time', () => {
+      const adapter = createMapAdapter<string>()
+      adapter.store.set('comwit-tabs-proj-A', 'persisted-A')
+      let projectId: string = 'proj-A'
+      const store = createPersisted({
+        key: () => `comwit-tabs-${projectId}`,
+        defaultValue: 'default',
+        storage: adapter,
+      })
+      expect(store.proxy.value).toBe('persisted-A')
+    })
+
+    it('falls back to defaultValue when the resolved key has no entry', () => {
+      const adapter = createMapAdapter<string>()
+      adapter.store.set('comwit-tabs-proj-A', 'persisted-A')
+      let projectId: string = 'proj-B'
+      const store = createPersisted({
+        key: () => `comwit-tabs-${projectId}`,
+        defaultValue: 'default',
+        storage: adapter,
+      })
+      expect(store.proxy.value).toBe('default')
+    })
+
+    it('writes back to the current key when the thunk return value changes', async () => {
+      const adapter = createMapAdapter<string>()
+      let projectId: string = 'proj-A'
+      const store = createPersisted({
+        key: () => `comwit-tabs-${projectId}`,
+        defaultValue: 'default',
+        storage: adapter,
+        debounceMs: 10,
+      })
+      // First write goes to proj-A
+      store.proxy.value = 'a-value'
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(adapter.store.get('comwit-tabs-proj-A')).toBe('a-value')
+
+      // Switch identity, write again — write must follow the new key
+      projectId = 'proj-B'
+      store.proxy.value = 'b-value'
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(adapter.store.get('comwit-tabs-proj-B')).toBe('b-value')
+      // proj-A row remains untouched
+      expect(adapter.store.get('comwit-tabs-proj-A')).toBe('a-value')
+    })
+
+    it('accepts a static string in the same field (backward compatible)', () => {
+      const adapter = createMapAdapter<string>()
+      adapter.store.set('static-key', 'persisted')
+      const store = createPersisted({
+        key: 'static-key',
+        defaultValue: 'default',
+        storage: adapter,
+      })
+      expect(store.proxy.value).toBe('persisted')
+    })
+  })
+
   describe('multiple persist fields', () => {
     it('handles multiple persist fields independently', () => {
       const nameAdapter = createMapAdapter<string>()
