@@ -7,7 +7,7 @@ Battle-tested across 1,000+ projects on [mvpstar.ai](https://mvpstar.ai) — a C
 ## Setup
 
 ```
-https://comwit.io/llms.txt
+https://library.comwit.io/llms.txt
 ```
 
 Pass the URL to Claude Code. It handles the rest.

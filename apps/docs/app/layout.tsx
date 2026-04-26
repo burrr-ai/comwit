@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     description:
       'LLM-optimized React state management. Proxy reactivity, built-in data fetching, minimal token overhead. Just pass llms.txt to Claude Code.',
     siteName: 'comwit',
-    url: 'https://comwit.io',
+    url: 'https://library.comwit.io',
     type: 'website',
     locale: 'en_US',
     images: [
@@ -56,9 +56,9 @@ export const metadata: Metadata = {
     images: ['/og.png'],
   },
   other: {
-    llmstxt: 'https://comwit.io/llms.txt',
+    llmstxt: 'https://library.comwit.io/llms.txt',
   },
-  metadataBase: new URL('https://comwit.io'),
+  metadataBase: new URL('https://library.comwit.io'),
   icons: {
     icon: '/logo.svg',
   },

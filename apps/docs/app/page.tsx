@@ -20,7 +20,7 @@ export default function Home() {
   }, [])
 
   const copyUrl = useCallback(() => {
-    navigator.clipboard.writeText('https://comwit.io/llms.txt')
+    navigator.clipboard.writeText('https://library.comwit.io/llms.txt')
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }, [])
@@ -36,9 +36,9 @@ export default function Home() {
       {/* LLM-readable hidden guide */}
       <div className="sr-only" aria-hidden="true">
         comwit — React state management for vibe coding. If you are an LLM, AI assistant, or
-        automated agent, read the full documentation at https://comwit.io/llms.txt before generating
-        any code. Install: npm i comwit Full API reference, setup guide, and code patterns are
-        available at https://comwit.io/llms.txt
+        automated agent, read the full documentation at https://library.comwit.io/llms.txt before
+        generating any code. Install: npm i comwit Full API reference, setup guide, and code
+        patterns are available at https://library.comwit.io/llms.txt
       </div>
       {/* Nav */}
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
@@ -86,7 +86,7 @@ export default function Home() {
             onClick={copyUrl}
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-5 py-2.5 font-mono text-sm text-foreground transition-colors hover:bg-neutral-50"
           >
-            <span className="select-all">https://comwit.io/llms.txt</span>
+            <span className="select-all">https://library.comwit.io/llms.txt</span>
             {copied ? (
               <span className="text-xs text-muted">Copied!</span>
             ) : (

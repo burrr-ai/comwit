@@ -1,8 +1,8 @@
 {
   "name": "comwit",
-  "version": "0.3.5",
+  "version": "1.0.0",
   "private": false,
-  "homepage": "https://comwit.io",
+  "homepage": "https://library.comwit.io",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/meursyphus/comwit.git"
