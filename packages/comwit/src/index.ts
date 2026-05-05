@@ -12,6 +12,7 @@ export {
   computed,
   initDevTools,
   snapshot,
+  isProxy,
 } from './core'
 export type {
   Query,

@@ -281,6 +281,15 @@ export function snapshot<T extends object>(state: T): T {
   return createSnapshot(target, ensureVersion()) as T
 }
 
+/**
+ * Returns true if `value` is a comwit reactive proxy (top-level model proxy or
+ * a nested proxy slice). Useful for boundary code that must convert proxies to
+ * plain objects before serialization (e.g. server actions, logging, postMessage).
+ */
+export function isProxy(value: unknown): boolean {
+  return getProxyState(value) !== undefined
+}
+
 export function subscribe<T extends object>(state: T, callback: () => void): () => void {
   const proxyState = getProxyState(state)
   if (!proxyState) {

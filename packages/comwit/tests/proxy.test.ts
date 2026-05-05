@@ -1,4 +1,4 @@
-import { createProxy, snapshot, subscribe } from '../src/core/proxy'
+import { createProxy, snapshot, subscribe, isProxy } from '../src/core/proxy'
 
 const flush = () => new Promise((r) => setTimeout(r))
 
@@ -66,6 +66,49 @@ describe('snapshot()', () => {
 
     expect(snap1.count).toBe(0)
     expect(snap2.count).toBe(10)
+  })
+})
+
+describe('isProxy()', () => {
+  test('returns true for top-level proxy', () => {
+    const state = createProxy({ count: 0 })
+    expect(isProxy(state)).toBe(true)
+  })
+
+  test('returns true for nested proxy slice', () => {
+    const state = createProxy({ user: { name: 'Alice' } })
+    expect(isProxy(state.user)).toBe(true)
+  })
+
+  test('returns true for nested array proxy', () => {
+    const state = createProxy({ items: [{ id: 1 }] })
+    expect(isProxy(state.items)).toBe(true)
+    expect(isProxy(state.items[0])).toBe(true)
+  })
+
+  test('returns false for plain objects', () => {
+    expect(isProxy({})).toBe(false)
+    expect(isProxy({ count: 0 })).toBe(false)
+    expect(isProxy([1, 2, 3])).toBe(false)
+  })
+
+  test('returns false for primitives and nullish values', () => {
+    expect(isProxy(null)).toBe(false)
+    expect(isProxy(undefined)).toBe(false)
+    expect(isProxy(0)).toBe(false)
+    expect(isProxy('a')).toBe(false)
+    expect(isProxy(true)).toBe(false)
+  })
+
+  test('returns false for snapshot result', () => {
+    const state = createProxy({ count: 0 })
+    const snap = snapshot(state)
+    expect(isProxy(snap)).toBe(false)
+  })
+
+  test('returns false for non-proxyable objects (Date, File, Map)', () => {
+    expect(isProxy(new Date())).toBe(false)
+    expect(isProxy(new Map())).toBe(false)
   })
 })
 

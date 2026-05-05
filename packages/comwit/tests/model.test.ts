@@ -1,5 +1,10 @@
-import { model, silent, query } from '../src/core'
+import { model, silent, query, snapshot, isProxy } from '../src/core'
 import { isSilent } from '../src/core/silent'
+import {
+  bindResourceState,
+  createQueryBindingRegistry,
+  type ResourceDescriptorMap,
+} from '../src/core/query'
 
 describe('model()', () => {
   test('creates a Model with key, pluginBags, and instance()', () => {
@@ -136,6 +141,58 @@ describe('model()', () => {
     const snap = store.getSnapshot()
     expect(snap.form.launchedAt).toBeInstanceOf(Date)
     expect(snap.form.launchedAt.toISOString()).toBe(date.toISOString())
+  })
+
+  test('snapshot() works on top-level model proxy', () => {
+    const m = model({ count: 0, user: { name: 'Alice' } })
+    const store = m.instance()
+
+    store.proxy.count = 5
+    const snap = snapshot(store.proxy)
+    expect(snap.count).toBe(5)
+    expect(snap.user.name).toBe('Alice')
+    expect(() => {
+      ;(snap as any).count = 99
+    }).toThrow()
+  })
+
+  test('isProxy() returns true for the bound state used inside actions', () => {
+    const m = model({
+      count: 0,
+      items: query({
+        queryFn: async () => [],
+        initialData: [] as string[],
+      }),
+    })
+    const store = m.instance()
+    const registry = createQueryBindingRegistry()
+    const descriptors = m.pluginBags.get('query')! as ResourceDescriptorMap
+    const bound = bindResourceState(store.proxy, descriptors, undefined, registry)
+
+    expect(isProxy(bound)).toBe(true)
+  })
+
+  test('snapshot() works on the bound state (plugin-wrapped proxy)', () => {
+    const m = model({
+      count: 0,
+      user: { name: 'Alice' },
+      items: query({
+        queryFn: async () => [],
+        initialData: [] as string[],
+      }),
+    })
+    const store = m.instance()
+    const registry = createQueryBindingRegistry()
+    const descriptors = m.pluginBags.get('query')! as ResourceDescriptorMap
+    const bound = bindResourceState(store.proxy, descriptors, undefined, registry)
+
+    bound.count = 7
+    const snap = snapshot(bound)
+    expect(snap.count).toBe(7)
+    expect(snap.user.name).toBe('Alice')
+    expect(() => {
+      ;(snap as any).count = 99
+    }).toThrow()
   })
 
   test('model with query descriptors extracts into pluginBags', () => {
