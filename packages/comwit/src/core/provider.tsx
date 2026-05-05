@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef } from 'react'
+import React, { createContext, useContext, useRef, type Context } from 'react'
 import { getPlugins } from './plugin'
 import type { Model, StoreEntry } from './model'
 import type { StageMethodDecorator } from '../interceptors/utils'
@@ -29,10 +29,21 @@ export type StoreRegistry = {
   globalInterceptors?: StageMethodDecorator[]
 }
 
-const StateContext = createContext<StoreRegistry | null>(null)
+// Lazily create the React Context the first time the provider or a hook is
+// invoked. Calling createContext() at module top-level would crash the
+// moment this module is evaluated under React Server Components (the
+// RSC-vendored React build does not export createContext), even when only
+// the proxy utilities (snapshot/isProxy) are needed at the import site.
+let _StateContext: Context<StoreRegistry | null> | null = null
+function getStateContext(): Context<StoreRegistry | null> {
+  if (_StateContext === null) {
+    _StateContext = createContext<StoreRegistry | null>(null)
+  }
+  return _StateContext
+}
 
 export function useStoreRegistry(): StoreRegistry {
-  const ctx = useContext(StateContext)
+  const ctx = useContext(getStateContext())
   if (!ctx) throw new Error('Wrap your app with <ComwitProvider>')
   return ctx
 }
@@ -102,5 +113,6 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
     registryRef.current.pluginDefaults.set(plugin.name, defaults)
   }
 
+  const StateContext = getStateContext()
   return <StateContext.Provider value={registryRef.current}>{children}</StateContext.Provider>
 }
