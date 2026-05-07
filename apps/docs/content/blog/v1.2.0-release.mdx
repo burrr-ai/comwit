@@ -1,0 +1,88 @@
+---
+title: 'comwit v1.2.0 — flushDebounce & flushThrottle helpers'
+date: '2026-05-07'
+description: 'v1.2.0 minor release. Adds `flushDebounce` / `cancelDebounce` / `flushThrottle` / `cancelThrottle` helpers so pending trailing calls behind `@Debounce` and `@Throttle` can be fired (or dropped) from outside without dropping the surrounding decorator stack.'
+author: 'Claude Code'
+---
+
+## What's New
+
+### `flushDebounce` / `cancelDebounce` / `flushThrottle` / `cancelThrottle`
+
+`@Debounce` and `@Throttle` schedule trailing calls. Until now, there was no
+way to force a pending call to fire from the outside. The autosave
+shutdown/navigation case made this painful:
+
+> User types in a draft → keystrokes call `@Debounce(700) persistSoon()` →
+> user closes the sheet within the debounce window → the surrounding state
+> resets → the timer fires after the close and the method exits early because
+> its preconditions no longer hold → **the user's last input is silently
+> lost**.
+
+The previous escape hatch was to drop the decorator entirely and roll a
+hand-built `setTimeout` + flush — which costs you `@OnError`, `@LoginRequired`,
+`@Retry`, `@Queue`, etc., because they were all composing through the same
+interceptor pipeline.
+
+```ts
+import {
+  Debounce,
+  Throttle,
+  flushDebounce,
+  cancelDebounce,
+  flushThrottle,
+  cancelThrottle,
+} from 'comwit'
+
+class DraftActions {
+  @LoginRequired
+  @Debounce(700)
+  @OnError(toastErr)
+  async persistSoon() {
+    await this.saveDraft()
+  }
+}
+
+// elsewhere — close handler / navigation
+await flushDebounce(this.draftActions, 'persistSoon')
+cancelDebounce(this.draftActions, 'persistSoon')
+```
+
+The full decorator stack composes: a flushed call propagates through
+`@OnError`, `@LoginRequired`, `@Retry`, etc. exactly as a naturally-fired
+trailing call would. `flushDebounce` returns a Promise that resolves with
+the method's return value (or rejects with its error) so `await` works
+uniformly.
+
+The first argument accepts either the action class instance or the merged
+actions object returned by `useAction(...)` — useful when the method to flush
+lives in a different action slice from the caller.
+
+See [Decorators →
+Flushing pending @Debounce / @Throttle calls](/docs/decorators#flushing-pending-debounce--throttle-calls)
+for the full reference, and
+[issue #71](https://github.com/meursyphus/comwit/issues/71) for the design
+discussion.
+
+### Per-instance debounce / throttle timers
+
+Two instances of the same class no longer share a debounce/throttle window.
+`@Debounce(ms)` keys its timer by `(instance, methodName)`, matching how
+people actually expect class-based actions to behave.
+
+---
+
+## Breaking Changes
+
+None. This is a fully backward-compatible minor release.
+
+The only observable change to existing code is that `actions.debouncedMethod()`
+now returns a Promise that settles when the trailing call eventually fires.
+Previously it returned `undefined`. Code that did not use the return value is
+unaffected; code that wants to await the trailing call can now do so.
+
+## Upgrading
+
+```bash
+yarn add comwit@1.2.0
+```
