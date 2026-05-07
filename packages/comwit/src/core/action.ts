@@ -5,6 +5,7 @@ import {
   type LazyInterceptorFactory,
   type StageMethodDecorator,
 } from '../interceptors/utils'
+import { attachActionOwner } from '../interceptors/flush-registry'
 import { useStoreRegistry } from './provider'
 import type { BoundResourceState } from './query/types'
 import { runHistoryTransaction } from './history'
@@ -128,7 +129,13 @@ function bindValue<C extends object>(
   const transactional = function (this: unknown, ...args: unknown[]) {
     return runHistoryTransaction(name, () => fn.apply(this, args))
   }
-  return resolveLazyInterceptors(fn, ctx, transactional).bind(instance)
+  const bound = resolveLazyInterceptors(fn, ctx, transactional).bind(instance) as AnyFunction
+  // Attach a back-pointer from the bound method to its owning class instance
+  // so helpers like `flushDebounce(actions, 'persistSoon')` (where `actions`
+  // is the merged useAction result) can resolve back to the registered
+  // instance when looking up debounce/throttle handles.
+  attachActionOwner(bound, instance, name)
+  return bound
 }
 
 function resolveLazyInterceptors<C extends object = Record<string, never>>(
