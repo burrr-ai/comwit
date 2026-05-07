@@ -18,7 +18,7 @@ export const todo = model(
 )
 ```
 
-Use `history: true` for no limit.
+Use `history: true` for the default limit of 100 undo entries. Use `history: { limit }` to override the stack size.
 
 ## Use
 

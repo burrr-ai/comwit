@@ -93,8 +93,8 @@ const editor = model(
 ```
 
 - `history: false` or omitted — no `$history` field, no history tracking
-- `history: true` — enable history with no stack limit
-- `history: { limit }` — keep at most `limit` undo entries
+- `history: true` — enable history with the default limit of 100 undo entries
+- `history: { limit }` — enable history and override the undo stack limit
 
 ## Ignoring Changes
 

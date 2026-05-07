@@ -171,6 +171,8 @@ const todo = model(
 )
 ```
 
+`history: true` uses a default limit of 100 undo entries. Pass `history: { limit }` to override the stack size.
+
 No new hook is needed. Access `$history` through the existing hook from [`create()`](/docs/api/create).
 
 ```tsx

@@ -6,6 +6,8 @@ export type HistoryOptions = {
 
 export type HistoryConfig = boolean | HistoryOptions
 
+export const DEFAULT_HISTORY_LIMIT = 100
+
 export type HistoryApi = {
   canUndo: boolean
   canRedo: boolean
@@ -49,8 +51,8 @@ const transactions: HistoryTransaction[] = []
 
 export function normalizeHistoryOptions(config: HistoryConfig | undefined): HistoryOptions | null {
   if (!config) return null
-  if (config === true) return {}
-  return config
+  if (config === true) return { limit: DEFAULT_HISTORY_LIMIT }
+  return { limit: config.limit ?? DEFAULT_HISTORY_LIMIT }
 }
 
 export function runHistoryTransaction<T>(label: string | undefined, fn: () => T): T {
@@ -144,13 +146,16 @@ export class HistoryController {
   private cleanup: (() => void) | null = null
   private paused = false
   private applying = false
-  private readonly limit: number | null
+  private readonly limit: number
 
   constructor(
     private readonly proxy: object,
     options: HistoryOptions = {}
   ) {
-    this.limit = typeof options.limit === 'number' && options.limit >= 0 ? options.limit : null
+    this.limit =
+      typeof options.limit === 'number' && options.limit >= 0
+        ? options.limit
+        : DEFAULT_HISTORY_LIMIT
     this.apiMethods = {
       undo: (steps) => this.undo(steps),
       redo: (steps) => this.redo(steps),
@@ -209,7 +214,7 @@ export class HistoryController {
     if (!entry) return
 
     this.past.push(entry)
-    if (this.limit !== null && this.past.length > this.limit) {
+    if (this.past.length > this.limit) {
       this.past.splice(0, this.past.length - this.limit)
     }
     this.future = []

@@ -143,6 +143,82 @@ describe('history', () => {
     expect(result.current.state.$history.canRedo).toBe(false)
   })
 
+  test('uses a default limit of 100 undo entries', async () => {
+    const counter = model({ count: 0 }, { history: true })
+    const counterActions = action(({ state }) => ({
+      increment() {
+        state(counter).count += 1
+      },
+    }))
+
+    const wrapper = createWrapper()
+    const { result } = renderHook(
+      () => ({
+        state: useModel(counter),
+        actions: useAction<{ increment: () => void }>([counterActions]),
+      }),
+      { wrapper }
+    )
+
+    await act(async () => {
+      for (let i = 0; i < 101; i++) {
+        result.current.actions.increment()
+      }
+    })
+
+    expect(result.current.state.count).toBe(101)
+
+    await act(async () => {
+      result.current.state.$history.undo(100)
+    })
+
+    expect(result.current.state.count).toBe(1)
+    expect(result.current.state.$history.canUndo).toBe(false)
+  })
+
+  test('buckets one action transaction by each changed model', async () => {
+    const profile = model({ name: 'Ada' }, { history: true })
+    const settings = model({ theme: 'light' }, { history: true })
+    const actions = action(({ state }) => ({
+      updateBoth() {
+        state(profile).name = 'Grace'
+        state(settings).theme = 'dark'
+      },
+    }))
+
+    const wrapper = createWrapper()
+    const { result } = renderHook(
+      () => ({
+        profile: useModel(profile),
+        settings: useModel(settings),
+        actions: useAction<{ updateBoth: () => void }>([actions]),
+      }),
+      { wrapper }
+    )
+
+    await act(async () => {
+      result.current.actions.updateBoth()
+    })
+
+    expect(result.current.profile.name).toBe('Grace')
+    expect(result.current.settings.theme).toBe('dark')
+    expect(result.current.profile.$history.canUndo).toBe(true)
+    expect(result.current.settings.$history.canUndo).toBe(true)
+
+    await act(async () => {
+      result.current.profile.$history.undo()
+    })
+
+    expect(result.current.profile.name).toBe('Ada')
+    expect(result.current.settings.theme).toBe('dark')
+
+    await act(async () => {
+      result.current.settings.$history.undo()
+    })
+
+    expect(result.current.settings.theme).toBe('light')
+  })
+
   test('supports ignore without suppressing rendering', async () => {
     const counter = model({ count: 0 }, { history: true })
     const counterActions = action(({ state }) => ({
