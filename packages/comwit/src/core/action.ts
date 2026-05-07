@@ -5,6 +5,7 @@ import {
   type LazyInterceptorFactory,
   type StageMethodDecorator,
 } from '../interceptors/utils'
+import { attachActionOwner } from '../interceptors/flush-registry'
 import { useStoreRegistry } from './provider'
 import type { BoundResourceState } from './query/types'
 
@@ -96,7 +97,7 @@ function normalizeActions<A, C extends object = Record<string, never>>(
       continue
     }
 
-    out[key] = bindValue(value as AnyFunction, instance, ctx)
+    out[key] = bindValue(value as AnyFunction, instance, ctx, key)
   }
 
   for (
@@ -110,7 +111,7 @@ function normalizeActions<A, C extends object = Record<string, never>>(
       const fn = descriptor?.value
 
       if (typeof fn !== 'function') continue
-      out[key] = bindValue(fn as AnyFunction, instance, ctx)
+      out[key] = bindValue(fn as AnyFunction, instance, ctx, key)
     }
   }
 
@@ -120,9 +121,16 @@ function normalizeActions<A, C extends object = Record<string, never>>(
 function bindValue<C extends object>(
   fn: AnyFunction,
   instance: object,
-  ctx: ActionContext<C>
+  ctx: ActionContext<C>,
+  methodName: string
 ): AnyFunction {
-  return resolveLazyInterceptors(fn, ctx).bind(instance)
+  const bound = resolveLazyInterceptors(fn, ctx).bind(instance) as AnyFunction
+  // Attach a back-pointer from the bound method to its owning class instance
+  // so helpers like `flushDebounce(actions, 'persistSoon')` (where `actions`
+  // is the merged useAction result) can resolve back to the registered
+  // instance when looking up debounce/throttle handles.
+  attachActionOwner(bound, instance, methodName)
+  return bound
 }
 
 function resolveLazyInterceptors<C extends object = Record<string, never>>(
