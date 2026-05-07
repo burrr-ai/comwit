@@ -1,0 +1,78 @@
+# comwit — History Reference
+
+History adds undo and redo to a model. It is disabled by default.
+
+## Enable
+
+```ts
+import { model } from 'comwit'
+
+export const todo = model(
+  {
+    items: [] as Todo[],
+    selectedId: null as string | null,
+  },
+  {
+    history: { limit: 100 },
+  }
+)
+```
+
+Use `history: true` for no limit.
+
+## Use
+
+No new hook is needed. Use the existing hook created by `create()`.
+
+```tsx
+const history = useTodo((s) => s.$history)
+
+history.undo()
+history.redo()
+history.canUndo
+history.canRedo
+```
+
+## Recording Model
+
+Each action method call is recorded as one transaction.
+
+```ts
+const todoActions = action(({ state }) => ({
+  add(title: string) {
+    const s = state(todo)
+    s.items.push({ id: crypto.randomUUID(), title, done: false })
+    s.selectedId = s.items.at(-1)!.id
+  },
+}))
+```
+
+Calling `s.$history.undo()` reverts both mutations together.
+
+## API
+
+```ts
+type HistoryApi = {
+  canUndo: boolean
+  canRedo: boolean
+  isPaused: boolean
+  undo(steps?: number): void
+  redo(steps?: number): void
+  clear(): void
+  pause(): void
+  resume(): void
+  ignore<T>(fn: () => T): T
+  transaction<T>(fn: () => T): T
+  transaction<T>(label: string, fn: () => T): T
+}
+```
+
+Use `ignore()` for changes that should re-render but should not enter the undo stack.
+
+```ts
+s.$history.ignore(() => {
+  s.draft = value
+})
+```
+
+`ignore()` is not the same as `silent()`. `silent()` suppresses notifications; `ignore()` only skips history recording.

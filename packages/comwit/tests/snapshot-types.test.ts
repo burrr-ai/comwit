@@ -80,3 +80,17 @@ test('action state() — standalone snapshot() converts nested slices', () => {
     return {}
   })
 })
+
+test('history-enabled models expose $history methods', () => {
+  const m = model({ count: 0 }, { history: true })
+
+  action(({ state }) => {
+    const s = state(m)
+    expectTypeOf(s.$history.canUndo).toEqualTypeOf<boolean>()
+    expectTypeOf(s.$history.undo).toBeFunction()
+    expectTypeOf(s.$history.redo).toBeFunction()
+    s.$history.undo()
+    s.$history.redo()
+    return {}
+  })
+})

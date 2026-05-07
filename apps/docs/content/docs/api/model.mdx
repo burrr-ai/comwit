@@ -50,6 +50,7 @@ export const app = model<AppState>({
 - Fields using [`query()`](/docs/api/query) become client-fetched data with loading states
 - Fields using [`persist()`](/docs/api/persist) are automatically synced to storage
 - Plain fields (strings, objects, arrays, null) are reactive local state
+- Models with `history: true` expose [`$history`](/docs/api/history) for undo and redo
 - Models initialize lazily — only when first accessed via a hook
 - Each model instance is scoped to the nearest `ComwitProvider`
 
@@ -152,6 +153,37 @@ const chat = model(
 - Initializing analytics or logging
 - Subscribing to external event sources
 
+## History
+
+History is disabled by default. Enable it per model when user-facing changes should support undo and redo.
+
+```ts
+const todo = model(
+  {
+    items: [] as Todo[],
+    selectedId: null as string | null,
+  },
+  {
+    history: {
+      limit: 100,
+    },
+  }
+)
+```
+
+No new hook is needed. Access `$history` through the existing hook from [`create()`](/docs/api/create).
+
+```tsx
+const history = useTodo((s) => s.$history)
+
+history.undo()
+history.redo()
+history.canUndo
+history.canRedo
+```
+
+Each action method call is recorded as one transaction. Multiple mutations inside one action are undone together. Use `$history.ignore()` for changes that should re-render but should not be recorded.
+
 ## Options
 
 The second argument to `model()` accepts optional configuration:
@@ -161,6 +193,7 @@ model(initial, {
   derive?: (state) => ({ key: () => value }),
   rules?: { field: (value) => true | 'error message' },
   onObserve?: (state) => void | (() => void),
+  history?: boolean | { limit?: number },
 })
 ```
 

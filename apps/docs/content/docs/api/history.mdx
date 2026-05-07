@@ -1,0 +1,136 @@
+---
+title: '$history'
+group: 'API'
+slug: 'api/history'
+order: 8
+---
+
+# $history
+
+Undo and redo for model state. History is disabled by default and only exists on models that opt in.
+
+```ts
+import { model } from 'comwit'
+
+export const todo = model(
+  {
+    items: [] as Todo[],
+    selectedId: null as string | null,
+  },
+  {
+    history: true,
+  }
+)
+```
+
+## Usage
+
+No new hook is required. Read and call `$history` from the existing hook created by [`create()`](/docs/api/create).
+
+```tsx
+const { items, history } = useTodo((s) => ({
+  items: s.items,
+  history: s.$history,
+}))
+
+return (
+  <div>
+    <button onClick={() => history.undo()} disabled={!history.canUndo}>
+      Undo
+    </button>
+    <button onClick={() => history.redo()} disabled={!history.canRedo}>
+      Redo
+    </button>
+  </div>
+)
+```
+
+## Recording
+
+Each action method call is recorded as one history transaction.
+
+```ts
+const todoActions = action(({ state }) => ({
+  add(title: string) {
+    const s = state(todo)
+    s.items.push({ id: crypto.randomUUID(), title, done: false })
+    s.selectedId = s.items.at(-1)!.id
+  },
+}))
+```
+
+The two mutations above are undone together by one call to `s.$history.undo()`.
+
+## API
+
+```ts
+type HistoryApi = {
+  canUndo: boolean
+  canRedo: boolean
+  isPaused: boolean
+  undo(steps?: number): void
+  redo(steps?: number): void
+  clear(): void
+  pause(): void
+  resume(): void
+  ignore<T>(fn: () => T): T
+  transaction<T>(fn: () => T): T
+  transaction<T>(label: string, fn: () => T): T
+}
+```
+
+## Options
+
+```ts
+const editor = model(
+  { blocks: [] as Block[] },
+  {
+    history: {
+      limit: 100,
+    },
+  }
+)
+```
+
+- `history: false` or omitted — no `$history` field, no history tracking
+- `history: true` — enable history with no stack limit
+- `history: { limit }` — keep at most `limit` undo entries
+
+## Ignoring Changes
+
+Use `$history.ignore()` for state changes that should re-render but should not be undoable.
+
+```ts
+const editorActions = action(({ state }) => ({
+  setDraft(value: string) {
+    const s = state(editor)
+    s.$history.ignore(() => {
+      s.draft = value
+    })
+  },
+}))
+```
+
+This is different from [`silent()`](/docs/api/silent). `silent()` suppresses notifications for hydration-style writes. `$history.ignore()` only skips history recording.
+
+## Manual Transactions
+
+Action methods are already transactions. Use `$history.transaction()` only when you need to group nested or manual changes explicitly.
+
+```ts
+const editorActions = action(({ state }) => ({
+  bulkRename(ids: string[], title: string) {
+    const s = state(editor)
+    s.$history.transaction('bulk rename', () => {
+      for (const id of ids) {
+        const block = s.blocks.find((x) => x.id === id)
+        if (block) block.title = title
+      }
+    })
+  },
+}))
+```
+
+## Redo Stack
+
+When a new action is committed after an undo, the redo stack is cleared. This follows the standard undo/redo model used by editors and state history systems.

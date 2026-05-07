@@ -11,11 +11,22 @@ const $ref = Symbol('ref') // marks objects excluded from proxying
 const $snap = Symbol('snap') // snapshot cache on target
 const $proxy = Symbol('proxy') // cached proxy on base object
 
-type Path = (string | symbol)[]
-type Op =
-  | [op: 'set', path: Path, value: unknown, prevValue: unknown]
-  | [op: 'delete', path: Path, prevValue: unknown]
-type Listener = (op: Op | undefined, nextVersion: number) => void
+export type Path = (string | symbol)[]
+export type ProxyOpMeta = {
+  prevLength?: number
+  nextLength?: number
+}
+export type ProxyOp =
+  | [
+      op: 'set',
+      path: Path,
+      value: unknown,
+      prevValue: unknown,
+      hadPrevValue: boolean,
+      meta?: ProxyOpMeta,
+    ]
+  | [op: 'delete', path: Path, prevValue: unknown, hadPrevValue: boolean, meta?: ProxyOpMeta]
+type Listener = (op: ProxyOp | undefined, nextVersion: number) => void
 type RemoveListener = () => void
 type AddListener = (listener: Listener) => RemoveListener
 type ProxyState = readonly [
@@ -96,7 +107,7 @@ function createHandler<T extends object>(
   isInitializing: () => boolean,
   addPropListener: (prop: string | symbol, propValue: unknown) => void,
   removePropListener: (prop: string | symbol) => void,
-  notifyUpdate: (op: Op | undefined) => void
+  notifyUpdate: (op: ProxyOp | undefined) => void
 ): ProxyHandler<T> {
   return {
     get(target: T, prop: string | symbol, receiver: object) {
@@ -110,17 +121,19 @@ function createHandler<T extends object>(
       return Reflect.get(target, prop, receiver)
     },
     deleteProperty(target: T, prop: string | symbol) {
+      const hadPrevValue = Reflect.has(target, prop)
       const prevValue = Reflect.get(target, prop)
       removePropListener(prop)
       const deleted = Reflect.deleteProperty(target, prop)
       if (deleted) {
-        notifyUpdate(['delete', [prop], prevValue])
+        notifyUpdate(['delete', [prop], prevValue, hadPrevValue])
       }
       return deleted
     },
     set(target: T, prop: string | symbol, value: any, receiver: object) {
       const hasPrevValue = !isInitializing() && Reflect.has(target, prop)
       const prevValue = Reflect.get(target, prop, receiver)
+      const prevLength = Array.isArray(target) ? target.length : undefined
       const cachedProxy = isObject(value) && getCachedProxy(value)
       if (
         hasPrevValue &&
@@ -132,7 +145,12 @@ function createHandler<T extends object>(
       const nextValue = !getProxyState(value) && canProxy(value) ? proxyInner(value) : value
       addPropListener(prop, nextValue)
       Reflect.set(target, prop, nextValue, receiver)
-      notifyUpdate(['set', [prop], value, prevValue])
+      const nextLength = Array.isArray(target) ? target.length : undefined
+      const meta =
+        prevLength !== undefined && nextLength !== undefined && prevLength !== nextLength
+          ? { prevLength, nextLength }
+          : undefined
+      notifyUpdate(['set', [prop], value, prevValue, hasPrevValue, meta])
       return true
     },
   }
@@ -156,7 +174,7 @@ function proxyInner<T extends object>(baseObject: T): T {
   }
   let version = globalVersion
   const listeners = new Set<Listener>()
-  const notifyUpdate = (op: Op | undefined, nextVersion = ++globalVersion) => {
+  const notifyUpdate = (op: ProxyOp | undefined, nextVersion = ++globalVersion) => {
     if (version !== nextVersion) {
       checkVersion = version = nextVersion
       listeners.forEach((listener) => listener(op, nextVersion))
@@ -178,7 +196,7 @@ function proxyInner<T extends object>(baseObject: T): T {
   const createPropListener =
     (prop: string | symbol): Listener =>
     (op, nextVersion) => {
-      let newOp: Op | undefined
+      let newOp: ProxyOp | undefined
       if (op) {
         newOp = [...op]
         newOp[1] = [prop, ...(newOp[1] as Path)]
@@ -300,6 +318,29 @@ export function subscribe<T extends object>(state: T, callback: () => void): () 
   const listener: Listener = () => {
     if (isListenerActive) {
       callback()
+    }
+  }
+  const removeListener = addListener(listener)
+  isListenerActive = true
+  return () => {
+    isListenerActive = false
+    removeListener()
+  }
+}
+
+export function subscribeOps<T extends object>(
+  state: T,
+  callback: (op: ProxyOp | undefined, nextVersion: number) => void
+): () => void {
+  const proxyState = getProxyState(state)
+  if (!proxyState) {
+    throw new Error('Please use proxy object')
+  }
+  const addListener = proxyState[2]
+  let isListenerActive = false
+  const listener: Listener = (op, nextVersion) => {
+    if (isListenerActive) {
+      callback(op, nextVersion)
     }
   }
   const removeListener = addListener(listener)

@@ -223,9 +223,11 @@ export type BoundResourceState<T> =
               ? BoundSingleResourceState<TData, unknown>
               : T extends (infer U)[]
                 ? BoundResourceState<U>[]
-                : T extends object
-                  ? { [K in keyof T]: BoundResourceState<T[K]> }
-                  : T
+                : T extends (...args: any[]) => any
+                  ? T
+                  : T extends object
+                    ? { [K in keyof T]: BoundResourceState<T[K]> }
+                    : T
 
 export type DependentQueryOptions<TData> = {
   enabled?: (state: any) => boolean
