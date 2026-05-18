@@ -5,17 +5,27 @@ import { useStoreRegistry } from './provider'
 import { isEqual } from '../utils'
 import { isSilent } from './silent'
 import { COMPUTED_PLUGIN_NAME, createComputedProxy, getComputedSnapshot } from './computed'
+import {
+  createHistoryController,
+  normalizeHistoryOptions,
+  type HistoryApi,
+  type HistoryConfig,
+  type HistoryController,
+  type HistoryOptions,
+} from './history'
 
 export type StoreEntry<T extends object = any> = {
   proxy: T
   getSnapshot(): T
   subscribe(listener: () => void): () => void
+  history?: HistoryController
 }
 
 export type ModelOptions<T extends object, D extends object = {}> = {
   derive?: (state: T) => { [K in keyof D]: () => D[K] }
   rules?: { [K in keyof T]?: (value: T[K]) => true | string }
   onObserve?: (state: T) => void | (() => void)
+  history?: HistoryConfig
 }
 
 export type ValidationState<T> = {
@@ -24,6 +34,10 @@ export type ValidationState<T> = {
 }
 
 export function model<T extends object>(initial: T): Model<T>
+export function model<T extends object, D extends object>(
+  initial: T,
+  options: ModelOptions<T, D> & { history: true | HistoryOptions }
+): Model<T & Readonly<D> & { $validation: ValidationState<T>; $history: HistoryApi }>
 export function model<T extends object, D extends object>(
   initial: T,
   options: ModelOptions<T, D>
@@ -48,6 +62,8 @@ export function model<T extends object, D extends object = {}>(
     onObserve: options?.onObserve as Model<T & Readonly<D>>['onObserve'],
     instance(): StoreEntry<T & Readonly<D>> {
       const p = createProxy(cloneState())
+      const historyOptions = normalizeHistoryOptions(options?.history)
+      const history = historyOptions ? createHistoryController(p, historyOptions) : null
 
       const deriveFactory = options?.derive
       const rules = options?.rules
@@ -61,7 +77,8 @@ export function model<T extends object, D extends object = {}>(
 
       const computedBag = pluginBags.get(COMPUTED_PLUGIN_NAME)
       const hasComputed = computedBag != null && computedBag.size > 0
-      const hasExtensions = derivedGetters != null || rules != null || hasComputed
+      const hasHistory = history != null
+      const hasExtensions = derivedGetters != null || rules != null || hasComputed || hasHistory
 
       let computedProxyRef: object | null = null
       let publicProxy: unknown = p
@@ -73,6 +90,9 @@ export function model<T extends object, D extends object = {}>(
         const base = publicProxy as object
         publicProxy = new Proxy(base, {
           get(target, prop, receiver) {
+            if (prop === '$history' && history) {
+              return history.getApi()
+            }
             if (typeof prop === 'string' && derivedKeys?.has(prop)) {
               return derivedGetters![prop]()
             }
@@ -88,6 +108,25 @@ export function model<T extends object, D extends object = {}>(
             if (prop === '$validation') {
               throw new Error('Cannot set $validation')
             }
+            if (prop === '$history') {
+              throw new Error('Cannot set $history')
+            }
+            return Reflect.set(target, prop, value, receiver)
+          },
+        })
+      } else if (history) {
+        const base = publicProxy as object
+        publicProxy = new Proxy(base, {
+          get(target, prop, receiver) {
+            if (prop === '$history') {
+              return history.getApi()
+            }
+            return Reflect.get(target, prop, receiver)
+          },
+          set(target, prop, value, receiver) {
+            if (prop === '$history') {
+              throw new Error('Cannot set $history')
+            }
             return Reflect.set(target, prop, value, receiver)
           },
         })
@@ -95,6 +134,7 @@ export function model<T extends object, D extends object = {}>(
 
       return {
         proxy: publicProxy as T & Readonly<D>,
+        history: history ?? undefined,
         getSnapshot() {
           if (!hasExtensions) return snapshot(p) as T & Readonly<D>
 
@@ -115,12 +155,21 @@ export function model<T extends object, D extends object = {}>(
             result.$validation = computeValidation(p as Record<string, unknown>, rules)
           }
 
+          if (history) {
+            result.$history = history.getApi()
+          }
+
           return Object.freeze(result) as T & Readonly<D>
         },
         subscribe(listener) {
-          return subscribe(p, () => {
+          const unsubProxy = subscribe(p, () => {
             if (!isSilent()) listener()
           })
+          const unsubHistory = history?.subscribe(listener)
+          return () => {
+            unsubProxy()
+            unsubHistory?.()
+          }
         },
       }
     },

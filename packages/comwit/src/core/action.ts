@@ -7,6 +7,7 @@ import {
 } from '../interceptors/utils'
 import { useStoreRegistry } from './provider'
 import type { BoundResourceState } from './query/types'
+import { runHistoryTransaction } from './history'
 
 export type State = <T extends object>(model: Model<T>) => BoundResourceState<T>
 
@@ -97,7 +98,7 @@ function normalizeActions<A, C extends object = Record<string, never>>(
       continue
     }
 
-    out[key] = bindValue(value as AnyFunction, instance, ctx)
+    out[key] = bindValue(value as AnyFunction, instance, ctx, key)
   }
 
   for (
@@ -111,7 +112,7 @@ function normalizeActions<A, C extends object = Record<string, never>>(
       const fn = descriptor?.value
 
       if (typeof fn !== 'function') continue
-      out[key] = bindValue(fn as AnyFunction, instance, ctx)
+      out[key] = bindValue(fn as AnyFunction, instance, ctx, key)
     }
   }
 
@@ -121,19 +122,24 @@ function normalizeActions<A, C extends object = Record<string, never>>(
 function bindValue<C extends object>(
   fn: AnyFunction,
   instance: object,
-  ctx: ActionContext<C>
+  ctx: ActionContext<C>,
+  name: string
 ): AnyFunction {
-  return resolveLazyInterceptors(fn, ctx).bind(instance)
+  const transactional = function (this: unknown, ...args: unknown[]) {
+    return runHistoryTransaction(name, () => fn.apply(this, args))
+  }
+  return resolveLazyInterceptors(fn, ctx, transactional).bind(instance)
 }
 
 function resolveLazyInterceptors<C extends object = Record<string, never>>(
   fn: AnyFunction,
-  ctx: ActionContext<C>
+  ctx: ActionContext<C>,
+  initial: AnyFunction = fn
 ): AnyFunction {
   const factories = getLazyInterceptorFactories(fn) as Array<LazyInterceptorFactory<C>>
-  if (!factories.length) return fn
+  if (!factories.length) return initial
 
-  let next = fn
+  let next = initial
   for (const factory of factories) {
     const decorator = factory({ state: ctx.state, context: ctx.context })
     if (typeof decorator !== 'function') continue
