@@ -41,8 +41,7 @@ export function Providers({ children }: { children: ReactNode }) {
       defaultOptions={{
         query: {
           staleTime: 30_000,
-          cacheTime: 120_000,
-          gcTime: 180_000,
+          gcTime: 5 * 60_000,
           placeholderData: keepPreviousData,
         },
         persist: {
@@ -91,7 +90,7 @@ import { OnError, Log, ComwitProvider } from 'comwit'
 `ComwitProvider` takes two props:
 
 - **context** — shared values (router, auth, etc.) available in all actions
-- **defaultOptions.query** — global query defaults (staleTime, cacheTime, placeholderData)
+- **defaultOptions.query** — global query defaults (staleTime, gcTime, placeholderData)
 - **defaultOptions.persist** — global persist defaults (debounceMs)
 - **defaultOptions.interceptors** — global interceptors applied to all action methods
 

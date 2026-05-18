@@ -52,8 +52,7 @@ export function Providers({ children }: { children: ReactNode }) {
       defaultOptions={{
         query: {
           staleTime: 30_000,
-          cacheTime: 120_000,
-          gcTime: 180_000,
+          gcTime: 5 * 60_000,
           placeholderData: keepPreviousData,
         },
       }}
@@ -328,7 +327,7 @@ export const usePost = create<PostState, PostActions>(post, {
 - Realtime methods: `.query()` · `.refetch()` · `.set()` · `.unsubscribe()`
 - Realtime-only: `connectionStatus` · `isConnected`
 - Subscribe callbacks: `update` · `set` · `refetch` · `onStatus` · `onError`
-- Options: `staleTime` · `cacheTime` · `gcTime` · `placeholderData` · `force`
+- Options: `staleTime` · `gcTime` · `placeholderData` · `force`
 - Suspense: `Query.Suspense<T>` · `Query.SuspenseInfinite<T>` · `{ suspense: true }`
 
 For full API details, see the [Query System Reference](/llm/query.txt).

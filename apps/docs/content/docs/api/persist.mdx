@@ -35,13 +35,13 @@ export type SettingsState = {
 
 ## Options
 
-| Option        | Type                                                    | Description                                        |
-| ------------- | ------------------------------------------------------- | -------------------------------------------------- |
-| `key`         | `string`                                                | **Required.** Storage key.                         |
-| `defaultValue`| `T`                                                     | **Required.** Value when storage is empty.         |
-| `storage`     | `'localStorage' \| 'sessionStorage' \| PersistAdapter`  | Storage backend. Default `'localStorage'`.         |
-| `serialize`   | `(value: T) => string`                                  | Custom serializer. Default `JSON.stringify`.       |
-| `deserialize` | `(raw: string) => T`                                    | Custom deserializer. Default `JSON.parse`.         |
+| Option         | Type                                                   | Description                                  |
+| -------------- | ------------------------------------------------------ | -------------------------------------------- |
+| `key`          | `string`                                               | **Required.** Storage key.                   |
+| `defaultValue` | `T`                                                    | **Required.** Value when storage is empty.   |
+| `storage`      | `'localStorage' \| 'sessionStorage' \| PersistAdapter` | Storage backend. Default `'localStorage'`.   |
+| `serialize`    | `(value: T) => string`                                 | Custom serializer. Default `JSON.stringify`. |
+| `deserialize`  | `(raw: string) => T`                                   | Custom deserializer. Default `JSON.parse`.   |
 
 ## How it works
 
@@ -70,12 +70,20 @@ Implement `PersistAdapter<T>` for custom storage backends:
 import { type PersistAdapter } from 'comwit'
 
 const indexedDBAdapter: PersistAdapter<UserPrefs> = {
-  get(key) { /* read from IndexedDB */ },
-  set(key, value) { /* write to IndexedDB */ },
-  remove(key) { /* delete from IndexedDB */ },
+  get(key) {
+    /* read from IndexedDB */
+  },
+  set(key, value) {
+    /* write to IndexedDB */
+  },
+  remove(key) {
+    /* delete from IndexedDB */
+  },
   subscribe(key, callback) {
     // optional: listen for external changes
-    return () => { /* cleanup */ }
+    return () => {
+      /* cleanup */
+    }
   },
 }
 

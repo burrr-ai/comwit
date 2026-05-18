@@ -1,4 +1,5 @@
 import { snapshot } from '../proxy'
+import { DEFAULT_GC_TIME } from './registry'
 import {
   RESOURCE_QUERY_OPTION_KEYS,
   type AnyResourceDescriptor,
@@ -42,10 +43,9 @@ function normalizeError(error: unknown) {
   return 'Unknown error'
 }
 
-function resolveGcTime(options: QueryDefaultOptions): number | undefined {
-  if (typeof options.cacheTime === 'number') return options.cacheTime
+function resolveGcTime(options: QueryDefaultOptions): number {
   if (typeof options.gcTime === 'number') return options.gcTime
-  return undefined
+  return DEFAULT_GC_TIME
 }
 
 export function mergeResult(state: ResourceDataLike, result: unknown, appendData = false) {
@@ -162,14 +162,15 @@ function cloneRuntime(path: string): ResourceRuntimeState {
     activeKey: undefined,
     fetchId: 0,
     cacheEntries: new Map(),
+    gcTime: DEFAULT_GC_TIME,
+    gcTimers: new Map(),
   }
 }
 
 function createCacheEntry(
   state: ResourceDataLike,
   key: QueryCacheKey,
-  arg: unknown,
-  gcTime?: number
+  arg: unknown
 ): QueryCacheEntry {
   return {
     key,
@@ -177,7 +178,6 @@ function createCacheEntry(
     hasQueried: false,
     lastFetchedAt: 0,
     cursorHistory: [],
-    gcTime,
     state: snapshot(state) as ResourceDataLike,
   }
 }
@@ -192,17 +192,44 @@ function updateCachedState(entry: QueryCacheEntry, source: ResourceDataLike) {
   entry.state = snapshot(source) as ResourceDataLike
 }
 
-function cleanupExpiredCacheEntries(runtime: ResourceRuntimeState, now: number) {
-  for (const [key, entry] of runtime.cacheEntries) {
-    if (typeof entry.gcTime !== 'number') continue
-    if (entry.lastFetchedAt === 0) continue
-    if (now - entry.lastFetchedAt < entry.gcTime) continue
-
-    runtime.cacheEntries.delete(key)
-    if (runtime.activeKey === key) {
-      runtime.activeKey = undefined
-      runtime.lastArg = undefined
+/**
+ * Schedules eviction for every cache entry on every runtime owned by the
+ * given model key. Called by the query plugin when the model's observer
+ * count transitions to 0. Subsequent calls are idempotent — existing
+ * timers are left in place.
+ */
+export function scheduleModelGc(registry: QueryBindingRegistry, modelKey: symbol) {
+  const runtimes = registry.runtimesByModel.get(modelKey)
+  if (!runtimes) return
+  for (const runtime of runtimes) {
+    for (const [key] of runtime.cacheEntries) {
+      if (runtime.gcTimers.has(key)) continue
+      const timer = setTimeout(() => {
+        runtime.gcTimers.delete(key)
+        runtime.cacheEntries.delete(key)
+        if (runtime.activeKey === key) {
+          runtime.activeKey = undefined
+          runtime.lastArg = undefined
+        }
+      }, runtime.gcTime)
+      runtime.gcTimers.set(key, timer)
     }
+  }
+}
+
+/**
+ * Cancels all pending GC timers across every runtime owned by the model.
+ * Called by the query plugin when the model gains its first observer
+ * (subscriber count transitions from 0 to 1).
+ */
+export function cancelModelGc(registry: QueryBindingRegistry, modelKey: symbol) {
+  const runtimes = registry.runtimesByModel.get(modelKey)
+  if (!runtimes) return
+  for (const runtime of runtimes) {
+    for (const timer of runtime.gcTimers.values()) {
+      clearTimeout(timer)
+    }
+    runtime.gcTimers.clear()
   }
 }
 
@@ -254,7 +281,8 @@ export function createResourceAccessor(
   path: string,
   defaults: QueryDefaultOptions | undefined,
   registry: QueryBindingRegistry,
-  modelState?: object
+  modelState?: object,
+  modelKey?: symbol
 ): ResourceDataLike {
   if (registry.boundResourceValue.has(state)) {
     return registry.boundResourceValue.get(state) as ResourceDataLike
@@ -262,7 +290,20 @@ export function createResourceAccessor(
 
   const runtime = registry.boundResourceRuntime.get(state) ?? cloneRuntime(path)
   runtime.path = path
+  runtime.gcTime = resolveGcTime({
+    ...(defaults ?? {}),
+    ...(descriptor.options as QueryDefaultOptions),
+  })
   registry.boundResourceRuntime.set(state, runtime)
+
+  if (modelKey !== undefined) {
+    let set = registry.runtimesByModel.get(modelKey)
+    if (!set) {
+      set = new Set()
+      registry.runtimesByModel.set(modelKey, set)
+    }
+    set.add(runtime)
+  }
 
   const getActiveEntry = () => {
     if (!runtime.activeKey) return
@@ -350,9 +391,8 @@ export function createResourceAccessor(
 
     const staleTime =
       typeof effectiveOptions.staleTime === 'number' ? effectiveOptions.staleTime : 0
-    const gcTime = resolveGcTime(effectiveOptions)
+    runtime.gcTime = resolveGcTime(effectiveOptions)
     const now = Date.now()
-    cleanupExpiredCacheEntries(runtime, now)
 
     const queryArg = isRefetch ? activeEntryBefore?.arg : hasArg ? arg : runtime.lastArg
     const queryKey = serializeQueryArg(queryArg)
@@ -361,11 +401,16 @@ export function createResourceAccessor(
 
     let entry = runtime.cacheEntries.get(queryKey)
     if (!entry) {
-      entry = createCacheEntry(state, queryKey, queryArg, gcTime)
+      entry = createCacheEntry(state, queryKey, queryArg)
       runtime.cacheEntries.set(queryKey, entry)
+    } else {
+      const pending = runtime.gcTimers.get(queryKey)
+      if (pending !== undefined) {
+        clearTimeout(pending)
+        runtime.gcTimers.delete(queryKey)
+      }
     }
 
-    entry.gcTime = gcTime
     entry.arg = queryArg
 
     const shouldFetch =
