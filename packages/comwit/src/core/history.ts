@@ -44,10 +44,14 @@ type HistoryEntry = {
 type HistoryTransaction = {
   label?: string
   entries: Map<HistoryController, ProxyOp[]>
+  parent?: HistoryTransaction
+  isAsync?: boolean
+  skipAsyncRecording?: boolean
 }
 
 let ignoreDepth = 0
 const transactions: HistoryTransaction[] = []
+const activeTransactions: HistoryTransaction[] = []
 
 export function normalizeHistoryOptions(config: HistoryConfig | undefined): HistoryOptions | null {
   if (!config) return null
@@ -56,18 +60,23 @@ export function normalizeHistoryOptions(config: HistoryConfig | undefined): Hist
 }
 
 export function runHistoryTransaction<T>(label: string | undefined, fn: () => T): T {
-  const tx: HistoryTransaction = { label, entries: new Map() }
+  const parent = activeTransactions[activeTransactions.length - 1]
+  const tx: HistoryTransaction = { label, entries: new Map(), parent }
   transactions.push(tx)
+  activeTransactions.push(tx)
 
   let result: T
   try {
     result = fn()
   } catch (error) {
-    transactions.pop()
+    popActiveTransaction(tx)
+    removeTransaction(tx)
     throw error
   }
+  popActiveTransaction(tx)
 
   if (isThenable(result)) {
+    markAsyncTransaction(tx)
     return result.then(
       (value) => {
         finishTransaction(tx, true)
@@ -95,7 +104,7 @@ export function runHistoryIgnored<T>(fn: () => T): T {
 
 export function recordHistoryOp(controller: HistoryController, op: ProxyOp | undefined): void {
   if (!op || ignoreDepth > 0 || controller.isApplying || controller.isPaused) return
-  const tx = transactions[transactions.length - 1]
+  const tx = getRecordingTransaction()
   if (!tx) return
 
   const ops = tx.entries.get(controller)
@@ -107,25 +116,63 @@ export function recordHistoryOp(controller: HistoryController, op: ProxyOp | und
 }
 
 function finishTransaction(tx: HistoryTransaction, shouldCommit: boolean): void {
-  const top = transactions.pop()
-  if (top !== tx) {
+  if (!removeTransaction(tx)) {
     throw new Error('[comwit] history transaction stack is corrupted')
   }
 
   if (!shouldCommit) return
 
-  const parent = transactions[transactions.length - 1]
-  if (parent) {
+  if (tx.parent && transactions.includes(tx.parent)) {
     for (const [controller, ops] of tx.entries) {
-      const existing = parent.entries.get(controller)
+      const existing = tx.parent.entries.get(controller)
       if (existing) existing.push(...ops)
-      else parent.entries.set(controller, ops)
+      else tx.parent.entries.set(controller, ops)
     }
     return
   }
 
   for (const [controller, ops] of tx.entries) {
     controller.commit(ops, tx.label)
+  }
+}
+
+function getRecordingTransaction(): HistoryTransaction | undefined {
+  const active = activeTransactions[activeTransactions.length - 1]
+  if (active) return active
+
+  const asyncCandidates = transactions.filter((tx) => tx.isAsync && !tx.skipAsyncRecording)
+  return asyncCandidates.length === 1 ? asyncCandidates[0] : undefined
+}
+
+function popActiveTransaction(tx: HistoryTransaction): void {
+  const top = activeTransactions.pop()
+  if (top === tx) return
+
+  const index = activeTransactions.lastIndexOf(tx)
+  if (index >= 0) {
+    activeTransactions.splice(index, 1)
+  }
+  throw new Error('[comwit] history transaction stack is corrupted')
+}
+
+function removeTransaction(tx: HistoryTransaction): boolean {
+  const index = transactions.lastIndexOf(tx)
+  if (index < 0) return false
+  transactions.splice(index, 1)
+  return true
+}
+
+function markAsyncTransaction(tx: HistoryTransaction): void {
+  tx.isAsync = true
+  const overlappingRoots = transactions.filter(
+    (pending) => pending !== tx && pending.isAsync && !pending.parent
+  )
+
+  if (!tx.parent && overlappingRoots.length > 0) {
+    tx.skipAsyncRecording = true
+    for (const pending of overlappingRoots) {
+      pending.skipAsyncRecording = true
+    }
   }
 }
 

@@ -10,6 +10,16 @@ function createWrapper() {
   }
 }
 
+function deferred<T = void>() {
+  let resolve!: (value: T) => void
+  let reject!: (error: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 describe('history', () => {
   test('is disabled by default', () => {
     const counter = model({ count: 0 })
@@ -173,6 +183,114 @@ describe('history', () => {
     })
 
     expect(result.current.state.count).toBe(1)
+    expect(result.current.state.$history.canUndo).toBe(false)
+  })
+
+  test('does not corrupt transaction stack when async actions resolve out of order without history', async () => {
+    const search = model({ value: '' })
+    const gates = new Map<string, ReturnType<typeof deferred>>()
+    const searchActions = action(({ state }) => ({
+      async search(label: string) {
+        const gate = deferred()
+        gates.set(label, gate)
+        await gate.promise
+        state(search).value = label
+      },
+    }))
+
+    const wrapper = createWrapper()
+    const { result } = renderHook(
+      () => ({
+        state: useModel(search),
+        actions: useAction<{ search: (label: string) => Promise<void> }>([searchActions]),
+      }),
+      { wrapper }
+    )
+
+    const first = result.current.actions.search('first')
+    const second = result.current.actions.search('second')
+
+    await act(async () => {
+      gates.get('first')!.resolve()
+      await first
+    })
+
+    expect(result.current.state.value).toBe('first')
+
+    await act(async () => {
+      gates.get('second')!.resolve()
+      await second
+    })
+
+    expect(result.current.state.value).toBe('second')
+  })
+
+  test('records sequential async action mutations while one transaction is pending', async () => {
+    const counter = model({ count: 0 }, { history: true })
+    const counterActions = action(({ state }) => ({
+      async setAfterAwait(value: number) {
+        await Promise.resolve()
+        state(counter).count = value
+      },
+    }))
+
+    const wrapper = createWrapper()
+    const { result } = renderHook(
+      () => ({
+        state: useModel(counter),
+        actions: useAction<{ setAfterAwait: (value: number) => Promise<void> }>([counterActions]),
+      }),
+      { wrapper }
+    )
+
+    await act(async () => {
+      await result.current.actions.setAfterAwait(5)
+    })
+
+    expect(result.current.state.count).toBe(5)
+    expect(result.current.state.$history.canUndo).toBe(true)
+
+    await act(async () => {
+      result.current.state.$history.undo()
+    })
+
+    expect(result.current.state.count).toBe(0)
+  })
+
+  test('skips ambiguous async history recording for overlapping actions', async () => {
+    const counter = model({ value: 'idle' }, { history: true })
+    const gates = new Map<string, ReturnType<typeof deferred>>()
+    const counterActions = action(({ state }) => ({
+      async setAfterAwait(label: string) {
+        const gate = deferred()
+        gates.set(label, gate)
+        await gate.promise
+        state(counter).value = label
+      },
+    }))
+
+    const wrapper = createWrapper()
+    const { result } = renderHook(
+      () => ({
+        state: useModel(counter),
+        actions: useAction<{ setAfterAwait: (label: string) => Promise<void> }>([counterActions]),
+      }),
+      { wrapper }
+    )
+
+    const first = result.current.actions.setAfterAwait('first')
+    const second = result.current.actions.setAfterAwait('second')
+
+    await act(async () => {
+      gates.get('first')!.resolve()
+      await first
+    })
+    await act(async () => {
+      gates.get('second')!.resolve()
+      await second
+    })
+
+    expect(result.current.state.value).toBe('second')
     expect(result.current.state.$history.canUndo).toBe(false)
   })
 
