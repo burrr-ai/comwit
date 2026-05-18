@@ -55,7 +55,8 @@ export function useAction<A, C extends object = Record<string, never>>(
           proxy,
           bag,
           registryState,
-          defaults as Record<string, unknown> | undefined
+          defaults as Record<string, unknown> | undefined,
+          dep.key
         )
       }
 

@@ -21,13 +21,11 @@ export const RESOURCE_QUERY_OPTION_KEYS = new Set([
   'force',
   'placeholderData',
   'staleTime',
-  'cacheTime',
   'gcTime',
 ])
 
 export type QueryDefaultOptions = {
   staleTime?: number
-  cacheTime?: number
   gcTime?: number
   placeholderData?: PlaceholderData<unknown, unknown>
 }
@@ -295,7 +293,6 @@ export type QueryCacheEntry = {
   lastFetchedAt: number
   lastResult?: unknown
   cursorHistory: Array<string | null>
-  gcTime?: number
   state: ResourceDataLike
 }
 
@@ -309,6 +306,12 @@ export type QueryBindingRegistry = {
   boundPathProxy: WeakMap<object, Map<string, object>>
   boundResourceRuntime: WeakMap<object, ResourceRuntimeState>
   suspense: Map<string, SuspenseState>
+  /**
+   * Tracks every runtime created in this registry, indexed by the owning
+   * model's key. Used by the GC scheduler to enumerate which cache entries
+   * belong to a model when its observer count transitions to 0.
+   */
+  runtimesByModel: Map<symbol, Set<ResourceRuntimeState>>
 }
 
 export type ResourceRuntimeState = {
@@ -320,4 +323,16 @@ export type ResourceRuntimeState = {
   subscriptionCleanup?: () => void
   refetchIntervalId?: ReturnType<typeof setInterval>
   streamAbortController?: AbortController
+  /**
+   * Configured gcTime for this runtime, resolved at bind time from
+   * descriptor options + provider defaults. Used when scheduling eviction
+   * after the owning model loses its last observer.
+   */
+  gcTime: number
+  /**
+   * Pending eviction timers keyed by cache entry key. Populated when the
+   * owning model's observer count drops to 0 and cleared when it rises
+   * back to >=1.
+   */
+  gcTimers: Map<QueryCacheKey, ReturnType<typeof setTimeout>>
 }

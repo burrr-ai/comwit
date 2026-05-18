@@ -1,6 +1,7 @@
 import { registerPlugin, type FieldPlugin, type PluginBag } from '../plugin'
 import { isResourceDescriptor } from './descriptor'
 import { bindResourceState } from './bind'
+import { cancelModelGc, scheduleModelGc } from './accessor'
 import { checkSuspense } from './suspense'
 import { createQueryBindingRegistry } from './registry'
 import type {
@@ -30,7 +31,8 @@ export const queryPlugin: FieldPlugin = {
     proxy: object,
     bag: PluginBag,
     registryState: unknown,
-    defaults?: Record<string, unknown>
+    defaults?: Record<string, unknown>,
+    modelKey?: symbol
   ): object {
     if (bag.size === 0) return proxy
     const descriptors = bag as ResourceDescriptorMap
@@ -38,7 +40,8 @@ export const queryPlugin: FieldPlugin = {
       proxy as any,
       descriptors,
       defaults as QueryDefaultOptions | undefined,
-      registryState as QueryBindingRegistry
+      registryState as QueryBindingRegistry,
+      modelKey
     )
   },
 
@@ -46,6 +49,20 @@ export const queryPlugin: FieldPlugin = {
     if (bag.size === 0) return
     const descriptors = bag as ResourceDescriptorMap
     checkSuspense(descriptors, registryState as QueryBindingRegistry)
+  },
+
+  onSubscriberChange(
+    modelKey: symbol,
+    _bag: PluginBag,
+    registryState: unknown,
+    hasObservers: boolean
+  ): void {
+    const registry = registryState as QueryBindingRegistry
+    if (hasObservers) {
+      cancelModelGc(registry, modelKey)
+    } else {
+      scheduleModelGc(registry, modelKey)
+    }
   },
 }
 
