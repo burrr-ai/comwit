@@ -62,17 +62,16 @@ Once accessed via `state()` in an action, query fields expose these methods:
 
 Pass options at the query definition or globally via `ComwitProvider`:
 
-| Option            | Description                                                                    |
-| ----------------- | ------------------------------------------------------------------------------ |
-| `staleTime`       | Time in ms before cached data is considered stale (default: 0)                 |
-| `cacheTime`       | Alias for gcTime                                                               |
-| `gcTime`          | Time in ms before unused cache entries are garbage collected                   |
-| `placeholderData` | Data to show while loading. Use `keepPreviousData` to retain previous results. |
-| `force`           | Skip cache and always fetch (call-time only)                                   |
-| `enabled`         | `(state) => boolean` — skip query when condition is false                      |
-| `dependsOn`       | `(state) => any` — block query until dependency is truthy/resolved             |
-| `refetchInterval` | `number \| false \| (data, error?) => number \| false` — auto-poll interval    |
-| `suspense`        | `boolean` — enable React Suspense integration                                  |
+| Option            | Description                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| `staleTime`       | Time in ms before cached data is considered stale (default: 0)                                   |
+| `gcTime`          | Time in ms a cache entry survives after the model loses its last observer (default: 5 \* 60_000) |
+| `placeholderData` | Data to show while loading. Use `keepPreviousData` to retain previous results.                   |
+| `force`           | Skip cache and always fetch (call-time only)                                                     |
+| `enabled`         | `(state) => boolean` — skip query when condition is false                                        |
+| `dependsOn`       | `(state) => any` — block query until dependency is truthy/resolved                               |
+| `refetchInterval` | `number \| false \| (data, error?) => number \| false` — auto-poll interval                      |
+| `suspense`        | `boolean` — enable React Suspense integration                                                    |
 
 ## queryFn context
 

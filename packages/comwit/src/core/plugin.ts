@@ -29,12 +29,15 @@ export type FieldPlugin = {
   /**
    * Called when action's state() binds a model proxy.
    * Wraps the proxy with plugin-specific accessors (e.g. .query(), .refetch()).
+   * `modelKey` identifies the owning model; plugins that track per-model
+   * runtime state should index by it.
    */
   bindState(
     proxy: object,
     bag: PluginBag,
     registryState: unknown,
-    defaults?: Record<string, unknown>
+    defaults?: Record<string, unknown>,
+    modelKey?: symbol
   ): object
 
   /**
@@ -42,6 +45,19 @@ export type FieldPlugin = {
    * Used by query plugin to throw promises for Suspense or errors for ErrorBoundary.
    */
   onRender?(bag: PluginBag, registryState: unknown): void
+
+  /**
+   * Called when a model's observer count transitions to/from 0.
+   * Fires with `hasObservers=true` when count goes 0→1, and
+   * `hasObservers=false` when count goes 1→0. Used by the query plugin
+   * to schedule/cancel cache eviction (TanStack-style gcTime).
+   */
+  onSubscriberChange?(
+    modelKey: symbol,
+    bag: PluginBag,
+    registryState: unknown,
+    hasObservers: boolean
+  ): void
 }
 
 const plugins: FieldPlugin[] = []

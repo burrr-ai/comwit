@@ -179,21 +179,27 @@ export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T)
   const subscribe = useCallback(
     (listener: () => void) => {
       lifecycle.subscriberCount++
-      if (lifecycle.subscriberCount === 1 && m.onObserve) {
-        const result = m.onObserve(store.proxy)
-        lifecycle.cleanup = typeof result === 'function' ? result : null
+      if (lifecycle.subscriberCount === 1) {
+        notifySubscriberChange(m, registry, true)
+        if (m.onObserve) {
+          const result = m.onObserve(store.proxy)
+          lifecycle.cleanup = typeof result === 'function' ? result : null
+        }
       }
       const unsubProxy = store.subscribe(listener)
       return () => {
         unsubProxy()
         lifecycle.subscriberCount--
-        if (lifecycle.subscriberCount === 0 && lifecycle.cleanup) {
-          lifecycle.cleanup()
-          lifecycle.cleanup = null
+        if (lifecycle.subscriberCount === 0) {
+          if (lifecycle.cleanup) {
+            lifecycle.cleanup()
+            lifecycle.cleanup = null
+          }
+          notifySubscriberChange(m, registry, false)
         }
       }
     },
-    [store, lifecycle, m]
+    [store, lifecycle, m, registry]
   )
 
   const getSnapshot = useCallback(() => {
@@ -221,6 +227,21 @@ export function useModel<T extends object, R>(m: Model<T>, selector?: (state: T)
   }
 
   return result
+}
+
+function notifySubscriberChange(
+  m: Model<any>,
+  registry: ReturnType<typeof useStoreRegistry>,
+  hasObservers: boolean
+): void {
+  const plugins = getPlugins()
+  for (const plugin of plugins) {
+    if (!plugin.onSubscriberChange) continue
+    const bag = m.pluginBags.get(plugin.name)
+    if (!bag || bag.size === 0) continue
+    const registryState = registry.pluginStates.get(plugin.name)
+    plugin.onSubscriberChange(m.key, bag, registryState, hasObservers)
+  }
 }
 
 function normalize(value: unknown, path: string, pluginBags: Map<string, PluginBag>): unknown {

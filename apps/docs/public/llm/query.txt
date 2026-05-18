@@ -29,8 +29,7 @@ export const post = model<PostState>({
 | `queryFn`         | `(arg, context) => TData \| Promise<TData>` | **Required.** Fetcher function.                                      |
 | `suspense`        | `boolean`                                   | Enable React Suspense integration. Default `false`.                  |
 | `staleTime`       | `number`                                    | Milliseconds before cached data is considered stale. Default `0`.    |
-| `cacheTime`       | `number`                                    | Alias for `gcTime`. Milliseconds before cache entry is garbage collected. |
-| `gcTime`          | `number`                                    | Milliseconds before cache entry is garbage collected.                |
+| `gcTime`          | `number`                                    | Milliseconds a cache entry survives after the model loses its last observer. Default `5 * 60_000`. |
 | `placeholderData` | `TData \| (arg, previousData) => TData`     | Data shown while fetching. Use `keepPreviousData` helper.            |
 
 ### queryFn Signature
@@ -223,7 +222,7 @@ await this.model.comments.query(postId, { staleTime: 60_000 })
 
 **Options:**
 - `force: boolean` — Bypass cache staleness check and always fetch.
-- `staleTime`, `cacheTime`, `gcTime`, `placeholderData` — Override defaults per call.
+- `staleTime`, `gcTime`, `placeholderData` — Override defaults per call.
 
 ### .refetch()
 
