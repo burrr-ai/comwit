@@ -1,0 +1,93 @@
+---
+title: 'Utilities'
+group: 'API'
+slug: 'api/utilities'
+order: 10
+---
+
+# Utilities
+
+Standalone helpers exported from `'comwit'` for working with reactive proxies and inspecting state during development.
+
+```ts
+import { snapshot, isProxy, initDevTools } from 'comwit'
+```
+
+## snapshot()
+
+```ts
+function snapshot<T extends object>(state: T): T
+```
+
+Returns a non-extensible, deep plain-object copy of a comwit reactive proxy. The result is detached from the store — later mutations to the proxy do not affect it, and nested objects are recursively snapshotted and made non-extensible (via `Object.preventExtensions`, so existing properties stay writable but none can be added or removed).
+
+`state` must be a proxy (a model proxy or a nested proxy slice). Passing a plain object throws `Error('Please use proxy object')`.
+
+```ts
+import { snapshot } from 'comwit'
+
+const plain = snapshot(this.model.filter)
+```
+
+### Top-level vs nested slices
+
+The top-level model proxy also exposes a `.snapshot()` method, so for the whole model you can call it directly:
+
+```ts
+await savePostAction(this.model.snapshot())
+```
+
+For **nested slices** (e.g. `state.filter`, `state.list.data`), use the standalone `snapshot()` helper. It is the type-safe path — `.snapshot()` is only typed on the top-level proxy so that plain assignments like `state.user = userFromApi` keep working:
+
+```ts
+import { snapshot } from 'comwit'
+
+await fetchCoders({ filter: snapshot(this.model.filter) })
+```
+
+This is the recommended way to convert proxies to plain objects before passing them to server actions or other APIs that require serializable data.
+
+## isProxy()
+
+```ts
+function isProxy(value: unknown): boolean
+```
+
+Returns `true` if `value` is a comwit reactive proxy — either a top-level model proxy or a nested proxy slice. Returns `false` for plain objects, primitives, and snapshots.
+
+Useful for boundary code that must convert proxies to plain objects before serialization (server actions, logging, `postMessage`):
+
+```ts
+import { isProxy, snapshot } from 'comwit'
+
+function toPlain<T extends object>(value: T): T {
+  return isProxy(value) ? snapshot(value) : value
+}
+```
+
+## initDevTools()
+
+```ts
+function initDevTools(options?: { maxLogSize?: number }): ComwitDevTools | undefined
+```
+
+Initializes the in-memory devtools instance and stores it on `globalThis.__COMWIT_DEVTOOLS__`. It tracks registered stores, captures state-change and action events, and keeps a rolling action log.
+
+- `options.maxLogSize` — maximum number of action log entries kept (default `50`). Older entries are dropped once the limit is exceeded.
+- Returns the existing instance if one was already initialized (idempotent).
+- Returns `undefined` and does nothing when `process.env.NODE_ENV === 'production'`.
+
+```ts
+import { initDevTools } from 'comwit'
+
+if (process.env.NODE_ENV !== 'production') {
+  initDevTools({ maxLogSize: 100 })
+}
+```
+
+The returned `ComwitDevTools` object exposes:
+
+- `stores` — `Map` of model key to `{ model, entry, unsubscribe }`.
+- `getStoreSnapshot(model)` — `{ state, subscriberCount }` for a model, or `null` if not registered. Note: `subscriberCount` currently reports the total number of registered stores, not the subscriber count for that specific model.
+- `actionLog` — array of recent action entries (`{ name, args, result?, error?, timestamp }`).
+- `subscribe(type, handler)` — listen for `'state-change'`, `'action'`, or `'query'` events; returns an unsubscribe function.

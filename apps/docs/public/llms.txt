@@ -405,6 +405,9 @@ For full API details, see the [Decorator Reference](/llm/decorator.txt).
 - `persist()` — persisted field in model
 - `state(model)` — mutable proxy in actions
 - `intercept()` — custom decorator builder (immediate or lazy mode)
+- `snapshot(state)` — non-extensible deep plain-object copy of any proxy slice (throws on non-proxy)
+- `isProxy(value)` — `true` if `value` is a comwit reactive proxy
+- `initDevTools(options?)` — dev-only devtools (`{ maxLogSize?: number }`, default 50); no-op in production
 
 ## Passing State to Server Actions
 
@@ -422,6 +425,8 @@ await savePostAction(this.model.snapshot())
 // nested slice
 await fetchCoders({ filter: snapshot(this.model.filter) })
 ```
+
+`isProxy(value)` returns `true` for any comwit proxy (top-level model or nested slice) and `false` for plain objects or snapshots — handy in generic boundary helpers that conditionally snapshot before serializing.
 
 ## References
 

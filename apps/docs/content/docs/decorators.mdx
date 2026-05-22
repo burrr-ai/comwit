@@ -25,17 +25,17 @@ import {
 
 ## Built-in decorators
 
-| Decorator                       | Purpose                                                                       |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| `@OnError(fn)`                  | Error handler. Receives the error. Re-throw to propagate.                     |
-| `@OnSuccess(fn)`                | Runs after successful completion.                                             |
-| `@Debounce(ms)`                 | Debounces the method call. Pair with `flushDebounce` / `cancelDebounce`.      |
-| `@Throttle(ms)`                 | Throttles the method call. Pair with `flushThrottle` / `cancelThrottle`.      |
-| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>`                         |
-| `@Retry({ times, delay? })`     | Retries on error up to `times`. Optional `delay` between retries.             |
-| `@Queue()`                      | Queues concurrent calls, executing one at a time.                             |
-| `@Log(level?)`                  | Logs method execution with timing. Levels: `'info'` \| `'debug'` \| `'warn'`. |
-| `@Validate(validators)`         | Validates arguments before execution. Throws `ValidationError` on failure.    |
+| Decorator                       | Purpose                                                                                                                |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `@OnError(fn)`                  | Error handler. Receives the error. Re-throw to propagate.                                                              |
+| `@OnSuccess(fn)`                | Runs after successful completion.                                                                                      |
+| `@Debounce(ms)`                 | Debounces the method call. Pair with `flushDebounce` / `cancelDebounce`.                                               |
+| `@Throttle(ms)`                 | Throttles the method call. Pair with `flushThrottle` / `cancelThrottle`.                                               |
+| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>`                                                                  |
+| `@Retry(count, options?)`       | Retries on error up to `count` times. `options`: ms `delay`, or `{ delay?, backoff? }` (`'fixed'` \| `'exponential'`). |
+| `@Queue(strategy?)`             | Concurrency control. `strategy`: `'drop'` (default) \| `'queue'` \| `'replace'`.                                       |
+| `@Log(level?)`                  | Logs method execution with timing. Levels: `'info'` \| `'debug'` \| `'warn'`.                                          |
+| `@Validate(validators)`         | Validates arguments before execution. Throws `ValidationError` on failure.                                             |
 
 ## Example
 
