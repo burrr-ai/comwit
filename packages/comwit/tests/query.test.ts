@@ -362,6 +362,19 @@ describe('query', () => {
       expect(queryFn).not.toHaveBeenCalled()
     })
 
+    it('should always return a Promise — even when no entry has been queried', async () => {
+      const queryFn = vi.fn().mockResolvedValue(['data'])
+      const bound = createBound({
+        initialData: [] as string[],
+        queryFn,
+      })
+
+      // 타입 컨트랙트는 Promise<unknown> — 호출자가 .then/.catch 를 붙여도 안전해야 한다.
+      const result = bound.refetch()
+      expect(result).toBeInstanceOf(Promise)
+      await expect(result).resolves.toBeUndefined()
+    })
+
     it('should re-execute last query after successful query', async () => {
       const queryFn = vi.fn().mockResolvedValueOnce(['first']).mockResolvedValueOnce(['second'])
 
