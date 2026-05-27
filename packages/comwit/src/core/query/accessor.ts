@@ -648,7 +648,7 @@ export function createResourceAccessor(
 
   const refetch = () => {
     const active = getActiveEntry()
-    if (!active?.hasQueried) return
+    if (!active?.hasQueried) return Promise.resolve()
     return executeQuery(active.arg, undefined, true, 'replace', true)
   }
 
