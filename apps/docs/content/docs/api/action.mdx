@@ -57,6 +57,8 @@ The factory receives `{ state, context }`:
 - **state(model)** — returns a mutable proxy to a model's state. Call it for each model you need.
 - **context** — the shared context from `ComwitProvider` (router, auth, etc.)
 
+When a model has [`history: true`](/docs/api/history), each action method call is recorded as one history transaction. Multiple state mutations inside the method are undone together via `state.$history.undo()`.
+
 ## Class pattern
 
 Use a class inside the factory. This gives you:

@@ -18,9 +18,9 @@ Add `experimentalDecorators` to your `tsconfig.json`. Without this, Next.js prod
 // tsconfig.json
 {
   "compilerOptions": {
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
     // ... other options
-  }
+  },
 }
 ```
 
@@ -52,8 +52,7 @@ export function Providers({ children }: { children: ReactNode }) {
       defaultOptions={{
         query: {
           staleTime: 30_000,
-          cacheTime: 120_000,
-          gcTime: 180_000,
+          gcTime: 5 * 60_000,
           placeholderData: keepPreviousData,
         },
       }}
@@ -170,6 +169,22 @@ export const post = model<PostState>({
 })
 ```
 
+History is off by default. Enable it per model when user-facing state should support undo and redo:
+
+```ts
+export const todo = model(
+  {
+    items: [] as Todo[],
+    selectedId: null as string | null,
+  },
+  {
+    history: { limit: 100 },
+  }
+)
+```
+
+`history: true` uses a default limit of 100 undo entries. Pass `history: { limit }` to override the stack size.
+
 #### Derived State & Validation
 
 `model()` accepts an optional second argument with `derive` and `rules`:
@@ -190,8 +205,8 @@ export const cart = model<CartState, CartDerived>(
     }),
     // rules: per-field validation — accessed via state.$validation
     rules: {
-      coupon: (v) => (v.length <= 20) || 'Coupon too long',
-      items: (v) => (v.length > 0) || 'Cart is empty',
+      coupon: (v) => v.length <= 20 || 'Coupon too long',
+      items: (v) => v.length > 0 || 'Cart is empty',
     },
   }
 )
@@ -199,6 +214,21 @@ export const cart = model<CartState, CartDerived>(
 
 - Derived fields are readonly and throw if assigned.
 - Validation is accessed via `state.$validation`: `{ errors: { [field]: string | null }, isValid: boolean }`.
+
+#### History
+
+No new hook is needed. Use the existing domain hook and read `$history`:
+
+```tsx
+const { history } = useTodo((s) => ({ history: s.$history }))
+
+history.undo()
+history.redo()
+history.canUndo
+history.canRedo
+```
+
+Each action method call is one history transaction. Multiple mutations inside the method are undone together. Use `s.$history.ignore(() => { ... })` for changes that should re-render but should not be recorded. This is separate from `silent()`, which suppresses notifications.
 
 ### actions/\*.ts
 
@@ -297,7 +327,7 @@ export const usePost = create<PostState, PostActions>(post, {
 - Realtime methods: `.query()` · `.refetch()` · `.set()` · `.unsubscribe()`
 - Realtime-only: `connectionStatus` · `isConnected`
 - Subscribe callbacks: `update` · `set` · `refetch` · `onStatus` · `onError`
-- Options: `staleTime` · `cacheTime` · `gcTime` · `placeholderData` · `force`
+- Options: `staleTime` · `gcTime` · `placeholderData` · `force`
 - Suspense: `Query.Suspense<T>` · `Query.SuspenseInfinite<T>` · `{ suspense: true }`
 
 For full API details, see the [Query System Reference](/llm/query.txt).
@@ -321,6 +351,8 @@ const settings = model({
 
 For full API details, see the [Persist Reference](/llm/persist.txt).
 
+For full undo/redo details, see the [History Reference](/llm/history.txt).
+
 ## Usage
 
 ```tsx
@@ -342,18 +374,18 @@ Selectors use deep equality — only re-renders when selected values change.
 
 All from `'comwit'`. Stack on class methods.
 
-| Decorator                              | Purpose                                                           |
-| -------------------------------------- | ----------------------------------------------------------------- |
-| `@OnError(fn)`                         | Error handler. Re-throw to propagate.                             |
-| `@OnSuccess(fn)`                       | Success callback.                                                 |
-| `@Debounce(ms)`                        | Debounce.                                                         |
-| `@Throttle(ms)`                        | Throttle.                                                         |
-| `@Authorized({ when, onDeny })`        | Auth guard. `when: () => boolean \| Promise<boolean>`             |
-| `@Transaction()`                       | Transactional execution (experimental, currently no-op).          |
-| `@Retry(count, options?)`              | Retry on failure with fixed or exponential backoff.               |
-| `@Queue(strategy?)`                    | Concurrency control: `'drop'`, `'queue'`, or `'replace'`.        |
-| `@Log(level?)`                         | Console logging of calls, results, and errors.                    |
-| `@Validate(validators)`               | Argument validation before execution. Throws `ValidationError`.   |
+| Decorator                       | Purpose                                                         |
+| ------------------------------- | --------------------------------------------------------------- |
+| `@OnError(fn)`                  | Error handler. Re-throw to propagate.                           |
+| `@OnSuccess(fn)`                | Success callback.                                               |
+| `@Debounce(ms)`                 | Debounce.                                                       |
+| `@Throttle(ms)`                 | Throttle.                                                       |
+| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>`           |
+| `@Transaction()`                | Transactional execution (experimental, currently no-op).        |
+| `@Retry(count, options?)`       | Retry on failure with fixed or exponential backoff.             |
+| `@Queue(strategy?)`             | Concurrency control: `'drop'`, `'queue'`, or `'replace'`.       |
+| `@Log(level?)`                  | Console logging of calls, results, and errors.                  |
+| `@Validate(validators)`         | Argument validation before execution. Throws `ValidationError`. |
 
 `intercept(hooks | factory)` — create custom decorators with lifecycle hooks. Supports immediate mode (hooks object) and lazy mode (factory with `state`/`context` access).
 
@@ -373,6 +405,9 @@ For full API details, see the [Decorator Reference](/llm/decorator.txt).
 - `persist()` — persisted field in model
 - `state(model)` — mutable proxy in actions
 - `intercept()` — custom decorator builder (immediate or lazy mode)
+- `snapshot(state)` — non-extensible deep plain-object copy of any proxy slice (throws on non-proxy)
+- `isProxy(value)` — `true` if `value` is a comwit reactive proxy
+- `initDevTools(options?)` — dev-only devtools (`{ maxLogSize?: number }`, default 50); no-op in production
 
 ## Passing State to Server Actions
 
@@ -390,6 +425,8 @@ await savePostAction(this.model.snapshot())
 // nested slice
 await fetchCoders({ filter: snapshot(this.model.filter) })
 ```
+
+`isProxy(value)` returns `true` for any comwit proxy (top-level model or nested slice) and `false` for plain objects or snapshots — handy in generic boundary helpers that conditionally snapshot before serializing.
 
 ## References
 

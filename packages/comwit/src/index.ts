@@ -25,5 +25,8 @@ export type {
   PersistOptions,
   PersistDefaults,
   Snapshotable,
+  HistoryApi,
+  HistoryOptions,
+  HistoryConfig,
 } from './core'
 export * from './interceptors'

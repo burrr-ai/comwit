@@ -25,17 +25,17 @@ import {
 
 ## Built-in decorators
 
-| Decorator                       | Purpose                                                                       |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| `@OnError(fn)`                  | Error handler. Receives the error. Re-throw to propagate.                     |
-| `@OnSuccess(fn)`                | Runs after successful completion.                                             |
-| `@Debounce(ms)`                 | Debounces the method call.                                                    |
-| `@Throttle(ms)`                 | Throttles the method call.                                                    |
-| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>`                         |
-| `@Retry({ times, delay? })`     | Retries on error up to `times`. Optional `delay` between retries.             |
-| `@Queue()`                      | Queues concurrent calls, executing one at a time.                             |
-| `@Log(level?)`                  | Logs method execution with timing. Levels: `'info'` \| `'debug'` \| `'warn'`. |
-| `@Validate(validators)`         | Validates arguments before execution. Throws `ValidationError` on failure.    |
+| Decorator                       | Purpose                                                                                                                |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `@OnError(fn)`                  | Error handler. Receives the error. Re-throw to propagate.                                                              |
+| `@OnSuccess(fn)`                | Runs after successful completion.                                                                                      |
+| `@Debounce(ms)`                 | Debounces the method call. Pair with `flushDebounce` / `cancelDebounce`.                                               |
+| `@Throttle(ms)`                 | Throttles the method call. Pair with `flushThrottle` / `cancelThrottle`.                                               |
+| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>`                                                                  |
+| `@Retry(count, options?)`       | Retries on error up to `count` times. `options`: ms `delay`, or `{ delay?, backoff? }` (`'fixed'` \| `'exponential'`). |
+| `@Queue(strategy?)`             | Concurrency control. `strategy`: `'drop'` (default) \| `'queue'` \| `'replace'`.                                       |
+| `@Log(level?)`                  | Logs method execution with timing. Levels: `'info'` \| `'debug'` \| `'warn'`.                                          |
+| `@Validate(validators)`         | Validates arguments before execution. Throws `ValidationError` on failure.                                             |
 
 ## Example
 
@@ -63,6 +63,78 @@ export const postActions = action<Pick<PostActions, 'create' | 'search'>, AppCon
   }
 )
 ```
+
+## Flushing pending @Debounce / @Throttle calls
+
+`@Debounce` and `@Throttle` schedule trailing calls. There are situations where
+you need to **fire that pending call immediately** instead of waiting for the
+window to close — typically when the surrounding state is about to be torn
+down and the trailing call would be silently dropped.
+
+A canonical example is autosave on a card detail sheet:
+
+> User types in a draft → keystrokes call `@Debounce(700) persistSoon()` →
+> user closes the sheet within the debounce window → the surrounding state
+> (e.g. the active draft id) resets → the timer fires after the close and the
+> method exits early because its preconditions no longer hold → **the user's
+> last input is silently lost**.
+
+### Helpers
+
+```ts
+import { flushDebounce, cancelDebounce, flushThrottle, cancelThrottle } from 'comwit'
+
+// Fire the pending trailing call now. Resolves with the method's return
+// value, or `undefined` if there was no pending call. Rejects if the
+// flushed method throws — surrounding decorators (e.g. @OnError) see the
+// error exactly as if it had fired on its own.
+flushDebounce<T>(target: T, methodName: keyof T & string): Promise<unknown>
+
+// Drop the pending trailing call. No-op when nothing is pending.
+cancelDebounce<T>(target: T, methodName: keyof T & string): void
+
+// Same shape, for @Throttle.
+flushThrottle<T>(target: T, methodName: keyof T & string): Promise<unknown>
+cancelThrottle<T>(target: T, methodName: keyof T & string): void
+```
+
+`target` accepts either the action class instance or the merged actions
+object returned by `useAction(...)`. The latter is the common case when the
+method to flush lives in a different action slice from the caller.
+
+```ts
+class DraftActions {
+  @LoginRequired
+  @Debounce(700)
+  @OnError(toastErr)
+  async persistSoon() {
+    await this.saveDraft()
+  }
+}
+
+// In another action slice — flush before navigating away.
+await flushDebounce(this.draftActions, 'persistSoon')
+```
+
+The full decorator stack composes: a flushed call propagates through
+`@OnError`, `@LoginRequired`, `@Retry`, etc. exactly as a naturally-fired
+trailing call would, because the helpers route the same code path that the
+internal timer would.
+
+### Why helpers and not `instance.method.flush()`
+
+A more ergonomic API would be `instance.persistSoon.flush()` — close to
+es-toolkit's own shape. We chose helpers for v1.x because comwit's
+interceptor pipeline (`composeInterceptors`) only forwards call signatures —
+properties attached to the function (`.flush`, `.cancel`) get silently
+dropped whenever any other decorator sits outside `@Debounce` in the stack.
+A method-shape change requires every interceptor to forward attached props
+as a contract, plus typing changes flowing through `StageMethodDecorator`.
+That's a coordinated cross-cutting commitment we'll roll out as an opt-in
+later (issue
+[#71](https://github.com/meursyphus/comwit/issues/71)). The helpers here
+remain the canonical path for cross-slice cases — they will keep working
+unchanged.
 
 ## Custom Decorators with intercept()
 

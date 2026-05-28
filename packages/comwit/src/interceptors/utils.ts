@@ -83,7 +83,13 @@ function wrapWithHooks(hooks: InterceptorHooks, original: Function): Function {
     let result: any
     try {
       if (interceptHook) {
-        result = interceptHook((...a: any[]) => original.apply(this, a), args)
+        // Invoke the intercept hook with `this` bound to the original
+        // call-site's receiver. This lets hooks that need per-instance state
+        // (e.g. `@Debounce`'s flush registry keyed by the action class
+        // instance) read `this`. Existing hooks that do not use `this` are
+        // unaffected — most are arrow functions or `function` expressions
+        // that ignore their receiver.
+        result = interceptHook.call(this, (...a: any[]) => original.apply(this, a), args)
       } else {
         result = original.apply(this, args)
       }

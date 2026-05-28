@@ -6,6 +6,7 @@ import {
   keepPreviousData,
   type BoundSingleResourceState,
 } from '../src/core/query'
+import { cancelModelGc, scheduleModelGc } from '../src/core/query/accessor'
 
 function deferred<T>() {
   let resolve!: (v: T) => void
@@ -18,6 +19,17 @@ function deferred<T>() {
 }
 
 function createBound<TData>(opts: {
+  initialData: TData
+  queryFn: (...args: any[]) => any
+  staleTime?: number
+  gcTime?: number
+  placeholderData?: any
+}) {
+  const result = createBoundWithRegistry(opts)
+  return result.bound
+}
+
+function createBoundWithRegistry<TData>(opts: {
   initialData: TData
   queryFn: (...args: any[]) => any
   staleTime?: number
@@ -39,9 +51,14 @@ function createBound<TData>(opts: {
     store.proxy,
     m.pluginBags.get('query')!,
     undefined,
-    registry
+    registry,
+    m.key
   ) as any
-  return bound.resource as BoundSingleResourceState<TData, any>
+  return {
+    bound: bound.resource as BoundSingleResourceState<TData, any>,
+    registry,
+    modelKey: m.key,
+  }
 }
 
 describe('query', () => {
@@ -208,7 +225,7 @@ describe('query', () => {
       expect(bound.data).toEqual(['result-a'])
     })
 
-    it('should clean up cache entries after gcTime on next query', async () => {
+    it('should keep cache entries while the model has active observers', async () => {
       const queryFn = vi
         .fn()
         .mockImplementation((arg: string) => Promise.resolve([`result-${arg}`]))
@@ -222,18 +239,84 @@ describe('query', () => {
       await bound.query('a')
       expect(queryFn).toHaveBeenCalledTimes(1)
 
-      // Simulate time passing beyond gcTime
-      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000)
+      // Time passing alone must NOT evict cache while observers are active.
+      // (Eviction is observer-driven now, not lastFetchedAt-driven.)
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 5_000)
 
-      // Query 'b' triggers cleanup of expired 'a'
       await bound.query('b')
       expect(queryFn).toHaveBeenCalledTimes(2)
 
-      // 'a' should have been gc'd, so querying 'a' again calls queryFn
       await bound.query('a')
-      expect(queryFn).toHaveBeenCalledTimes(3)
+      expect(queryFn).toHaveBeenCalledTimes(2)
+      expect(bound.data).toEqual(['result-a'])
 
       vi.restoreAllMocks()
+    })
+
+    it('should evict cache entries after gcTime once observers drop to 0', async () => {
+      vi.useFakeTimers()
+      const queryFn = vi
+        .fn()
+        .mockImplementation((arg: string) => Promise.resolve([`result-${arg}`]))
+      const { bound, registry, modelKey } = createBoundWithRegistry({
+        initialData: [] as string[],
+        queryFn,
+        staleTime: 10_000,
+        gcTime: 500,
+      })
+
+      await bound.query('a')
+      expect(queryFn).toHaveBeenCalledTimes(1)
+
+      // Simulate the last observer unmounting.
+      scheduleModelGc(registry, modelKey)
+
+      // Before gcTime elapses, the entry is still around — a refetch with a
+      // new observer is satisfied from cache.
+      await vi.advanceTimersByTimeAsync(400)
+      cancelModelGc(registry, modelKey)
+      await bound.query('a')
+      expect(queryFn).toHaveBeenCalledTimes(1)
+
+      // Unmount again, this time let the timer fire fully.
+      scheduleModelGc(registry, modelKey)
+      await vi.advanceTimersByTimeAsync(600)
+
+      await bound.query('a')
+      expect(queryFn).toHaveBeenCalledTimes(2)
+
+      vi.useRealTimers()
+    })
+
+    it('should default gcTime to 5 minutes when not configured', async () => {
+      vi.useFakeTimers()
+      const queryFn = vi.fn().mockResolvedValue(['alice'])
+      const { bound, registry, modelKey } = createBoundWithRegistry({
+        initialData: [] as string[],
+        queryFn,
+        // Use a staleTime large enough that staleness can't trigger refetches
+        // during the time advances below — we want to isolate GC behavior.
+        staleTime: 60 * 60_000,
+      })
+
+      await bound.query()
+      expect(queryFn).toHaveBeenCalledTimes(1)
+
+      scheduleModelGc(registry, modelKey)
+
+      // Just shy of 5 minutes: still cached.
+      await vi.advanceTimersByTimeAsync(5 * 60_000 - 100)
+      cancelModelGc(registry, modelKey)
+      await bound.query()
+      expect(queryFn).toHaveBeenCalledTimes(1)
+
+      // Past 5 minutes: evicted.
+      scheduleModelGc(registry, modelKey)
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + 100)
+      await bound.query()
+      expect(queryFn).toHaveBeenCalledTimes(2)
+
+      vi.useRealTimers()
     })
   })
 
@@ -277,6 +360,19 @@ describe('query', () => {
 
       await bound.refetch()
       expect(queryFn).not.toHaveBeenCalled()
+    })
+
+    it('should always return a Promise — even when no entry has been queried', async () => {
+      const queryFn = vi.fn().mockResolvedValue(['data'])
+      const bound = createBound({
+        initialData: [] as string[],
+        queryFn,
+      })
+
+      // 타입 컨트랙트는 Promise<unknown> — 호출자가 .then/.catch 를 붙여도 안전해야 한다.
+      const result = bound.refetch()
+      expect(result).toBeInstanceOf(Promise)
+      await expect(result).resolves.toBeUndefined()
     })
 
     it('should re-execute last query after successful query', async () => {
