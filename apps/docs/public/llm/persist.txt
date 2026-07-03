@@ -7,7 +7,7 @@
 Creates a persisted field descriptor for use inside `model()`. The field value is automatically synced to storage.
 
 ```ts
-import { model, persist } from 'comwit'
+import { model, persist } from '@comwit/state'
 
 const settings = model({
   theme: persist({ key: 'theme', defaultValue: 'light' }),
@@ -56,7 +56,7 @@ With `localStorage`, changes from other tabs are automatically detected via the 
 Implement the `PersistAdapter<T>` interface for custom storage backends:
 
 ```ts
-import { type PersistAdapter } from 'comwit'
+import { type PersistAdapter } from '@comwit/state'
 
 const indexedDBAdapter: PersistAdapter<MyData> = {
   get(key) { /* read from IndexedDB */ },
@@ -90,7 +90,7 @@ export type SettingsState = {
 }
 
 // model.ts
-import { model, persist } from 'comwit'
+import { model, persist } from '@comwit/state'
 
 export const settings = model<SettingsState>({
   theme: persist({ key: 'app-theme', defaultValue: 'light' }),
@@ -99,7 +99,7 @@ export const settings = model<SettingsState>({
 })
 
 // actions/settings.ts
-import { action } from 'comwit'
+import { action } from '@comwit/state'
 
 export const settingsActions = action<SettingsActions>(({ state }) => {
   class SettingsActions {

@@ -12,8 +12,10 @@ Get comwit running in a Next.js project in under 5 minutes.
 ## 1. Install
 
 ```bash
-npm i comwit
+npm i @comwit/state
 ```
+
+> Migrating from the old `comwit` package? See the [v2.0.0 release notes](/blog/v2.0.0-release). The API is identical — only the package name changed.
 
 ## 2. Setup Provider
 
@@ -24,7 +26,7 @@ Create `app/providers.tsx` and wrap your root layout.
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { keepPreviousData, ComwitProvider } from 'comwit'
+import { keepPreviousData, ComwitProvider } from '@comwit/state'
 import { ReactNode } from 'react'
 
 type AppContext = {
@@ -73,7 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 You can also configure global interceptors that apply to all action methods:
 
 ```tsx
-import { OnError, Log, ComwitProvider } from 'comwit'
+import { OnError, Log, ComwitProvider } from '@comwit/state'
 
 <ComwitProvider
   context={context}

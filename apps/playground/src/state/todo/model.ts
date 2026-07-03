@@ -1,4 +1,4 @@
-import { model } from 'comwit'
+import { model } from '@comwit/state'
 import type { TodoState } from './types'
 
 export const todoModel = model<TodoState>({

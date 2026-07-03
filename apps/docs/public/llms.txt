@@ -7,7 +7,7 @@ State management for Next.js.
 ## 1. Install
 
 ```bash
-npm i comwit
+npm i @comwit/state
 ```
 
 ## 2. Enable Decorators
@@ -35,7 +35,7 @@ Create `app/providers.tsx` and wrap your root layout.
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { keepPreviousData, ComwitProvider } from 'comwit'
+import { keepPreviousData, ComwitProvider } from '@comwit/state'
 import { ReactNode } from 'react'
 
 type AppContext = {
@@ -132,7 +132,7 @@ Write order: **types.ts -> model.ts -> actions/\*.ts -> index.ts**
 - Plain types for SSR-hydrated fields
 
 ```ts
-import { Query } from 'comwit'
+import { Query } from '@comwit/state'
 
 export type Post = { id: string; ... }
 
@@ -157,7 +157,7 @@ export type PostActions = {
 `Query<T>` fields use `query()` with `initialData` + `queryFn`. Plain fields get default values.
 
 ```ts
-import { model, query } from 'comwit'
+import { model, query } from '@comwit/state'
 
 export const post = model<PostState>({
   posts: query<Post[]>({ initialData: [], queryFn: () => api.post.findAll() }),
@@ -190,7 +190,7 @@ export const todo = model(
 `model()` accepts an optional second argument with `derive` and `rules`:
 
 ```ts
-import { model, query } from 'comwit'
+import { model, query } from '@comwit/state'
 
 export const cart = model<CartState, CartDerived>(
   {
@@ -235,7 +235,7 @@ Each action method call is one history transaction. Multiple mutations inside th
 Actions are self-contained — resolve state via `state()`, side effects via decorators/context. UI only calls.
 
 ```ts
-import { action, silent, OnError, OnSuccess } from 'comwit'
+import { action, silent, OnError, OnSuccess } from '@comwit/state'
 import { user } from '@/state/user/model'
 
 export const postActions = action<Pick<PostActions, '...'>, AppContext>(({ state, context }) => {
@@ -307,7 +307,7 @@ function PostDetail({ initialPost }: { initialPost: Post }) {
 ### index.ts
 
 ```ts
-import { create } from 'comwit'
+import { create } from '@comwit/state'
 import type { PostState, PostActions } from './types'
 import { post } from './model'
 import { postActions } from './actions/crud'
@@ -337,7 +337,7 @@ For full API details, see the [Query System Reference](/llm/query.txt).
 `persist()` creates a persisted field descriptor inside `model()`. Values are automatically synced to storage.
 
 ```ts
-import { model, persist } from 'comwit'
+import { model, persist } from '@comwit/state'
 
 const settings = model({
   theme: persist({ key: 'theme', defaultValue: 'light' }),
@@ -417,7 +417,7 @@ For full API details, see the [Decorator Reference](/llm/decorator.txt).
 - **Nested slice** (e.g. `state.filter`, `state.list.data`): use the standalone `snapshot()` helper, imported from `'comwit'`. This is the type-safe path — `.snapshot()` is only typed on the top-level proxy to keep plain assignments like `state.user = userFromApi` working.
 
 ```ts
-import { snapshot } from 'comwit'
+import { snapshot } from '@comwit/state'
 
 // top-level
 await savePostAction(this.model.snapshot())

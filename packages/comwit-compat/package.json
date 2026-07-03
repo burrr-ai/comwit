@@ -1,0 +1,54 @@
+{
+  "name": "comwit",
+  "version": "2.0.0",
+  "private": false,
+  "homepage": "https://library.comwit.io",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meursyphus/comwit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/meursyphus/comwit/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "latest"
+  },
+  "type": "module",
+  "description": "Deprecated: renamed to @comwit/state. This package re-exports @comwit/state for backward compatibility.",
+  "keywords": [
+    "react",
+    "state-management",
+    "vibe-coding",
+    "claude-code",
+    "deprecated"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "author": "meursyphus",
+  "main": "index.cjs",
+  "module": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "require": "./index.cjs"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.cjs",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "@comwit/state": "^2.0.0"
+  }
+}

@@ -117,7 +117,7 @@ This isn't domain-driven design bolted on after the fact. The entire library is 
 Every domain starts here. One file that defines the shape of state and all available actions:
 
 ```ts
-import { Query } from 'comwit'
+import { Query } from '@comwit/state'
 
 export type Post = { id: string; title: string /* ... */ }
 
@@ -141,7 +141,7 @@ Read this file and you understand the entire domain. Every field typed. Every ac
 The model holds both the list and the current item in one place:
 
 ```ts
-import { model, query } from 'comwit'
+import { model, query } from '@comwit/state'
 
 export const post = model<PostState>({
   posts: query<Post[]>({
@@ -159,7 +159,7 @@ When a like action fires, it can update `this.model.posts.data` and `this.model.
 Actions don't take IDs as parameters from the UI. They resolve what they need from state:
 
 ```ts
-import { action, OnError, OnSuccess } from 'comwit'
+import { action, OnError, OnSuccess } from '@comwit/state'
 import { user } from '@/state/user/model'
 
 export const postActions = action<Pick<PostActions, 'create'>, AppContext>(({ state, context }) => {
@@ -191,7 +191,7 @@ The action is self-contained: auth check, API call, state update, success redire
 The hook ties model and actions together:
 
 ```ts
-import { create } from 'comwit'
+import { create } from '@comwit/state'
 
 export const usePost = create<PostState, PostActions>(post, {
   actions: [postActions],

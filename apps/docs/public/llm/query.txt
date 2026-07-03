@@ -7,7 +7,7 @@
 Creates a single resource descriptor for client-side data fetching. Used inside `model()`.
 
 ```ts
-import { model, query } from 'comwit'
+import { model, query } from '@comwit/state'
 
 export const post = model<PostState>({
   posts: query<Post[]>({
@@ -50,7 +50,7 @@ The return value can be:
 Creates an infinite/paginated resource descriptor. Use with `Query.Infinite<T>` type.
 
 ```ts
-import { model, query } from 'comwit'
+import { model, query } from '@comwit/state'
 
 export const feed = model<FeedState>({
   trending: query.infinite<Post[]>({
@@ -78,7 +78,7 @@ Without `hasMore: true` in the response, `nextFetch()` becomes a no-op.
 Creates a real-time resource descriptor that combines initial data fetching with live subscription updates. After `queryFn` succeeds, the `subscribe` function is called with callbacks to push live updates.
 
 ```ts
-import { model, query } from 'comwit'
+import { model, query } from '@comwit/state'
 
 export const chat = model<ChatState>({
   messages: query.realtime<Message[]>({
@@ -137,7 +137,7 @@ export const chat = model<ChatState>({
 ### Type
 
 ```ts
-import { Query } from 'comwit'
+import { Query } from '@comwit/state'
 
 messages: Query.Realtime<Message[]>
 messages: Query.Realtime<Message[], string>  // with argument
@@ -146,7 +146,7 @@ messages: Query.Realtime<Message[], string>  // with argument
 ## Types
 
 ```ts
-import { Query } from 'comwit'
+import { Query } from '@comwit/state'
 
 // Single query — fetched client-side
 posts: Query<Post[]>
@@ -299,7 +299,7 @@ query() defined in model
 Helper for `placeholderData` that keeps the previous data while fetching new data:
 
 ```ts
-import { keepPreviousData, ComwitProvider } from 'comwit'
+import { keepPreviousData, ComwitProvider } from '@comwit/state'
 
 <ComwitProvider
   defaultOptions={{
@@ -324,7 +324,7 @@ query<Post[]>({
 
 ```ts
 // types.ts
-import { Query } from 'comwit'
+import { Query } from '@comwit/state'
 
 export type FeedState = {
   posts: Query<Post[]>
@@ -333,7 +333,7 @@ export type FeedState = {
 }
 
 // model.ts
-import { model, query } from 'comwit'
+import { model, query } from '@comwit/state'
 
 export const feed = model<FeedState>({
   posts: query<Post[]>({
@@ -355,7 +355,7 @@ export const feed = model<FeedState>({
 })
 
 // actions/load.ts
-import { action } from 'comwit'
+import { action } from '@comwit/state'
 
 export const feedLoader = action<Pick<FeedActions, 'loadPosts' | 'loadMore' | 'loadPost'>>(({ state }) => {
   class FeedLoader {

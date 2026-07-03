@@ -1,4 +1,4 @@
-import { create } from 'comwit'
+import { create } from '@comwit/state'
 import type { TodoState, TodoActions } from './types'
 import { todoModel } from './model'
 import { todoCrudActions } from './actions/crud'

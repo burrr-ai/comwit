@@ -5,7 +5,7 @@ History adds undo and redo to a model. It is disabled by default.
 ## Enable
 
 ```ts
-import { model } from 'comwit'
+import { model } from '@comwit/state'
 
 export const todo = model(
   {

@@ -1,4 +1,4 @@
-import { action, OnError, OnSuccess } from 'comwit'
+import { action, OnError, OnSuccess } from '@comwit/state'
 import { toast } from 'sonner'
 import type { TodoActionOptions, TodoActions, Filter, TodoState } from '../types'
 import { todoModel } from '../model'

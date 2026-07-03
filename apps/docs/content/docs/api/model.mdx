@@ -10,13 +10,13 @@ order: 3
 Creates a global reactive store. Each domain has one model.
 
 ```ts
-import { model } from 'comwit'
+import { model } from '@comwit/state'
 ```
 
 ## Usage
 
 ```ts
-import { model, query } from 'comwit'
+import { model, query } from '@comwit/state'
 import type { PostState } from './types'
 
 export const post = model<PostState>({
@@ -34,7 +34,7 @@ export const post = model<PostState>({
 
 ```ts
 // With persist fields
-import { model, query, persist } from 'comwit'
+import { model, query, persist } from '@comwit/state'
 
 export const app = model<AppState>({
   posts: query<Post[]>({ initialData: [], queryFn: () => api.post.findAll() }),

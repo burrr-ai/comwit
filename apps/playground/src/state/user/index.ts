@@ -1,4 +1,4 @@
-import { create } from 'comwit'
+import { create } from '@comwit/state'
 import type { UserActions, UserState } from './types'
 import { userModel } from './model'
 import { userActions } from './actions'

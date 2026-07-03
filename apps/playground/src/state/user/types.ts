@@ -1,4 +1,4 @@
-import { Query } from 'comwit'
+import { Query } from '@comwit/state'
 
 export type DemoUser = {
   id: string

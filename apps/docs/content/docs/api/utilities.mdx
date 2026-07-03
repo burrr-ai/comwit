@@ -10,7 +10,7 @@ order: 10
 Standalone helpers exported from `'comwit'` for working with reactive proxies and inspecting state during development.
 
 ```ts
-import { snapshot, isProxy, initDevTools } from 'comwit'
+import { snapshot, isProxy, initDevTools } from '@comwit/state'
 ```
 
 ## snapshot()
@@ -24,7 +24,7 @@ Returns a non-extensible, deep plain-object copy of a comwit reactive proxy. The
 `state` must be a proxy (a model proxy or a nested proxy slice). Passing a plain object throws `Error('Please use proxy object')`.
 
 ```ts
-import { snapshot } from 'comwit'
+import { snapshot } from '@comwit/state'
 
 const plain = snapshot(this.model.filter)
 ```
@@ -40,7 +40,7 @@ await savePostAction(this.model.snapshot())
 For **nested slices** (e.g. `state.filter`, `state.list.data`), use the standalone `snapshot()` helper. It is the type-safe path — `.snapshot()` is only typed on the top-level proxy so that plain assignments like `state.user = userFromApi` keep working:
 
 ```ts
-import { snapshot } from 'comwit'
+import { snapshot } from '@comwit/state'
 
 await fetchCoders({ filter: snapshot(this.model.filter) })
 ```
@@ -58,7 +58,7 @@ Returns `true` if `value` is a comwit reactive proxy — either a top-level mode
 Useful for boundary code that must convert proxies to plain objects before serialization (server actions, logging, `postMessage`):
 
 ```ts
-import { isProxy, snapshot } from 'comwit'
+import { isProxy, snapshot } from '@comwit/state'
 
 function toPlain<T extends object>(value: T): T {
   return isProxy(value) ? snapshot(value) : value
@@ -78,7 +78,7 @@ Initializes the in-memory devtools instance and stores it on `globalThis.__COMWI
 - Returns `undefined` and does nothing when `process.env.NODE_ENV === 'production'`.
 
 ```ts
-import { initDevTools } from 'comwit'
+import { initDevTools } from '@comwit/state'
 
 if (process.env.NODE_ENV !== 'production') {
   initDevTools({ maxLogSize: 100 })

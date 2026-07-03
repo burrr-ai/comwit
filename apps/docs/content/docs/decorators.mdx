@@ -20,7 +20,7 @@ import {
   Queue,
   Log,
   Validate,
-} from 'comwit'
+} from '@comwit/state'
 ```
 
 ## Built-in decorators
@@ -40,7 +40,7 @@ import {
 ## Example
 
 ```ts
-import { action, OnError, OnSuccess, Debounce } from 'comwit'
+import { action, OnError, OnSuccess, Debounce } from '@comwit/state'
 
 export const postActions = action<Pick<PostActions, 'create' | 'search'>, AppContext>(
   ({ state, context }) => {
@@ -82,7 +82,7 @@ A canonical example is autosave on a card detail sheet:
 ### Helpers
 
 ```ts
-import { flushDebounce, cancelDebounce, flushThrottle, cancelThrottle } from 'comwit'
+import { flushDebounce, cancelDebounce, flushThrottle, cancelThrottle } from '@comwit/state'
 
 // Fire the pending trailing call now. Resolves with the method's return
 // value, or `undefined` if there was no pending call. Rejects if the
@@ -141,7 +141,7 @@ unchanged.
 Build reusable decorators with full lifecycle control.
 
 ```ts
-import { intercept } from 'comwit'
+import { intercept } from '@comwit/state'
 ```
 
 `intercept()` supports two modes:
@@ -211,7 +211,7 @@ function MinLength(field: string, min: number) {
 Validates arguments before execution. Validators map keys to argument positions.
 
 ```ts
-import { Validate, ValidationError } from 'comwit'
+import { Validate, ValidationError } from '@comwit/state'
 
 class TodoActions {
   @Validate({

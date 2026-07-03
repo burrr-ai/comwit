@@ -12,7 +12,7 @@ import { intercept, type StageMethodDecorator } from './utils'
  *
  * @example
  * ```ts
- * import { transaction } from 'comwit'
+ * import { transaction } from '@comwit/state'
  *
  * const withTransaction = transaction()
  * const safeSave = withTransaction(saveData)

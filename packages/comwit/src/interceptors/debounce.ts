@@ -14,7 +14,7 @@ import { createDebounceHandle, debounceRegistry, getHandle, registerHandle } fro
  *
  * @example
  * ```ts
- * import { debounce } from 'comwit'
+ * import { debounce } from '@comwit/state'
  *
  * const debouncedSearch = debounce(300)(searchApi)
  * // Only the last call within 300ms will execute
@@ -70,7 +70,7 @@ export function debounce<T extends AnyFunction>(
  *
  * @example Flushing a pending call before navigation:
  * ```ts
- * import { Debounce, flushDebounce } from 'comwit'
+ * import { Debounce, flushDebounce } from '@comwit/state'
  *
  * class DraftActions {
  *   @Debounce(700)
@@ -118,7 +118,7 @@ export function Debounce(waitMs: number, options?: DebounceOptions): StageMethod
  *
  * @example
  * ```ts
- * import { flushDebounce } from 'comwit'
+ * import { flushDebounce } from '@comwit/state'
  *
  * await flushDebounce(draftActions, 'persistSoon')
  * ```
@@ -143,7 +143,7 @@ export function flushDebounce<T extends object>(
  *
  * @example
  * ```ts
- * import { cancelDebounce } from 'comwit'
+ * import { cancelDebounce } from '@comwit/state'
  *
  * cancelDebounce(draftActions, 'persistSoon')
  * ```

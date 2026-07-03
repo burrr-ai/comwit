@@ -1,4 +1,4 @@
-import { model, query } from 'comwit'
+import { model, query } from '@comwit/state'
 import type { DemoUser, UserState } from './types'
 import { getCollaborators, getCurrentUser } from '@/api/user'
 

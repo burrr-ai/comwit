@@ -1,6 +1,6 @@
 {
-  "name": "comwit",
-  "version": "1.3.0",
+  "name": "@comwit/state",
+  "version": "2.0.0",
   "private": false,
   "homepage": "https://library.comwit.io",
   "repository": {
@@ -33,14 +33,14 @@
   },
   "license": "MIT",
   "author": "meursyphus",
-  "main": "dist/comwit.cjs",
-  "module": "dist/comwit.js",
+  "main": "dist/state.cjs",
+  "module": "dist/state.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/comwit.js",
-      "require": "./dist/comwit.cjs"
+      "import": "./dist/state.js",
+      "require": "./dist/state.cjs"
     }
   },
   "files": [

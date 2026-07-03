@@ -39,7 +39,7 @@ function sleep(ms: number): Promise<void> {
  *
  * @example
  * ```ts
- * import { retry } from 'comwit'
+ * import { retry } from '@comwit/state'
  *
  * const withRetry = retry(3, { delay: 1000, backoff: 'exponential' })
  * const resilientFetch = withRetry(fetchData)

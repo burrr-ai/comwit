@@ -10,13 +10,13 @@ order: 8
 Declares a computed (derived) field inside a model. The value is lazily evaluated from other state.
 
 ```ts
-import { computed } from 'comwit'
+import { computed } from '@comwit/state'
 ```
 
 ## Basic usage
 
 ```ts
-import { model, computed } from 'comwit'
+import { model, computed } from '@comwit/state'
 
 const cart = model({
   items: [] as CartItem[],

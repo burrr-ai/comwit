@@ -12,7 +12,7 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error'
  *
  * @example
  * ```ts
- * import { log } from 'comwit'
+ * import { log } from '@comwit/state'
  *
  * const withDebugLog = log('debug')
  * const loggedFetch = withDebugLog(fetchUser)

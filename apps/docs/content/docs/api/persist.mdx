@@ -10,13 +10,13 @@ order: 7
 Declares a persisted field inside a model. Values are automatically synced to storage.
 
 ```ts
-import { persist } from 'comwit'
+import { persist } from '@comwit/state'
 ```
 
 ## Basic usage
 
 ```ts
-import { model, persist } from 'comwit'
+import { model, persist } from '@comwit/state'
 
 export const settings = model<SettingsState>({
   theme: persist({ key: 'theme', defaultValue: 'light' }),
@@ -67,7 +67,7 @@ Configure debounce timing globally:
 Implement `PersistAdapter<T>` for custom storage backends:
 
 ```ts
-import { type PersistAdapter } from 'comwit'
+import { type PersistAdapter } from '@comwit/state'
 
 const indexedDBAdapter: PersistAdapter<UserPrefs> = {
   get(key) {

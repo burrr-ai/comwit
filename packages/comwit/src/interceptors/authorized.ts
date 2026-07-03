@@ -19,7 +19,7 @@ type AuthorizedOptions = {
  *
  * @example
  * ```ts
- * import { onAuthorized } from 'comwit'
+ * import { onAuthorized } from '@comwit/state'
  *
  * const withAuth = onAuthorized({
  *   when: () => !!sessionStorage.getItem('token'),

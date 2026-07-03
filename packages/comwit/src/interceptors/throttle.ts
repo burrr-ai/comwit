@@ -14,7 +14,7 @@ import { createThrottleHandle, getHandle, registerHandle, throttleRegistry } fro
  *
  * @example
  * ```ts
- * import { throttle } from 'comwit'
+ * import { throttle } from '@comwit/state'
  *
  * const throttledScroll = throttle(200)(handleScroll)
  * window.addEventListener('scroll', throttledScroll)
@@ -65,7 +65,7 @@ export function throttle<T extends AnyFunction>(
  *
  * @example Flushing a pending trailing call:
  * ```ts
- * import { Throttle, flushThrottle } from 'comwit'
+ * import { Throttle, flushThrottle } from '@comwit/state'
  *
  * class ScrollActions {
  *   @Throttle(200)

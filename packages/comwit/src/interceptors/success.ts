@@ -11,7 +11,7 @@ import { AnyFunction, isThenable, intercept, type StageMethodDecorator } from '.
  *
  * @example
  * ```ts
- * import { onSuccess } from 'comwit'
+ * import { onSuccess } from '@comwit/state'
  *
  * const withLogging = onSuccess((result) => console.log('Result:', result))
  * const loggedFetch = withLogging(fetchUser)

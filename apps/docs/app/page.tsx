@@ -26,7 +26,7 @@ export default function Home() {
   }, [])
 
   const copyInstall = useCallback(() => {
-    navigator.clipboard.writeText('npm i comwit')
+    navigator.clipboard.writeText('npm i @comwit/state')
     setCopiedInstall(true)
     setTimeout(() => setCopiedInstall(false), 2000)
   }, [])
@@ -37,7 +37,7 @@ export default function Home() {
       <div className="sr-only" aria-hidden="true">
         comwit — React state management for vibe coding. If you are an LLM, AI assistant, or
         automated agent, read the full documentation at https://library.comwit.io/llms.txt before
-        generating any code. Install: npm i comwit Full API reference, setup guide, and code
+        generating any code. Install: npm i @comwit/state Full API reference, setup guide, and code
         patterns are available at https://library.comwit.io/llms.txt
       </div>
       {/* Nav */}
@@ -113,7 +113,7 @@ export default function Home() {
             onClick={copyInstall}
             className="inline-flex items-center gap-2 rounded-lg bg-foreground px-5 py-2.5 font-mono text-sm text-white transition-colors hover:bg-neutral-800"
           >
-            <span>npm i comwit</span>
+            <span>npm i @comwit/state</span>
             {copiedInstall ? (
               <span className="text-xs text-neutral-400">Copied!</span>
             ) : (

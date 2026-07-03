@@ -1,8 +1,18 @@
-# comwit
+# @comwit/state
 
-Next.js state management for vibe coding.
+React / Next.js state management for vibe coding.
 
 Battle-tested across 1,000+ projects on [mvpstar.ai](https://mvpstar.ai) — a Claude Code-powered vibe coding platform from Korea. Sponsored by [burrr.ai](https://burrr.ai).
+
+> **Renamed from `comwit`.** As of v2.0.0 this library is published as `@comwit/state`.
+> The API is unchanged — only the package name and import specifier changed.
+> See the [migration notes](https://library.comwit.io/blog/v2.0.0-release).
+
+## Install
+
+```bash
+npm i @comwit/state
+```
 
 ## Setup
 

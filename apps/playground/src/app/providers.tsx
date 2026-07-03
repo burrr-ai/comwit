@@ -1,6 +1,6 @@
 'use client'
 
-import { ComwitProvider } from 'comwit'
+import { ComwitProvider } from '@comwit/state'
 import { Toaster } from 'sonner'
 
 export function Providers({ children }: { children: React.ReactNode }) {

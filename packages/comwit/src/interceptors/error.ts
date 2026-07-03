@@ -11,7 +11,7 @@ import { AnyFunction, isThenable, intercept, type StageMethodDecorator } from '.
  *
  * @example
  * ```ts
- * import { onError } from 'comwit'
+ * import { onError } from '@comwit/state'
  *
  * const withErrorLogging = onError((err) => console.error('Failed:', err))
  * const safeFetch = withErrorLogging(fetch)

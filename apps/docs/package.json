@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
-    "comwit": "*",
+    "@comwit/state": "*",
     "gray-matter": "^4.0.3",
     "highlight.js": "^11.11.1",
     "motion": "^12.34.0",

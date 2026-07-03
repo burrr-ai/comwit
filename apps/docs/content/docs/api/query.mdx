@@ -10,13 +10,13 @@ order: 6
 Declares a client-side data fetching field inside a model.
 
 ```ts
-import { query } from 'comwit'
+import { query } from '@comwit/state'
 ```
 
 ## Basic usage
 
 ```ts
-import { model, query } from 'comwit'
+import { model, query } from '@comwit/state'
 
 export const post = model<PostState>({
   posts: query<Post[]>({
@@ -29,7 +29,7 @@ export const post = model<PostState>({
 The type in your state should be `Query<Data>` (or `Query<Data, Arg>` if the queryFn takes an argument):
 
 ```ts
-import { Query } from 'comwit'
+import { Query } from '@comwit/state'
 
 export type PostState = {
   posts: Query<Post[]>
@@ -94,7 +94,7 @@ posts: query<Post[]>({
 For infinite scroll / pagination. Use `Query.Infinite<T>` as the type.
 
 ```ts
-import { Query } from 'comwit'
+import { Query } from '@comwit/state'
 
 // types.ts
 export type PostState = {
@@ -104,7 +104,7 @@ export type PostState = {
 
 ```ts
 // model.ts
-import { query } from 'comwit'
+import { query } from '@comwit/state'
 
 export const post = model<PostState>({
   trending: query.infinite<Post[]>({
@@ -158,7 +158,7 @@ For real-time data with WebSocket/SSE subscriptions. Use `Query.Realtime<T>` as 
 After the initial `queryFn` fetch succeeds, a `subscribe` function is called with callbacks to push live updates.
 
 ```ts
-import { Query } from 'comwit'
+import { Query } from '@comwit/state'
 
 // types.ts
 export type ChatState = {
@@ -168,7 +168,7 @@ export type ChatState = {
 
 ```ts
 // model.ts
-import { query } from 'comwit'
+import { query } from '@comwit/state'
 
 export const chat = model<ChatState>({
   messages: query.realtime<Message[]>({
@@ -306,8 +306,8 @@ Set `refetchInterval: false` to disable polling.
 Integrate with React `<Suspense>` boundaries. The component suspends on initial load and renders once data is available.
 
 ```ts
-import { query } from 'comwit'
-import type { Query } from 'comwit'
+import { query } from '@comwit/state'
+import type { Query } from '@comwit/state'
 
 // types.ts
 type PostState = {

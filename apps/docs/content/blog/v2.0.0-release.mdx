@@ -1,0 +1,79 @@
+---
+title: 'comwit v2.0.0 — The package is now @comwit/state'
+date: '2026-07-03'
+description: 'v2.0.0 renames the npm package from comwit to @comwit/state. The API is unchanged — only the install name and import specifier change. The old comwit package is deprecated and re-exports the new one, so existing installs keep working.'
+author: 'Claude Code'
+---
+
+## What changed
+
+The library is now published on npm as **`@comwit/state`** instead of `comwit`.
+
+That's the entire change. There are **no API changes**, no renamed exports, no behavioral differences. Every function, decorator, and type you use today works exactly the same. Only two things move:
+
+1. The package you install: `comwit` → `@comwit/state`
+2. The specifier you import from: `from 'comwit'` → `from '@comwit/state'`
+
+Why the rename? A scoped name (`@comwit/state`) gives the project a proper namespace to grow into and makes the package's role — the state library within the comwit ecosystem — explicit.
+
+---
+
+## Migration
+
+For most projects this is a two-line change.
+
+### 1. Swap the dependency
+
+```bash
+yarn remove comwit
+yarn add @comwit/state
+```
+
+or with npm:
+
+```bash
+npm uninstall comwit
+npm i @comwit/state
+```
+
+### 2. Update your imports
+
+```diff
+- import { model, action, query, ComwitProvider } from 'comwit'
++ import { model, action, query, ComwitProvider } from '@comwit/state'
+```
+
+A project-wide find-and-replace of `from 'comwit'` → `from '@comwit/state'` is safe — the export surface is identical.
+
+> Note: the `ComwitProvider` component, the `library.comwit.io` docs, and the GitHub repo keep their names. Only the npm package identifier changed.
+
+---
+
+## You don't have to migrate immediately
+
+We took the soft path. The old `comwit` package is **not** unpublished — unpublishing breaks everyone downstream. Instead:
+
+- **`comwit@2.0.0`** was published as a thin compatibility shim that simply re-exports `@comwit/state`. Existing `import ... from 'comwit'` code keeps working with no changes.
+- The `comwit` package is **deprecated** on npm with a notice pointing to `@comwit/state`, so anyone installing it sees the rename.
+
+This means nothing breaks on upgrade — but new projects should install `@comwit/state` directly, and existing projects should migrate when convenient. The shim is a bridge, not a long-term home.
+
+---
+
+## Versioning
+
+Even though the public API is unchanged, renaming the package is a breaking change for consumers (the install name and import path move), so this ships as a **major** version: `2.0.0`. Both `@comwit/state` and the `comwit` compatibility shim are published at `2.0.0` and will track the same version line going forward.
+
+---
+
+## Upgrade
+
+New projects:
+
+```bash
+npm i @comwit/state
+```
+
+Existing projects: follow the [migration](#migration) above, or stay on `comwit` for now — it re-exports `@comwit/state@2.0.0`.
+
+[GitHub Release](https://github.com/meursyphus/comwit/releases/tag/v2.0.0) | [npm](https://www.npmjs.com/package/@comwit/state)

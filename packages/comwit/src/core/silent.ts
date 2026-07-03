@@ -5,7 +5,7 @@
  *
  * @example
  * ```ts
- * import { silent } from 'comwit'
+ * import { silent } from '@comwit/state'
  *
  * silent(() => {
  *   model.todos = serverData.todos

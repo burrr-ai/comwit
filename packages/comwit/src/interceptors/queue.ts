@@ -16,7 +16,7 @@ type QueueStrategy = 'drop' | 'queue' | 'replace'
  *
  * @example
  * ```ts
- * import { queue } from 'comwit'
+ * import { queue } from '@comwit/state'
  *
  * const withQueue = queue('queue')
  * const sequentialSave = withQueue(saveData)

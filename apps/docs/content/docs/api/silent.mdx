@@ -10,7 +10,7 @@ order: 8
 Suppresses re-renders during state mutations. Used for SSR hydration.
 
 ```ts
-import { silent } from 'comwit'
+import { silent } from '@comwit/state'
 ```
 
 ## Why
@@ -20,7 +20,7 @@ When a server component passes initial data to a client component, you need to s
 ## Usage in actions
 
 ```ts
-import { action, silent } from 'comwit'
+import { action, silent } from '@comwit/state'
 
 export const postActions = action<Pick<PostActions, 'init'>>(({ state }) => {
   class Actions {

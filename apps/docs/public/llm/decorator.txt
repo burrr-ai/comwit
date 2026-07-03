@@ -26,7 +26,7 @@ All decorators are imported from `'comwit'`.
 Intercepts errors thrown by the decorated method. Calls `handler` with the caught error, then re-throws.
 
 ```ts
-import { OnError } from 'comwit'
+import { OnError } from '@comwit/state'
 
 class PostActions {
   @OnError((err) => toast.error(err instanceof Error ? err.message : 'Failed'))
@@ -45,7 +45,7 @@ class PostActions {
 Intercepts successful results. Calls `handler` with the return value (or resolved value for async). Original return value is preserved.
 
 ```ts
-import { OnSuccess } from 'comwit'
+import { OnSuccess } from '@comwit/state'
 
 class PostActions {
   @OnSuccess((user) => cache.set(user.id, user))
@@ -65,7 +65,7 @@ class PostActions {
 Debounces the method. Delays invocation until `ms` milliseconds have elapsed since the last call. Rapid calls reset the timer.
 
 ```ts
-import { Debounce } from 'comwit'
+import { Debounce } from '@comwit/state'
 
 class SearchActions {
   @Debounce(300)
@@ -86,7 +86,7 @@ class SearchActions {
 Throttles the method. At most one call per `ms` milliseconds. First call executes immediately.
 
 ```ts
-import { Throttle } from 'comwit'
+import { Throttle } from '@comwit/state'
 
 class UiActions {
   @Throttle(200)
@@ -105,7 +105,7 @@ class UiActions {
 Authorization guard. Evaluates `when()` before execution. If `false`, calls `onDeny()` and returns `undefined`. Both `when` and `onDeny` can be sync or async.
 
 ```ts
-import { Authorized } from 'comwit'
+import { Authorized } from '@comwit/state'
 
 class PostActions {
   @Authorized({
@@ -127,7 +127,7 @@ class PostActions {
 Marks a method for transactional execution. **Experimental:** Currently a no-op placeholder. The decorator API is stable, but rollback behavior will be implemented once a scoped proxy snapshot strategy is finalized.
 
 ```ts
-import { Transaction } from 'comwit'
+import { Transaction } from '@comwit/state'
 
 class Store {
   @Transaction()
@@ -147,7 +147,7 @@ class Store {
 Retries the method on failure up to `count` times. Supports fixed and exponential backoff.
 
 ```ts
-import { Retry } from 'comwit'
+import { Retry } from '@comwit/state'
 
 class Api {
   @Retry(3, { delay: 1000, backoff: 'exponential' })
@@ -177,7 +177,7 @@ Prevents concurrent execution. Three strategies:
 - `'replace'` — Allows new calls but discards stale results.
 
 ```ts
-import { Queue } from 'comwit'
+import { Queue } from '@comwit/state'
 
 class Api {
   @Queue('drop')
@@ -196,7 +196,7 @@ class Api {
 Logs method calls for debugging. Logs name + args on call, result on success, error on failure.
 
 ```ts
-import { Log } from 'comwit'
+import { Log } from '@comwit/state'
 
 class Api {
   @Log('debug')
@@ -218,7 +218,7 @@ Default level is `'info'`.
 Validates method arguments before execution. Each key maps to an argument by position. If any validator returns a string (error message), a `ValidationError` is thrown.
 
 ```ts
-import { Validate } from 'comwit'
+import { Validate } from '@comwit/state'
 
 class TodoActions {
   @Validate({
@@ -236,7 +236,7 @@ class TodoActions {
 Throws `ValidationError` (extends `Error`) with an `errors` property containing `Record<string, string>`.
 
 ```ts
-import { ValidationError } from 'comwit'
+import { ValidationError } from '@comwit/state'
 
 try {
   actions.createTodo('', 5)
@@ -258,7 +258,7 @@ The `intercept()` function is the foundation for all decorators. It creates meth
 Pass an `InterceptorHooks` object directly:
 
 ```ts
-import { intercept } from 'comwit'
+import { intercept } from '@comwit/state'
 
 const LogCalls = intercept({
   onBefore: (...args) => console.log('call', args),
@@ -278,7 +278,7 @@ class Api {
 Pass a factory function that receives `ActionContext`. The factory is stored and resolved when the action binds to a context (inside `useAction`/`create`). Use this when hooks need runtime state or context.
 
 ```ts
-import { intercept } from 'comwit'
+import { intercept } from '@comwit/state'
 
 const WithAuth = intercept((ctx) => ({
   intercept: (execute, args) => {
@@ -311,7 +311,7 @@ function RetryCustom(times: number) {
 Combine lazy mode with `state()` access for reusable cross-domain guards:
 
 ```ts
-import { intercept, onAuthorized } from 'comwit'
+import { intercept, onAuthorized } from '@comwit/state'
 import { user } from '@/state/user/model'
 
 // createInterceptor pattern — intercept() in lazy mode with state access
@@ -351,7 +351,7 @@ class Actions {
 **Lazy mode** — shares `state()`/`context` access across every method on the class. Useful when every action in a group has the same precondition (e.g. all mutations require login):
 
 ```ts
-import { intercept } from 'comwit'
+import { intercept } from '@comwit/state'
 import { user } from '@/state/user/model'
 
 const LoginRequired = intercept(({ state, context }) => {
@@ -411,7 +411,7 @@ onSettled(...args)                   // always called (finally semantics)
 Each decorator has a lowercase functional counterpart for use outside of classes:
 
 ```ts
-import { onError, onSuccess, debounce, throttle, onAuthorized, retry, queue, log } from 'comwit'
+import { onError, onSuccess, debounce, throttle, onAuthorized, retry, queue, log } from '@comwit/state'
 
 // Higher-order functions: wrap a function
 const withRetry = retry(3, { delay: 1000, backoff: 'exponential' })
@@ -429,7 +429,7 @@ const loggedFetch = withLog(fetchUser)
 Apply interceptors to all action methods via `ComwitProvider`:
 
 ```tsx
-import { ComwitProvider, intercept } from 'comwit'
+import { ComwitProvider, intercept } from '@comwit/state'
 
 const GlobalLogger = intercept({
   onError: (err) => Sentry.captureException(err),
