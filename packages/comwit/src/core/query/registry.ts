@@ -11,6 +11,7 @@ export function createQueryBindingRegistry(): QueryBindingRegistry {
     boundResourceValue: new WeakMap(),
     boundPathProxy: new WeakMap(),
     boundResourceRuntime: new WeakMap(),
+    selectorLoads: new WeakMap(),
     suspense: new Map(),
     runtimesByModel: new Map(),
   }

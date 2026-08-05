@@ -1,5 +1,14 @@
 import { expectTypeOf, test } from 'vitest'
-import { action, model, query, snapshot } from '../src'
+import {
+  action,
+  create,
+  model,
+  query,
+  snapshot,
+  useModel,
+  type SelectableResourceState,
+} from '../src'
+import type { Query } from '../src'
 import { createProxy } from '../src/core/proxy'
 
 // `.snapshot()` is exposed on the top-level proxy at the type level. For
@@ -94,3 +103,47 @@ test('history-enabled models expose $history methods', () => {
     return {}
   })
 })
+
+test('selector load infers query arguments from the model', () => {
+  type CatalogState = SelectableResourceState<{
+    list: Query<string[], { page: number; filter?: string }>
+    total: Query<number>
+  }>
+
+  expectTypeOf<CatalogState['list']['load']>().parameter(0).toEqualTypeOf<{
+    page: number
+    filter?: string
+  }>()
+  expectTypeOf<Parameters<CatalogState['list']['load']>>().toEqualTypeOf<
+    [{ page: number; filter?: string }]
+  >()
+  expectTypeOf<Parameters<CatalogState['total']['load']>>().toEqualTypeOf<[]>()
+  expectTypeOf<ReturnType<CatalogState['list']['load']>['data']>().toEqualTypeOf<string[]>()
+})
+
+const selectorModel = model({
+  list: query<string[], { page: number }>({
+    initialData: [],
+    queryFn: ({ page }) => Promise.resolve([String(page)]),
+  }),
+  total: query<number>({ initialData: 0, queryFn: () => Promise.resolve(1) }),
+})
+const useSelectorModel = create(selectorModel, { actions: [] })
+
+function selectorLoadTypeContract() {
+  useModel(selectorModel, (state) => state.list.load({ page: 1 }).data)
+  useSelectorModel((state) => state.total.load().data)
+
+  // @ts-expect-error argument queries require their inferred argument
+  useModel(selectorModel, (state) => state.list.load())
+  // @ts-expect-error no-argument queries do not accept an argument
+  useSelectorModel((state) => state.total.load({ page: 1 }))
+
+  // `.load()` is collected only while a selector executes.
+  // @ts-expect-error the selector-less result is passive
+  useModel(selectorModel).list.load({ page: 1 })
+  // @ts-expect-error the selector-less domain hook result is passive
+  useSelectorModel().total.load()
+}
+
+void selectorLoadTypeContract

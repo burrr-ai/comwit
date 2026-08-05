@@ -1,441 +1,335 @@
-# comwit
+# comwit — AI implementation guide
 
-State management for Next.js.
+`@comwit/state` is domain-oriented React/Next.js state management. Use this file as the practical project contract; follow the linked references for exhaustive signatures.
 
-> Give this document to Claude Code. It sets up your project.
-
-## 1. Install
+## Install and provider
 
 ```bash
-npm i @comwit/state
+yarn add @comwit/state
 ```
 
-## 2. Enable Decorators
-
-Add `experimentalDecorators` to your `tsconfig.json`. Without this, Next.js production builds (SWC) will fail to parse `@OnError`, `@Retry`, etc.
-
-```jsonc
-// tsconfig.json
-{
-  "compilerOptions": {
-    "experimentalDecorators": true,
-    // ... other options
-  },
-}
-```
-
-> **Why?** Next.js reads this flag and passes it to SWC as `jsc.parser.decorators: true`. Without it, the `@` token is not recognized and the build fails with "Unexpected token '@'". Dev mode (Turbopack) may work without it, but production builds will not.
-
-## 3. Setup Provider
-
-Create `app/providers.tsx` and wrap your root layout.
+Enable `experimentalDecorators` in `tsconfig.json` when using decorators. Wrap the client tree once:
 
 ```tsx
-// app/providers.tsx
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { keepPreviousData, ComwitProvider } from '@comwit/state'
-import { ReactNode } from 'react'
-
-type AppContext = {
-  router: { push: (href: string) => void }
-}
-
-export function Providers({ children }: { children: ReactNode }) {
-  const router = useRouter()
-  const context: AppContext = { router }
-
-  return (
-    <ComwitProvider
-      context={context}
-      defaultOptions={{
-        query: {
-          staleTime: 30_000,
-          gcTime: 5 * 60_000,
-          placeholderData: keepPreviousData,
-        },
-      }}
-    >
-      {children}
-    </ComwitProvider>
-  )
-}
+<ComwitProvider
+  context={{ router }}
+  defaultOptions={{
+    query: { staleTime: 30_000, gcTime: 5 * 60_000 },
+    persist: { debounceMs: 100 },
+  }}
+>
+  {children}
+</ComwitProvider>
 ```
 
-```tsx
-// app/layout.tsx
-import { Providers } from './providers'
+Provider `context` is available to actions and lazy interceptors. Query defaults may also include `placeholderData`.
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
-      </body>
-    </html>
-  )
-}
-```
+## Project contract
 
-## 4. Create `state/.ai.md`
-
-Create `src/state/.ai.md` (or `state/.ai.md`) with the full content below.
-
-## 5. Update `CLAUDE.md`
-
-Add this to your project's `CLAUDE.md`:
-
-```md
-## State Management
-
-This project uses comwit. When working on files in state/, always read state/.ai.md first.
-```
-
----
-
-## state/.ai.md Content
-
-Copy everything between the fences into your `state/.ai.md`:
-
-````md
-## Structure
-
-```
+```text
 state/{domain}/
-  ├── types.ts          # State + Actions types
-  ├── model.ts          # model() with initial state
-  ├── actions/
-  │   ├── crud.ts       # CRUD operations
-  │   ├── load.ts       # Data fetching via query()
-  │   ├── init.ts       # SSR hydration via silent()
-  │   └── ...           # One file per concern
-  └── index.ts          # create() hook + re-exports
+  types.ts          # State and Actions contracts; write first
+  model.ts          # model(), query(), persist(), computed()
+  actions/
+    init.ts         # server-data initialization
+    load.ts         # imperative/coordinated fetching
+    crud.ts         # mutations, optimistic updates, rollback
+    interact.ts     # domain interactions
+  index.ts          # create() domain hook and re-exports
 ```
 
-Write order: **types.ts -> model.ts -> actions/\*.ts -> index.ts**
+Write in this order: `types.ts` → `model.ts` → `actions/*` → `index.ts`.
 
-## Rules
+Rules:
 
-- Dependencies: pages → state → api (one way)
-- Pass domain objects whole: `<Card post={post} />`
-- **Server actions**: convert proxy → plain object before passing. Use `state.snapshot()` for the top-level model, and the standalone `snapshot(state.slice)` helper for nested slices.
+- Dependency direction is page → state → API/repository.
+- Keep list, detail, stats, filters, and related local UI state in the same domain when they must stay consistent.
+- Put commands and side effects in actions. UI event handlers should usually call one action.
+- Actions read other domains with `state(otherModel)` instead of receiving duplicate state as arguments.
+- Pass domain objects whole to UI (`<Card product={product} />`).
+- After CRUD, update every related view optimistically or refetch it; include rollback for failed optimistic writes.
+- Use selectors; calling a domain hook without a selector observes the whole model.
 
-## File Templates
+## types.ts
 
-### types.ts
-
-**Read this file first.** JSDoc on each field/method guides the implementation.
-
-- `Query<Data>` for client-fetched fields — provides `.data` `.isLoading` `.isError` `.error`
-- `Query<Data, Arg>` — second generic = queryFn param type
-- Plain types for SSR-hydrated fields
+Use `Query<Data, Arg>` for remotely loaded fields and ordinary types for local/server-initialized state.
 
 ```ts
-import { Query } from '@comwit/state'
+import type { Query } from '@comwit/state'
 
-export type Post = { id: string; ... }
-
-export type PostState = {
-  posts: Query<Post[]>              // client fetch
-  comments: Query<Comment[], string> // client fetch, second generic = queryFn arg
-  current: Post | null               // SSR hydrated
-  // ...
+export type ProductState = {
+  products: Query<Pageable<Product>, { page: number; filter: ProductFilter }>
+  stats: Query<ProductStats>
+  detail: Query<Product | null, { id: string }>
+  selectedIds: string[]
+  isEditMode: boolean
 }
 
-export type PostActions = {
-  /** @description Fetch posts via query() */
-  loadPosts(): Promise<void>
-  /** @description Toggle like. Optimistic on list + current, toast on error */
-  like(postId: string): Promise<void>
-  // ...
+export type ProductActions = {
+  initDetail(product: Product): void
+  refreshAll(): Promise<void>
+  loadMore(): Promise<void>
+  create(title: string): Promise<void>
+  delete(id: string): Promise<void>
+  toggleSelect(id: string): void
 }
 ```
 
-### model.ts
+Query type variants:
 
-`Query<T>` fields use `query()` with `initialData` + `queryFn`. Plain fields get default values.
+- `Query<T, Arg>` — single resource
+- `Query.Infinite<T, Arg>` — cursor/infinite resource
+- `Query.Realtime<T, Arg>` — initial fetch plus subscription
+- `Query.Suspense<T, Arg>` / `Query.SuspenseInfinite<T, Arg>` — non-null data typing with `{ suspense: true }`
+
+## model.ts
+
+The model defines data shape and fetch policy, not UI effects.
 
 ```ts
-import { model, query } from '@comwit/state'
+import { keepPreviousData, model, query } from '@comwit/state'
 
-export const post = model<PostState>({
-  posts: query<Post[]>({ initialData: [], queryFn: () => api.post.findAll() }),
-  comments: query<Comment[], string>({
-    initialData: [],
-    queryFn: (postId) => api.comment.findAll(postId),
+export const product = model<ProductState>({
+  products: query({
+    initialData: EMPTY_PAGE,
+    queryFn: ({ page, filter }) => api.product.list({ page, filter }),
+    placeholderData: keepPreviousData,
   }),
-  current: null,
+  stats: query({ initialData: EMPTY_STATS, queryFn: () => api.product.stats() }),
+  detail: query({ initialData: null, queryFn: ({ id }) => api.product.get(id) }),
+  selectedIds: [],
+  isEditMode: false,
 })
 ```
 
-History is off by default. Enable it per model when user-facing state should support undo and redo:
+Use `keepPreviousData` mainly for pagination. Each serialized query argument has a cache entry; the resource state displays one active argument at a time.
+
+### Infinite and realtime
 
 ```ts
-export const todo = model(
-  {
-    items: [] as Todo[],
-    selectedId: null as string | null,
+posts: query.infinite<Post[]>({
+  initialData: [],
+  queryFn: async (_, { state }) => {
+    const res = await api.posts.list({ cursor: state.cursor })
+    return { data: res.items, cursor: res.nextCursor, hasMore: res.hasNext }
   },
-  {
-    history: { limit: 100 },
-  }
-)
+})
 ```
 
-`history: true` uses a default limit of 100 undo entries. Pass `history: { limit }` to override the stack size.
+`query.realtime()` also requires `subscribe(callbacks) => cleanup`; callbacks are `update`, `set`, `refetch`, `onStatus`, and `onError`.
 
-#### Derived State & Validation
+### Derived state, validation, history, persistence
 
-`model()` accepts an optional second argument with `derive` and `rules`:
+- Inline derived fields: `computed(state => value)`.
+- Model option `derive`: returns named getter functions; derived values are readonly.
+- Model option `rules`: field validators; read `{ errors, isValid }` from `$validation`.
+- Model option `history: true | { limit }`: read `$history.undo()`, `redo()`, `canUndo`, `canRedo`, `ignore(fn)` through the existing domain hook. One action call is one history transaction.
+- `persist({ key, defaultValue, storage? })`: local/session/custom storage, SSR-safe, debounced, cross-tab for localStorage.
+
+## Choosing how a query starts
+
+There are two compatible paths. Do not create another query hook.
+
+### View-owned request: selector `.load(arg)`
+
+Use when props, route state, or local render state already contains the query argument.
+
+```tsx
+const products = useProduct((s) => s.products.load({ page, filter }))
+const stats = useProduct((s) => s.stats.load())
+```
+
+Contract:
+
+- `Arg` is inferred from the model's `Query<Data, Arg>`; `{ ... }` is type-checked. A no-arg query uses `.load()`.
+- Calling `.load()` is the explicit opt-in. Selecting `s.products` without it is a passive read and never fetches.
+- `.load()` returns the resource state, including `data` and flags.
+- The query key is available during render, so the first selected state is loading-aware; the request starts after commit.
+- A stable mounted selector does not restart on unrelated rerenders. An argument change selects/loads the new cache key.
+- Same-resource, same-key selector requests share the in-flight request.
+- Configure options on `query()` or the provider. `.load()` intentionally takes no call-time fetch options.
+
+This avoids the empty → skeleton → content flash caused when the first request is only started by `useEffect`.
+
+### Command-owned request: action `.query(arg)`
+
+Use for user events, preloads, multi-query sequences, forced calls, or workflows with other side effects.
 
 ```ts
-import { model, query } from '@comwit/state'
-
-export const cart = model<CartState, CartDerived>(
-  {
-    items: [],
-    coupon: '',
-  },
-  {
-    // derive: computed fields — recalculated on every read
-    derive: (state) => ({
-      total: () => state.items.reduce((sum, i) => sum + i.price * i.qty, 0),
-      itemCount: () => state.items.reduce((sum, i) => sum + i.qty, 0),
-    }),
-    // rules: per-field validation — accessed via state.$validation
-    rules: {
-      coupon: (v) => v.length <= 20 || 'Coupon too long',
-      items: (v) => v.length > 0 || 'Cart is empty',
+export const loadActions = action<Pick<ProductActions, 'refreshAll'>>(({ state }) => {
+  const m = state(product)
+  return {
+    async refreshAll() {
+      await Promise.all([m.products.refetch(), m.stats.refetch()])
     },
   }
-)
-```
-
-- Derived fields are readonly and throw if assigned.
-- Validation is accessed via `state.$validation`: `{ errors: { [field]: string | null }, isValid: boolean }`.
-
-#### History
-
-No new hook is needed. Use the existing domain hook and read `$history`:
-
-```tsx
-const { history } = useTodo((s) => ({ history: s.$history }))
-
-history.undo()
-history.redo()
-history.canUndo
-history.canRedo
-```
-
-Each action method call is one history transaction. Multiple mutations inside the method are undone together. Use `s.$history.ignore(() => { ... })` for changes that should re-render but should not be recorded. This is separate from `silent()`, which suppresses notifications.
-
-### actions/\*.ts
-
-Actions are self-contained — resolve state via `state()`, side effects via decorators/context. UI only calls.
-
-```ts
-import { action, silent, OnError, OnSuccess } from '@comwit/state'
-import { user } from '@/state/user/model'
-
-export const postActions = action<Pick<PostActions, '...'>, AppContext>(({ state, context }) => {
-  class PostActions {
-    private model = state(post)
-    private user = state(user) // cross-domain — read other model directly
-
-    // SSR hydrate — silent() suppresses re-render
-    init(data: Post) {
-      silent(() => {
-        this.model.current = data
-      })
-    }
-
-    async loadPosts() {
-      await this.model.posts.query()
-    }
-
-    // guard: check auth from user domain, not from params
-    @OnSuccess(() => context.router.push('/posts'))
-    @OnError((e) => toast.error(e instanceof Error ? e.message : 'Failed'))
-    async create(title: string) {
-      if (!this.user.me) return
-      const created = await api.post.create({ userId: this.user.me.id, title })
-      this.model.posts.data.push(created)
-    }
-  }
-  return new PostActions()
 })
 ```
 
-The pattern above can be automated with `intercept()` in lazy mode. See [Decorators](#decorators) below.
+Existing `useEffect(() => actions.load(), [])` code remains supported. Migrate only when selector ownership is clearer.
+
+## Query state and methods
+
+State:
+
+- All: `data`, `isLoading`, `isFetching`, `isSuccess`, `isError`, `error`.
+- Infinite: `cursor`, `hasMore`.
+- Realtime: `connectionStatus`, `isConnected`.
+
+Selector method:
+
+- `.load(arg?)` — lifecycle-managed initial query; returns state.
+
+Action methods from `state(model)`:
+
+- `.query(arg?, options?)` — fetch; honors cache freshness.
+- `.refetch()` — force the active/last argument; no-op before a successful initial query.
+- `.set(data | statePatch)` — set data and mark success; useful for optimistic and server initialization.
+- Infinite: `.nextFetch(arg?)`, `.previousFetch(arg?, options?)`.
+- Realtime: `.unsubscribe()`.
+
+Options: `staleTime`, `gcTime`, `placeholderData`; call-time `force`; conditions `enabled`, `dependsOn`; polling `refetchInterval`; `suspense`.
+
+`isLoading` represents a first load, while `isFetching` also covers background refetches. Render errors before data when appropriate.
+
+## actions/\*
+
+Actions own mutation, I/O coordination, navigation, toast/dialog side effects, and cross-domain access.
 
 ```ts
-// reusable guard — state() must be initialized in the factory body
+export const crudActions = action<Pick<ProductActions, 'delete'>>(({ state }) => {
+  class CrudActions {
+    private m = state(product)
+
+    @OnError((e) => toast.error(toMessage(e)))
+    async delete(id: string) {
+      if (!(await popup.confirm({ title: 'Delete this product?' }))) return
+      const before = [...this.m.products.data.items]
+      this.m.products.data.items = before.filter((item) => item.id !== id)
+      try {
+        await api.product.delete(id)
+        await Promise.all([this.m.products.refetch(), this.m.stats.refetch()])
+      } catch (error) {
+        this.m.products.data.items = before
+        throw error
+      }
+    }
+  }
+  return new CrudActions()
+})
+```
+
+Plain state is mutable inside actions: assign fields, `push`/`splice` arrays, or replace arrays with `filter`. Direct query-data mutation is also reactive; use `.set()` when replacing/initializing an entire query result and success state together.
+
+For cross-domain guards, initialize the other model once in the action or lazy interceptor factory:
+
+```ts
 const LoginRequired = intercept<AppContext>(({ state, context }) => {
-  const u = state(user)
+  const user = state(userModel)
   return {
     intercept: (execute, args) => {
-      if (!u.me) { context.router.push('/login'); return }
+      if (!user.me) return context.router.push('/login')
       return execute(...args)
     },
   }
 })
+```
 
-// replaces the manual if (!this.user.me) check above:
-@LoginRequired
-@OnSuccess(() => context.router.push('/posts'))
-async create(title: string) { /* ... */ }
+## Server data and App Router Suspense
 
-// or apply to the whole class — every method inherits the guard
-@LoginRequired
-class PostCrudActions {
-  async create(title: string) { /* ... */ }
-  async update(id: string, title: string) { /* ... */ }
-  async delete(id: string) { /* ... */ }
+No separate `hydrate()` API is needed. Initialize during client render through an action that wraps writes in `silent()`; do not delay it to an effect.
+
+```ts
+initDetail(value: Product) {
+  silent(() => this.m.detail.set(value))
 }
 ```
 
+`.set()` marks the query successful, so client fallbacks can distinguish initialized cache from `initialData`.
+
 ```tsx
-// call init outside useEffect — silent() makes it safe
-function PostDetail({ initialPost }: { initialPost: Post }) {
-  const { actions } = usePost((s) => ({ actions: s.actions }))
-  actions.init(initialPost)
-  return <Article />
+function DetailInit({ value }: { value: Product }) {
+  const init = useProduct((s) => s.actions.initDetail)
+  init(value)
+  return <ProductView product={value} />
 }
 ```
 
-### index.ts
+For a server `<Suspense>` boundary, the client fallback may passively read the current query: show cached content when `isSuccess`, otherwise show a skeleton. The resolved server branch renders `DetailInit`. Reuse cached content only when its active identity is valid for the route; otherwise keep the fallback neutral.
+
+Library `suspense: true` is available for client query suspension: initial query promises suspend, refetches use `isFetching`, and errors go to the nearest error boundary. Prefer the server-streaming pattern above for App Router server work.
+
+## index.ts and UI
 
 ```ts
-import { create } from '@comwit/state'
-import type { PostState, PostActions } from './types'
-import { post } from './model'
-import { postActions } from './actions/crud'
-
-export const usePost = create<PostState, PostActions>(post, {
-  actions: [postActions /* ... */],
+export const useProduct = create<ProductState, ProductActions>(product, {
+  actions: [initActions, loadActions, crudActions, interactActions],
 })
 ```
 
-## query() Summary
-
-`query()`, `query.infinite()`, and `query.realtime()` create resource descriptors for client-side fetching inside `model()`.
-
-- Methods: `.query(arg?)` · `.refetch()` · `.set(data)` · `.nextFetch()` · `.previousFetch()`
-- Flags: `isLoading` · `isFetching` · `isSuccess` · `isError` · `error`
-- Infinite-only: `cursor` · `hasMore`
-- Realtime methods: `.query()` · `.refetch()` · `.set()` · `.unsubscribe()`
-- Realtime-only: `connectionStatus` · `isConnected`
-- Subscribe callbacks: `update` · `set` · `refetch` · `onStatus` · `onError`
-- Options: `staleTime` · `gcTime` · `placeholderData` · `force`
-- Suspense: `Query.Suspense<T>` · `Query.SuspenseInfinite<T>` · `{ suspense: true }`
-
-For full API details, see the [Query System Reference](/llm/query.txt).
-
-## persist() Summary
-
-`persist()` creates a persisted field descriptor inside `model()`. Values are automatically synced to storage.
-
-```ts
-import { model, persist } from '@comwit/state'
-
-const settings = model({
-  theme: persist({ key: 'theme', defaultValue: 'light' }),
-  lang: persist({ key: 'lang', defaultValue: 'en', storage: 'sessionStorage' }),
-})
-```
-
-- Storage: `'localStorage'` (default) · `'sessionStorage'` · custom `PersistAdapter`
-- Features: auto-hydration · debounced write-back · cross-tab sync (localStorage) · SSR safe
-- Provider defaults: `<ComwitProvider defaultOptions={{ persist: { debounceMs: 100 } }}>`
-
-For full API details, see the [Persist Reference](/llm/persist.txt).
-
-For full undo/redo details, see the [History Reference](/llm/history.txt).
-
-## Usage
+Selectors use deep equality and can return state plus actions:
 
 ```tsx
-const { posts, current, actions } = usePost((s) => ({
-  posts: s.posts, // Query<Post[]> — has .data .isLoading .isError
-  current: s.current, // Post | null — plain state
+const { list, actions } = useProduct((s) => ({
+  list: s.products.load({ page, filter }),
   actions: s.actions,
 }))
 
-// query fields — check flags, access data via .data
-if (posts.isLoading) return <Skeleton />
-if (posts.isError) return <p>Error: {posts.error}</p>
-return posts.data.map((post) => <Card key={post.id} post={post} />)
+if (list.isLoading) return <Skeleton />
+if (list.isError) return <ErrorView message={list.error} retry={actions.refreshAll} />
+return list.data.items.map((product) => <Card key={product.id} product={product} />)
 ```
 
-Selectors use deep equality — only re-renders when selected values change.
+For passive cached/initialized state, omit `.load()`. UI handlers call actions rather than mutating state directly.
 
-## Decorators
+## Proxy boundaries
 
-All from `'comwit'`. Stack on class methods.
-
-| Decorator                       | Purpose                                                         |
-| ------------------------------- | --------------------------------------------------------------- |
-| `@OnError(fn)`                  | Error handler. Re-throw to propagate.                           |
-| `@OnSuccess(fn)`                | Success callback.                                               |
-| `@Debounce(ms)`                 | Debounce.                                                       |
-| `@Throttle(ms)`                 | Throttle.                                                       |
-| `@Authorized({ when, onDeny })` | Auth guard. `when: () => boolean \| Promise<boolean>`           |
-| `@Transaction()`                | Transactional execution (experimental, currently no-op).        |
-| `@Retry(count, options?)`       | Retry on failure with fixed or exponential backoff.             |
-| `@Queue(strategy?)`             | Concurrency control: `'drop'`, `'queue'`, or `'replace'`.       |
-| `@Log(level?)`                  | Console logging of calls, results, and errors.                  |
-| `@Validate(validators)`         | Argument validation before execution. Throws `ValidationError`. |
-
-`intercept(hooks | factory)` — create custom decorators with lifecycle hooks. Supports immediate mode (hooks object) and lazy mode (factory with `state`/`context` access).
-
-Global interceptors via `<ComwitProvider defaultOptions={{ interceptors: [...] }}>`.
-
-For full API details, see the [Decorator Reference](/llm/decorator.txt).
-
-## Key Concepts
-
-- `model(initial, options?)` — global reactive store, with optional `derive` and `rules`
-- `action(factory)` — factory with `state`/`context` access
-- `create(model, { actions })` — model + actions -> React hook
-- `silent(fn)` — suppress re-renders (SSR)
-- `state.snapshot()` — top-level proxy → frozen plain object. For nested slices use the standalone `snapshot(state.slice)` helper (for server actions, logging)
-- `query()` / `query.infinite()` — client fetch in model
-- `query.realtime()` — real-time subscription in model
-- `persist()` — persisted field in model
-- `state(model)` — mutable proxy in actions
-- `intercept()` — custom decorator builder (immediate or lazy mode)
-- `snapshot(state)` — non-extensible deep plain-object copy of any proxy slice (throws on non-proxy)
-- `isProxy(value)` — `true` if `value` is a comwit reactive proxy
-- `initDevTools(options?)` — dev-only devtools (`{ maxLogSize?: number }`, default 50); no-op in production
-
-## Passing State to Server Actions
-
-`state(model)` returns a Proxy, which is fine for normal use. When passing state to server actions (or other APIs that require plain objects), convert to a snapshot first.
-
-- **Top-level model**: call `.snapshot()` directly.
-- **Nested slice** (e.g. `state.filter`, `state.list.data`): use the standalone `snapshot()` helper, imported from `'comwit'`. This is the type-safe path — `.snapshot()` is only typed on the top-level proxy to keep plain assignments like `state.user = userFromApi` working.
+`state(model)` is a reactive proxy. Convert it before server actions, structured serialization, or APIs that require plain extensible objects:
 
 ```ts
 import { snapshot } from '@comwit/state'
 
-// top-level
-await savePostAction(this.model.snapshot())
-
-// nested slice
-await fetchCoders({ filter: snapshot(this.model.filter) })
+await save(this.m.snapshot()) // top-level model
+await search(snapshot(this.m.filters)) // nested slice
 ```
 
-`isProxy(value)` returns `true` for any comwit proxy (top-level model or nested slice) and `false` for plain objects or snapshots — handy in generic boundary helpers that conditionally snapshot before serializing.
+- `snapshot(proxy)` returns a frozen plain snapshot and throws for non-proxies.
+- `isProxy(value)` detects comwit proxies.
+- `silent(fn)` suppresses subscriber notifications; it is not a history-ignore helper.
 
-## References
+## Decorators and custom interception
 
-- [Query System Reference](/llm/query.txt) — query(), query.infinite(), query.realtime(), suspense, caching
-- [Decorator Reference](/llm/decorator.txt) — interceptors, guards, lifecycle hooks
-- [Persist Reference](/llm/persist.txt) — persist(), storage adapters, cross-tab sync
+Built-ins:
 
-## Feedback
+- `@OnError(fn)` — side effect, then the original error propagates automatically.
+- `@OnSuccess(fn)` — success side effect.
+- `@Authorized({ when, onDeny })` — guard.
+- `@Debounce(ms)`, `@Throttle(ms)` — timing; helpers can flush/cancel pending calls.
+- `@Retry(count, options?)` — fixed/exponential retry.
+- `@Queue('drop' | 'queue' | 'replace')` — concurrency.
+- `@Log(level?)`, `@Validate(validators)`.
 
-If you encounter a bug or have a feature request, file an issue:
-`gh issue create --repo meursyphus/comwit --title '...' --body '...'`
-````
+Use `intercept(hooks)` for context-free decorators and `intercept(({ state, context }) => hooks)` for lazy state/context access. Class decorators wrap every method; method decorators add narrower rules. If an `intercept` hook does not call `execute(...args)`, the original method is blocked.
+
+## Delivery checklist
+
+- Types written before model/actions; query argument types are explicit.
+- View-owned query uses selector `.load(arg)`; passive query intentionally omits it.
+- Command/coordinated query stays in an action.
+- Loading, error, empty, and background-fetch behavior are deliberate.
+- Server init uses `silent()` and query `.set()` where applicable.
+- CRUD keeps list/detail/stats consistent and rolls back failed optimistic writes.
+- Proxy values are snapshotted at serialization boundaries.
+- Decorator support is enabled in TypeScript/Next.js.
+
+## Full references
+
+- https://library.comwit.io/llm/query.txt — selector loading, caching, infinite, realtime, Suspense
+- https://library.comwit.io/llm/decorator.txt — decorators and `intercept`
+- https://library.comwit.io/llm/persist.txt — persistence
+- https://library.comwit.io/llm/history.txt — undo/redo
+- https://library.comwit.io/docs — human-readable documentation
+
+Feedback: `gh issue create --repo burrr-ai/comwit --title '...' --body '...'`

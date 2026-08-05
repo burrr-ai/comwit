@@ -37,15 +37,48 @@ export type PostState = {
 }
 ```
 
+## Load from a selector
+
+Inside `useModel()` or a hook created by `create()`, call `.load(arg)` on the query field to declare that this component needs that query:
+
+```tsx
+const list = useProduct((state) => state.products.load({ page, filter }))
+
+if (list.isLoading) return <Skeleton />
+if (list.isError) return <ErrorMessage message={list.error} />
+return <ProductList products={list.data.items} />
+```
+
+The argument type is inferred from `Query<Data, Arg>`. Queries without an argument use `.load()`.
+
+`load` is explicit and lifecycle-managed:
+
+- It reports `isLoading: true` on the first render, then starts the request after the component commits. This prevents an empty-state flash before an effect calls an action.
+- The serialized argument is the cache key. Changing it loads the new key; ordinary rerenders with the same key do not restart the request.
+- Concurrent selector loads for the same resource and key share the in-flight request.
+- Selecting `state.products` without calling `.load(...)` is passive and never starts a request.
+- `load` has no call-time options. Put defaults on `query(...)` or `ComwitProvider`; use an action with `.query(...)`, `.refetch()`, or `.set()` for imperative workflows.
+
+```tsx
+const useDashboard = create(dashboard, { actions: [dashboardActions] })
+
+const total = useDashboard((state) => state.total.load()) // Query<number>
+const list = useDashboard((state) => state.list.load({ page })) // Query<List, { page: number }>
+const cached = useDashboard((state) => state.list) // passive read
+```
+
+Existing effect-driven actions remain supported. Use selector `load` when the request belongs to the mounted view; use action `.query()` when loading is part of a command, sequence, preload, or user event.
+
 ## Methods
 
-Once accessed via `state()` in an action, query fields expose these methods:
+Inside React selectors, a query exposes `.load(arg?)` and returns its query state. Once accessed via `state()` in an action, it exposes these imperative methods:
 
-| Method         | Description                                              |
-| -------------- | -------------------------------------------------------- |
-| `.query(arg?)` | Fetch data. Respects staleTime — skips if data is fresh. |
-| `.refetch()`   | Force re-fetch with the last used argument.              |
-| `.set(data)`   | Manually set data (for optimistic updates).              |
+| Method         | Where    | Description                                                        |
+| -------------- | -------- | ------------------------------------------------------------------ |
+| `.load(arg?)`  | Selector | Declare the query for this mounted component and return its state. |
+| `.query(arg?)` | Action   | Fetch data. Respects staleTime — skips if data is fresh.           |
+| `.refetch()`   | Action   | Force re-fetch with the last used argument.                        |
+| `.set(data)`   | Action   | Manually set data and mark the query successful.                   |
 
 ## Status flags
 
@@ -135,6 +168,8 @@ async loadMoreTrending() {
   await this.model.trending.nextFetch()
 }
 ```
+
+The initial infinite query can also be declared with `.load(arg?)` in a React selector. Continue to call `.nextFetch()` and `.previousFetch()` from actions.
 
 The `queryFn` return value can include `cursor` and `hasMore` to control pagination:
 
@@ -347,3 +382,20 @@ function Page() {
 - `refetch()` does **not** suspend — uses background fetching with `isFetching`
 - Errors are thrown to the nearest `ErrorBoundary`
 - Use `Query.Suspense<T>` or `Query.SuspenseInfinite<T>` for correct typing (`data` is `NonNullable`)
+
+For App Router server streaming, prefer a cache-aware fallback instead of making every fallback a skeleton. A client fallback may passively read an already successful query and render it; otherwise it renders the skeleton. When the server result resolves, initialize the same query with `silent(() => resource.set(data))`. No separate hydration API is required.
+
+```tsx
+function ProductFallback() {
+  const detail = useProduct((state) => state.detail) // passive cache read
+  return detail.isSuccess ? <ProductView product={detail.data!} /> : <ProductSkeleton />
+}
+
+function ProductInit({ product }: { product: Product }) {
+  const actions = useProduct((state) => state.actions)
+  actions.init(product) // init uses silent(() => model.detail.set(product))
+  return <ProductView product={product} />
+}
+```
+
+Only reuse cached content when the active value is valid for the route being rendered. Otherwise use a neutral fallback.

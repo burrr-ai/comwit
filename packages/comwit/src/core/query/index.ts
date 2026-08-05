@@ -21,6 +21,10 @@ export type {
   BoundInfiniteResourceState,
   BoundRealtimeResourceState,
   BoundResourceState,
+  SelectableSingleResourceState,
+  SelectableInfiniteResourceState,
+  SelectableRealtimeResourceState,
+  SelectableResourceState,
   SingleResourceBuilderOptions,
   InfiniteResourceBuilderOptions,
   RealtimeResourceBuilderOptions,
@@ -33,7 +37,15 @@ export type {
 export { query, isResourceDescriptor, keepPreviousData } from './descriptor'
 
 // Accessor
-export { createResourceAccessor, mergeResult } from './accessor'
+export { createResourceAccessor, mergeResult, serializeQueryArg } from './accessor'
+
+// React selector auto-load
+export {
+  createQuerySelectorState,
+  runQuerySelectorLoads,
+  querySelectorLoadKey,
+  type QuerySelectorLoad,
+} from './select'
 
 // Binding
 export { bindResourceState } from './bind'

@@ -52,7 +52,7 @@ export type PostState = {
 }
 
 export type PostActions = {
-  /** @description Fetch posts via query() */
+  /** @description Imperatively fetch posts for coordinated workflows */
   loadPosts(): Promise<void>
   /** @description Toggle like. Optimistic update on list + current */
   like(postId: string): Promise<void>
@@ -62,6 +62,8 @@ export type PostActions = {
 - `Query<Data>` for client-fetched fields — provides `.data`, `.isLoading`, `.isError`, `.error`
 - `Query<Data, Arg>` — second generic is the `queryFn` parameter type
 - Plain types for SSR-hydrated or local state
+
+For view-owned requests, components can call `s.posts.load(arg)` directly in the existing domain hook selector. Keep a `loadPosts()` action when fetching is part of a command, multi-query sequence, preload, or user event. No additional hook is needed.
 
 ## Cross-domain access
 
