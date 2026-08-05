@@ -147,7 +147,7 @@ export default function Home() {
             <li className="flex gap-3">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-foreground" />
               <span>
-                Battle-tested across 1,000+ projects on mvpstar.ai — a Claude Code-based vibe coding
+                Battle-tested across 1,000+ projects on comwit.io — a Claude Code-based vibe coding
                 platform
               </span>
             </li>

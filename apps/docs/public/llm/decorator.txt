@@ -2,7 +2,7 @@
 
 > Full API reference for all built-in decorators, custom interceptor creation, and composition patterns.
 
-All decorators are imported from `'comwit'`.
+All decorators are imported from `'@comwit/state'`.
 
 ## Built-in Decorators
 

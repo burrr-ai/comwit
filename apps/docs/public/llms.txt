@@ -44,7 +44,6 @@ Write in this order: `types.ts` → `model.ts` → `actions/*` → `index.ts`.
 
 Rules:
 
-- Dependency direction is page → state → API/repository.
 - Keep list, detail, stats, filters, and related local UI state in the same domain when they must stay consistent.
 - Put commands and side effects in actions. UI event handlers should usually call one action.
 - Actions read other domains with `state(otherModel)` instead of receiving duplicate state as arguments.
@@ -128,34 +127,18 @@ posts: query.infinite<Post[]>({
 - Model option `history: true | { limit }`: read `$history.undo()`, `redo()`, `canUndo`, `canRedo`, `ignore(fn)` through the existing domain hook. One action call is one history transaction.
 - `persist({ key, defaultValue, storage? })`: local/session/custom storage, SSR-safe, debounced, cross-tab for localStorage.
 
-## Choosing how a query starts
+## Reading and starting queries
 
-There are two compatible paths. Do not create another query hook.
-
-### View-owned request: selector `.load(arg)`
-
-Use when props, route state, or local render state already contains the query argument.
+A selector can start a request or passively read data that was already loaded or initialized:
 
 ```tsx
-const products = useProduct((s) => s.products.load({ page, filter }))
-const stats = useProduct((s) => s.stats.load())
+const products = useProduct((s) => s.products.load({ page, filter })) // start/load this key
+const stats = useProduct((s) => s.stats) // read current state; never starts a request
 ```
 
-Contract:
+Use selector `.load(arg?)` when the view owns the initial request. Its argument is inferred from `Query<Data, Arg>`, and it returns the ordinary query resource state. Use passive selection when another action or server initialization owns loading. Do not create another query hook.
 
-- `Arg` is inferred from the model's `Query<Data, Arg>`; `{ ... }` is type-checked. A no-arg query uses `.load()`.
-- Calling `.load()` is the explicit opt-in. Selecting `s.products` without it is a passive read and never fetches.
-- `.load()` returns the resource state, including `data` and flags.
-- The query key is available during render, so the first selected state is loading-aware; the request starts after commit.
-- A stable mounted selector does not restart on unrelated rerenders. An argument change selects/loads the new cache key.
-- Same-resource, same-key selector requests share the in-flight request.
-- Configure options on `query()` or the provider. `.load()` intentionally takes no call-time fetch options.
-
-This avoids the empty → skeleton → content flash caused when the first request is only started by `useEffect`.
-
-### Command-owned request: action `.query(arg)`
-
-Use for user events, preloads, multi-query sequences, forced calls, or workflows with other side effects.
+Inside actions, use `.query(arg?, options?)`, `.refetch()`, or related methods for user events, preloads, coordinated requests, and forced calls:
 
 ```ts
 export const loadActions = action<Pick<ProductActions, 'refreshAll'>>(({ state }) => {
@@ -168,7 +151,7 @@ export const loadActions = action<Pick<ProductActions, 'refreshAll'>>(({ state }
 })
 ```
 
-Existing `useEffect(() => actions.load(), [])` code remains supported. Migrate only when selector ownership is clearer.
+Existing `useEffect(() => actions.load(), [])` code remains supported; migrate to selector `.load()` only when the view clearly owns the request. See https://library.comwit.io/llm/query.txt for cache-key, lifecycle, infinite, realtime, and Suspense details.
 
 ## Query state and methods
 
@@ -222,20 +205,6 @@ export const crudActions = action<Pick<ProductActions, 'delete'>>(({ state }) =>
 ```
 
 Plain state is mutable inside actions: assign fields, `push`/`splice` arrays, or replace arrays with `filter`. Direct query-data mutation is also reactive; use `.set()` when replacing/initializing an entire query result and success state together.
-
-For cross-domain guards, initialize the other model once in the action or lazy interceptor factory:
-
-```ts
-const LoginRequired = intercept<AppContext>(({ state, context }) => {
-  const user = state(userModel)
-  return {
-    intercept: (execute, args) => {
-      if (!user.me) return context.router.push('/login')
-      return execute(...args)
-    },
-  }
-})
-```
 
 ## Server data and App Router Suspense
 
@@ -312,6 +281,43 @@ Built-ins:
 - `@Log(level?)`, `@Validate(validators)`.
 
 Use `intercept(hooks)` for context-free decorators and `intercept(({ state, context }) => hooks)` for lazy state/context access. Class decorators wrap every method; method decorators add narrower rules. If an `intercept` hook does not call `execute(...args)`, the original method is blocked.
+
+Create reusable decorators for repeated action rules, then apply them to a whole action class or one method:
+
+```ts
+import { intercept } from '@comwit/state'
+
+const LoginRequired = intercept<AppContext>(({ state, context }) => {
+  const user = state(userModel)
+  return {
+    intercept: (execute, args) => {
+      if (!user.me) return context.router.push('/login')
+      return execute(...args)
+    },
+  }
+})
+
+const ConfirmDelete = intercept(() => ({
+  intercept: async (execute, args) => {
+    if (!(await popup.confirm({ title: 'Delete this product?' }))) return
+    return execute(...args)
+  },
+}))
+
+@LoginRequired
+class CrudActions {
+  async create(title: string) {
+    /* ... */
+  }
+
+  @ConfirmDelete
+  async delete(id: string) {
+    /* ... */
+  }
+}
+```
+
+Here `@LoginRequired` guards every method, while `@ConfirmDelete` applies only to `delete`. Class and method decorators can be combined; keep error side effects in built-ins such as `@OnError`.
 
 ## Delivery checklist
 
