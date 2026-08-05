@@ -146,7 +146,7 @@ function stableSerialize(value: unknown, seen = new WeakSet<object>()): unknown 
   return out
 }
 
-function serializeQueryArg(arg: unknown) {
+export function serializeQueryArg(arg: unknown) {
   try {
     const serialized = JSON.stringify(stableSerialize(arg))
     return serialized === undefined ? '__undefined__' : serialized
@@ -771,5 +771,6 @@ export function createResourceAccessor(
   })
 
   registry.boundResourceValue.set(state, bound)
+  registry.boundResourceRuntime.set(bound, runtime)
   return bound
 }

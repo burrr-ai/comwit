@@ -9,6 +9,7 @@ import {
   Query,
   QueryDefaultOptions,
   QueryQueryOptions,
+  SelectableResourceState,
   query,
 } from './query'
 
@@ -35,18 +36,20 @@ function create<S extends object, A>(
   m: Model<S>,
   options: { actions: ActionFactory<Partial<A>, any>[] }
 ) {
+  type SelectableState = SelectableResourceState<S>
+
   function useStore(): S & { actions: A }
-  function useStore<R>(selector: (state: S & { actions: A }) => R): R
-  function useStore<R>(selector?: (state: S & { actions: A }) => R) {
+  function useStore<R>(selector: (state: SelectableState & { actions: A }) => R): R
+  function useStore<R>(selector?: (state: SelectableState & { actions: A }) => R) {
     const actions = useAction<A>(options.actions)
-    const withActions = (state: S): S & { actions: A } => ({
+    const withActions = (state: SelectableState): SelectableState & { actions: A } => ({
       ...state,
       actions,
     })
 
     const finalSelector = selector
-      ? (state: S) => selector(withActions(state))
-      : (state: S) => withActions(state) as unknown as R
+      ? (state: SelectableState) => selector(withActions(state))
+      : (state: SelectableState) => withActions(state) as unknown as R
 
     return useModel(m, finalSelector)
   }
@@ -76,6 +79,7 @@ export type {
   PlaceholderData,
   QueryDefaultOptions,
   QueryQueryOptions,
+  SelectableResourceState,
   RegistryDefaults,
   ModelOptions,
   ValidationState,

@@ -1,0 +1,77 @@
+---
+title: 'comwit v2.1.0 — Declare query loading in selectors'
+date: '2026-08-05'
+description: 'v2.1.0 adds type-inferred selector .load(arg), so a component can declare its query key during render and show loading state from the first frame without another hook.'
+author: 'Codex'
+---
+
+## Query arguments now belong in the selector
+
+comwit queries have always supported imperative loading from actions. That remains unchanged. v2.1.0 adds a second, lifecycle-managed path for requests owned by a mounted view:
+
+```tsx
+const products = useProduct((state) => state.products.load({ page, filter }))
+```
+
+The `.load()` argument is inferred from the model's `Query<Data, Arg>` declaration. A query without an argument uses `load()`; an argument query requires its exact `Arg` type.
+
+The call is also the opt-in. Selecting `state.products` without `.load(...)` stays passive and never starts a request.
+
+## Why add it?
+
+Previously, a common component started an action from `useEffect`:
+
+```tsx
+const products = useProduct((state) => state.products)
+
+useEffect(() => {
+  actions.loadProducts({ page, filter })
+}, [page, filter])
+```
+
+Before the effect ran, the query still looked untouched: empty `initialData`, `isLoading: false`. A normal loading/empty/content branch could briefly render the empty state before switching to the skeleton.
+
+With selector `.load(arg)`, comwit knows the key during render. The selected resource is loading-aware on that first render, and the request starts after React commits.
+
+## Lifecycle and cache behavior
+
+- Ordinary rerenders with the same serialized argument do not restart the selector request.
+- Changing the argument selects and loads the new cache key.
+- Concurrent selector loads for the same resource and key share the in-flight request.
+- Existing per-argument caching, `staleTime`, `gcTime`, and `placeholderData` behavior still applies.
+- Call-time query options remain an action concern; `.load()` only accepts the declared query argument.
+- Single, infinite, and realtime query fields expose the selector API.
+
+## Existing actions remain valid
+
+This release does not remove or reinterpret `.query()`:
+
+```ts
+await this.model.products.query({ page, filter })
+await this.model.products.refetch()
+this.model.products.set(serverData)
+```
+
+Use selector `.load()` when the mounted view owns the request. Keep action methods for user commands, preloads, forced requests, multi-query coordination, and side effects. Existing `useEffect`-driven loading remains compatible.
+
+No additional React hook was added; the feature is part of the selector accepted by `useModel()` and hooks returned by `create()`.
+
+## Server Suspense guidance
+
+The documentation now includes a cache-aware App Router fallback pattern. A client fallback can passively render an already successful active query and otherwise show a skeleton; the resolved server branch initializes the resource with `silent(() => resource.set(data))`.
+
+This uses existing query state and server initialization. A separate hydration API is not required.
+
+## Documentation for agents
+
+`/llms.txt` has been rewritten as a compact, end-to-end implementation guide. It now covers the same practical domain workflow as the project state guide: types-first structure, query ownership, server initialization, CRUD consistency, cross-domain actions, optimistic rollback, proxy boundaries, decorators, persistence, history, and delivery checks.
+
+## Upgrade
+
+```bash
+yarn add @comwit/state@2.1.0
+```
+
+The deprecated `comwit` compatibility package also tracks v2.1.0 and re-exports `@comwit/state`.
+
+[GitHub Release](https://github.com/burrr-ai/comwit/releases/tag/v2.1.0) | [npm](https://www.npmjs.com/package/@comwit/state)

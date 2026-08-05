@@ -1,6 +1,6 @@
 # comwit — Query System Reference
 
-> Full API reference for `query()`, `query.infinite()`, `query.realtime()`, Suspense support, caching, and resource state.
+> Full API reference for selector `.load()`, imperative query methods, `query.infinite()`, `query.realtime()`, Suspense, caching, and resource state.
 
 ## query(opts)
 
@@ -23,25 +23,27 @@ export const post = model<PostState>({
 
 ### Options
 
-| Option            | Type                                        | Description                                                          |
-| ----------------- | ------------------------------------------- | -------------------------------------------------------------------- |
-| `initialData`     | `TData`                                     | **Required.** Initial value before any fetch.                        |
-| `queryFn`         | `(arg, context) => TData \| Promise<TData>` | **Required.** Fetcher function.                                      |
-| `suspense`        | `boolean`                                   | Enable React Suspense integration. Default `false`.                  |
-| `staleTime`       | `number`                                    | Milliseconds before cached data is considered stale. Default `0`.    |
+| Option            | Type                                        | Description                                                                                        |
+| ----------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `initialData`     | `TData`                                     | **Required.** Initial value before any fetch.                                                      |
+| `queryFn`         | `(arg, context) => TData \| Promise<TData>` | **Required.** Fetcher function.                                                                    |
+| `suspense`        | `boolean`                                   | Enable React Suspense integration. Default `false`.                                                |
+| `staleTime`       | `number`                                    | Milliseconds before cached data is considered stale. Default `0`.                                  |
 | `gcTime`          | `number`                                    | Milliseconds a cache entry survives after the model loses its last observer. Default `5 * 60_000`. |
-| `placeholderData` | `TData \| (arg, previousData) => TData`     | Data shown while fetching. Use `keepPreviousData` helper.            |
+| `placeholderData` | `TData \| (arg, previousData) => TData`     | Data shown while fetching. Use `keepPreviousData` helper.                                          |
 
 ### queryFn Signature
 
 ```ts
-queryFn: (arg: TArg, context: { state: Readonly<ResourceSingleState<TData>> }) => TData | Promise<TData>
+queryFn: (arg: TArg, context: { state: Readonly<ResourceSingleState<TData>> }) =>
+  TData | Promise<TData>
 ```
 
 - `arg` — the argument passed to `.query(arg)`. Type is the second generic: `Query<TData, TArg>`.
 - `context.state` — a readonly snapshot of the current resource state (includes `data`, `isLoading`, etc.).
 
 The return value can be:
+
 - Plain data (`TData`) — assigned to `.data`
 - An object with `data` key plus optional state overrides
 
@@ -100,21 +102,21 @@ export const chat = model<ChatState>({
 
 ### Options
 
-| Option      | Type                                        | Description                                         |
-| ----------- | ------------------------------------------- | --------------------------------------------------- |
-| `initialData` | `TData`                                   | **Required.** Initial value before any fetch.       |
-| `queryFn`   | `(arg, context) => TData \| Promise<TData>` | **Required.** Initial data fetcher.                 |
-| `subscribe` | `(callbacks) => () => void`                 | **Required.** Sets up live subscription. Returns cleanup function. |
+| Option        | Type                                        | Description                                                        |
+| ------------- | ------------------------------------------- | ------------------------------------------------------------------ |
+| `initialData` | `TData`                                     | **Required.** Initial value before any fetch.                      |
+| `queryFn`     | `(arg, context) => TData \| Promise<TData>` | **Required.** Initial data fetcher.                                |
+| `subscribe`   | `(callbacks) => () => void`                 | **Required.** Sets up live subscription. Returns cleanup function. |
 
 ### Subscribe Callbacks
 
-| Callback    | Signature                              | Description                                         |
-| ----------- | -------------------------------------- | --------------------------------------------------- |
-| `update`    | `(updater: (prev: TData) => TData) => void` | Merge data using updater function.             |
-| `set`       | `(data: TData) => void`               | Replace data entirely.                              |
-| `refetch`   | `() => void`                           | Re-execute the queryFn.                             |
-| `onStatus`  | `(status: ConnectionStatus) => void`   | Update connection status.                           |
-| `onError`   | `(error: unknown) => void`             | Set error state.                                    |
+| Callback   | Signature                                   | Description                        |
+| ---------- | ------------------------------------------- | ---------------------------------- |
+| `update`   | `(updater: (prev: TData) => TData) => void` | Merge data using updater function. |
+| `set`      | `(data: TData) => void`                     | Replace data entirely.             |
+| `refetch`  | `() => void`                                | Re-execute the queryFn.            |
+| `onStatus` | `(status: ConnectionStatus) => void`        | Update connection status.          |
+| `onError`  | `(error: unknown) => void`                  | Set error state.                   |
 
 ### ConnectionStatus
 
@@ -129,10 +131,10 @@ export const chat = model<ChatState>({
 
 ### Realtime-only Flags
 
-| Flag               | Type               | Description                              |
-| ------------------ | ------------------ | ---------------------------------------- |
-| `connectionStatus` | `ConnectionStatus` | Current connection state.                |
-| `isConnected`      | `boolean`          | `true` when status is `'connected'`.     |
+| Flag               | Type               | Description                          |
+| ------------------ | ------------------ | ------------------------------------ |
+| `connectionStatus` | `ConnectionStatus` | Current connection state.            |
+| `isConnected`      | `boolean`          | `true` when status is `'connected'`. |
 
 ### Type
 
@@ -140,7 +142,7 @@ export const chat = model<ChatState>({
 import { Query } from '@comwit/state'
 
 messages: Query.Realtime<Message[]>
-messages: Query.Realtime<Message[], string>  // with argument
+messages: Query.Realtime<Message[], string> // with argument
 ```
 
 ## Types
@@ -180,6 +182,7 @@ const post = model<PostState>({
 ```
 
 Use `Query.Suspense<T>` or `Query.SuspenseInfinite<T>` as the type. With suspense enabled:
+
 - During initial load, a Promise is thrown (caught by React `<Suspense>`).
 - On error, the error is thrown (caught by React `<ErrorBoundary>`).
 - After success, `data` is guaranteed non-nullable.
@@ -200,11 +203,30 @@ function PostList() {
 
 ## Methods
 
-All methods are available on resource fields after binding (i.e., when accessed through `state(model)` in actions or via `useModel`/`create` hooks).
+React selectors and actions intentionally expose different loading controls.
+
+### .load(arg?) — React selectors
+
+Call `.load()` only inside a `useModel()` selector or a hook created by `create()`:
+
+```tsx
+const posts = usePost((state) => state.posts.load())
+const comments = usePost((state) => state.comments.load(postId))
+```
+
+- The argument is inferred from `Query<TData, TArg>`; an argument query requires exactly that type, while `Query<TData>` uses `.load()`.
+- Calling `.load(arg)` opts the selector into automatic loading. Merely selecting `state.posts` is passive and never fetches.
+- The selector returns the normal resource state (`data`, flags, error, plus infinite/realtime fields).
+- The request begins after React commits, but the selected state reports the first load immediately so skeleton → content does not flash through an empty state.
+- A stable mounted selector does not restart the request on unrelated rerenders. Changing the serialized argument changes the cache key and starts that key.
+- Concurrent selector loads for the same resource and key are deduplicated.
+- Call-time options are deliberately unavailable. Configure provider/query defaults, or use an action method below for forced or coordinated requests.
+
+Selector loading is additive. Existing `useEffect(() => actions.load(), [])` and event-driven actions continue to work.
 
 ### .query(arg?, options?)
 
-Triggers the fetch. Must be called at least once before `.refetch()` or `.nextFetch()` will work.
+Imperative action method. Triggers the fetch and must be called at least once before `.refetch()` or `.nextFetch()` will work.
 
 ```ts
 // No argument
@@ -221,6 +243,7 @@ await this.model.comments.query(postId, { staleTime: 60_000 })
 ```
 
 **Options:**
+
 - `force: boolean` — Bypass cache staleness check and always fetch.
 - `staleTime`, `gcTime`, `placeholderData` — Override defaults per call.
 
@@ -262,27 +285,27 @@ await this.model.trending.previousFetch()
 
 ## State Flags
 
-| Flag         | Type              | Description                                               |
-| ------------ | ----------------- | --------------------------------------------------------- |
-| `data`       | `TData`           | The fetched data (or `initialData` before first fetch).   |
-| `isLoading`  | `boolean`         | `true` during the initial fetch (before first success).   |
-| `isFetching` | `boolean`         | `true` during any fetch (including refetches).            |
-| `isSuccess`  | `boolean`         | `true` after at least one successful fetch.               |
-| `isError`    | `boolean`         | `true` when the last fetch failed.                        |
-| `error`      | `string \| null`  | Error message from the last failed fetch.                 |
+| Flag         | Type             | Description                                             |
+| ------------ | ---------------- | ------------------------------------------------------- |
+| `data`       | `TData`          | The fetched data (or `initialData` before first fetch). |
+| `isLoading`  | `boolean`        | `true` during the initial fetch (before first success). |
+| `isFetching` | `boolean`        | `true` during any fetch (including refetches).          |
+| `isSuccess`  | `boolean`        | `true` after at least one successful fetch.             |
+| `isError`    | `boolean`        | `true` when the last fetch failed.                      |
+| `error`      | `string \| null` | Error message from the last failed fetch.               |
 
 ### Infinite-only flags
 
-| Flag      | Type              | Description                                          |
-| --------- | ----------------- | ---------------------------------------------------- |
-| `cursor`  | `string \| null`  | Current pagination cursor.                           |
-| `hasMore` | `boolean`         | Whether more pages are available. `nextFetch()` is a no-op when `false`. |
+| Flag      | Type             | Description                                                              |
+| --------- | ---------------- | ------------------------------------------------------------------------ |
+| `cursor`  | `string \| null` | Current pagination cursor.                                               |
+| `hasMore` | `boolean`        | Whether more pages are available. `nextFetch()` is a no-op when `false`. |
 
 ## Cache Lifecycle
 
 ```
 query() defined in model
-  -> .query(arg) called in action
+  -> selector .load(arg) after commit OR action .query(arg)
     -> queryFn executes, data loaded
     -> cache entry created with key = serialized arg
     -> within staleTime -> cached data returned, no fetch
@@ -293,6 +316,7 @@ query() defined in model
 - Each unique argument produces a separate cache entry (keyed by serialized arg).
 - Switching between arguments restores the cached state for that argument.
 - `placeholderData` is applied when switching to an argument with no cache.
+- Query resources currently expose one active argument at a time. Cached entries remain per argument, but a displayed resource state represents the active key.
 
 ## keepPreviousData
 
@@ -377,11 +401,15 @@ export const feedLoader = action<Pick<FeedActions, 'loadPosts' | 'loadMore' | 'l
 })
 
 // usage in component
-const { posts, trending } = useFeed((s) => ({
-  posts: s.posts,
-  trending: s.trending,
-}))
+const posts = useFeed((s) => s.posts.load())
+const trending = useFeed((s) => s.trending.load())
 
 if (posts.isLoading) return <Skeleton />
 if (posts.isError) return <p>Error: {posts.error}</p>
 ```
+
+## Server Suspense fallback guidance
+
+For App Router streaming, a fallback does not have to be skeleton-only. Passively read the currently active query state: render cached content when `isSuccess`, otherwise render a skeleton. The resolved server branch can initialize the query through an action that runs `silent(() => resource.set(serverData))`. This uses the existing state API; no separate `hydrate()` primitive is needed.
+
+Only reuse the active cached value when it is valid for the route/identity being rendered. Otherwise use a neutral fallback.

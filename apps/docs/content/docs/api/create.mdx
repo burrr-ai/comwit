@@ -54,18 +54,17 @@ const { posts } = usePost((s) => ({ posts: s.posts }))
 
 ## Reading query fields
 
-Query fields expose data and status flags:
+Call `.load(arg)` in the selector when the mounted component owns the request. It returns the query state and makes the first render loading-aware:
 
 ```tsx
-const { posts, actions } = usePost((s) => ({
-  posts: s.posts,
-  actions: s.actions,
-}))
+const posts = usePost((s) => s.posts.load({ page }))
 
 if (posts.isLoading) return <Skeleton />
 if (posts.isError) return <p>Error: {posts.error}</p>
 return posts.data.map((post) => <Card key={post.id} post={post} />)
 ```
+
+Selecting `s.posts` without `.load(...)` only observes existing state; it does not fetch. Existing action-driven loading remains valid for commands and coordinated workflows.
 
 ## Calling actions
 
@@ -78,3 +77,5 @@ useEffect(() => {
   actions.loadPosts()
 }, [])
 ```
+
+The effect pattern is backward compatible. Prefer selector `.load(...)` for a request whose argument already comes from render props or route state, because the query key is known during the first render and no empty state flashes before the effect.

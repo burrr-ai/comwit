@@ -18,6 +18,7 @@ export type {
   Query,
   QueryDefaultOptions,
   QueryQueryOptions,
+  SelectableResourceState,
   PlaceholderData,
   ModelOptions,
   ValidationState,

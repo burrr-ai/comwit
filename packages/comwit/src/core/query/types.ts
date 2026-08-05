@@ -181,6 +181,38 @@ export type BoundInfiniteResourceState<TData, TArg = unknown> = ResourceInfinite
 export type BoundRealtimeResourceState<TData, TArg = unknown> = ResourceRealtimeState<TData> &
   ResourceRealtimeQueryController<TData, TArg>
 
+type ResourceLoadController<TState, TArg> = [TArg] extends [void]
+  ? { load(): TState }
+  : { load(arg: TArg): TState }
+
+export type SelectableSingleResourceState<TData, TArg = void> = ResourceSingleState<TData> &
+  ResourceLoadController<ResourceSingleState<TData>, TArg>
+export type SelectableInfiniteResourceState<TData, TArg = void> = ResourceInfiniteState<TData> &
+  ResourceLoadController<ResourceInfiniteState<TData>, TArg>
+export type SelectableRealtimeResourceState<TData, TArg = void> = ResourceRealtimeState<TData> &
+  ResourceLoadController<ResourceRealtimeState<TData>, TArg>
+
+type SuspenseSelectableSingleResourceState<TData, TArg = void> = Omit<
+  SelectableSingleResourceState<TData, TArg>,
+  'data' | 'load'
+> & {
+  data: NonNullable<TData>
+  load: ResourceLoadController<
+    Omit<ResourceSingleState<TData>, 'data'> & { data: NonNullable<TData> },
+    TArg
+  >['load']
+}
+type SuspenseSelectableInfiniteResourceState<TData, TArg = void> = Omit<
+  SelectableInfiniteResourceState<TData, TArg>,
+  'data' | 'load'
+> & {
+  data: NonNullable<TData>
+  load: ResourceLoadController<
+    Omit<ResourceInfiniteState<TData>, 'data'> & { data: NonNullable<TData> },
+    TArg
+  >['load']
+}
+
 type SuspenseSingleResourceState<TData, TArg = unknown> = Omit<
   BoundSingleResourceState<TData, TArg>,
   'data'
@@ -226,6 +258,30 @@ export type BoundResourceState<T> =
                   : T extends object
                     ? { [K in keyof T]: BoundResourceState<T[K]> }
                     : T
+
+/**
+ * Projects model state into the React selector shape. Query resources expose
+ * `.load(arg)`, which opts that selector into lifecycle-managed fetching while
+ * returning the same query state flags and data shape.
+ */
+export type SelectableResourceState<T> =
+  T extends RealtimeResourceDescriptor<infer TData, infer TArg>
+    ? SelectableRealtimeResourceState<TData, TArg>
+    : T extends InfiniteResourceDescriptor<infer TData, infer TArg, infer TSuspense>
+      ? TSuspense extends true
+        ? SuspenseSelectableInfiniteResourceState<TData, TArg>
+        : SelectableInfiniteResourceState<TData, TArg>
+      : T extends SingleResourceDescriptor<infer TData, infer TArg, infer TSuspense>
+        ? TSuspense extends true
+          ? SuspenseSelectableSingleResourceState<TData, TArg>
+          : SelectableSingleResourceState<TData, TArg>
+        : T extends (infer U)[]
+          ? SelectableResourceState<U>[]
+          : T extends (...args: any[]) => any
+            ? T
+            : T extends object
+              ? { [K in keyof T]: SelectableResourceState<T[K]> }
+              : T
 
 export type DependentQueryOptions<TData> = {
   enabled?: (state: any) => boolean
@@ -307,6 +363,8 @@ export type QueryBindingRegistry = {
   boundResourceValue: WeakMap<object, Record<string, unknown>>
   boundPathProxy: WeakMap<object, Map<string, object>>
   boundResourceRuntime: WeakMap<object, ResourceRuntimeState>
+  /** In-flight requests started by selector `.load()` calls, keyed per resource. */
+  selectorLoads: WeakMap<object, Map<QueryCacheKey, Promise<unknown>>>
   suspense: Map<string, SuspenseState>
   /**
    * Tracks every runtime created in this registry, indexed by the owning
