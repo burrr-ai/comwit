@@ -136,21 +136,60 @@ posts: query.infinite<Post[]>({
 
 ### Durable on-demand query data
 
-Use `local` when server-shaped, ID-keyed data should appear immediately from IndexedDB and then be
-corrected by the server. It is especially useful for repeated list/detail navigation, optimistic
-field edits that should fan out across loaded views, and Next.js server-owned details whose Suspense
-fallback may show an exact cached value without starting another request.
+```ts
+// Public content can be shared and kept fresh for longer.
+const posts = local.collection<Post>({
+  key: 'posts',
+  version: 1,
+  scope: 'public',
+})
 
-Model one collection per canonical entity type. It uses `id` by default, supports a custom `getId`,
-and may use a static public scope or a lazy user/tenant scope. Model one resource per independently
-restorable view and freshness policy: filters, list ordering, detail completeness, and cursors remain
-view-specific. Delayed fields that belong to the same view can be emitted progressively from one
-query; split them into another resource only when they need independent restoration or freshness.
+// Personalized rows resolve their user only when the resource is used.
+const projects = local.collection<Project>({
+  key: 'projects',
+  version: 1,
+  scope: ({ state }) => {
+    const userId = state(member).me?.id
+    return userId ? `user:${userId}` : null
+  },
+})
 
-Prefer shorter stale windows for personalized data and longer windows for stable public content.
-Use `persist()` instead for local-owned preferences or drafts, and ordinary `query()` when durable
-restoration has little value. `local` is not an offline mutation queue, CRDT, or multi-device conflict
-engine. Collection versions invalidate old rows rather than migrate them. See
+// Render the list first, then merge delayed fields into the same Project entities.
+async function* loadProjects(filter: ProjectFilter) {
+  const rows = await api.project.list(filter)
+  yield { data: rows, isLoading: false, isSuccess: true }
+
+  const statuses = await api.project.deploymentStatuses(rows.map((row) => row.id))
+  yield {
+    data: mergeDeploymentStatuses(rows, statuses),
+    isLoading: false,
+    isSuccess: true,
+  }
+}
+
+export const app = model({
+  posts: local.query<Post[]>({
+    source: posts,
+    initialData: [],
+    staleTime: 7 * 24 * 60 * 60_000,
+    queryFn: () => api.post.list(),
+  }),
+  projects: local.query<Project[], ProjectFilter>({
+    source: projects,
+    initialData: [],
+    staleTime: 5 * 60_000,
+    queryFn: loadProjects,
+  }),
+  // The server fetches this SEO detail; the client fallback only calls restore({ id }).
+  projectDetail: local<Project | null, { id: string }>({
+    source: projects,
+    initialData: null,
+  }),
+})
+```
+
+Use `persist()` for local-owned preferences and drafts. `local` restores server snapshots; it does
+not queue offline mutations or resolve multi-device conflicts. See
 https://library.comwit.io/llm/local.txt for the full contract and options.
 
 ## Reading and starting queries
