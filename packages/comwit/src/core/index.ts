@@ -28,6 +28,8 @@ import { computedPlugin } from './computed'
 import { computed } from './computed'
 import {
   local,
+  type BoundLocalResource,
+  type Local,
   type LocalCollection,
   type LocalCollectionOptions,
   type LocalDefaults,
@@ -36,7 +38,11 @@ import {
   type LocalEntityFragment,
   type LocalEntityId,
   type LocalErrorContext,
+  type LocalInfiniteOptions,
+  type LocalQueryOptions,
   type LocalResourceOptions,
+  type LocalStandaloneOptions,
+  type SelectableLocalResource,
 } from './local'
 
 // Register built-in plugins
@@ -54,10 +60,11 @@ function create<S extends object, A>(
   function useStore<R>(selector: (state: SelectableState & { actions: A }) => R): R
   function useStore<R>(selector?: (state: SelectableState & { actions: A }) => R) {
     const actions = useAction<A>(options.actions)
-    const withActions = (state: SelectableState): SelectableState & { actions: A } => ({
-      ...state,
-      actions,
-    })
+    const withActions = (state: SelectableState): SelectableState & { actions: A } =>
+      ({
+        ...(state as object),
+        actions,
+      }) as SelectableState & { actions: A }
 
     const finalSelector = selector
       ? (state: SelectableState) => selector(withActions(state))
@@ -103,6 +110,8 @@ export type {
   HistoryApi,
   HistoryOptions,
   HistoryConfig,
+  BoundLocalResource,
+  Local,
   LocalCollection,
   LocalCollectionOptions,
   LocalDefaults,
@@ -111,5 +120,9 @@ export type {
   LocalEntityFragment,
   LocalEntityId,
   LocalErrorContext,
+  LocalInfiniteOptions,
+  LocalQueryOptions,
   LocalResourceOptions,
+  LocalStandaloneOptions,
+  SelectableLocalResource,
 }

@@ -3,7 +3,8 @@
 > Full API reference for selector `.load()`, imperative query methods, `query.infinite()`, `query.realtime()`, Suspense, caching, and resource state.
 
 For IndexedDB-backed normalized list/detail/infinite views, see
-https://library.comwit.io/llm/local.txt. Wrapping with `local()` preserves every query method below.
+https://library.comwit.io/llm/local.txt. `local.query()` and `local.infinite()` preserve every
+corresponding query method below; standalone `local()` has no network driver.
 
 ## query(opts)
 
@@ -258,7 +259,7 @@ Re-fetches using the last argument. No-op if `.query()` has never been called.
 await this.model.posts.refetch()
 ```
 
-### .set(data)
+### .set(data, options?)
 
 Manually set resource data without fetching. Marks the resource as successful.
 
@@ -268,7 +269,13 @@ this.model.posts.set([newPost, ...this.model.posts.data])
 
 // Set data + state overrides
 this.model.posts.set({ data: [], isSuccess: true })
+
+// Initialize an exact local/server-owned detail view
+this.model.detail.set(product, { arg: { id: product.id } })
 ```
+
+The optional `arg` establishes the exact resource identity. It is primarily useful when a server
+initializer sets a standalone local resource before a fallback has activated that route key.
 
 ### .nextFetch(arg?)
 
@@ -413,6 +420,9 @@ if (posts.isError) return <p>Error: {posts.error}</p>
 
 ## Server Suspense fallback guidance
 
-For App Router streaming, a fallback does not have to be skeleton-only. Passively read the currently active query state: render cached content when `isSuccess`, otherwise render a skeleton. The resolved server branch can initialize the query through an action that runs `silent(() => resource.set(serverData))`. This uses the existing state API; no separate `hydrate()` primitive is needed.
-
-Only reuse the active cached value when it is valid for the route/identity being rendered. Otherwise use a neutral fallback.
+For App Router streaming with server-owned detail fetching, prefer a standalone `local()` resource.
+The fallback calls `restore(routeArg)`, which checks only the exact IndexedDB view and never starts
+an API request or suspends. The resolved server branch initializes it with
+`silent(() => resource.set(serverData, { arg: routeArg }))`. See the local reference for the full
+pattern. Ordinary query fields may still be read passively, but their active value must already be
+known to match the current route.

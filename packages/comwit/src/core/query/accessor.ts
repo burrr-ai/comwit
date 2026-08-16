@@ -1,7 +1,7 @@
 import { snapshot } from '../proxy'
-import { bindLocalResource, serializeResourceArg } from '../local'
 import { DEFAULT_GC_TIME } from './registry'
 import {
+  RESOURCE_LIFECYCLE,
   RESOURCE_QUERY_OPTION_KEYS,
   type AnyResourceDescriptor,
   type ConnectionStatus,
@@ -17,10 +17,12 @@ import {
   type ResourceContext,
   type ResourceDataLike,
   type ResourceInfiniteState,
+  type ResourceLifecycleBinding,
   type ResourceQueryOptions,
   type ResourceRealtimeState,
   type ResourceRuntimeState,
   type ResourceSingleState,
+  type ResourceSetOptions,
   type SingleResourceDescriptor,
   type SubscribeCallbacks,
 } from './types'
@@ -154,6 +156,16 @@ export function serializeQueryArg(arg: unknown) {
   } catch {
     return `__unserializable__:${String(arg)}`
   }
+}
+
+export function serializeResourceArg(descriptor: AnyResourceDescriptor, arg: unknown): string {
+  const serialize = descriptor.serializeArg as ((value: unknown) => string) | undefined
+  if (!serialize) return serializeQueryArg(arg)
+  const result = serialize(arg)
+  if (typeof result !== 'string') {
+    throw new Error('resource serializeArg must return a string')
+  }
+  return result
 }
 
 function cloneRuntime(path: string): ResourceRuntimeState {
@@ -299,9 +311,40 @@ export function createResourceAccessor(
   })
   registry.boundResourceRuntime.set(state, runtime)
 
-  const localBinding = bindLocalResource(registry.local, descriptor, path, state, runtime)
-  const runInternal = <T>(callback: () => T): T =>
-    localBinding ? localBinding.runInternal(callback) : callback()
+  const lifecycleBindings = (descriptor[RESOURCE_LIFECYCLE] ?? [])
+    .map((factory) => factory.bind({ state, descriptor, path, runtime, registry }))
+    .filter((binding): binding is ResourceLifecycleBinding => binding !== undefined)
+
+  const runInternal = <T>(callback: () => T): T => {
+    const visit = (index: number): T => {
+      const binding = lifecycleBindings[index]
+      if (!binding) return callback()
+      return binding.runInternal ? binding.runInternal(() => visit(index + 1)) : visit(index + 1)
+    }
+    return visit(0)
+  }
+
+  const activateLifecycle = (key: string, arg: unknown) => {
+    for (const binding of lifecycleBindings) binding.activate?.(key, arg)
+  }
+
+  const beginLifecycleRequests = () => lifecycleBindings.map((binding) => binding.beginRequest?.())
+
+  const commitLifecycleSuccess = async (
+    entry: QueryCacheEntry,
+    fetchedAt: number,
+    requestTokens: unknown[]
+  ) => {
+    await Promise.all(
+      lifecycleBindings.map((binding, index) =>
+        binding.afterSuccess?.({
+          entry,
+          fetchedAt,
+          requestToken: requestTokens[index],
+        })
+      )
+    )
+  }
 
   if (modelKey !== undefined) {
     let set = registry.runtimesByModel.get(modelKey)
@@ -402,10 +445,10 @@ export function createResourceAccessor(
     const now = Date.now()
 
     const queryArg = isRefetch ? activeEntryBefore?.arg : hasArg ? arg : runtime.lastArg
-    const queryKey = serializeResourceArg(descriptor, queryArg, serializeQueryArg)
+    const queryKey = serializeResourceArg(descriptor, queryArg)
     runtime.lastArg = queryArg
     runtime.activeKey = queryKey
-    localBinding?.activate(queryKey)
+    activateLifecycle(queryKey, queryArg)
 
     let entry = runtime.cacheEntries.get(queryKey)
     if (!entry) {
@@ -423,9 +466,8 @@ export function createResourceAccessor(
 
     const currentFetchId = ++runtime.fetchId
 
-    // A local query first checks the exact durable view for this resource/argument.
-    // The view proves list membership/detail completeness; an entity row by itself does not.
-    if (localBinding && !entry.localHydrated && !entry.hasQueried) {
+    // Lifecycle adapters may restore an exact durable view before the remote driver runs.
+    if (lifecycleBindings.length > 0 && !entry.resourceHydrated && !entry.hasQueried) {
       const isArgChange = !isRefetch && activeEntryBefore?.hasQueried
       const hasPlaceholderData = effectiveOptions.placeholderData !== undefined
 
@@ -445,9 +487,13 @@ export function createResourceAccessor(
       state.isLoading = !state.isSuccess
       state.isFetching = true
 
-      const hydrated = await localBinding.hydrate()
+      let hydrated
+      for (const binding of lifecycleBindings) {
+        hydrated = await binding.hydrate?.()
+        if (hydrated) break
+      }
       if (runtime.fetchId !== currentFetchId) return
-      entry.localHydrated = true
+      entry.resourceHydrated = true
 
       if (hydrated) {
         runInternal(() => {
@@ -461,11 +507,12 @@ export function createResourceAccessor(
         })
         entry.hasQueried = true
         entry.lastFetchedAt = hydrated.fetchedAt
-        entry.cursorHistory = [...hydrated.cursorHistory]
+        entry.cursorHistory = [...(hydrated.cursorHistory ?? [])]
         entry.lastResult =
-          descriptor.kind === 'infinite'
+          hydrated.lastResult ??
+          (descriptor.kind === 'infinite'
             ? { data: hydrated.data, ...hydrated.state }
-            : hydrated.data
+            : hydrated.data)
         updateCachedState(entry, state)
       }
     }
@@ -551,7 +598,7 @@ export function createResourceAccessor(
       runtime.streamAbortController = undefined
     }
 
-    const requestStartRevision = localBinding?.currentRevision() ?? 0
+    const requestTokens = beginLifecycleRequests()
 
     try {
       let result: unknown
@@ -621,9 +668,7 @@ export function createResourceAccessor(
         state.isSuccess = true
         entry.lastFetchedAt = Date.now()
         entry.lastResult = lastYield
-        if (localBinding) {
-          await localBinding.commitRemote(entry, entry.lastFetchedAt, requestStartRevision)
-        }
+        await commitLifecycleSuccess(entry, entry.lastFetchedAt, requestTokens)
         updateCachedState(entry, state)
 
         scheduleRefetchInterval()
@@ -653,9 +698,7 @@ export function createResourceAccessor(
         }
       }
 
-      if (localBinding) {
-        await localBinding.commitRemote(entry, entry.lastFetchedAt, requestStartRevision)
-      }
+      await commitLifecycleSuccess(entry, entry.lastFetchedAt, requestTokens)
       updateCachedState(entry, state)
 
       if (descriptor.kind === 'realtime') {
@@ -670,7 +713,8 @@ export function createResourceAccessor(
         throw error
       }
       state.isError = true
-      state.isSuccess = localBinding && entry.hasQueried ? true : false
+      state.isSuccess =
+        entry.hasQueried && lifecycleBindings.some((binding) => binding.preserveSuccessOnError)
       state.error = normalizeError(error)
 
       // Store error in suspense state for ErrorBoundary
@@ -795,9 +839,68 @@ export function createResourceAccessor(
     }
   }
 
-  const bound = new Proxy(state, {
+  const setResource = (next: unknown, options?: ResourceSetOptions<unknown>): unknown => {
+    const setArg =
+      options && Object.prototype.hasOwnProperty.call(options, 'arg')
+        ? options.arg
+        : runtime.lastArg
+    const key = serializeResourceArg(descriptor, setArg)
+
+    // A server initializer must win over an IndexedDB restore or request that
+    // started before it. Advancing fetchId invalidates either pending result.
+    runtime.fetchId++
+    runtime.lastArg = setArg
+    runtime.activeKey = key
+    activateLifecycle(key, setArg)
+
+    let entry = runtime.cacheEntries.get(key)
+    if (!entry) {
+      entry = createCacheEntry(state, key, setArg)
+      runtime.cacheEntries.set(key, entry)
+    }
+    entry.arg = setArg
+
+    const stateKeys = new Set([
+      'data',
+      'isLoading',
+      'isFetching',
+      'isSuccess',
+      'isError',
+      'error',
+      'cursor',
+      'hasMore',
+    ])
+    const nextKeys = isRecord(next) ? Object.keys(next) : []
+    const isStatePatch =
+      nextKeys.length > 0 &&
+      nextKeys.some((key) => stateKeys.has(key)) &&
+      nextKeys.every((key) => stateKeys.has(key))
+
+    if (isStatePatch) {
+      Object.assign(state, next)
+    } else {
+      state.data = next
+    }
+
+    state.isLoading = false
+    state.isFetching = false
+    state.isSuccess = true
+    state.isError = false
+    state.error = null
+
+    entry.hasQueried = true
+    entry.resourceHydrated = true
+    entry.lastFetchedAt = Date.now()
+    entry.lastResult = state.data
+    updateCachedState(entry, state)
+
+    return next
+  }
+
+  const baseBound = new Proxy(state, {
     get(target, prop) {
       if (prop === 'query') return queryFn
+      if (descriptor.selectorMethod && prop === descriptor.selectorMethod) return queryFn
       if (prop === 'refetch') return refetch
       if (prop === 'unsubscribe') {
         if (descriptor.kind === 'realtime') return unsubscribe
@@ -812,29 +915,17 @@ export function createResourceAccessor(
         return undefined
       }
       if (prop === 'set') {
-        return (next: unknown) => {
-          if (isRecord(next)) {
-            Object.assign(target, next)
-          } else {
-            target.data = next
-          }
-
-          target.isSuccess = true
-          target.isError = false
-          target.error = null
-
-          const activeEntry = getActiveEntry()
-          if (activeEntry) {
-            updateCachedState(activeEntry, target)
-          }
-
-          return next
-        }
+        return setResource
       }
 
       return Reflect.get(target, prop)
     },
   })
+
+  const bound = lifecycleBindings.reduce(
+    (controller, binding) => binding.decorateController?.(controller) ?? controller,
+    baseBound as ResourceDataLike
+  )
 
   registry.boundResourceValue.set(state, bound)
   registry.boundResourceRuntime.set(bound, runtime)

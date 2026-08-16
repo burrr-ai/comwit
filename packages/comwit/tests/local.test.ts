@@ -1,5 +1,5 @@
 import { IDBFactory } from 'fake-indexeddb'
-import { local, model, query } from '../src/core'
+import { local, model, query, silent } from '../src/core'
 import { bindResourceState, createQueryBindingRegistry } from '../src/core/query'
 
 type TodoEntity = {
@@ -34,29 +34,27 @@ function createTodoBound(options: {
   onError?: (error: unknown) => void
 }) {
   const todoModel = model({
-    list: local(
-      query<TodoListItem[], { status: 'open' | 'done' }>({
-        initialData: [],
-        staleTime: options.staleTime,
-        queryFn: options.listFn ?? (() => []),
-      }),
-      { source: options.source }
-    ),
-    detail: local(
-      query<TodoDetail | null, string>({
-        initialData: null,
-        staleTime: options.staleTime,
-        queryFn: options.detailFn ?? (() => null),
-      }),
-      { source: options.source }
-    ),
+    list: local.query<TodoListItem[], { status: 'open' | 'done' }>({
+      source: options.source,
+      initialData: [],
+      staleTime: options.staleTime,
+      queryFn: options.listFn ?? (() => []),
+    }),
+    detail: local.query<TodoDetail | null, string>({
+      source: options.source,
+      initialData: null,
+      staleTime: options.staleTime,
+      queryFn: options.detailFn ?? (() => null),
+    }),
   })
   const store = todoModel.instance()
   const registry = createQueryBindingRegistry({
-    indexedDB: options.factory,
-    database: options.database,
-    scope: options.scope,
-    onError: options.onError ? (error) => options.onError?.(error) : undefined,
+    local: {
+      indexedDB: options.factory,
+      database: options.database,
+      scope: options.scope,
+      onError: options.onError ? (error) => options.onError?.(error) : undefined,
+    },
   })
   const bound = bindResourceState(
     store.proxy,
@@ -75,6 +73,127 @@ describe('local()', () => {
     expect(() => local.collection<TodoEntity>({ key: 'todos', version: 0 })).toThrow(
       'positive integer'
     )
+
+    const source = local.collection<TodoEntity>({ key: 'todos', version: 1 })
+    const legacy = local(query<TodoListItem[]>({ initialData: [], queryFn: () => [] }), {
+      source,
+    })
+    expect(legacy.kind).toBe('single')
+  })
+
+  test('restores a standalone detail seeded by server initialization without an API query', async () => {
+    const factory = new IDBFactory()
+    const database = `local-standalone-${crypto.randomUUID()}`
+    const source = local.collection<TodoEntity>({ key: 'todos', version: 1 })
+
+    const createBound = () => {
+      const todoModel = model({
+        list: local.query<TodoListItem[], { status: 'open' | 'done' }>({
+          source,
+          initialData: [],
+          staleTime: 60_000,
+          queryFn: () => [{ id: '1', title: 'List title', status: 'open', updatedAt: 1 }],
+        }),
+        detail: local<TodoDetail | null, string>({
+          source,
+          initialData: null,
+        }),
+      })
+      const store = todoModel.instance()
+      const registry = createQueryBindingRegistry({
+        local: { indexedDB: factory, database },
+      })
+      return bindResourceState(
+        store.proxy,
+        todoModel.pluginBags.get('query')!,
+        undefined,
+        registry,
+        todoModel.key
+      ) as any
+    }
+
+    const first = createBound()
+    await first.list.query({ status: 'open' })
+
+    silent(() => {
+      first.detail.set(
+        {
+          id: '1',
+          title: 'Server detail',
+          status: 'open',
+          updatedAt: 2,
+          description: 'SEO response',
+        },
+        { arg: '1' }
+      )
+    })
+
+    await vi.waitFor(() => expect(first.list.data[0].title).toBe('Server detail'))
+
+    const restored = createBound()
+    await restored.detail.restore('1')
+
+    expect(restored.detail.data).toEqual({
+      id: '1',
+      title: 'Server detail',
+      status: 'open',
+      updatedAt: 2,
+      description: 'SEO response',
+    })
+    expect(restored.detail.isSuccess).toBe(true)
+
+    restored.detail.remove('1')
+    expect(restored.detail.data).toBeNull()
+  })
+
+  test('lets a server initializer win over a pending standalone IndexedDB restore', async () => {
+    const factory = new IDBFactory()
+    const database = `local-standalone-race-${crypto.randomUUID()}`
+    const source = local.collection<TodoEntity>({ key: 'todos', version: 1 })
+
+    const createBound = () => {
+      const todoModel = model({
+        detail: local<TodoDetail | null, string>({ source, initialData: null }),
+      })
+      const store = todoModel.instance()
+      return bindResourceState(
+        store.proxy,
+        todoModel.pluginBags.get('query')!,
+        undefined,
+        createQueryBindingRegistry({ local: { indexedDB: factory, database } }),
+        todoModel.key
+      ) as any
+    }
+
+    const seed = createBound()
+    seed.detail.set(
+      {
+        id: '1',
+        title: 'IndexedDB value',
+        status: 'open',
+        updatedAt: 1,
+        description: 'Old',
+      },
+      { arg: '1' }
+    )
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const next = createBound()
+    const restoring = next.detail.restore('1')
+    next.detail.set(
+      {
+        id: '1',
+        title: 'Server value',
+        status: 'open',
+        updatedAt: 2,
+        description: 'Fresh',
+      },
+      { arg: '1' }
+    )
+    await restoring
+
+    expect(next.detail.data.title).toBe('Server value')
+    expect(next.detail.data.description).toBe('Fresh')
   })
 
   test('hydrates an exact list argument from IndexedDB without refetching while fresh', async () => {
@@ -383,29 +502,29 @@ describe('local()', () => {
 
     const createPageBound = (listFn: () => Promise<TodoPage> | TodoPage, detailFn: () => any) => {
       const pageModel = model({
-        page: local(
-          query<TodoPage>({
-            initialData: { items: [], total: 0 },
-            staleTime: 60_000,
-            queryFn: listFn,
-          }),
-          {
-            source,
-            map: {
-              split: (page) => ({ rows: page.items, meta: { total: page.total } }),
-              join: (rows, meta) => ({
-                items: rows,
-                total: meta?.total ?? 0,
-              }),
-            },
-          }
-        ),
-        detail: local(query<TodoDetail | null, string>({ initialData: null, queryFn: detailFn }), {
+        page: local.query<TodoPage>({
           source,
+          initialData: { items: [], total: 0 },
+          staleTime: 60_000,
+          queryFn: listFn,
+          map: {
+            split: (page) => ({ rows: page.items, meta: { total: page.total } }),
+            join: (rows, meta) => ({
+              items: rows,
+              total: meta?.total ?? 0,
+            }),
+          },
+        }),
+        detail: local.query<TodoDetail | null, string>({
+          source,
+          initialData: null,
+          queryFn: detailFn,
         }),
       })
       const store = pageModel.instance()
-      const registry = createQueryBindingRegistry({ indexedDB: factory, database })
+      const registry = createQueryBindingRegistry({
+        local: { indexedDB: factory, database },
+      })
       return bindResourceState(
         store.proxy,
         pageModel.pluginBags.get('query')!,
@@ -452,17 +571,17 @@ describe('local()', () => {
 
     const createFeed = (queryFn: () => any) => {
       const feedModel = model({
-        feed: local(
-          query.infinite<TodoListItem[]>({
-            initialData: [],
-            staleTime: 60_000,
-            queryFn,
-          }),
-          { source }
-        ),
+        feed: local.infinite<TodoListItem[]>({
+          source,
+          initialData: [],
+          staleTime: 60_000,
+          queryFn,
+        }),
       })
       const store = feedModel.instance()
-      const registry = createQueryBindingRegistry({ indexedDB: factory, database })
+      const registry = createQueryBindingRegistry({
+        local: { indexedDB: factory, database },
+      })
       return bindResourceState(
         store.proxy,
         feedModel.pluginBags.get('query')!,

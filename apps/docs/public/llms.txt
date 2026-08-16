@@ -54,21 +54,22 @@ Rules:
 
 ## types.ts
 
-Use `Query<Data, Arg>` for remotely loaded fields and ordinary types for local/server-initialized state.
+Use `Query<Data, Arg>` for remotely loaded fields and `Local<Data, Arg>` for IndexedDB-backed
+resources that an action or server component initializes.
 
 ```ts
-import type { Query } from '@comwit/state'
+import type { Local, Query } from '@comwit/state'
 
 export type ProductState = {
   products: Query<Pageable<Product>, { page: number; filter: ProductFilter }>
   stats: Query<ProductStats>
-  detail: Query<Product | null, { id: string }>
+  detail: Local<Product | null, { id: string }>
   selectedIds: string[]
   isEditMode: boolean
 }
 
 export type ProductActions = {
-  initDetail(product: Product): void
+  initDetail(id: string, product: Product): void
   refreshAll(): Promise<void>
   loadMore(): Promise<void>
   create(title: string): Promise<void>
@@ -89,16 +90,19 @@ Query type variants:
 The model defines data shape and fetch policy, not UI effects.
 
 ```ts
-import { keepPreviousData, model, query } from '@comwit/state'
+import { keepPreviousData, local, model, query } from '@comwit/state'
+
+const productEntities = local.collection<Product>({ key: 'products', version: 1 })
 
 export const product = model<ProductState>({
-  products: query({
+  products: local.query({
+    source: productEntities,
     initialData: EMPTY_PAGE,
     queryFn: ({ page, filter }) => api.product.list({ page, filter }),
     placeholderData: keepPreviousData,
   }),
   stats: query({ initialData: EMPTY_STATS, queryFn: () => api.product.stats() }),
-  detail: query({ initialData: null, queryFn: ({ id }) => api.product.get(id) }),
+  detail: local({ source: productEntities, initialData: null }),
   selectedIds: [],
   isEditMode: false,
 })
@@ -127,30 +131,27 @@ posts: query.infinite<Post[]>({
 - Model option `rules`: field validators; read `{ errors, isValid }` from `$validation`.
 - Model option `history: true | { limit }`: read `$history.undo()`, `redo()`, `canUndo`, `canRedo`, `ignore(fn)` through the existing domain hook. One action call is one history transaction.
 - `persist({ key, defaultValue, storage? })`: local/session/custom storage, SSR-safe, debounced, cross-tab for localStorage.
-- `local(query(...), { source })`: IndexedDB-backed exact-argument views over normalized entities; stale data revalidates with the original queryFn.
+- `local({ source, initialData })`: standalone exact-argument IndexedDB resource; `.restore()` never calls an API.
+- `local.query({ source, initialData, queryFn })` / `local.infinite(...)`: local-first adapters that revalidate with the existing query lifecycle.
 
 ### Durable on-demand query data
 
-Use one collection per entity type and share it across list/detail/infinite resources:
+Use one collection per entity type and share it across list/detail/infinite resources. A standalone
+detail is useful when a Next.js server component owns its API request:
 
 ```ts
 const products = local.collection<ProductEntity>({ key: 'products', version: 1 })
 
 const product = model({
-  list: local(
-    query<ProductListItem[], Filter>({
-      initialData: [],
-      queryFn: api.product.list,
-    }),
-    { source: products }
-  ),
-  detail: local(
-    query<ProductDetail | null, string>({
-      initialData: null,
-      queryFn: api.product.detail,
-    }),
-    { source: products }
-  ),
+  list: local.query<ProductListItem[], Filter>({
+    source: products,
+    initialData: [],
+    queryFn: api.product.list,
+  }),
+  detail: local<ProductDetail | null, { id: string }>({
+    source: products,
+    initialData: null,
+  }),
 })
 ```
 
@@ -160,9 +161,11 @@ stale views render while `isFetching` and revalidate in the background; unseen a
 List presence never proves detail completeness.
 
 Incoming fields shallowly merge, so a later list summary does not erase omitted detail fields.
-Direct entity edits write through and fan out to loaded views sharing the ID. Refetch after API
-mutations to correct membership/order/totals. Array removal changes one view, not the global entity.
-Use resource `map.split/join` for envelopes such as `{ items, total }`.
+Direct entity edits write through and fan out to loaded views sharing the ID. Standalone `.restore(arg)`
+checks only the exact local view and never fetches; `.set(data, { arg })` writes that exact view;
+`.remove(arg)` resets it to `initialData`. Refetch query-backed views after API mutations to correct
+membership/order/totals. Array removal changes one view, not the global entity. Use resource
+`map.split/join` for envelopes such as `{ items, total }`.
 
 `version` is required and has no migration path: bumping it invalidates and removes older rows.
 Scope by user/tenant and remount `ComwitProvider` when scope changes. This feature is not a full local
@@ -175,6 +178,7 @@ A selector can start a request or passively read data that was already loaded or
 ```tsx
 const products = useProduct((s) => s.products.load({ page, filter })) // start/load this key
 const stats = useProduct((s) => s.stats) // read current state; never starts a request
+const detail = useProduct((s) => s.detail.restore({ id })) // exact IndexedDB only; no API
 ```
 
 Use selector `.load(arg?)` when the view owns the initial request. Its argument is inferred from `Query<Data, Arg>`, and it returns the ordinary query resource state. Use passive selection when another action or server initialization owns loading. Do not create another query hook.
@@ -210,7 +214,7 @@ Action methods from `state(model)`:
 
 - `.query(arg?, options?)` — fetch; honors cache freshness.
 - `.refetch()` — force the active/last argument; no-op before a successful initial query.
-- `.set(data | statePatch)` — set data and mark success; useful for optimistic and server initialization.
+- `.set(data | statePatch, { arg }?)` — set data and mark success; `arg` identifies an exact local/server-initialized view.
 - Infinite: `.nextFetch(arg?)`, `.previousFetch(arg?, options?)`.
 - Realtime: `.unsubscribe()`.
 
@@ -252,22 +256,34 @@ Plain state is mutable inside actions: assign fields, `push`/`splice` arrays, or
 No separate `hydrate()` API is needed. Initialize during client render through an action that wraps writes in `silent()`; do not delay it to an effect.
 
 ```ts
-initDetail(value: Product) {
-  silent(() => this.m.detail.set(value))
+initDetail(id: string, value: Product) {
+  silent(() => this.m.detail.set(value, { arg: { id } }))
 }
 ```
 
-`.set()` marks the query successful, so client fallbacks can distinguish initialized cache from `initialData`.
+`.set()` marks the resource successful. On a standalone local resource, it also stores the exact
+argument view and canonical entity in IndexedDB. `silent()` suppresses notifications, not storage.
 
 ```tsx
-function DetailInit({ value }: { value: Product }) {
+function DetailInit({ id, value }: { id: string; value: Product }) {
   const init = useProduct((s) => s.actions.initDetail)
-  init(value)
+  init(id, value)
   return <ProductView product={value} />
 }
 ```
 
-For a server `<Suspense>` boundary, the client fallback may passively read the current query: show cached content when `isSuccess`, otherwise show a skeleton. The resolved server branch renders `DetailInit`. Reuse cached content only when its active identity is valid for the route; otherwise keep the fallback neutral.
+For a server `<Suspense>` boundary, the client fallback restores only the exact route view. It does
+not call an API or suspend; show cached content when present and otherwise show a skeleton. The
+resolved server branch renders `DetailInit`.
+
+```tsx
+function DetailFallback({ id }: { id: string }) {
+  const detail = useProduct((s) => s.detail.restore({ id }))
+  return detail.data ? <ProductView product={detail.data} /> : <ProductSkeleton />
+}
+```
+
+If the IndexedDB read is still pending when the server initializer runs, the server value wins.
 
 Library `suspense: true` is available for client query suspension: initial query promises suspend, refetches use `isFetching`, and errors go to the nearest error boundary. Prefer the server-streaming pattern above for App Router server work.
 
@@ -366,7 +382,7 @@ Here `@LoginRequired` guards every method, while `@ConfirmDelete` applies only t
 - View-owned query uses selector `.load(arg)`; passive query intentionally omits it.
 - Command/coordinated query stays in an action.
 - Loading, error, empty, and background-fetch behavior are deliberate.
-- Server init uses `silent()` and query `.set()` where applicable.
+- Server init uses `silent()` and `.set(data, { arg })`; a local fallback uses exact `.restore(arg)`.
 - CRUD keeps list/detail/stats consistent and rolls back failed optimistic writes.
 - Proxy values are snapshotted at serialization boundaries.
 - Decorator support is enabled in TypeScript/Next.js.

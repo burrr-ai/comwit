@@ -30,6 +30,8 @@ export type {
   HistoryApi,
   HistoryOptions,
   HistoryConfig,
+  BoundLocalResource,
+  Local,
   LocalCollection,
   LocalCollectionOptions,
   LocalDefaults,
@@ -38,6 +40,10 @@ export type {
   LocalEntityFragment,
   LocalEntityId,
   LocalErrorContext,
+  LocalInfiniteOptions,
+  LocalQueryOptions,
   LocalResourceOptions,
+  LocalStandaloneOptions,
+  SelectableLocalResource,
 } from './core'
 export * from './interceptors'

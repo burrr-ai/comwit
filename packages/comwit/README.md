@@ -28,18 +28,20 @@ Pass the URL to Claude Code. It handles the rest.
 const todos = local.collection<Todo>({ key: 'todos', version: 1 })
 
 const todo = model({
-  list: local(
-    query<Todo[], TodoFilter>({
-      initialData: [],
-      queryFn: api.todo.list,
-    }),
-    { source: todos }
-  ),
+  list: local.query<Todo[], TodoFilter>({
+    source: todos,
+    initialData: [],
+    queryFn: api.todo.list,
+  }),
+  detail: local<Todo | null, { id: string }>({
+    source: todos,
+    initialData: null,
+  }),
 })
 ```
 
-`local(query(...))` restores exact argument views from normalized IndexedDB entities and uses the
-original `queryFn` to revalidate stale data. The `.load()`, `.query()`, `.refetch()`, `.set()`, and
-optimistic mutation interfaces remain unchanged.
+`local()` restores an exact IndexedDB view without making an API request, which fits server-owned
+SEO details. `local.query()` and `local.infinite()` add background server revalidation while keeping
+the existing `.load()`, `.query()`, `.refetch()`, `.set()`, and optimistic mutation interfaces.
 
-[Read the local query reference](https://library.comwit.io/docs/api/local).
+[Read the local resource reference](https://library.comwit.io/docs/api/local).

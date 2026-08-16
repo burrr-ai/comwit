@@ -10,7 +10,6 @@ import type {
   QueryDefaultOptions,
   ResourceDescriptorMap,
 } from './types'
-import type { LocalDefaults } from '../local'
 
 export const QUERY_PLUGIN_NAME = 'query'
 
@@ -28,7 +27,7 @@ export const queryPlugin: FieldPlugin = {
     _defaults?: Record<string, unknown>,
     allDefaults?: Record<string, unknown>
   ): QueryBindingRegistry {
-    return createQueryBindingRegistry(allDefaults?.local as LocalDefaults | undefined)
+    return createQueryBindingRegistry(allDefaults)
   },
 
   bindState(

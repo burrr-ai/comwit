@@ -13,8 +13,9 @@ Declares a client-side data fetching field inside a model.
 import { query } from '@comwit/state'
 ```
 
-Wrap a query with [`local()`](/docs/api/local) when the exact argument should restore from
-IndexedDB before stale data revalidates in the background.
+Use [`local.query()`](/docs/api/local) when the exact argument should restore from IndexedDB before
+stale data revalidates in the background. Standalone `local()` is available when a server component
+or action owns remote loading.
 
 ## Basic usage
 
@@ -76,12 +77,12 @@ Existing effect-driven actions remain supported. Use selector `load` when the re
 
 Inside React selectors, a query exposes `.load(arg?)` and returns its query state. Once accessed via `state()` in an action, it exposes these imperative methods:
 
-| Method         | Where    | Description                                                        |
-| -------------- | -------- | ------------------------------------------------------------------ |
-| `.load(arg?)`  | Selector | Declare the query for this mounted component and return its state. |
-| `.query(arg?)` | Action   | Fetch data. Respects staleTime — skips if data is fresh.           |
-| `.refetch()`   | Action   | Force re-fetch with the last used argument.                        |
-| `.set(data)`   | Action   | Manually set data and mark the query successful.                   |
+| Method                 | Where    | Description                                                                       |
+| ---------------------- | -------- | --------------------------------------------------------------------------------- |
+| `.load(arg?)`          | Selector | Declare the query for this mounted component and return its state.                |
+| `.query(arg?)`         | Action   | Fetch data. Respects staleTime — skips if data is fresh.                          |
+| `.refetch()`           | Action   | Force re-fetch with the last used argument.                                       |
+| `.set(data, { arg }?)` | Action   | Manually set data and mark success; `arg` establishes an exact resource identity. |
 
 ## Status flags
 
@@ -386,19 +387,23 @@ function Page() {
 - Errors are thrown to the nearest `ErrorBoundary`
 - Use `Query.Suspense<T>` or `Query.SuspenseInfinite<T>` for correct typing (`data` is `NonNullable`)
 
-For App Router server streaming, prefer a cache-aware fallback instead of making every fallback a skeleton. A client fallback may passively read an already successful query and render it; otherwise it renders the skeleton. When the server result resolves, initialize the same query with `silent(() => resource.set(data))`. No separate hydration API is required.
+For App Router server streaming where the server owns the detail request, prefer a standalone
+[`local()`](/docs/api/local) resource. Its client fallback calls `restore({ id })`, which checks only
+the exact IndexedDB view and does not issue another API request. The resolved server branch writes
+the exact value with `silent(() => resource.set(data, { arg: { id } }))`.
 
 ```tsx
-function ProductFallback() {
-  const detail = useProduct((state) => state.detail) // passive cache read
-  return detail.isSuccess ? <ProductView product={detail.data!} /> : <ProductSkeleton />
+function ProductFallback({ id }: { id: string }) {
+  const detail = useProduct((state) => state.detail.restore({ id }))
+  return detail.data ? <ProductView product={detail.data} /> : <ProductSkeleton />
 }
 
-function ProductInit({ product }: { product: Product }) {
+function ProductInit({ id, product }: { id: string; product: Product }) {
   const actions = useProduct((state) => state.actions)
-  actions.init(product) // init uses silent(() => model.detail.set(product))
+  actions.init(id, product) // uses silent(() => detail.set(product, { arg: { id } }))
   return <ProductView product={product} />
 }
 ```
 
-Only reuse cached content when the active value is valid for the route being rendered. Otherwise use a neutral fallback.
+If no exact value exists or restoration is pending, the fallback stays a skeleton. A server
+initializer wins over an older IndexedDB read that is still pending.

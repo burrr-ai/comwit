@@ -1,11 +1,22 @@
 import { snapshot, subscribeOps, type ProxyOp } from './proxy'
+import { query } from './query/descriptor'
+import {
+  RESOURCE_LIFECYCLE,
+  RESOURCE_TYPE_OVERRIDE,
+  type ResourceLifecycleFactory,
+} from './query/types'
 import type {
   AnyResourceDescriptor,
+  InfiniteResourceBuilderOptions,
   InfiniteResourceDescriptor,
   QueryCacheEntry,
   QueryCacheKey,
+  ResourceBaseState,
   ResourceDataLike,
+  ResourceSetOptions,
   ResourceRuntimeState,
+  ResourceTypeOverride,
+  SingleResourceBuilderOptions,
   SingleResourceDescriptor,
 } from './query/types'
 
@@ -107,9 +118,65 @@ export type LocalResourceMetadata = {
   key?: string
   serializeArg?: (arg: unknown) => string
   map?: LocalDataMap<LocalEntity, unknown>
+  standalone?: boolean
+  initialData?: unknown
 }
 
+type LocalRestoreController<TState, TArg> = [TArg] extends [void]
+  ? { restore(): TState }
+  : { restore(arg: TArg): TState }
+
+type LocalActionController<TData, TArg> = [TArg] extends [void]
+  ? {
+      restore(): Promise<unknown>
+      set(data: TData, options?: ResourceSetOptions<TArg>): TData
+      remove(): TData
+    }
+  : {
+      restore(arg: TArg): Promise<unknown>
+      set(data: TData, options: ResourceSetOptions<TArg>): TData
+      remove(arg: TArg): TData
+    }
+
+export type BoundLocalResource<TData, TArg = void> = ResourceBaseState<TData> &
+  LocalActionController<TData, TArg>
+
+export type SelectableLocalResource<TData, TArg = void> = ResourceBaseState<TData> &
+  LocalRestoreController<ResourceBaseState<TData>, TArg>
+
+export type Local<TData, TArg = void> = SingleResourceDescriptor<TData, TArg> &
+  ResourceTypeOverride<BoundLocalResource<TData, TArg>, SelectableLocalResource<TData, TArg>> & {
+    selectorMethod: 'restore'
+  }
+
+export type LocalStandaloneOptions<
+  TData,
+  TArg,
+  TEntity extends LocalEntity = any,
+  TMeta = any,
+> = LocalResourceOptions<TEntity, TArg, TData, TMeta> & {
+  initialData: TData
+}
+
+export type LocalQueryOptions<
+  TData,
+  TArg,
+  TEntity extends LocalEntity = any,
+  TMeta = any,
+> = SingleResourceBuilderOptions<TData, TArg> & LocalResourceOptions<TEntity, TArg, TData, TMeta>
+
+export type LocalInfiniteOptions<
+  TData,
+  TArg,
+  TEntity extends LocalEntity = any,
+  TMeta = any,
+> = InfiniteResourceBuilderOptions<TData, TArg> & LocalResourceOptions<TEntity, TArg, TData, TMeta>
+
 export type LocalFactory = {
+  <TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
+    options: LocalStandaloneOptions<TData, TArg, TEntity, TMeta>
+  ): Local<TData, TArg>
+  /** @deprecated Prefer local.query() or local.infinite(). */
   <TDescriptor extends LocalResourceDescriptor, TEntity extends LocalEntity, TMeta = unknown>(
     descriptor: TDescriptor,
     options: LocalResourceOptions<
@@ -122,6 +189,12 @@ export type LocalFactory = {
   collection<TEntity extends LocalEntity>(
     options: LocalCollectionOptions<TEntity>
   ): LocalCollection<TEntity>
+  query<TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
+    options: LocalQueryOptions<TData, TArg, TEntity, TMeta>
+  ): SingleResourceDescriptor<TData, TArg>
+  infinite<TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
+    options: LocalInfiniteOptions<TData, TArg, TEntity, TMeta>
+  ): InfiniteResourceDescriptor<TData, TArg>
 }
 
 function createCollection<TEntity extends LocalEntity>(
@@ -170,35 +243,115 @@ function attachLocal<
     writable: false,
   })
 
+  const existing = descriptor[RESOURCE_LIFECYCLE] ?? []
+  Object.defineProperty(descriptor, RESOURCE_LIFECYCLE, {
+    value: [...existing, createLocalLifecycleFactory()],
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  })
+
+  if (options.serializeArg) {
+    descriptor.serializeArg = options.serializeArg as (arg: ResourceArg<TDescriptor>) => string
+  }
+
   return descriptor
 }
 
-export const local: LocalFactory = Object.assign(attachLocal, {
+function splitLocalOptions<
+  TEntity extends LocalEntity,
+  TArg,
+  TData,
+  TMeta,
+  TOptions extends LocalResourceOptions<TEntity, TArg, TData, TMeta>,
+>(options: TOptions) {
+  const { source, key, serializeArg, map, ...resourceOptions } = options
+  return {
+    resourceOptions,
+    localOptions: { source, key, serializeArg, map },
+  }
+}
+
+function createStandaloneLocal<TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
+  options: LocalStandaloneOptions<TData, TArg, TEntity, TMeta>
+): Local<TData, TArg> {
+  const { initialData } = options
+  const { localOptions } = splitLocalOptions<TEntity, TArg, TData, TMeta, typeof options>(options)
+  const descriptor = query<TData, TArg>({
+    initialData,
+    staleTime: Number.POSITIVE_INFINITY,
+    queryFn: () => initialData,
+  }) as Local<TData, TArg>
+
+  descriptor.selectorMethod = 'restore'
+  Object.defineProperty(descriptor, RESOURCE_TYPE_OVERRIDE, {
+    value: { bound: undefined, selectable: undefined },
+    enumerable: false,
+  })
+
+  const attached = attachLocal(descriptor, localOptions)
+  const metadata = getLocalResourceMetadata(attached)!
+  metadata.standalone = true
+  metadata.initialData = initialData
+  return attached
+}
+
+function createLocalQuery<TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
+  options: LocalQueryOptions<TData, TArg, TEntity, TMeta>
+): SingleResourceDescriptor<TData, TArg> {
+  const { resourceOptions, localOptions } = splitLocalOptions<
+    TEntity,
+    TArg,
+    TData,
+    TMeta,
+    typeof options
+  >(options)
+  return attachLocal(
+    query(resourceOptions as SingleResourceBuilderOptions<TData, TArg>),
+    localOptions
+  )
+}
+
+function createLocalInfinite<TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
+  options: LocalInfiniteOptions<TData, TArg, TEntity, TMeta>
+): InfiniteResourceDescriptor<TData, TArg> {
+  const { resourceOptions, localOptions } = splitLocalOptions<
+    TEntity,
+    TArg,
+    TData,
+    TMeta,
+    typeof options
+  >(options)
+  return attachLocal(
+    query.infinite(resourceOptions as InfiniteResourceBuilderOptions<TData, TArg>),
+    localOptions
+  )
+}
+
+function createLocal(...args: unknown[]): LocalResourceDescriptor {
+  if (args.length === 1) {
+    return createStandaloneLocal(
+      args[0] as LocalStandaloneOptions<unknown, unknown, LocalEntity, unknown>
+    )
+  }
+  return attachLocal(
+    args[0] as LocalResourceDescriptor,
+    args[1] as unknown as LocalResourceOptions<LocalEntity, unknown, unknown>
+  )
+}
+
+export const local: LocalFactory = Object.assign(createLocal, {
   collection: createCollection,
+  query: createLocalQuery,
+  infinite: createLocalInfinite,
 }) as LocalFactory
 
-export function getLocalResourceMetadata(
-  descriptor: AnyResourceDescriptor
-): LocalResourceMetadata | undefined {
+export function getLocalResourceMetadata(descriptor: object): LocalResourceMetadata | undefined {
   return (
     descriptor as AnyResourceDescriptor & {
       [LOCAL_RESOURCE_META]?: LocalResourceMetadata
     }
   )[LOCAL_RESOURCE_META]
-}
-
-export function serializeResourceArg(
-  descriptor: AnyResourceDescriptor,
-  arg: unknown,
-  fallback: (arg: unknown) => string
-): string {
-  const serialize = getLocalResourceMetadata(descriptor)?.serializeArg
-  if (!serialize) return fallback(arg)
-  const result = serialize(arg)
-  if (typeof result !== 'string') {
-    throw new Error('local() serializeArg must return a string')
-  }
-  return result
 }
 
 type DataKind = 'array' | 'entity' | 'null' | 'mapped'
@@ -595,6 +748,8 @@ export type LocalRegistryState = {
   manager: LocalManager
   bindings: WeakMap<object, LocalResourceBinding>
 }
+
+const LOCAL_REGISTRY_SERVICE = Symbol('comwit-local-registry-service')
 
 export function createLocalRegistryState(defaults?: LocalDefaults): LocalRegistryState {
   const factory =
@@ -1085,4 +1240,62 @@ export function bindLocalResource(
   )
   registry.bindings.set(state, binding)
   return binding
+}
+
+function createLocalLifecycleFactory(): ResourceLifecycleFactory {
+  return {
+    bind({ registry, descriptor, path, state, runtime }) {
+      let localRegistry = registry.services.get(LOCAL_REGISTRY_SERVICE) as
+        | LocalRegistryState
+        | undefined
+      if (!localRegistry) {
+        localRegistry = createLocalRegistryState(
+          registry.providerDefaults?.local as LocalDefaults | undefined
+        )
+        registry.services.set(LOCAL_REGISTRY_SERVICE, localRegistry)
+      }
+
+      const binding = bindLocalResource(localRegistry, descriptor, path, state, runtime)
+      if (!binding) return undefined
+      const metadata = getLocalResourceMetadata(descriptor)
+
+      return {
+        activate(key) {
+          binding.activate(key)
+        },
+        hydrate() {
+          return binding.hydrate()
+        },
+        beginRequest() {
+          return binding.currentRevision()
+        },
+        afterSuccess({ entry, fetchedAt, requestToken }) {
+          return binding.commitRemote(
+            entry,
+            fetchedAt,
+            typeof requestToken === 'number' ? requestToken : 0
+          )
+        },
+        runInternal(callback) {
+          return binding.runInternal(callback)
+        },
+        preserveSuccessOnError: true,
+        decorateController(controller) {
+          if (!metadata?.standalone) return controller
+          return new Proxy(controller, {
+            get(target, prop, receiver) {
+              if (prop === 'remove') {
+                return (arg?: unknown) => {
+                  const set = Reflect.get(target, 'set', receiver)
+                  if (typeof set !== 'function') return metadata.initialData
+                  return set.call(target, metadata.initialData, { arg })
+                }
+              }
+              return Reflect.get(target, prop, receiver)
+            },
+          })
+        },
+      }
+    },
+  }
 }

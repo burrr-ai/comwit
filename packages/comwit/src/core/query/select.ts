@@ -1,5 +1,4 @@
-import { serializeQueryArg } from './accessor'
-import { serializeResourceArg } from '../local'
+import { serializeResourceArg } from './accessor'
 import type {
   AnyResourceDescriptor,
   QueryBindingRegistry,
@@ -15,6 +14,7 @@ export type QuerySelectorLoad = {
   hasArg: boolean
   key: QueryCacheKey
   path: string
+  method: string
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -91,13 +91,14 @@ function createResourceSelector(
 ) {
   return new Proxy(state, {
     get(target, prop, receiver) {
-      if (prop !== 'load') return Reflect.get(target, prop, receiver)
+      const selectorMethod = descriptor.selectorMethod ?? 'load'
+      if (prop !== selectorMethod) return Reflect.get(target, prop, receiver)
 
       return (...args: unknown[]) => {
         const hasArg = args.length > 0
         const arg = hasArg ? args[0] : undefined
-        const key = serializeResourceArg(descriptor, arg, serializeQueryArg)
-        loads.push({ arg, controller, hasArg, key, path })
+        const key = serializeResourceArg(descriptor, arg)
+        loads.push({ arg, controller, hasArg, key, path, method: selectorMethod })
 
         const runtime = registry.boundResourceRuntime.get(controller)
         return cachedState(state, runtime, controller, descriptor, key, registry)
@@ -173,14 +174,14 @@ export function runQuerySelectorLoads(
     }
     if (pending.has(load.key)) continue
 
-    const query = load.controller.query
-    if (typeof query !== 'function') continue
+    const controllerMethod = load.controller[load.method === 'load' ? 'query' : load.method]
+    if (typeof controllerMethod !== 'function') continue
 
     let promise: Promise<unknown>
     try {
       const result = load.hasArg
-        ? query.call(load.controller, load.arg, undefined)
-        : query.call(load.controller)
+        ? controllerMethod.call(load.controller, load.arg, undefined)
+        : controllerMethod.call(load.controller)
       promise = Promise.resolve(result)
     } catch (error) {
       promise = Promise.reject(error)
