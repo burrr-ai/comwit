@@ -352,6 +352,8 @@ export type QueryCacheEntry = {
   lastResult?: unknown
   cursorHistory: Array<string | null>
   state: ResourceDataLike
+  /** Whether the durable local view has already been checked for this key. */
+  localHydrated?: boolean
 }
 
 export type SuspenseState = {
@@ -372,6 +374,8 @@ export type QueryBindingRegistry = {
    * belong to a model when its observer count transitions to 0.
    */
   runtimesByModel: Map<symbol, Set<ResourceRuntimeState>>
+  /** Provider-scoped IndexedDB/local collection state. */
+  local?: import('../local').LocalRegistryState
 }
 
 export type ResourceRuntimeState = {

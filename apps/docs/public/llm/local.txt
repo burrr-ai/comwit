@@ -1,0 +1,122 @@
+# local() — IndexedDB-backed on-demand queries
+
+`local()` wraps an existing `query()` or `query.infinite()` without changing its public API. It is
+a normalized durable query cache: restore an exact argument from IndexedDB, render it, then use the
+original `queryFn` to revalidate stale data.
+
+## Basic list/detail model
+
+```ts
+import { local, model, query } from '@comwit/state'
+
+interface TodoEntity {
+  readonly id: string
+  title: string
+  status: 'open' | 'done'
+  updatedAt: number
+  description?: string
+}
+
+type TodoListItem = Pick<TodoEntity, 'id' | 'title' | 'status' | 'updatedAt'>
+type TodoDetail = TodoEntity & { description: string }
+
+const todos = local.collection<TodoEntity>({
+  key: 'todos',
+  version: 1,
+})
+
+export const todo = model({
+  list: local(
+    query<TodoListItem[], TodoFilter>({
+      initialData: [],
+      staleTime: 30_000,
+      queryFn: (filter) => api.todo.list(filter),
+    }),
+    { source: todos }
+  ),
+  detail: local(
+    query<TodoDetail | null, string>({
+      initialData: null,
+      queryFn: (id) => api.todo.detail(id),
+    }),
+    { source: todos }
+  ),
+})
+```
+
+One collection represents one entity type. List/detail/infinite resources keep independent view
+keys and freshness while sharing canonical values by `id`.
+
+## Provider
+
+```tsx
+<ComwitProvider
+  key={user.id}
+  defaultOptions={{
+    local: {
+      database: 'my-app',
+      scope: `user:${user.id}`,
+      onError: reportError,
+    },
+  }}
+>
+```
+
+Remount the provider when scope changes. Defaults are `database: '@comwit/state'` and
+`scope: 'default'`. IndexedDB failure degrades to an ordinary query.
+
+## Storage and loading
+
+```text
+entities: ID → merged entity value
+views: resource + canonical argument → ordered IDs + fetchedAt + cursor metadata
+```
+
+An exact view is required. A list entity does not make detail complete, and already loaded entities
+cannot make an unseen filter complete. An unseen argument calls the server.
+
+- Fresh local view: restore without a request.
+- Stale local view: restore with `isLoading: false`, set `isFetching: true`, then revalidate.
+- Miss: ordinary first-load query behavior.
+- Revalidation error: retain local data with `isSuccess: true` and `isError: true`.
+
+The visible snapshot can change when background revalidation completes. This is deliberate server
+correction; use `isFetching` for a subtle update indicator. Copy query data into separate draft
+state before binding it to an actively edited form.
+
+Remote results update entities and replace only the current view membership. A row omitted from one
+filtered response is not globally deleted.
+
+For response envelopes such as `{ items, total }`, pass `map.split(data) => { rows, meta }` and
+`map.join(rows, meta) => data`. Rows are normalized and cloneable envelope metadata is stored on the
+view.
+
+## Merge and optimistic edits
+
+Incoming own fields shallowly merge into the canonical entity. Omitted detail-only fields survive a
+later summary response; explicit `null` clears a field. Configure collection `merge` for custom
+nested behavior and `revision` for a comparable server version such as `updatedAt`.
+
+Direct query data mutations remain reactive and write through to IndexedDB. Every loaded local
+resource containing the same collection and ID receives the canonical field update. Array removal
+changes only that view, not the global entity.
+
+Always perform the API mutation and refetch views whose membership, ordering, total, or cursor may
+have changed. `local()` has no mutation outbox, offline retry, CRDT, or multi-device conflict engine.
+
+## Version and options
+
+`local.collection({ key, version })` requires an explicit positive integer version. There are no
+migrations: a version bump is a cache miss and old rows for the same collection/scope are removed.
+
+Resource options:
+
+- `source` (required): shared collection.
+- `key`: durable view identity override; default model field path.
+- `serializeArg`: collision-safe stable serializer for non-JSON arguments.
+- `map`: `split/join` normalization adapter for response envelopes.
+
+Infinite queries persist flattened ID order, cursor, `hasMore`, and cursor history. Realtime queries
+are unsupported in this beta.
+
+Use `persist()` for local-owned settings/drafts. Use `local(query())` for server-owned snapshots.

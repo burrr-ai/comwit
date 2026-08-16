@@ -1,4 +1,5 @@
 import type { QueryBindingRegistry } from './types'
+import { createLocalRegistryState, type LocalDefaults } from '../local'
 
 /**
  * Default time (ms) a cache entry survives after the owning model loses
@@ -6,7 +7,7 @@ import type { QueryBindingRegistry } from './types'
  */
 export const DEFAULT_GC_TIME = 5 * 60 * 1000
 
-export function createQueryBindingRegistry(): QueryBindingRegistry {
+export function createQueryBindingRegistry(localDefaults?: LocalDefaults): QueryBindingRegistry {
   return {
     boundResourceValue: new WeakMap(),
     boundPathProxy: new WeakMap(),
@@ -14,5 +15,6 @@ export function createQueryBindingRegistry(): QueryBindingRegistry {
     selectorLoads: new WeakMap(),
     suspense: new Map(),
     runtimesByModel: new Map(),
+    local: createLocalRegistryState(localDefaults),
   }
 }

@@ -22,3 +22,6 @@ https://library.comwit.io/llms.txt
 ```
 
 Pass the URL to Claude Code. It handles the rest.
+
+The `2.2` beta adds normalized IndexedDB-backed, on-demand query views through
+[`local(query(...))`](https://library.comwit.io/docs/api/local).

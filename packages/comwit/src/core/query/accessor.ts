@@ -1,4 +1,5 @@
 import { snapshot } from '../proxy'
+import { bindLocalResource, serializeResourceArg } from '../local'
 import { DEFAULT_GC_TIME } from './registry'
 import {
   RESOURCE_QUERY_OPTION_KEYS,
@@ -183,7 +184,9 @@ function createCacheEntry(
 }
 
 function applyCachedState(target: ResourceDataLike, cached: QueryCacheEntry) {
-  Object.assign(target, cached.state)
+  // snapshot() is intentionally frozen. Clone it before placing it back into
+  // the mutable proxy or nested optimistic edits would hit read-only objects.
+  Object.assign(target, structuredClone(cached.state))
   target.isLoading = false
   target.isFetching = false
 }
@@ -296,6 +299,10 @@ export function createResourceAccessor(
   })
   registry.boundResourceRuntime.set(state, runtime)
 
+  const localBinding = bindLocalResource(registry.local, descriptor, path, state, runtime)
+  const runInternal = <T>(callback: () => T): T =>
+    localBinding ? localBinding.runInternal(callback) : callback()
+
   if (modelKey !== undefined) {
     let set = registry.runtimesByModel.get(modelKey)
     if (!set) {
@@ -395,9 +402,10 @@ export function createResourceAccessor(
     const now = Date.now()
 
     const queryArg = isRefetch ? activeEntryBefore?.arg : hasArg ? arg : runtime.lastArg
-    const queryKey = serializeQueryArg(queryArg)
+    const queryKey = serializeResourceArg(descriptor, queryArg, serializeQueryArg)
     runtime.lastArg = queryArg
     runtime.activeKey = queryKey
+    localBinding?.activate(queryKey)
 
     let entry = runtime.cacheEntries.get(queryKey)
     if (!entry) {
@@ -413,6 +421,55 @@ export function createResourceAccessor(
 
     entry.arg = queryArg
 
+    const currentFetchId = ++runtime.fetchId
+
+    // A local query first checks the exact durable view for this resource/argument.
+    // The view proves list membership/detail completeness; an entity row by itself does not.
+    if (localBinding && !entry.localHydrated && !entry.hasQueried) {
+      const isArgChange = !isRefetch && activeEntryBefore?.hasQueried
+      const hasPlaceholderData = effectiveOptions.placeholderData !== undefined
+
+      if (isArgChange && !hasPlaceholderData) {
+        runInternal(() => Object.assign(state, descriptor.initialState))
+      }
+      runInternal(() =>
+        applyPlaceholderData(
+          state as ResourceBaseState<unknown>,
+          queryArg as never,
+          effectiveOptions.placeholderData as PlaceholderData<unknown, unknown> | undefined
+        )
+      )
+
+      state.isError = false
+      state.error = null
+      state.isLoading = !state.isSuccess
+      state.isFetching = true
+
+      const hydrated = await localBinding.hydrate()
+      if (runtime.fetchId !== currentFetchId) return
+      entry.localHydrated = true
+
+      if (hydrated) {
+        runInternal(() => {
+          state.data = hydrated.data
+          Object.assign(state, hydrated.state)
+          state.isLoading = false
+          state.isFetching = false
+          state.isSuccess = true
+          state.isError = false
+          state.error = null
+        })
+        entry.hasQueried = true
+        entry.lastFetchedAt = hydrated.fetchedAt
+        entry.cursorHistory = [...hydrated.cursorHistory]
+        entry.lastResult =
+          descriptor.kind === 'infinite'
+            ? { data: hydrated.data, ...hydrated.state }
+            : hydrated.data
+        updateCachedState(entry, state)
+      }
+    }
+
     const shouldFetch =
       isRefetch ||
       !entry.hasQueried ||
@@ -421,12 +478,12 @@ export function createResourceAccessor(
       now - entry.lastFetchedAt >= staleTime
 
     if (!shouldFetch && entry.hasQueried) {
-      applyCachedState(state, entry)
+      runInternal(() => applyCachedState(state, entry))
       return entry.lastResult
     }
 
     if (entry.hasQueried) {
-      applyCachedState(state, entry)
+      runInternal(() => applyCachedState(state, entry))
     }
 
     // Determine if args changed (new cache entry, not a refetch)
@@ -435,13 +492,15 @@ export function createResourceAccessor(
 
     // When args change and no placeholderData, reset to initial state
     if (isArgChange && !hasPlaceholderData) {
-      Object.assign(state, descriptor.initialState)
+      runInternal(() => Object.assign(state, descriptor.initialState))
     }
 
-    applyPlaceholderData(
-      state as ResourceBaseState<unknown>,
-      queryArg as never,
-      effectiveOptions.placeholderData as PlaceholderData<unknown, unknown> | undefined
+    runInternal(() =>
+      applyPlaceholderData(
+        state as ResourceBaseState<unknown>,
+        queryArg as never,
+        effectiveOptions.placeholderData as PlaceholderData<unknown, unknown> | undefined
+      )
     )
 
     if (descriptor.kind === 'infinite' && mode !== 'restore') {
@@ -492,7 +551,7 @@ export function createResourceAccessor(
       runtime.streamAbortController = undefined
     }
 
-    const currentFetchId = ++runtime.fetchId
+    const requestStartRevision = localBinding?.currentRevision() ?? 0
 
     try {
       let result: unknown
@@ -546,7 +605,7 @@ export function createResourceAccessor(
             }
 
             lastYield = chunk
-            mergeResult(state, chunk)
+            runInternal(() => mergeResult(state, chunk))
           }
         } catch (streamError) {
           if (abortController.signal.aborted) {
@@ -562,6 +621,9 @@ export function createResourceAccessor(
         state.isSuccess = true
         entry.lastFetchedAt = Date.now()
         entry.lastResult = lastYield
+        if (localBinding) {
+          await localBinding.commitRemote(entry, entry.lastFetchedAt, requestStartRevision)
+        }
         updateCachedState(entry, state)
 
         scheduleRefetchInterval()
@@ -570,16 +632,15 @@ export function createResourceAccessor(
 
       // Non-streaming path (original behavior)
       if (descriptor.kind === 'single' || descriptor.kind === 'realtime') {
-        mergeResult(state, result)
+        runInternal(() => mergeResult(state, result))
       } else {
-        mergeResult(state, result, mode === 'append')
+        runInternal(() => mergeResult(state, result, mode === 'append'))
       }
 
       state.isSuccess = true
       entry.hasQueried = true
       entry.lastFetchedAt = Date.now()
       entry.lastResult = result
-      updateCachedState(entry, state)
 
       if (descriptor.kind === 'infinite' && mode !== 'restore') {
         const infiniteHistory = entry.cursorHistory
@@ -591,6 +652,11 @@ export function createResourceAccessor(
           infiniteHistory[infiniteHistory.length - 1] = nextCursor
         }
       }
+
+      if (localBinding) {
+        await localBinding.commitRemote(entry, entry.lastFetchedAt, requestStartRevision)
+      }
+      updateCachedState(entry, state)
 
       if (descriptor.kind === 'realtime') {
         startSubscription()
@@ -604,7 +670,7 @@ export function createResourceAccessor(
         throw error
       }
       state.isError = true
-      state.isSuccess = false
+      state.isSuccess = localBinding && entry.hasQueried ? true : false
       state.error = normalizeError(error)
 
       // Store error in suspense state for ErrorBoundary

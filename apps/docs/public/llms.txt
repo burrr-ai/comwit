@@ -17,6 +17,7 @@ Enable `experimentalDecorators` in `tsconfig.json` when using decorators. Wrap t
   context={{ router }}
   defaultOptions={{
     query: { staleTime: 30_000, gcTime: 5 * 60_000 },
+    local: { database: 'my-app', scope: `user:${user.id}` },
     persist: { debounceMs: 100 },
   }}
 >
@@ -126,6 +127,46 @@ posts: query.infinite<Post[]>({
 - Model option `rules`: field validators; read `{ errors, isValid }` from `$validation`.
 - Model option `history: true | { limit }`: read `$history.undo()`, `redo()`, `canUndo`, `canRedo`, `ignore(fn)` through the existing domain hook. One action call is one history transaction.
 - `persist({ key, defaultValue, storage? })`: local/session/custom storage, SSR-safe, debounced, cross-tab for localStorage.
+- `local(query(...), { source })`: IndexedDB-backed exact-argument views over normalized entities; stale data revalidates with the original queryFn.
+
+### Durable on-demand query data
+
+Use one collection per entity type and share it across list/detail/infinite resources:
+
+```ts
+const products = local.collection<ProductEntity>({ key: 'products', version: 1 })
+
+const product = model({
+  list: local(
+    query<ProductListItem[], Filter>({
+      initialData: [],
+      queryFn: api.product.list,
+    }),
+    { source: products }
+  ),
+  detail: local(
+    query<ProductDetail | null, string>({
+      initialData: null,
+      queryFn: api.product.detail,
+    }),
+    { source: products }
+  ),
+})
+```
+
+`entities` stores merged ID-keyed values; `views` stores each resource/argument's ordered IDs,
+freshness, and cursor metadata. Exact cached arguments hydrate first. Fresh views skip the request;
+stale views render while `isFetching` and revalidate in the background; unseen arguments fetch.
+List presence never proves detail completeness.
+
+Incoming fields shallowly merge, so a later list summary does not erase omitted detail fields.
+Direct entity edits write through and fan out to loaded views sharing the ID. Refetch after API
+mutations to correct membership/order/totals. Array removal changes one view, not the global entity.
+Use resource `map.split/join` for envelopes such as `{ items, total }`.
+
+`version` is required and has no migration path: bumping it invalidates and removes older rows.
+Scope by user/tenant and remount `ComwitProvider` when scope changes. This feature is not a full local
+database or mutation outbox. See https://library.comwit.io/llm/local.txt for the complete contract.
 
 ## Reading and starting queries
 

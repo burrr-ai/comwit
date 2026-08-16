@@ -26,6 +26,18 @@ import type { HistoryApi, HistoryOptions, HistoryConfig } from './history'
 
 import { computedPlugin } from './computed'
 import { computed } from './computed'
+import {
+  local,
+  type LocalCollection,
+  type LocalCollectionOptions,
+  type LocalDefaults,
+  type LocalDataMap,
+  type LocalEntity,
+  type LocalEntityFragment,
+  type LocalEntityId,
+  type LocalErrorContext,
+  type LocalResourceOptions,
+} from './local'
 
 // Register built-in plugins
 registerPlugin(queryPlugin)
@@ -66,6 +78,7 @@ export {
   silent,
   ComwitProvider,
   query,
+  local,
   keepPreviousData,
   persist,
   computed,
@@ -90,4 +103,13 @@ export type {
   HistoryApi,
   HistoryOptions,
   HistoryConfig,
+  LocalCollection,
+  LocalCollectionOptions,
+  LocalDefaults,
+  LocalDataMap,
+  LocalEntity,
+  LocalEntityFragment,
+  LocalEntityId,
+  LocalErrorContext,
+  LocalResourceOptions,
 }

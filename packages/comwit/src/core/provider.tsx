@@ -3,9 +3,11 @@ import { getPlugins } from './plugin'
 import type { Model, StoreEntry } from './model'
 import type { StageMethodDecorator } from '../interceptors/utils'
 import { getDevTools, initDevTools } from './devtools'
+import type { LocalDefaults } from './local'
 
 export type RegistryDefaults = {
   interceptors?: StageMethodDecorator[]
+  local?: LocalDefaults
   [pluginName: string]: unknown
 }
 
@@ -65,7 +67,10 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
     for (const plugin of plugins) {
       const defaults = defaultOptions?.[plugin.name] as Record<string, unknown> | undefined
       pluginDefaults.set(plugin.name, defaults)
-      pluginStates.set(plugin.name, plugin.createRegistryState(defaults))
+      pluginStates.set(
+        plugin.name,
+        plugin.createRegistryState(defaults, defaultOptions as Record<string, unknown> | undefined)
+      )
     }
 
     if (process.env.NODE_ENV !== 'production') {

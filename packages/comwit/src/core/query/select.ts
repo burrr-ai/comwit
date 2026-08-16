@@ -1,4 +1,5 @@
 import { serializeQueryArg } from './accessor'
+import { serializeResourceArg } from '../local'
 import type {
   AnyResourceDescriptor,
   QueryBindingRegistry,
@@ -95,7 +96,7 @@ function createResourceSelector(
       return (...args: unknown[]) => {
         const hasArg = args.length > 0
         const arg = hasArg ? args[0] : undefined
-        const key = serializeQueryArg(arg)
+        const key = serializeResourceArg(descriptor, arg, serializeQueryArg)
         loads.push({ arg, controller, hasArg, key, path })
 
         const runtime = registry.boundResourceRuntime.get(controller)

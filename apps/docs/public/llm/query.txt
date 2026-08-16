@@ -2,6 +2,9 @@
 
 > Full API reference for selector `.load()`, imperative query methods, `query.infinite()`, `query.realtime()`, Suspense, caching, and resource state.
 
+For IndexedDB-backed normalized list/detail/infinite views, see
+https://library.comwit.io/llm/local.txt. Wrapping with `local()` preserves every query method below.
+
 ## query(opts)
 
 Creates a single resource descriptor for client-side data fetching. Used inside `model()`.
@@ -196,7 +199,7 @@ function PostList() {
 }
 
 // Wrap with Suspense boundary
-<Suspense fallback={<Skeleton />}>
+;<Suspense fallback={<Skeleton />}>
   <PostList />
 </Suspense>
 ```

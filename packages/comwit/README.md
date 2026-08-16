@@ -21,3 +21,25 @@ https://library.comwit.io/llms.txt
 ```
 
 Pass the URL to Claude Code. It handles the rest.
+
+## Durable on-demand queries (2.2 beta)
+
+```ts
+const todos = local.collection<Todo>({ key: 'todos', version: 1 })
+
+const todo = model({
+  list: local(
+    query<Todo[], TodoFilter>({
+      initialData: [],
+      queryFn: api.todo.list,
+    }),
+    { source: todos }
+  ),
+})
+```
+
+`local(query(...))` restores exact argument views from normalized IndexedDB entities and uses the
+original `queryFn` to revalidate stale data. The `.load()`, `.query()`, `.refetch()`, `.set()`, and
+optimistic mutation interfaces remain unchanged.
+
+[Read the local query reference](https://library.comwit.io/docs/api/local).

@@ -8,6 +8,7 @@ export {
   ComwitProvider,
   keepPreviousData,
   query,
+  local,
   persist,
   computed,
   initDevTools,
@@ -29,5 +30,14 @@ export type {
   HistoryApi,
   HistoryOptions,
   HistoryConfig,
+  LocalCollection,
+  LocalCollectionOptions,
+  LocalDefaults,
+  LocalDataMap,
+  LocalEntity,
+  LocalEntityFragment,
+  LocalEntityId,
+  LocalErrorContext,
+  LocalResourceOptions,
 } from './core'
 export * from './interceptors'

@@ -1,6 +1,6 @@
 {
   "name": "@comwit/state",
-  "version": "2.1.0",
+  "version": "2.2.0-beta.0",
   "private": false,
   "homepage": "https://library.comwit.io",
   "repository": {
@@ -12,7 +12,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "latest"
+    "tag": "beta"
   },
   "type": "module",
   "description": "React state management for vibe coding. Less tokens. Built for Claude Code.",
@@ -65,6 +65,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "fake-indexeddb": "^6.2.4",
     "happy-dom": "^20.6.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

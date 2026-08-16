@@ -13,6 +13,9 @@ Declares a client-side data fetching field inside a model.
 import { query } from '@comwit/state'
 ```
 
+Wrap a query with [`local()`](/docs/api/local) when the exact argument should restore from
+IndexedDB before stale data revalidates in the background.
+
 ## Basic usage
 
 ```ts
