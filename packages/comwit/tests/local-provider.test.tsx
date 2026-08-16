@@ -11,6 +11,56 @@ type Todo = {
 }
 
 describe('local() provider integration', () => {
+  test('resolves an inline collection scope from another model lazily', async () => {
+    const factory = new IDBFactory()
+    const database = `local-provider-model-scope-${crypto.randomUUID()}`
+    const identityModel = model({ me: { id: '1' } as { id: string } | null })
+    let scopeEvaluations = 0
+    const todos = local.collection<Todo>({
+      key: 'model-scoped-todos',
+      version: 1,
+      scope: ({ state }) => {
+        scopeEvaluations++
+        const id = state(identityModel).me?.id
+        return id ? `user:${id}` : null
+      },
+    })
+    const queryFn = vi.fn().mockResolvedValue([{ id: '1', title: 'Scoped' }])
+    const todoModel = model({
+      list: local.query<Todo[]>({
+        source: todos,
+        initialData: [],
+        staleTime: 60_000,
+        queryFn,
+      }),
+    })
+
+    expect(scopeEvaluations).toBe(0)
+
+    function Wrapper({ children }: { children: ReactNode }) {
+      return (
+        <ComwitProvider defaultOptions={{ local: { database, indexedDB: factory } }}>
+          {children}
+        </ComwitProvider>
+      )
+    }
+
+    const first = renderHook(() => useModel(todoModel, (state) => state.list.load()), {
+      wrapper: Wrapper,
+    })
+    await waitFor(() => expect(first.result.current.data[0]?.title).toBe('Scoped'))
+    first.unmount()
+
+    const second = renderHook(() => useModel(todoModel, (state) => state.list.load()), {
+      wrapper: Wrapper,
+    })
+    await waitFor(() => expect(second.result.current.data[0]?.title).toBe('Scoped'))
+
+    expect(scopeEvaluations).toBeGreaterThan(0)
+    expect(queryFn).toHaveBeenCalledOnce()
+    second.unmount()
+  })
+
   test('uses defaultOptions.local for selector-owned loads across provider instances', async () => {
     const factory = new IDBFactory()
     const database = `local-provider-${crypto.randomUUID()}`

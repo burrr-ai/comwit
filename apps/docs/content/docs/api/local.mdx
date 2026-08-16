@@ -60,6 +60,31 @@ const externalProducts = local.collection<ExternalProduct>({
 `getId` must return the same string or finite number for every list/detail fragment representing
 the entity.
 
+A collection may own its persistence scope. Use a static scope for public data, or an inline
+resolver for user/tenant data. The resolver runs only when the local resource is used, so the
+referenced model may be initialized later.
+
+```ts
+const publicPosts = local.collection<Post>({
+  key: 'posts',
+  version: 1,
+  scope: 'public',
+})
+
+const privateProjects = local.collection<Project>({
+  key: 'projects',
+  version: 1,
+  scope: ({ state }) => {
+    const userId = state(userModel).me?.id
+    return userId ? `user:${userId}` : null
+  },
+})
+```
+
+Returning `null` or `undefined` skips IndexedDB reads and writes for that operation. It never falls
+back to the provider/default scope, which prevents unresolved private data from entering a shared
+cache.
+
 Use a query adapter where the client owns remote loading, and a standalone resource where a server
 component or action supplies the value:
 
@@ -227,7 +252,9 @@ feed: local.infinite<ProductListItem[], ProductFilter>({
 
 ## Provider setup
 
-Configure a database name and stable user or tenant scope. Remount the provider when scope changes.
+Configure the shared database and optional fallback scope. A collection `scope` takes precedence.
+Remount the provider when a provider-level scope changes; model-derived collection scopes do not
+require a provider change.
 
 ```tsx
 <ComwitProvider
@@ -353,6 +380,7 @@ or multi-device conflict engine.
 | `getId`           | Without default `id` | Identity extractor; defaults to the entity's `id` field |
 | `merge`           | No                   | Custom canonical fragment merge                         |
 | `revision`        | No                   | Comparable server revision extractor                    |
+| `scope`           | No                   | Static scope or lazy `({ state }) => string \| null`    |
 
 There are no migrations in this beta. Bumping `version` makes old views a cache miss and removes
 older rows for the same scope and collection.

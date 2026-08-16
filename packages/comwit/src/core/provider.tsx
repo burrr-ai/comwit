@@ -4,6 +4,7 @@ import type { Model, StoreEntry } from './model'
 import type { StageMethodDecorator } from '../interceptors/utils'
 import { getDevTools, initDevTools } from './devtools'
 import type { LocalDefaults } from './local'
+import type { QueryBindingRegistry } from './query/types'
 
 export type RegistryDefaults = {
   interceptors?: StageMethodDecorator[]
@@ -103,6 +104,12 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
         registryRef.current.lifecycles.set(model.key, state)
         return state
       },
+    }
+
+    const queryRegistry = pluginStates.get('query') as QueryBindingRegistry | undefined
+    if (queryRegistry) {
+      queryRegistry.getModelState = (source) =>
+        registryRef.current.get(source as Model<object>).proxy
     }
   }
 

@@ -62,6 +62,29 @@ export const product = model<ProductState>({
 })
 ```
 
+Collections may override the provider scope. An inline resolver is evaluated only when the local
+resource is used, so it can read a model that is initialized later:
+
+```ts
+const publicPosts = local.collection<Post>({
+  key: 'posts',
+  version: 1,
+  scope: 'public',
+})
+
+const privateProjects = local.collection<Project>({
+  key: 'projects',
+  version: 1,
+  scope: ({ state }) => {
+    const userId = state(userModel).me?.id
+    return userId ? `user:${userId}` : null
+  },
+})
+```
+
+Returning `null` or `undefined` skips IndexedDB for that operation and never falls back to a shared
+scope. Collection scope takes precedence over `defaultOptions.local.scope`.
+
 One collection may back list, detail, and infinite resources. Each resource/argument keeps an
 independent view key and freshness while canonical entity fields fan out between loaded resources.
 
@@ -155,7 +178,8 @@ actively edited forms into separate draft state.
 >
 ```
 
-Remount the provider when the user/tenant scope changes. Defaults are database
+Remount the provider when a provider-level user/tenant scope changes. A model-derived collection
+scope changes independently and does not require provider remounting. Defaults are database
 `'@comwit/state'` and scope `'default'`. IndexedDB failure leaves standalone state in memory and
 makes query adapters behave like ordinary queries. Server environments have no IndexedDB, so the
 storage lifecycle is skipped without throwing and `local.query().load()` uses its normal query
@@ -189,7 +213,8 @@ bumping it makes old views a cache miss and removes older rows for that collecti
 
 Collection options include `getId(entity)`, which defaults to `entity.id` and is required by the
 type when the entity has no `id`. It must return a stable string or finite number for every
-list/detail fragment.
+list/detail fragment. `scope` accepts a static string or a lazy `({ state }) => string | null`
+resolver.
 
 Resource options:
 

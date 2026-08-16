@@ -392,6 +392,8 @@ export type QueryBindingRegistry = {
   providerDefaults?: Record<string, unknown>
   /** Provider-scoped services shared by lifecycle adapters. */
   services: Map<symbol, unknown>
+  /** Lazily resolves another model from the same provider. */
+  getModelState?: (model: object) => object
 }
 
 export type ResourceRuntimeState = {

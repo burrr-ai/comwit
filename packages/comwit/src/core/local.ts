@@ -1,4 +1,5 @@
 import { snapshot, subscribeOps, type ProxyOp } from './proxy'
+import type { Model } from './model'
 import { query } from './query/descriptor'
 import {
   RESOURCE_LIFECYCLE,
@@ -9,9 +10,11 @@ import type {
   AnyResourceDescriptor,
   InfiniteResourceBuilderOptions,
   InfiniteResourceDescriptor,
+  QueryBindingRegistry,
   QueryCacheEntry,
   QueryCacheKey,
   ResourceBaseState,
+  BoundResourceState,
   ResourceDataLike,
   ResourceSetOptions,
   ResourceRuntimeState,
@@ -37,11 +40,26 @@ export type LocalEntityFragment<TEntity extends LocalEntity> = TEntity extends {
   ? Pick<TEntity, 'id'> & Partial<Omit<TEntity, 'id'>>
   : Partial<TEntity>
 
+export type LocalScopeContext = {
+  /** Resolve another model lazily from the current provider registry. */
+  state<T extends object>(model: Model<T>): BoundResourceState<T>
+}
+
+export type LocalScopeResolver = (context: LocalScopeContext) => string | null | undefined
+
+export type LocalScope = string | LocalScopeResolver
+
 type LocalCollectionBaseOptions<TEntity extends LocalEntity> = {
   /** Stable persisted namespace for this entity type. */
   key: string
   /** App-managed schema version. Changing it invalidates and removes older rows. */
   version: number
+  /**
+   * Optional persisted boundary for this collection. A resolver is evaluated lazily
+   * when the resource is used, so it may read another provider-bound model.
+   * Returning null/undefined skips IndexedDB for that operation.
+   */
+  scope?: LocalScope
   /** Advanced merge hook. The default shallowly merges fields present in the response. */
   merge?: (
     current: Readonly<Partial<TEntity>>,
@@ -116,7 +134,7 @@ export type LocalResourceOptions<
 }
 
 export type LocalErrorContext = {
-  operation: 'open' | 'read' | 'write' | 'cleanup' | 'normalize'
+  operation: 'open' | 'read' | 'write' | 'cleanup' | 'normalize' | 'scope'
   collection?: string
   resource?: string
 }
@@ -224,6 +242,9 @@ function createCollection<TEntity extends LocalEntity>(
   }
   if (!Number.isInteger(options.version) || options.version < 1) {
     throw new Error('local.collection() requires version to be a positive integer')
+  }
+  if (typeof options.scope === 'string' && !options.scope.trim()) {
+    throw new Error('local.collection() scope must be non-empty when provided')
   }
 
   const getId =
@@ -426,6 +447,7 @@ export type LocalHydratedView = {
 
 type ReconcileInput = {
   incoming: NormalizedState
+  activeView: ActiveView
   previousView?: ViewRecord
   existing: Map<string, EntityRecord>
   binding: LocalResourceBinding
@@ -806,7 +828,7 @@ export function createLocalRegistryState(defaults?: LocalDefaults): LocalRegistr
 }
 
 class LocalManager {
-  readonly scope: string
+  readonly defaultScope: string
   private readonly database?: LocalDatabase
   private readonly onError?: LocalDefaults['onError']
   private readonly bindings = new Set<LocalResourceBinding>()
@@ -817,7 +839,7 @@ class LocalManager {
   private writeTail: Promise<void> = Promise.resolve()
 
   constructor(defaults: LocalDefaults | undefined, factory: IDBFactory | undefined) {
-    this.scope = defaults?.scope ?? DEFAULT_SCOPE
+    this.defaultScope = defaults?.scope ?? DEFAULT_SCOPE
     this.onError = defaults?.onError
     if (factory) {
       this.database = new LocalDatabase(factory, defaults?.database ?? DEFAULT_DATABASE)
@@ -828,36 +850,43 @@ class LocalManager {
     this.bindings.add(binding)
   }
 
-  revision(collection: LocalCollection<LocalEntity>): number {
-    return this.collectionRevisions.get(this.collectionNamespace(collection)) ?? 0
+  revision(scope: string, collection: LocalCollection<LocalEntity>): number {
+    return this.collectionRevisions.get(this.collectionNamespace(scope, collection)) ?? 0
   }
 
-  markLocalMutation(collection: LocalCollection<LocalEntity>): number {
-    const namespace = this.collectionNamespace(collection)
+  markLocalMutation(scope: string, collection: LocalCollection<LocalEntity>): number {
+    const namespace = this.collectionNamespace(scope, collection)
     const revision = (this.collectionRevisions.get(namespace) ?? 0) + 1
     this.collectionRevisions.set(namespace, revision)
     return revision
   }
 
-  private collectionNamespace(collection: LocalCollection<LocalEntity>): string {
-    return JSON.stringify([this.scope, collection.key, collection.version])
+  private collectionNamespace(scope: string, collection: LocalCollection<LocalEntity>): string {
+    return JSON.stringify([scope, collection.key, collection.version])
   }
 
-  private entityCacheKey(collection: LocalCollection<LocalEntity>, id: LocalEntityId): string {
-    return JSON.stringify([this.collectionNamespace(collection), idToken(id)])
+  private entityCacheKey(
+    scope: string,
+    collection: LocalCollection<LocalEntity>,
+    id: LocalEntityId
+  ): string {
+    return JSON.stringify([this.collectionNamespace(scope, collection), idToken(id)])
   }
 
-  private report(error: unknown, context: LocalErrorContext): void {
+  report(error: unknown, context: LocalErrorContext): void {
     this.onError?.(error, context)
   }
 
-  private async ensureVersion(collection: LocalCollection<LocalEntity>): Promise<void> {
+  private async ensureVersion(
+    scope: string,
+    collection: LocalCollection<LocalEntity>
+  ): Promise<void> {
     if (!this.database) return
-    const namespace = this.collectionNamespace(collection)
+    const namespace = this.collectionNamespace(scope, collection)
     if (this.cleanedVersions.has(namespace)) return
     this.cleanedVersions.add(namespace)
     try {
-      await this.database.cleanupOldVersions(this.scope, collection.key, collection.version)
+      await this.database.cleanupOldVersions(scope, collection.key, collection.version)
     } catch (error) {
       this.report(error, { operation: 'cleanup', collection: collection.key })
     }
@@ -873,22 +902,30 @@ class LocalManager {
   }
 
   async hydrate(binding: LocalResourceBinding): Promise<LocalHydratedView | undefined> {
-    if (!this.database || !binding.activeView) return undefined
+    const activeView = binding.activeView
+    if (!this.database || !activeView) return undefined
     await this.writeTail
-    await this.ensureVersion(binding.metadata.source)
+    await this.ensureVersion(activeView.scope, binding.metadata.source)
 
     try {
-      const stored = await this.database.readView(binding.activeView.key)
+      const stored = await this.database.readView(activeView.key)
       if (!stored) return undefined
+      if (!binding.matchesActiveView(activeView)) {
+        binding.refreshScope(true)
+        return undefined
+      }
 
       stored.view.lastAccessedAt = Date.now()
       this.viewCache.set(stored.view.key, stored.view)
       for (const record of stored.entities) {
-        this.entityCache.set(this.entityCacheKey(binding.metadata.source, record.id), record)
-        const currentRevision = this.revision(binding.metadata.source)
+        this.entityCache.set(
+          this.entityCacheKey(activeView.scope, binding.metadata.source, record.id),
+          record
+        )
+        const currentRevision = this.revision(activeView.scope, binding.metadata.source)
         if (record.localRevision > currentRevision) {
           this.collectionRevisions.set(
-            this.collectionNamespace(binding.metadata.source),
+            this.collectionNamespace(activeView.scope, binding.metadata.source),
             record.localRevision
           )
         }
@@ -946,7 +983,8 @@ class LocalManager {
     requestStartRevision?: number,
     mutationRevision?: number
   ): Promise<void> {
-    if (!binding.activeView) return
+    const activeView = binding.activeView
+    if (!activeView) return
 
     let incoming: NormalizedState
     try {
@@ -966,6 +1004,7 @@ class LocalManager {
     ): ReconcileOutput => {
       const input: ReconcileInput = {
         incoming,
+        activeView,
         previousView,
         existing: existingFromStore,
         binding,
@@ -982,18 +1021,18 @@ class LocalManager {
     let output: ReconcileOutput
     try {
       output = await this.enqueue(async () => {
-        await this.ensureVersion(binding.metadata.source)
+        await this.ensureVersion(activeView.scope, binding.metadata.source)
         if (this.database) {
           return this.database.reconcile(
-            binding.activeView!.key,
-            this.scope,
+            activeView.key,
+            activeView.scope,
             binding.metadata.source.key,
             binding.metadata.source.version,
             incoming.ids,
             reconcile
           )
         }
-        return reconcile(this.viewCache.get(binding.activeView!.key), new Map())
+        return reconcile(this.viewCache.get(activeView.key), new Map())
       })
     } catch (error) {
       this.report(error, {
@@ -1001,21 +1040,27 @@ class LocalManager {
         collection: binding.metadata.source.key,
         resource: binding.resource,
       })
-      output = reconcile(this.viewCache.get(binding.activeView.key), new Map())
+      output = reconcile(this.viewCache.get(activeView.key), new Map())
     }
 
     this.viewCache.set(output.view.key, output.view)
     for (const record of output.entities) {
-      this.entityCache.set(this.entityCacheKey(binding.metadata.source, record.id), record)
+      this.entityCache.set(
+        this.entityCacheKey(activeView.scope, binding.metadata.source, record.id),
+        record
+      )
     }
 
-    if (!local) {
+    const remainsActive = binding.matchesActiveView(activeView)
+    if (!remainsActive) binding.refreshScope(true)
+
+    if (!local && remainsActive) {
       const byId = new Map(output.entities.map((record) => [idToken(record.id), record]))
       const ordered = output.view.ids
         .map(
           (id) =>
             byId.get(idToken(id)) ??
-            this.entityCache.get(this.entityCacheKey(binding.metadata.source, id))
+            this.entityCache.get(this.entityCacheKey(activeView.scope, binding.metadata.source, id))
         )
         .filter((record): record is EntityRecord => record !== undefined)
       if (ordered.length === output.view.ids.length) {
@@ -1026,18 +1071,18 @@ class LocalManager {
     const changed = output.entities.filter((record) =>
       output.changedEntityKeys.has(idToken(record.id))
     )
-    this.fanOut(binding.metadata.source, changed, binding)
+    this.fanOut(activeView.scope, binding.metadata.source, changed, binding)
   }
 
   private reconcile(input: ReconcileInput): ReconcileOutput {
-    const { binding, incoming, previousView, local, requestStartRevision } = input
+    const { activeView, binding, incoming, previousView, local, requestStartRevision } = input
     const collection = binding.metadata.source
-    const namespace = this.collectionNamespace(collection)
+    const namespace = this.collectionNamespace(activeView.scope, collection)
     const localRevision = input.mutationRevision ?? this.collectionRevisions.get(namespace) ?? 0
 
     const existing = new Map(input.existing)
     for (const id of new Set([...incoming.ids, ...(previousView?.ids ?? [])])) {
-      const cached = this.entityCache.get(this.entityCacheKey(collection, id))
+      const cached = this.entityCache.get(this.entityCacheKey(activeView.scope, collection, id))
       if (cached) existing.set(idToken(id), cached)
     }
 
@@ -1058,8 +1103,8 @@ class LocalManager {
       const nextLocalRevision =
         local && input.dirtyIds.has(token) ? localRevision : (current?.localRevision ?? 0)
       const record: EntityRecord = {
-        key: entityStorageKey(this.scope, collection.key, collection.version, id),
-        scope: this.scope,
+        key: entityStorageKey(activeView.scope, collection.key, collection.version, id),
+        scope: activeView.scope,
         collection: collection.key,
         version: collection.version,
         id,
@@ -1090,7 +1135,7 @@ class LocalManager {
     }
 
     const view: ViewRecord = {
-      ...binding.activeView!,
+      ...activeView,
       dataKind: protectLocalView ? previousView.dataKind : incoming.dataKind,
       dataMeta: protectLocalView ? previousView.dataMeta : incoming.dataMeta,
       ids,
@@ -1105,6 +1150,7 @@ class LocalManager {
   }
 
   fanOut(
+    scope: string,
     collection: LocalCollection<LocalEntity>,
     records: EntityRecord[],
     source?: LocalResourceBinding
@@ -1113,6 +1159,7 @@ class LocalManager {
     for (const binding of this.bindings) {
       if (
         binding === source ||
+        binding.activeView?.scope !== scope ||
         binding.metadata.source.key !== collection.key ||
         binding.metadata.source.version !== collection.version
       ) {
@@ -1120,7 +1167,7 @@ class LocalManager {
       }
       binding.applyEntities(records)
     }
-    source?.applyEntities(records)
+    if (source?.activeView?.scope === scope) source.applyEntities(records)
   }
 }
 
@@ -1129,8 +1176,15 @@ type ActiveView = Omit<
   'dataKind' | 'ids' | 'state' | 'fetchedAt' | 'lastAccessedAt' | 'cursorHistory' | 'localRevision'
 >
 
+type LocalRequestToken = {
+  scope?: string
+  revision: number
+}
+
 export class LocalResourceBinding {
   activeView?: ActiveView
+  private activeScope?: string
+  private scopeInitialized = false
   private suppress = 0
   private pendingMutation = false
   private pendingMutationRevision = 0
@@ -1142,7 +1196,8 @@ export class LocalResourceBinding {
     readonly resource: string,
     readonly state: ResourceDataLike,
     readonly runtime: ResourceRuntimeState,
-    readonly descriptor: AnyResourceDescriptor
+    readonly descriptor: AnyResourceDescriptor,
+    private readonly registry: QueryBindingRegistry
   ) {
     manager.register(this)
     subscribeOps(state, (op) => this.onOperation(op))
@@ -1157,19 +1212,59 @@ export class LocalResourceBinding {
     }
   }
 
-  activate(argKey: QueryCacheKey): void {
+  private resolveScope(): string | undefined {
+    const source = this.metadata.source
+    if (source.scope === undefined) return this.manager.defaultScope
+    if (typeof source.scope === 'string') return source.scope
+
+    const getModelState = this.registry.getModelState
+    if (!getModelState) return undefined
+
+    try {
+      const state: LocalScopeContext['state'] = <T extends object>(model: Model<T>) =>
+        getModelState(model) as BoundResourceState<T>
+      const resolved = source.scope({ state })
+      if (resolved == null) return undefined
+      if (typeof resolved === 'string' && resolved.trim()) return resolved
+      throw new Error('local.collection() scope resolver must return a non-empty string or null')
+    } catch (error) {
+      this.manager.report(error, {
+        operation: 'scope',
+        collection: source.key,
+        resource: this.resource,
+      })
+      return undefined
+    }
+  }
+
+  private setScope(scope: string | undefined, resetOnChange: boolean): void {
+    const changed = this.scopeInitialized && this.activeScope !== scope
+    this.scopeInitialized = true
+    this.activeScope = scope
+
+    if (!changed) return
+    this.runtime.fetchId++
+    this.runtime.cacheEntries.clear()
+    if (resetOnChange) {
+      this.runInternal(() =>
+        Object.assign(this.state, structuredClone(this.descriptor.initialState))
+      )
+    }
+  }
+
+  private createActiveView(argKey: QueryCacheKey, scope: string): ActiveView {
     const source = this.metadata.source
     const resource = this.metadata.key ?? this.resource
-    this.activeView = {
+    return {
       key: viewStorageKey(
-        this.manager.scope,
+        scope,
         source.key,
         source.version,
         resource,
         this.descriptor.kind,
         argKey
       ),
-      scope: this.manager.scope,
+      scope,
       collection: source.key,
       version: source.version,
       resource,
@@ -1178,13 +1273,40 @@ export class LocalResourceBinding {
     }
   }
 
+  activate(argKey: QueryCacheKey): void {
+    const scope = this.resolveScope()
+    this.setScope(scope, true)
+    this.activeView = scope ? this.createActiveView(argKey, scope) : undefined
+  }
+
+  matchesActiveView(view: ActiveView): boolean {
+    return (
+      this.resolveScope() === view.scope &&
+      this.activeView?.key === view.key &&
+      this.activeView.scope === view.scope
+    )
+  }
+
+  refreshScope(resetOnChange: boolean): void {
+    const scope = this.resolveScope()
+    this.setScope(scope, resetOnChange)
+    this.activeView =
+      scope && this.runtime.activeKey
+        ? this.createActiveView(this.runtime.activeKey, scope)
+        : undefined
+  }
+
   activeEntry(): QueryCacheEntry | undefined {
     if (!this.runtime.activeKey) return undefined
     return this.runtime.cacheEntries.get(this.runtime.activeKey)
   }
 
-  currentRevision(): number {
-    return this.manager.revision(this.metadata.source)
+  currentRevision(): LocalRequestToken {
+    const scope = this.activeView?.scope
+    return {
+      scope,
+      revision: scope ? this.manager.revision(scope, this.metadata.source) : 0,
+    }
   }
 
   async hydrate(): Promise<LocalHydratedView | undefined> {
@@ -1196,9 +1318,32 @@ export class LocalResourceBinding {
   async commitRemote(
     entry: QueryCacheEntry,
     fetchedAt: number,
-    requestStartRevision: number
+    requestToken: LocalRequestToken
   ): Promise<void> {
-    await this.manager.commitRemote(this, entry, fetchedAt, requestStartRevision)
+    const resolvedScope = this.resolveScope()
+
+    if (requestToken.scope && requestToken.scope !== resolvedScope) {
+      this.setScope(resolvedScope, true)
+      this.activeView =
+        resolvedScope && this.runtime.activeKey
+          ? this.createActiveView(this.runtime.activeKey, resolvedScope)
+          : undefined
+      return
+    }
+
+    if (!requestToken.scope && resolvedScope) {
+      this.setScope(resolvedScope, false)
+      this.activeView = this.runtime.activeKey
+        ? this.createActiveView(this.runtime.activeKey, resolvedScope)
+        : undefined
+      requestToken = {
+        scope: resolvedScope,
+        revision: this.manager.revision(resolvedScope, this.metadata.source),
+      }
+    }
+
+    if (!this.activeView || !requestToken.scope) return
+    await this.manager.commitRemote(this, entry, fetchedAt, requestToken.revision)
   }
 
   syncActiveCache(): void {
@@ -1248,10 +1393,23 @@ export class LocalResourceBinding {
 
   private onOperation(op: ProxyOp | undefined): void {
     if (this.suppress > 0 || !op || op[1][0] !== 'data') return
+    const scope = this.resolveScope()
+    if (!this.scopeInitialized || this.activeScope !== scope) {
+      this.setScope(scope, true)
+      this.activeView =
+        scope && this.runtime.activeKey
+          ? this.createActiveView(this.runtime.activeKey, scope)
+          : undefined
+      return
+    }
+    if (!this.activeView) return
     for (const id of idsFromOp(op, this.state, this.metadata)) this.dirtyIds.add(id)
     if (this.pendingMutation) return
     this.pendingMutation = true
-    this.pendingMutationRevision = this.manager.markLocalMutation(this.metadata.source)
+    this.pendingMutationRevision = this.manager.markLocalMutation(
+      this.activeView.scope,
+      this.metadata.source
+    )
 
     queueMicrotask(() => {
       this.pendingMutation = false
@@ -1265,28 +1423,30 @@ export class LocalResourceBinding {
 }
 
 export function bindLocalResource(
-  registry: LocalRegistryState | undefined,
+  localRegistry: LocalRegistryState | undefined,
+  queryRegistry: QueryBindingRegistry,
   descriptor: AnyResourceDescriptor,
   path: string,
   state: ResourceDataLike,
   runtime: ResourceRuntimeState
 ): LocalResourceBinding | undefined {
-  if (!registry) return undefined
+  if (!localRegistry) return undefined
   const metadata = getLocalResourceMetadata(descriptor)
   if (!metadata) return undefined
 
-  const existing = registry.bindings.get(state)
+  const existing = localRegistry.bindings.get(state)
   if (existing) return existing
 
   const binding = new LocalResourceBinding(
-    registry.manager,
+    localRegistry.manager,
     metadata,
     path,
     state,
     runtime,
-    descriptor
+    descriptor,
+    queryRegistry
   )
-  registry.bindings.set(state, binding)
+  localRegistry.bindings.set(state, binding)
   return binding
 }
 
@@ -1303,7 +1463,7 @@ function createLocalLifecycleFactory(): ResourceLifecycleFactory {
         registry.services.set(LOCAL_REGISTRY_SERVICE, localRegistry)
       }
 
-      const binding = bindLocalResource(localRegistry, descriptor, path, state, runtime)
+      const binding = bindLocalResource(localRegistry, registry, descriptor, path, state, runtime)
       if (!binding) return undefined
       const metadata = getLocalResourceMetadata(descriptor)
 
@@ -1321,7 +1481,9 @@ function createLocalLifecycleFactory(): ResourceLifecycleFactory {
           return binding.commitRemote(
             entry,
             fetchedAt,
-            typeof requestToken === 'number' ? requestToken : 0
+            requestToken && typeof requestToken === 'object'
+              ? (requestToken as LocalRequestToken)
+              : { revision: 0 }
           )
         },
         runInternal(callback) {

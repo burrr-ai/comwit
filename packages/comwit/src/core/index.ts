@@ -41,6 +41,9 @@ import {
   type LocalInfiniteOptions,
   type LocalQueryOptions,
   type LocalResourceOptions,
+  type LocalScope,
+  type LocalScopeContext,
+  type LocalScopeResolver,
   type LocalStandaloneOptions,
   type SelectableLocalResource,
 } from './local'
@@ -123,6 +126,9 @@ export type {
   LocalInfiniteOptions,
   LocalQueryOptions,
   LocalResourceOptions,
+  LocalScope,
+  LocalScopeContext,
+  LocalScopeResolver,
   LocalStandaloneOptions,
   SelectableLocalResource,
 }

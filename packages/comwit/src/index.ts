@@ -43,6 +43,9 @@ export type {
   LocalInfiniteOptions,
   LocalQueryOptions,
   LocalResourceOptions,
+  LocalScope,
+  LocalScopeContext,
+  LocalScopeResolver,
   LocalStandaloneOptions,
   SelectableLocalResource,
 } from './core'

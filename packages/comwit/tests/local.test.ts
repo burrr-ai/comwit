@@ -73,6 +73,9 @@ describe('local()', () => {
     expect(() => local.collection<TodoEntity>({ key: 'todos', version: 0 })).toThrow(
       'positive integer'
     )
+    expect(() => local.collection<TodoEntity>({ key: 'todos', version: 1, scope: ' ' })).toThrow(
+      'scope must be non-empty'
+    )
 
     const source = local.collection<TodoEntity>({ key: 'todos', version: 1 })
     expect(source.getId({ id: '1', title: 'Todo', status: 'open', updatedAt: 1 })).toBe('1')
@@ -572,6 +575,197 @@ describe('local()', () => {
     })
     await otherUser.bound.list.query({ status: 'open' })
     expect(otherUserQuery).toHaveBeenCalledOnce()
+  })
+
+  test('lets a collection override provider scope for shared public data', async () => {
+    const factory = new IDBFactory()
+    const database = `local-public-scope-${crypto.randomUUID()}`
+    const source = local.collection<TodoEntity>({
+      key: 'public-todos',
+      version: 1,
+      scope: 'public',
+    })
+    const seedQuery = vi.fn(() => [
+      { id: '1', title: 'Shared', status: 'open' as const, updatedAt: 1 },
+    ])
+    const seed = createTodoBound({
+      factory,
+      database,
+      source,
+      scope: 'user:1',
+      staleTime: 60_000,
+      listFn: seedQuery,
+    })
+    await seed.bound.list.query({ status: 'open' })
+
+    const restoreQuery = vi.fn(() => [
+      { id: '1', title: 'Remote', status: 'open' as const, updatedAt: 2 },
+    ])
+    const restored = createTodoBound({
+      factory,
+      database,
+      source,
+      scope: 'user:2',
+      staleTime: 60_000,
+      listFn: restoreQuery,
+    })
+    await restored.bound.list.query({ status: 'open' })
+
+    expect(seedQuery).toHaveBeenCalledOnce()
+    expect(restoreQuery).not.toHaveBeenCalled()
+    expect(restored.bound.list.data[0].title).toBe('Shared')
+  })
+
+  test('resolves collection scope lazily from another provider-bound model', async () => {
+    const factory = new IDBFactory()
+    const database = `local-model-scope-${crypto.randomUUID()}`
+    const identityModel = model<{ me: { id: string } | null }>({ me: null })
+    let scopeEvaluations = 0
+    const source = local.collection<TodoEntity>({
+      key: 'model-scoped-todos',
+      version: 1,
+      scope: ({ state }) => {
+        scopeEvaluations++
+        const id = state(identityModel).me?.id
+        return id ? `user:${id}` : null
+      },
+    })
+
+    expect(scopeEvaluations).toBe(0)
+
+    const createBound = (userId: string | null, listFn: () => TodoListItem[]) => {
+      const identityStore = identityModel.instance()
+      identityStore.proxy.me = userId ? { id: userId } : null
+      const todoModel = model({
+        list: local.query<TodoListItem[]>({
+          source,
+          initialData: [],
+          staleTime: 60_000,
+          queryFn: listFn,
+        }),
+      })
+      const store = todoModel.instance()
+      const registry = createQueryBindingRegistry({
+        local: { indexedDB: factory, database, scope: 'provider-default' },
+      })
+      registry.getModelState = (sourceModel) => {
+        if (sourceModel !== identityModel) throw new Error('Unexpected scope model')
+        return identityStore.proxy
+      }
+      const bound = bindResourceState(
+        store.proxy,
+        todoModel.pluginBags.get('query')!,
+        undefined,
+        registry,
+        todoModel.key
+      ) as any
+      return bound
+    }
+
+    const unresolvedQuery = vi.fn(() => [
+      { id: '1', title: 'Unscoped', status: 'open' as const, updatedAt: 1 },
+    ])
+    await createBound(null, unresolvedQuery).list.query()
+    expect(unresolvedQuery).toHaveBeenCalledOnce()
+    expect(scopeEvaluations).toBeGreaterThan(0)
+
+    const seedQuery = vi.fn(() => [
+      { id: '1', title: 'User one', status: 'open' as const, updatedAt: 2 },
+    ])
+    await createBound('1', seedQuery).list.query()
+
+    const restoreQuery = vi.fn(() => [
+      { id: '1', title: 'Remote one', status: 'open' as const, updatedAt: 3 },
+    ])
+    const restored = createBound('1', restoreQuery)
+    await restored.list.query()
+    expect(restoreQuery).not.toHaveBeenCalled()
+    expect(restored.list.data[0].title).toBe('User one')
+
+    const userTwoQuery = vi.fn(() => [
+      { id: '1', title: 'User two', status: 'open' as const, updatedAt: 1 },
+    ])
+    const userTwo = createBound('2', userTwoQuery)
+    await userTwo.list.query()
+    expect(userTwoQuery).toHaveBeenCalledOnce()
+    expect(userTwo.list.data[0].title).toBe('User two')
+  })
+
+  test('drops an in-flight result when its model-derived scope changes', async () => {
+    const factory = new IDBFactory()
+    const database = `local-scope-race-${crypto.randomUUID()}`
+    const identityModel = model<{ me: { id: string } | null }>({ me: null })
+    const identityStore = identityModel.instance()
+    identityStore.proxy.me = { id: '1' }
+    const source = local.collection<TodoEntity>({
+      key: 'scope-race-todos',
+      version: 1,
+      scope: ({ state }) => {
+        const id = state(identityModel).me?.id
+        return id ? `user:${id}` : null
+      },
+    })
+    const pending = deferred<TodoListItem[]>()
+    const listFn = vi
+      .fn<() => Promise<TodoListItem[]>>()
+      .mockResolvedValueOnce([
+        { id: '1', title: 'User one', status: 'open' as const, updatedAt: 1 },
+      ])
+      .mockImplementationOnce(() => pending.promise)
+    const todoModel = model({
+      list: local.query<TodoListItem[]>({
+        source,
+        initialData: [],
+        queryFn: listFn,
+      }),
+    })
+    const store = todoModel.instance()
+    const registry = createQueryBindingRegistry({ local: { indexedDB: factory, database } })
+    registry.getModelState = () => identityStore.proxy
+    const bound = bindResourceState(
+      store.proxy,
+      todoModel.pluginBags.get('query')!,
+      undefined,
+      registry,
+      todoModel.key
+    ) as any
+
+    await bound.list.query()
+    const request = bound.list.query({ force: true })
+    identityStore.proxy.me = { id: '2' }
+    pending.resolve([{ id: '1', title: 'Late user one', status: 'open' as const, updatedAt: 2 }])
+    await request
+
+    expect(bound.list.data).toEqual([])
+    expect(bound.list.isSuccess).toBe(false)
+
+    const userTwoQuery = vi.fn(() => [
+      { id: '1', title: 'Fresh user two', status: 'open' as const, updatedAt: 1 },
+    ])
+    const userTwoModel = model({
+      list: local.query<TodoListItem[]>({
+        source,
+        initialData: [],
+        staleTime: 60_000,
+        queryFn: userTwoQuery,
+      }),
+    })
+    const userTwoStore = userTwoModel.instance()
+    const userTwoRegistry = createQueryBindingRegistry({
+      local: { indexedDB: factory, database },
+    })
+    userTwoRegistry.getModelState = () => identityStore.proxy
+    const userTwo = bindResourceState(
+      userTwoStore.proxy,
+      userTwoModel.pluginBags.get('query')!,
+      undefined,
+      userTwoRegistry,
+      userTwoModel.key
+    ) as any
+
+    await userTwo.list.query()
+    expect(userTwoQuery).toHaveBeenCalledOnce()
+    expect(userTwo.list.data[0].title).toBe('Fresh user two')
   })
 
   test('normalizes and restores response envelopes with map.split/join', async () => {
