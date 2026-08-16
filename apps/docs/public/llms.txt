@@ -136,40 +136,22 @@ posts: query.infinite<Post[]>({
 
 ### Durable on-demand query data
 
-Use one collection per entity type and share it across list/detail/infinite resources. A standalone
-detail is useful when a Next.js server component owns its API request:
+Use `local` when server-shaped, ID-keyed data should appear immediately from IndexedDB and then be
+corrected by the server. It is especially useful for repeated list/detail navigation, optimistic
+field edits that should fan out across loaded views, and Next.js server-owned details whose Suspense
+fallback may show an exact cached value without starting another request.
 
-```ts
-const products = local.collection<ProductEntity>({ key: 'products', version: 1 })
+Model one collection per canonical entity type. It uses `id` by default, supports a custom `getId`,
+and may use a static public scope or a lazy user/tenant scope. Model one resource per independently
+restorable view and freshness policy: filters, list ordering, detail completeness, and cursors remain
+view-specific. Delayed fields that belong to the same view can be emitted progressively from one
+query; split them into another resource only when they need independent restoration or freshness.
 
-const product = model({
-  list: local.query<ProductListItem[], Filter>({
-    source: products,
-    initialData: [],
-    queryFn: api.product.list,
-  }),
-  detail: local<ProductDetail | null, { id: string }>({
-    source: products,
-    initialData: null,
-  }),
-})
-```
-
-`entities` stores merged ID-keyed values; `views` stores each resource/argument's ordered IDs,
-freshness, and cursor metadata. Exact cached arguments hydrate first. Fresh views skip the request;
-stale views render while `isFetching` and revalidate in the background; unseen arguments fetch.
-List presence never proves detail completeness.
-
-Incoming fields shallowly merge, so a later list summary does not erase omitted detail fields.
-Direct entity edits write through and fan out to loaded views sharing the ID. Standalone `.restore(arg)`
-checks only the exact local view and never fetches; `.set(data, { arg })` writes that exact view;
-`.remove(arg)` resets it to `initialData`. Refetch query-backed views after API mutations to correct
-membership/order/totals. Array removal changes one view, not the global entity. Use resource
-`map.split/join` for envelopes such as `{ items, total }`.
-
-`version` is required and has no migration path: bumping it invalidates and removes older rows.
-Scope by user/tenant and remount `ComwitProvider` when scope changes. This feature is not a full local
-database or mutation outbox. See https://library.comwit.io/llm/local.txt for the complete contract.
+Prefer shorter stale windows for personalized data and longer windows for stable public content.
+Use `persist()` instead for local-owned preferences or drafts, and ordinary `query()` when durable
+restoration has little value. `local` is not an offline mutation queue, CRDT, or multi-device conflict
+engine. Collection versions invalidate old rows rather than migrate them. See
+https://library.comwit.io/llm/local.txt for the full contract and options.
 
 ## Reading and starting queries
 

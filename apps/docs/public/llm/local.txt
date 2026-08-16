@@ -199,6 +199,24 @@ removed only from that view, not globally.
 For response envelopes such as `{ items, total }`, use `map.split(data) => { rows, meta }` and
 `map.join(rows, meta) => data`.
 
+## Collection and freshness boundaries
+
+A collection is the canonical identity boundary for an entity type, not a boundary per endpoint.
+List, detail, and enrichment fragments with the same IDs may share one collection. Resource keys and
+arguments own exact membership, ordering, metadata, and freshness.
+
+- Use separate local resources sharing a collection when they must restore or revalidate
+  independently; each resource may use a different `staleTime`.
+- Keep delayed enrichment inside one `local.query()` when it belongs to that view and should use the
+  same freshness policy. The query may return an `AsyncIterable`: early yields update the UI,
+  `isFetching` remains true, and the completed enriched view is committed to IndexedDB.
+- Do not add entity-level fetch timestamps only to schedule enrichment. Prefer view `staleTime`.
+  Missing optional fields may represent row-level loading until the later result arrives.
+
+Use shorter stale windows for personalized data that changes often and longer windows for stable
+public content. Scope personalized collections by user or tenant; public collections can use a
+static public scope.
+
 Incoming own fields shallowly merge into canonical entities. Omitted detail-only fields survive a
 later list summary; explicit `null` clears a field. Configure collection `merge` for nested rules and
 `revision` for a comparable server revision such as `updatedAt`.
