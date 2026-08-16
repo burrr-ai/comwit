@@ -75,10 +75,90 @@ describe('local()', () => {
     )
 
     const source = local.collection<TodoEntity>({ key: 'todos', version: 1 })
+    expect(source.getId({ id: '1', title: 'Todo', status: 'open', updatedAt: 1 })).toBe('1')
     const legacy = local(query<TodoListItem[]>({ initialData: [], queryFn: () => [] }), {
       source,
     })
     expect(legacy.kind).toBe('single')
+  })
+
+  test('skips IndexedDB on the server and continues as an ordinary query', async () => {
+    const source = local.collection<TodoEntity>({ key: 'todos', version: 1 })
+    const queryFn = vi.fn(() => [
+      { id: '1', title: 'Server only', status: 'open' as const, updatedAt: 1 },
+    ])
+    const todoModel = model({
+      list: local.query<TodoListItem[]>({ source, initialData: [], queryFn }),
+    })
+    const store = todoModel.instance()
+    const bound = bindResourceState(
+      store.proxy,
+      todoModel.pluginBags.get('query')!,
+      undefined,
+      createQueryBindingRegistry(),
+      todoModel.key
+    ) as any
+
+    await bound.list.query()
+
+    expect(queryFn).toHaveBeenCalledOnce()
+    expect(bound.list.data[0].title).toBe('Server only')
+    expect(bound.list.isSuccess).toBe(true)
+    expect(bound.list.isError).toBe(false)
+  })
+
+  test('normalizes, fans out, and restores entities with a custom getId', async () => {
+    type ExternalTodo = {
+      uuid: string
+      title: string
+      description?: string
+    }
+
+    const factory = new IDBFactory()
+    const database = `local-custom-id-${crypto.randomUUID()}`
+    const source = local.collection<ExternalTodo>({
+      key: 'external-todos',
+      version: 1,
+      getId: (todo) => todo.uuid,
+    })
+
+    const createBound = () => {
+      const todoModel = model({
+        list: local.query<ExternalTodo[]>({
+          source,
+          initialData: [],
+          queryFn: () => [{ uuid: 'todo-1', title: 'List title' }],
+          staleTime: 60_000,
+        }),
+        detail: local<ExternalTodo | null, string>({ source, initialData: null }),
+      })
+      const store = todoModel.instance()
+      return bindResourceState(
+        store.proxy,
+        todoModel.pluginBags.get('query')!,
+        undefined,
+        createQueryBindingRegistry({ local: { indexedDB: factory, database } }),
+        todoModel.key
+      ) as any
+    }
+
+    const first = createBound()
+    await first.list.query()
+    first.detail.set(
+      { uuid: 'todo-1', title: 'Detail title', description: 'Custom identity' },
+      { arg: 'todo-1' }
+    )
+
+    await vi.waitFor(() => expect(first.list.data[0].title).toBe('Detail title'))
+
+    const restored = createBound()
+    await restored.detail.restore('todo-1')
+
+    expect(restored.detail.data).toEqual({
+      uuid: 'todo-1',
+      title: 'Detail title',
+      description: 'Custom identity',
+    })
   })
 
   test('restores a standalone detail seeded by server initialization without an API query', async () => {

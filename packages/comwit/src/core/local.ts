@@ -30,11 +30,14 @@ const DEFAULT_DATABASE = '@comwit/state'
 const DEFAULT_SCOPE = 'default'
 
 export type LocalEntityId = string | number
-export type LocalEntity = { id: LocalEntityId } & Record<string, unknown>
-export type LocalEntityFragment<TEntity extends LocalEntity> = Pick<TEntity, 'id'> &
-  Partial<Omit<TEntity, 'id'>>
+export type LocalEntity = object
+export type LocalEntityFragment<TEntity extends LocalEntity> = TEntity extends {
+  id: LocalEntityId
+}
+  ? Pick<TEntity, 'id'> & Partial<Omit<TEntity, 'id'>>
+  : Partial<TEntity>
 
-export type LocalCollectionOptions<TEntity extends LocalEntity> = {
+type LocalCollectionBaseOptions<TEntity extends LocalEntity> = {
   /** Stable persisted namespace for this entity type. */
   key: string
   /** App-managed schema version. Changing it invalidates and removes older rows. */
@@ -48,8 +51,24 @@ export type LocalCollectionOptions<TEntity extends LocalEntity> = {
   revision?: (entity: Readonly<Partial<TEntity>>) => string | number | undefined
 }
 
+type LocalCollectionIdentityOptions<TEntity extends LocalEntity> = TEntity extends {
+  id: LocalEntityId
+}
+  ? {
+      /** Entity identity extractor. Defaults to `entity.id`. */
+      getId?: (entity: Readonly<TEntity>) => LocalEntityId
+    }
+  : {
+      /** Entity identity extractor. Required when the entity has no string/number `id`. */
+      getId: (entity: Readonly<TEntity>) => LocalEntityId
+    }
+
+export type LocalCollectionOptions<TEntity extends LocalEntity> =
+  LocalCollectionBaseOptions<TEntity> & LocalCollectionIdentityOptions<TEntity>
+
 export type LocalCollection<TEntity extends LocalEntity> = Readonly<
   LocalCollectionOptions<TEntity> & {
+    getId: (entity: Readonly<TEntity>) => LocalEntityId
     [LOCAL_COLLECTION_BRAND]: true
   }
 >
@@ -207,10 +226,15 @@ function createCollection<TEntity extends LocalEntity>(
     throw new Error('local.collection() requires version to be a positive integer')
   }
 
+  const getId =
+    options.getId ??
+    ((entity: Readonly<TEntity>) => (entity as { id?: unknown }).id as LocalEntityId)
+
   return Object.freeze({
     ...options,
+    getId,
     [LOCAL_COLLECTION_BRAND]: true as const,
-  })
+  }) as LocalCollection<TEntity>
 }
 
 function attachLocal<
@@ -389,7 +413,7 @@ type NormalizedState = {
   dataKind: DataKind
   dataMeta?: unknown
   ids: LocalEntityId[]
-  entities: LocalEntity[]
+  entities: Array<{ id: LocalEntityId; value: LocalEntity }>
   state: Record<string, unknown>
 }
 
@@ -609,41 +633,58 @@ function viewStorageKey(
 }
 
 function isEntity(value: unknown): value is LocalEntity {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
-  const id = (value as { id?: unknown }).id
-  return typeof id === 'string' || (typeof id === 'number' && Number.isFinite(id))
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function entityId(
+  collection: LocalCollection<LocalEntity>,
+  value: unknown
+): LocalEntityId | undefined {
+  if (!isEntity(value)) return undefined
+  const id = collection.getId(value)
+  if (typeof id === 'string') return id
+  if (typeof id === 'number' && Number.isFinite(id)) return id
+  return undefined
 }
 
 function normalizeState(state: ResourceDataLike, metadata: LocalResourceMetadata): NormalizedState {
   const plain = snapshot(state) as ResourceDataLike
   const data = plain.data
   let dataKind: DataKind
-  let entities: LocalEntity[]
+  let values: LocalEntity[]
   let dataMeta: unknown
 
   if (metadata.map) {
     const mapped = metadata.map.split(data)
     if (!mapped || !Array.isArray(mapped.rows) || !mapped.rows.every(isEntity)) {
-      throw new Error('local() map.split() must return entity rows with string or number ids')
+      throw new Error('local() map.split() must return entity object rows')
     }
     dataKind = 'mapped'
-    entities = mapped.rows as LocalEntity[]
+    values = mapped.rows as LocalEntity[]
     dataMeta = mapped.meta
   } else if (data === null) {
     dataKind = 'null'
-    entities = []
+    values = []
   } else if (Array.isArray(data)) {
     if (!data.every(isEntity)) {
-      throw new Error('local() array data must contain objects with a string or number id')
+      throw new Error('local() array data must contain entity objects')
     }
     dataKind = 'array'
-    entities = data as LocalEntity[]
+    values = data as LocalEntity[]
   } else if (isEntity(data)) {
     dataKind = 'entity'
-    entities = [data]
+    values = [data]
   } else {
     throw new Error('local() data must be an entity, an entity array, or null')
   }
+
+  const entities = values.map((value) => {
+    const id = entityId(metadata.source, value)
+    if (id === undefined) {
+      throw new Error('local() getId() must return a finite number or string for every entity')
+    }
+    return { id, value }
+  })
 
   const stateMeta: Record<string, unknown> = { ...plain }
   delete stateMeta.data
@@ -704,7 +745,7 @@ function mergeEntity(
   if (compareRevision(collection, current, incoming) < 0) return current
   if (collection.merge) {
     const merged = collection.merge(current, incoming)
-    return { ...merged, id: incoming.id } as LocalEntity
+    return { ...incoming, ...merged } as LocalEntity
   }
   return { ...current, ...incoming }
 }
@@ -718,9 +759,13 @@ function idsFromOp(
   if (!op || op[1][0] !== 'data') return ids
 
   const add = (value: unknown) => {
-    if (isEntity(value)) ids.add(idToken(value.id))
+    const id = entityId(metadata.source, value)
+    if (id !== undefined) ids.add(idToken(id))
     if (Array.isArray(value)) {
-      for (const item of value) if (isEntity(item)) ids.add(idToken(item.id))
+      for (const item of value) {
+        const itemId = entityId(metadata.source, item)
+        if (itemId !== undefined) ids.add(idToken(itemId))
+      }
     }
   }
 
@@ -999,8 +1044,8 @@ class LocalManager {
     const records: EntityRecord[] = []
     const changedEntityKeys = new Set<string>()
 
-    for (const entity of incoming.entities) {
-      const token = idToken(entity.id)
+    for (const { id, value: entity } of incoming.entities) {
+      const token = idToken(id)
       const current = existing.get(token)
       const protectLocal =
         !local &&
@@ -1013,11 +1058,11 @@ class LocalManager {
       const nextLocalRevision =
         local && input.dirtyIds.has(token) ? localRevision : (current?.localRevision ?? 0)
       const record: EntityRecord = {
-        key: entityStorageKey(this.scope, collection.key, collection.version, entity.id),
+        key: entityStorageKey(this.scope, collection.key, collection.version, id),
         scope: this.scope,
         collection: collection.key,
         version: collection.version,
-        id: entity.id,
+        id,
         value: nextValue,
         updatedAt: Date.now(),
         localRevision: nextLocalRevision,
@@ -1180,18 +1225,21 @@ export class LocalResourceBinding {
         const plain = snapshot(this.state) as ResourceDataLike
         const mapped = this.metadata.map.split(plain.data)
         const rows = mapped.rows.map((item) => {
-          const next = byId.get(idToken(item.id))
+          const id = entityId(this.metadata.source, item)
+          const next = id === undefined ? undefined : byId.get(idToken(id))
           return (next ?? item) as LocalEntity
         })
         this.state.data = this.metadata.map.join(rows, mapped.meta)
       } else if (Array.isArray(data)) {
         for (const item of data) {
-          if (!isEntity(item)) continue
-          const next = byId.get(idToken(item.id))
+          const id = entityId(this.metadata.source, item)
+          if (id === undefined) continue
+          const next = byId.get(idToken(id))
           if (next) Object.assign(item, next)
         }
       } else if (isEntity(data)) {
-        const next = byId.get(idToken(data.id))
+        const id = entityId(this.metadata.source, data)
+        const next = id === undefined ? undefined : byId.get(idToken(id))
         if (next) Object.assign(data, next)
       }
     })

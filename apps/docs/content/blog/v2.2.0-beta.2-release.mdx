@@ -1,0 +1,56 @@
+---
+title: 'comwit v2.2.0-beta.2 — Custom local entity identity'
+date: '2026-08-16'
+description: 'The third 2.2 beta adds collection getId support and verifies that local resources degrade cleanly when IndexedDB is unavailable on the server.'
+---
+
+The third 2.2 beta lets a local collection normalize entities whose identity field is not named
+`id`.
+
+## Default and custom identity
+
+Collections continue to use `entity.id` by default:
+
+```ts
+const products = local.collection<Product>({
+  key: 'products',
+  version: 1,
+})
+```
+
+When an API uses another field, provide `getId` once on the collection:
+
+```ts
+type ExternalProduct = {
+  uuid: string
+  title: string
+}
+
+const products = local.collection<ExternalProduct>({
+  key: 'external-products',
+  version: 1,
+  getId: (product) => product.uuid,
+})
+```
+
+Normalization, IndexedDB storage, optimistic write-through, and list/detail fan-out all use the
+collection extractor. It must return the same string or finite number for every fragment of an
+entity. TypeScript requires `getId` when the entity type does not have the default `id` field.
+
+## Server behavior
+
+Server environments do not provide IndexedDB. Local resources skip that storage lifecycle without
+throwing:
+
+- standalone `local().restore()` keeps its in-memory initial or initialized value;
+- `local.query().load()` continues through the ordinary query driver;
+- browser loads still restore an exact IndexedDB view before deciding whether to revalidate.
+
+Install the beta:
+
+```bash
+yarn add @comwit/state@2.2.0-beta.2
+```
+
+See the complete [`local()` reference](/docs/api/local) for collection versions, exact argument
+views, server initialization, and synchronization behavior.

@@ -20,13 +20,14 @@ local.query()     IndexedDB restore + ordinary query revalidation
 local.infinite()  IndexedDB restore + infinite query revalidation
 ```
 
-All forms share canonical entities by `id`, write direct optimistic mutations through to IndexedDB,
-and preserve the existing resource state shape. `local()` is not limited to client-side queries.
+All forms share canonical entities by collection identity, write direct optimistic mutations
+through to IndexedDB, and preserve the existing resource state shape. `local()` is not limited to
+client-side queries.
 
 ## One collection, independent resources
 
-Create one collection for an entity type. IDs are detected automatically and may be strings or
-numbers.
+Create one collection for an entity type. A string or finite-number `id` is used by default. Supply
+`getId` when the API uses another identity field or a derived identity.
 
 ```ts
 interface ProductEntity {
@@ -45,6 +46,19 @@ const products = local.collection<ProductEntity>({
   revision: (product) => product.updatedAt,
 })
 ```
+
+```ts
+type ExternalProduct = { uuid: string; title: string }
+
+const externalProducts = local.collection<ExternalProduct>({
+  key: 'external-products',
+  version: 1,
+  getId: (product) => product.uuid,
+})
+```
+
+`getId` must return the same string or finite number for every list/detail fragment representing
+the entity.
 
 Use a query adapter where the client owns remote loading, and a standalone resource where a server
 component or action supplies the value:
@@ -240,7 +254,8 @@ Configure a database name and stable user or tenant scope. Remount the provider 
 | `indexedDB`     | `IDBFactory`               | browser global  | Advanced injection for tests or browser-compatible runtimes |
 
 If IndexedDB is unavailable or fails, standalone resources retain their in-memory value and query
-adapters degrade to ordinary queries.
+adapters degrade to ordinary queries. Server environments therefore skip the IndexedDB lifecycle
+without throwing; a server-side `local.query().load()` proceeds through its normal query driver.
 
 ## On-demand normalized storage
 
@@ -331,12 +346,13 @@ or multi-device conflict engine.
 
 ## Collection and resource options
 
-| Collection option | Required | Description                          |
-| ----------------- | -------- | ------------------------------------ |
-| `key`             | Yes      | Stable persisted entity namespace    |
-| `version`         | Yes      | Positive integer schema version      |
-| `merge`           | No       | Custom canonical fragment merge      |
-| `revision`        | No       | Comparable server revision extractor |
+| Collection option | Required             | Description                                             |
+| ----------------- | -------------------- | ------------------------------------------------------- |
+| `key`             | Yes                  | Stable persisted entity namespace                       |
+| `version`         | Yes                  | Positive integer schema version                         |
+| `getId`           | Without default `id` | Identity extractor; defaults to the entity's `id` field |
+| `merge`           | No                   | Custom canonical fragment merge                         |
+| `revision`        | No                   | Comparable server revision extractor                    |
 
 There are no migrations in this beta. Bumping `version` makes old views a cache miss and removes
 older rows for the same scope and collection.

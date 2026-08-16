@@ -182,3 +182,18 @@ test('standalone local resources expose restore in selectors and exact set in ac
 
   void standaloneLocalTypeContract
 })
+
+test('local collections require getId only when the entity has no default id', () => {
+  type ExternalProduct = { uuid: string; title: string }
+
+  local.collection<ExternalProduct>({
+    key: 'external-products',
+    version: 1,
+    getId: (product) => product.uuid,
+  })
+
+  // @ts-expect-error Entities without `id` must provide an identity extractor.
+  local.collection<ExternalProduct>({ key: 'missing-get-id', version: 1 })
+
+  local.collection<{ id: string; title: string }>({ key: 'default-id', version: 1 })
+})

@@ -10,12 +10,12 @@ local.infinite()  IndexedDB restore + infinite query revalidation
 ```
 
 All forms keep the ordinary resource state fields (`data`, `isLoading`, `isFetching`, `isSuccess`,
-`isError`, `error`) and share canonical entity values by ID.
+`isError`, `error`) and share canonical entity values by collection identity.
 
 ## Collection and model
 
-Create one collection for each entity type. Entity IDs are detected automatically and may be
-strings or numbers.
+Create one collection for each entity type. A string or finite-number `id` is used by default.
+Supply `getId` when the API uses another identity field.
 
 ```ts
 import { local, model } from '@comwit/state'
@@ -35,6 +35,12 @@ const products = local.collection<ProductEntity>({
   key: 'products',
   version: 1,
   revision: (product) => product.updatedAt,
+})
+
+const externalProducts = local.collection<{ uuid: string; title: string }>({
+  key: 'external-products',
+  version: 1,
+  getId: (product) => product.uuid,
 })
 
 type ProductState = {
@@ -151,7 +157,9 @@ actively edited forms into separate draft state.
 
 Remount the provider when the user/tenant scope changes. Defaults are database
 `'@comwit/state'` and scope `'default'`. IndexedDB failure leaves standalone state in memory and
-makes query adapters behave like ordinary queries.
+makes query adapters behave like ordinary queries. Server environments have no IndexedDB, so the
+storage lifecycle is skipped without throwing and `local.query().load()` uses its normal query
+driver.
 
 ## On-demand normalized storage
 
@@ -178,6 +186,10 @@ have changed. `local()` has no mutation outbox, offline retry, CRDT, or multi-de
 
 `local.collection({ key, version })` requires a positive integer version. There are no migrations:
 bumping it makes old views a cache miss and removes older rows for that collection/scope.
+
+Collection options include `getId(entity)`, which defaults to `entity.id` and is required by the
+type when the entity has no `id`. It must return a stable string or finite number for every
+list/detail fragment.
 
 Resource options:
 
