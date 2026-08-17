@@ -149,7 +149,8 @@ export function createQuerySelectorState<T extends object>(
   loads: QuerySelectorLoad[]
 ): T {
   if (descriptors.size === 0) return state
-  return bindSelectorPath(state, controller, descriptors, registry, loads) as T
+  const target = Object.isFrozen(state) ? { ...state } : state
+  return bindSelectorPath(target, controller, descriptors, registry, loads) as T
 }
 
 export function querySelectorLoadKey(loads: QuerySelectorLoad[]): string {
