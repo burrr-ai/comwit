@@ -426,8 +426,8 @@ or multi-device conflict engine.
 | `revision`        | No                   | Comparable server revision extractor                    |
 | `scope`           | No                   | Static scope or lazy `({ state }) => string \| null`    |
 
-There are no migrations in this beta. Bumping `version` makes old views a cache miss and removes
-older rows for the same scope and collection.
+There are no built-in migrations. Bumping `version` makes old views a cache miss and removes older
+rows for the same scope and collection.
 
 | Resource option | Required | Description                                                            |
 | --------------- | -------- | ---------------------------------------------------------------------- |

@@ -1,0 +1,81 @@
+---
+title: 'comwit v2.2.0 — Local-first resources'
+date: '2026-08-17'
+description: 'v2.2.0 adds standalone IndexedDB resources, normalized local query adapters, custom entity identity, and collection-scoped persistence.'
+author: 'Codex'
+---
+
+## Durable data without changing the model API
+
+v2.2.0 promotes the local-first resource work from beta to stable. `local()` creates a standalone
+IndexedDB-backed model field, while `local.query()` and `local.infinite()` add optional remote
+loading and revalidation to the same durable foundation.
+
+```ts
+const products = local.collection<Product>({
+  key: 'products',
+  version: 1,
+  scope: ({ state }) => {
+    const userId = state(userModel).me?.id
+    return userId ? `user:${userId}` : null
+  },
+})
+
+const productModel = model({
+  detail: local<Product | null, { id: string }>({
+    source: products,
+    initialData: null,
+  }),
+  list: local.query<Product[], ProductFilter>({
+    source: products,
+    initialData: [],
+    staleTime: 30_000,
+    queryFn: api.product.list,
+  }),
+})
+```
+
+Standalone resources can restore exact persisted views and accept server-rendered initialization
+without starting a client request. Query-backed resources restore first, then use the normal
+`staleTime` rules to skip a fresh request or revalidate stale data in the background.
+
+## Normalized collections
+
+Collections store canonical entities separately from each resource and query argument's ordered
+view. List and detail fields can therefore share updates without treating a list fragment as a
+complete detail response.
+
+- Entity IDs default to `entity.id`; `getId` supports APIs that use another identity field.
+- `merge` and `revision` customize fragment merging and reject older server data.
+- Static or lazily resolved collection scopes isolate public, user, and tenant caches.
+- Scope changes discard the previous in-memory query cache and prevent cross-user response commits.
+- Direct local edits write through to IndexedDB and fan out to loaded views sharing the entity.
+
+Collection `version` remains an explicit schema boundary. There are no built-in migrations: bumping
+the version invalidates old views and cleans up older rows for that scope and collection.
+
+## Server and failure behavior
+
+Server environments simply skip IndexedDB. Standalone resources retain their initialized value,
+and query adapters continue through the ordinary query driver. Browser storage failures also
+degrade to in-memory behavior instead of breaking model access.
+
+This release does not add a mutation outbox, offline retry queue, CRDT, or multi-device conflict
+engine. Use local resources for durable first paint and client-side continuity while keeping the
+server authoritative for synchronization.
+
+## Selector compatibility fix
+
+Selector `.load()` now works when derived, computed, validation, or history extensions produce a
+frozen model snapshot. The selector binding preserves the immutable snapshot and uses a separate
+proxy target, avoiding JavaScript Proxy invariant errors.
+
+## Upgrade
+
+```bash
+yarn add @comwit/state@2.2.0
+```
+
+The deprecated `comwit` compatibility package also tracks v2.2.0 and re-exports `@comwit/state`.
+
+[npm](https://www.npmjs.com/package/@comwit/state)
