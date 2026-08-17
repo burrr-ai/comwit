@@ -2,13 +2,14 @@ import { expectTypeOf, test } from 'vitest'
 import {
   action,
   create,
+  local,
   model,
   query,
   snapshot,
   useModel,
   type SelectableResourceState,
 } from '../src'
-import type { Query } from '../src'
+import type { Local, Query } from '../src'
 import { createProxy } from '../src/core/proxy'
 
 // `.snapshot()` is exposed on the top-level proxy at the type level. For
@@ -147,3 +148,52 @@ function selectorLoadTypeContract() {
 }
 
 void selectorLoadTypeContract
+
+test('standalone local resources expose restore in selectors and exact set in actions', () => {
+  type Product = { id: string; title: string }
+  type DetailArg = { id: string }
+  type DetailState = SelectableResourceState<{
+    detail: Local<Product | null, DetailArg>
+  }>
+
+  expectTypeOf<DetailState['detail']['restore']>().parameter(0).toEqualTypeOf<DetailArg>()
+  expectTypeOf<
+    ReturnType<DetailState['detail']['restore']>['data']
+  >().toEqualTypeOf<Product | null>()
+
+  const products = local.collection<Product>({ key: 'products', version: 1 })
+  const m = model({
+    detail: local<Product | null, DetailArg>({
+      source: products,
+      initialData: null,
+    }),
+  })
+
+  action(({ state }) => {
+    const s = state(m)
+    s.detail.set({ id: '1', title: 'Server' }, { arg: { id: '1' } })
+    s.detail.remove({ id: '1' })
+    return {}
+  })
+
+  function standaloneLocalTypeContract() {
+    useModel(m, (state) => state.detail.restore({ id: '1' }).data)
+  }
+
+  void standaloneLocalTypeContract
+})
+
+test('local collections require getId only when the entity has no default id', () => {
+  type ExternalProduct = { uuid: string; title: string }
+
+  local.collection<ExternalProduct>({
+    key: 'external-products',
+    version: 1,
+    getId: (product) => product.uuid,
+  })
+
+  // @ts-expect-error Entities without `id` must provide an identity extractor.
+  local.collection<ExternalProduct>({ key: 'missing-get-id', version: 1 })
+
+  local.collection<{ id: string; title: string }>({ key: 'default-id', version: 1 })
+})

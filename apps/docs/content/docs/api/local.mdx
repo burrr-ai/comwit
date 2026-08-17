@@ -1,0 +1,468 @@
+---
+title: 'local()'
+group: 'API'
+slug: 'api/local'
+order: 7
+---
+
+# local()
+
+Creates an IndexedDB-backed resource over a normalized entity collection. A local resource may be
+standalone, query-backed, or infinite-query-backed:
+
+```ts
+import { local } from '@comwit/state'
+```
+
+```text
+local()           IndexedDB restore + server/manual set; no API driver
+local.query()     IndexedDB restore + ordinary query revalidation
+local.infinite()  IndexedDB restore + infinite query revalidation
+```
+
+All forms share canonical entities by collection identity, write direct optimistic mutations
+through to IndexedDB, and preserve the existing resource state shape. `local()` is not limited to
+client-side queries.
+
+## One collection, independent resources
+
+Create one collection for an entity type. A string or finite-number `id` is used by default. Supply
+`getId` when the API uses another identity field or a derived identity.
+
+```ts
+interface ProductEntity {
+  readonly id: string
+  title: string
+  updatedAt: number
+  description?: string
+}
+
+type ProductListItem = Pick<ProductEntity, 'id' | 'title' | 'updatedAt'>
+type ProductDetail = ProductEntity & { description: string }
+
+const products = local.collection<ProductEntity>({
+  key: 'products',
+  version: 1,
+  revision: (product) => product.updatedAt,
+})
+```
+
+```ts
+type ExternalProduct = { uuid: string; title: string }
+
+const externalProducts = local.collection<ExternalProduct>({
+  key: 'external-products',
+  version: 1,
+  getId: (product) => product.uuid,
+})
+```
+
+`getId` must return the same string or finite number for every list/detail fragment representing
+the entity.
+
+A collection may own its persistence scope. Use a static scope for public data, or an inline
+resolver for user/tenant data. The resolver runs only when the local resource is used, so the
+referenced model may be initialized later.
+
+```ts
+const publicPosts = local.collection<Post>({
+  key: 'posts',
+  version: 1,
+  scope: 'public',
+})
+
+const privateProjects = local.collection<Project>({
+  key: 'projects',
+  version: 1,
+  scope: ({ state }) => {
+    const userId = state(userModel).me?.id
+    return userId ? `user:${userId}` : null
+  },
+})
+```
+
+Returning `null` or `undefined` skips IndexedDB reads and writes for that operation. It never falls
+back to the provider/default scope, which prevents unresolved private data from entering a shared
+cache.
+
+Use a query adapter where the client owns remote loading, and a standalone resource where a server
+component or action supplies the value:
+
+```ts
+export const product = model({
+  list: local.query<ProductListItem[], ProductFilter>({
+    source: products,
+    initialData: [],
+    staleTime: 30_000,
+    queryFn: (filter) => api.product.list(filter),
+  }),
+
+  detail: local<ProductDetail | null, { id: string }>({
+    source: products,
+    initialData: null,
+  }),
+})
+```
+
+`local.query()` retains `.load()`, `.query()`, `.refetch()`, `.set()`, and the ordinary query state.
+Standalone `local()` exposes `.restore()`, `.set()`, `.remove()`, and the same data/status fields but
+has no API driver.
+
+## App Router SEO detail and server Suspense
+
+A common detail route fetches on the server for SEO. The server `<Suspense>` fallback should not make
+another API request. It only checks whether an exact IndexedDB detail is available and otherwise
+shows a skeleton.
+
+### Model and type
+
+```ts
+import type { Local } from '@comwit/state'
+
+export type ProductState = {
+  detail: Local<ProductDetail | null, { id: string }>
+}
+
+export const product = model<ProductState>({
+  detail: local<ProductDetail | null, { id: string }>({
+    source: products,
+    initialData: null,
+  }),
+})
+```
+
+### Exact cached fallback
+
+`restore(arg)` checks memory and then the exact IndexedDB view. It never invokes an API, never
+revalidates, and does not throw a Promise. While restoration is pending or misses, render the
+skeleton.
+
+```tsx
+'use client'
+
+function ProductFallback({ id }: { id: string }) {
+  const detail = useProduct((state) => state.detail.restore({ id }))
+
+  return detail.data ? <ProductView product={detail.data} /> : <ProductSkeleton />
+}
+```
+
+Passing the route identity to `restore()` prevents a previous route's active detail from appearing
+under a new URL.
+
+### Server result initialization
+
+The resolved server branch initializes the same exact view during client render. Include the
+argument because the server branch may resolve before the fallback has activated the resource.
+
+```ts
+initDetail(id: string, value: ProductDetail) {
+  silent(() => {
+    this.model.detail.set(value, {
+      arg: { id },
+    })
+  })
+}
+```
+
+```tsx
+'use client'
+
+function ProductInit({ id, value }: { id: string; value: ProductDetail }) {
+  const initDetail = useProduct((state) => state.actions.initDetail)
+  initDetail(id, value)
+  return <ProductView product={value} />
+}
+```
+
+`silent()` suppresses React notifications, not local persistence. `set()` marks the resource
+successful, writes the exact detail view and canonical entity to IndexedDB, and fans shared fields
+out to loaded product lists.
+
+```text
+server detail fetch starts
+  ├─ fallback: restore({ id })
+  │    ├─ hit  → cached detail
+  │    └─ miss → skeleton
+  └─ server resolves
+       → silent(detail.set(serverValue, { arg: { id } }))
+       → server value + IndexedDB commit
+```
+
+If an IndexedDB read is still pending when `set()` runs, its result is discarded. A late local
+restore cannot overwrite the newer server initialization.
+
+### Standalone methods
+
+| Method                  | Purpose                                                         |
+| ----------------------- | --------------------------------------------------------------- |
+| `.restore(arg)`         | Restore one exact local view; never call an API                 |
+| `.set(data, { arg })`   | Initialize or replace an exact view and write through           |
+| `.remove(arg)`          | Reset that exact view to `initialData`; does not call an API    |
+| direct `.data` mutation | Optimistically update canonical entities and loaded local views |
+
+`remove()` removes the resource view, not the server entity. Perform server deletion in an action
+and update or refetch every affected list.
+
+## Query-backed local resources
+
+`local.query()` is the local-first adapter for an ordinary query:
+
+```ts
+list: local.query<ProductListItem[], ProductFilter>({
+  source: products,
+  initialData: [],
+  staleTime: 30_000,
+  queryFn: (filter) => api.product.list(filter),
+})
+```
+
+Freshness uses the existing `staleTime` option:
+
+```text
+exact local view found and fresh
+→ show it without a network request
+
+exact local view found and stale
+→ show it immediately
+→ isLoading: false, isFetching: true
+→ run queryFn in the background
+→ commit canonical entities and current view atomically
+
+exact local view missing
+→ ordinary first-load query behavior
+```
+
+If revalidation fails, the local data remains visible with `isSuccess: true` and `isError: true`.
+Visible fields may change when the server response arrives; use `isFetching` for a subtle update
+indicator and copy actively edited forms into separate draft state.
+
+`local.infinite()` accepts the ordinary infinite query options and stores flattened ID ordering,
+cursor, `hasMore`, and cursor history:
+
+```ts
+feed: local.infinite<ProductListItem[], ProductFilter>({
+  source: products,
+  initialData: [],
+  queryFn: (filter, { state }) => api.product.feed({ ...filter, cursor: state.cursor }),
+})
+```
+
+`query.realtime()` is not supported in this beta.
+
+## Provider setup
+
+Configure the shared database and optional fallback scope. A collection `scope` takes precedence.
+Remount the provider when a provider-level scope changes; model-derived collection scopes do not
+require a provider change.
+
+```tsx
+<ComwitProvider
+  key={user.id}
+  defaultOptions={{
+    local: {
+      database: 'my-app',
+      scope: `user:${user.id}`,
+      onError(error, context) {
+        reportError(error, context)
+      },
+    },
+  }}
+>
+  {children}
+</ComwitProvider>
+```
+
+| Provider option | Type                       | Default         | Purpose                                                     |
+| --------------- | -------------------------- | --------------- | ----------------------------------------------------------- |
+| `database`      | `string`                   | `@comwit/state` | Dedicated IndexedDB database name                           |
+| `scope`         | `string`                   | `default`       | User/tenant boundary included in every persisted key        |
+| `onError`       | `(error, context) => void` | —               | Observe storage/normalization failures                      |
+| `indexedDB`     | `IDBFactory`               | browser global  | Advanced injection for tests or browser-compatible runtimes |
+
+If IndexedDB is unavailable or fails, standalone resources retain their in-memory value and query
+adapters degrade to ordinary queries. Server environments therefore skip the IndexedDB lifecycle
+without throwing; a server-side `local.query().load()` proceeds through its normal query driver.
+
+## On-demand normalized storage
+
+Entities and exact resource views are stored separately:
+
+```text
+entities
+  product:1 → { id: "1", title: "A", description: "..." }
+
+views
+  list:{status:"active"} → ids: [1], fetchedAt, ordering
+  detail:{id:"1"}        → ids: [1], fetchedAt
+```
+
+The durable view key includes:
+
+```text
+scope + collection key + collection version
++ resource key + resource kind + canonical argument
+```
+
+An exact list view proves only that filter's membership. A list entity does not prove detail
+completeness, and an entity loaded elsewhere does not make an unseen filter complete. Storage is
+on-demand rather than a full local database.
+
+Rows omitted from one filtered response lose only that view membership; they are not treated as
+global deletions because another list or detail may still reference them.
+
+### Response envelopes
+
+For `{ items, total }` and similar shapes, provide `map.split/join`:
+
+```ts
+page: local.query<Page<ProductListItem>, ProductFilter>({
+  source: products,
+  initialData: { items: [], total: 0 },
+  queryFn: (filter) => api.product.page(filter),
+  map: {
+    split: (page) => ({
+      rows: page.items,
+      meta: { total: page.total },
+    }),
+    join: (rows, meta) => ({
+      items: rows,
+      total: meta?.total ?? 0,
+    }),
+  },
+})
+```
+
+### Collection identity versus view freshness
+
+A collection represents canonical entity identity, not an API endpoint or an IndexedDB table that
+must mirror one response. List, detail, and later enrichment responses may all share the same
+collection as long as their fragments use the same entity IDs.
+
+The resource and its exact argument own membership, ordering, metadata, and freshness. Use separate
+local resources sharing one collection when the views must be restored or revalidated on different
+schedules. Each resource can have its own `staleTime` without duplicating canonical entities.
+
+When a second request only enriches the active list and should follow that list's freshness, keep it
+inside the same `local.query()`. Query functions may return an `AsyncIterable`, so the list can render
+after the first response and receive the enriched entities after the second response:
+
+```ts
+async function* loadProjects(filter: ProjectFilter) {
+  const projects = await api.project.list(filter)
+  yield { data: projects, isLoading: false, isSuccess: true }
+
+  const statuses = await api.project.deploymentStatuses(projects.map((project) => project.id))
+  yield {
+    data: mergeDeploymentStatuses(projects, statuses),
+    isLoading: false,
+    isSuccess: true,
+  }
+}
+
+projects: local.query<Project[], ProjectFilter>({
+  source: projectEntities,
+  initialData: [],
+  staleTime: 5 * 60_000,
+  queryFn: loadProjects,
+})
+```
+
+Each yield updates the reactive query state. `isFetching` remains true until the iterable completes,
+and the completed view is committed to IndexedDB. The next fresh restore therefore includes the
+enriched fields without a separate deployment-status resource.
+
+Do not add a manual `fetchedAt` field to an entity merely to schedule this second request. The exact
+view's `staleTime` already owns that policy. Optional field presence can drive a small row-level
+loading treatment while enrichment is still in progress. Model the enrichment as a separate local
+resource only when it genuinely needs an independent durable view or freshness schedule.
+
+## Entity merging and optimistic edits
+
+Incoming own fields shallowly merge into the canonical entity. A list summary therefore does not
+erase an omitted detail-only field:
+
+```text
+stored detail: { id: 1, title: "A", description: "Detail only" }
+new list row:  { id: 1, title: "B" }
+
+merged entity: { id: 1, title: "B", description: "Detail only" }
+```
+
+An explicit `null` replaces a field. Use collection `merge` for custom nested behavior and
+`revision` to reject an older server fragment.
+
+Direct resource mutations remain ordinary reactive proxy mutations:
+
+```ts
+const previous = this.model.detail.data!.title
+this.model.detail.data!.title = title
+
+try {
+  await api.product.update(id, { title })
+  await this.model.list.refetch()
+} catch (error) {
+  this.model.detail.data!.title = previous
+  throw error
+}
+```
+
+The changed canonical row is written through and fanned out to every loaded local resource sharing
+the collection and ID. Responses that started before a newer local edit cannot overwrite the newer
+fields or locally changed membership.
+
+List membership, ordering, totals, and cursors remain view-owned. Refetch affected query-backed
+views after a mutation that can change them. There is no mutation outbox, offline retry queue, CRDT,
+or multi-device conflict engine.
+
+## Collection and resource options
+
+| Collection option | Required             | Description                                             |
+| ----------------- | -------------------- | ------------------------------------------------------- |
+| `key`             | Yes                  | Stable persisted entity namespace                       |
+| `version`         | Yes                  | Positive integer schema version                         |
+| `getId`           | Without default `id` | Identity extractor; defaults to the entity's `id` field |
+| `merge`           | No                   | Custom canonical fragment merge                         |
+| `revision`        | No                   | Comparable server revision extractor                    |
+| `scope`           | No                   | Static scope or lazy `({ state }) => string \| null`    |
+
+There are no built-in migrations. Bumping `version` makes old views a cache miss and removes older
+rows for the same scope and collection.
+
+| Resource option | Required | Description                                                            |
+| --------------- | -------- | ---------------------------------------------------------------------- |
+| `source`        | Yes      | Shared `local.collection()`                                            |
+| `initialData`   | Yes      | Value before restore/fetch                                             |
+| `key`           | No       | Stable view identity override; defaults to the model field path        |
+| `serializeArg`  | No       | Custom argument serializer; must return a collision-safe stable string |
+| `map`           | No       | Entity adapter for response envelopes                                  |
+
+## Query coupling and compatibility
+
+Query internals know only a generic resource lifecycle. They do not import `local`, IndexedDB, or
+collections. `local.query()` and `local.infinite()` install the local lifecycle adapter; standalone
+`local()` uses the same neutral resource state engine without a network driver.
+
+The beta.0 wrapper remains as a deprecated compatibility alias:
+
+```ts
+// Deprecated compatibility form
+local(query({ initialData: [], queryFn }), { source: products })
+
+// Preferred
+local.query({ source: products, initialData: [], queryFn })
+```
+
+## `persist()` versus `local()`
+
+Use `persist()` for local-owned preferences, drafts, and UI state. Use `local()` for server-shaped,
+ID-keyed snapshots that may be restored from IndexedDB and later initialized or corrected by a
+server source.
+
+```text
+persist()            local()
+local-owned value    server-shaped snapshot
+local/sessionStorage IndexedDB
+one value per key    normalized entities + exact argument views
+no server identity   optional query or server-init driver
+```

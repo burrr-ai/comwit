@@ -66,6 +66,28 @@ describe('query selector load', () => {
     expect(result.current.data).toBe(42)
   })
 
+  test('loads from a frozen snapshot produced by model extensions', async () => {
+    const queryFn = vi.fn().mockResolvedValue(['book'])
+    const products = model(
+      {
+        list: query<string[]>({ initialData: [], queryFn }),
+      },
+      {
+        derive: (state) => ({
+          count: () => state.list.data.length,
+        }),
+      }
+    )
+
+    const { result } = renderHook(() => useModel(products, (state) => state.list.load()), {
+      wrapper: Wrapper,
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(queryFn).toHaveBeenCalledOnce()
+    expect(result.current.data).toEqual(['book'])
+  })
+
   test('treats an option-shaped object as the declared query argument', async () => {
     const queryFn = vi.fn(({ force }: { force: boolean }) => Promise.resolve(String(force)))
     const search = model({

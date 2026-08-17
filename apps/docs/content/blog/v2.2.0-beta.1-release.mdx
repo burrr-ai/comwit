@@ -1,0 +1,87 @@
+---
+title: 'comwit v2.2.0-beta.1 — Standalone local resources'
+date: '2026-08-16'
+description: 'The second 2.2 beta separates IndexedDB resources from queries, adds exact local restore for server-rendered details, and keeps query adapters optional.'
+---
+
+The first 2.2 beta introduced normalized IndexedDB-backed query views. This update makes the
+boundary clearer: `local()` is now an independent resource, while `local.query()` and
+`local.infinite()` are optional adapters for client-owned remote loading.
+
+## Standalone server-owned detail
+
+A Next.js detail page often fetches on the server for SEO. Its Suspense fallback can now restore an
+exact IndexedDB view without starting a second API request:
+
+```ts
+const products = local.collection<Product>({ key: 'products', version: 1 })
+
+const product = model({
+  detail: local<Product | null, { id: string }>({
+    source: products,
+    initialData: null,
+  }),
+})
+```
+
+```tsx
+function ProductFallback({ id }: { id: string }) {
+  const detail = useProduct((state) => state.detail.restore({ id }))
+  return detail.data ? <ProductView product={detail.data} /> : <ProductSkeleton />
+}
+```
+
+The resolved server branch initializes the same exact view:
+
+```ts
+silent(() => {
+  model.detail.set(serverProduct, { arg: { id } })
+})
+```
+
+That write updates the visible resource, canonical collection entity, loaded list rows, and
+IndexedDB. If an older restore is still pending, the server value wins.
+
+## Optional query adapters
+
+Client-owned lists retain the familiar query interface:
+
+```ts
+list: local.query<Product[], ProductFilter>({
+  source: products,
+  initialData: [],
+  staleTime: 30_000,
+  queryFn: api.product.list,
+})
+```
+
+Exact fresh views skip the request. Stale views render immediately and revalidate in the
+background. Misses use the ordinary first-load query behavior. The same pattern is available for
+infinite data with `local.infinite()`.
+
+## Lower query coupling
+
+The query implementation no longer imports local storage, IndexedDB, or collection code. It exposes
+only a generic resource lifecycle, and the local adapters attach through that boundary. Existing
+queries therefore keep their behavior without depending on the local feature.
+
+The beta.0 wrapper remains temporarily available:
+
+```ts
+local(query({ initialData: [], queryFn }), { source: products }) // deprecated
+```
+
+Prefer the explicit adapter in new code:
+
+```ts
+local.query({ source: products, initialData: [], queryFn })
+```
+
+Install the beta:
+
+```bash
+yarn add @comwit/state@2.2.0-beta.1
+```
+
+See the complete [`local()` reference](/docs/api/local) for storage identity, version invalidation,
+normalization, optimistic updates, and provider scoping.

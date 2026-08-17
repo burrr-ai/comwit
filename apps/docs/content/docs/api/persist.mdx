@@ -2,12 +2,16 @@
 title: 'persist()'
 group: 'API'
 slug: 'api/persist'
-order: 7
+order: 8
 ---
 
 # persist()
 
 Declares a persisted field inside a model. Values are automatically synced to storage.
+
+For server-shaped, ID-keyed snapshots that should restore normalized entities from IndexedDB, use
+[`local()`](/docs/api/local). Add its `local.query()` adapter when the client should also revalidate
+in the background. `persist()` is for local-owned preferences, drafts, and UI values.
 
 ```ts
 import { persist } from '@comwit/state'

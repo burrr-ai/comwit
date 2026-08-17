@@ -21,3 +21,27 @@ https://library.comwit.io/llms.txt
 ```
 
 Pass the URL to Claude Code. It handles the rest.
+
+## Durable on-demand queries (2.2 beta)
+
+```ts
+const todos = local.collection<Todo>({ key: 'todos', version: 1 })
+
+const todo = model({
+  list: local.query<Todo[], TodoFilter>({
+    source: todos,
+    initialData: [],
+    queryFn: api.todo.list,
+  }),
+  detail: local<Todo | null, { id: string }>({
+    source: todos,
+    initialData: null,
+  }),
+})
+```
+
+`local()` restores an exact IndexedDB view without making an API request, which fits server-owned
+SEO details. `local.query()` and `local.infinite()` add background server revalidation while keeping
+the existing `.load()`, `.query()`, `.refetch()`, `.set()`, and optimistic mutation interfaces.
+
+[Read the local resource reference](https://library.comwit.io/docs/api/local).

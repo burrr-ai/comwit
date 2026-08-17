@@ -17,6 +17,7 @@ Enable `experimentalDecorators` in `tsconfig.json` when using decorators. Wrap t
   context={{ router }}
   defaultOptions={{
     query: { staleTime: 30_000, gcTime: 5 * 60_000 },
+    local: { database: 'my-app', scope: `user:${user.id}` },
     persist: { debounceMs: 100 },
   }}
 >
@@ -53,21 +54,22 @@ Rules:
 
 ## types.ts
 
-Use `Query<Data, Arg>` for remotely loaded fields and ordinary types for local/server-initialized state.
+Use `Query<Data, Arg>` for remotely loaded fields and `Local<Data, Arg>` for IndexedDB-backed
+resources that an action or server component initializes.
 
 ```ts
-import type { Query } from '@comwit/state'
+import type { Local, Query } from '@comwit/state'
 
 export type ProductState = {
   products: Query<Pageable<Product>, { page: number; filter: ProductFilter }>
   stats: Query<ProductStats>
-  detail: Query<Product | null, { id: string }>
+  detail: Local<Product | null, { id: string }>
   selectedIds: string[]
   isEditMode: boolean
 }
 
 export type ProductActions = {
-  initDetail(product: Product): void
+  initDetail(id: string, product: Product): void
   refreshAll(): Promise<void>
   loadMore(): Promise<void>
   create(title: string): Promise<void>
@@ -88,16 +90,19 @@ Query type variants:
 The model defines data shape and fetch policy, not UI effects.
 
 ```ts
-import { keepPreviousData, model, query } from '@comwit/state'
+import { keepPreviousData, local, model, query } from '@comwit/state'
+
+const productEntities = local.collection<Product>({ key: 'products', version: 1 })
 
 export const product = model<ProductState>({
-  products: query({
+  products: local.query({
+    source: productEntities,
     initialData: EMPTY_PAGE,
     queryFn: ({ page, filter }) => api.product.list({ page, filter }),
     placeholderData: keepPreviousData,
   }),
   stats: query({ initialData: EMPTY_STATS, queryFn: () => api.product.stats() }),
-  detail: query({ initialData: null, queryFn: ({ id }) => api.product.get(id) }),
+  detail: local({ source: productEntities, initialData: null }),
   selectedIds: [],
   isEditMode: false,
 })
@@ -126,6 +131,66 @@ posts: query.infinite<Post[]>({
 - Model option `rules`: field validators; read `{ errors, isValid }` from `$validation`.
 - Model option `history: true | { limit }`: read `$history.undo()`, `redo()`, `canUndo`, `canRedo`, `ignore(fn)` through the existing domain hook. One action call is one history transaction.
 - `persist({ key, defaultValue, storage? })`: local/session/custom storage, SSR-safe, debounced, cross-tab for localStorage.
+- `local({ source, initialData })`: standalone exact-argument IndexedDB resource; `.restore()` never calls an API.
+- `local.query({ source, initialData, queryFn })` / `local.infinite(...)`: local-first adapters that revalidate with the existing query lifecycle.
+
+### Durable on-demand query data
+
+```ts
+// Public content can be shared and kept fresh for longer.
+const posts = local.collection<Post>({
+  key: 'posts',
+  version: 1,
+  scope: 'public',
+})
+
+// Personalized rows resolve their user only when the resource is used.
+const projects = local.collection<Project>({
+  key: 'projects',
+  version: 1,
+  scope: ({ state }) => {
+    const userId = state(member).me?.id
+    return userId ? `user:${userId}` : null
+  },
+})
+
+// Render the list first, then merge delayed fields into the same Project entities.
+async function* loadProjects(filter: ProjectFilter) {
+  const rows = await api.project.list(filter)
+  yield { data: rows, isLoading: false, isSuccess: true }
+
+  const statuses = await api.project.deploymentStatuses(rows.map((row) => row.id))
+  yield {
+    data: mergeDeploymentStatuses(rows, statuses),
+    isLoading: false,
+    isSuccess: true,
+  }
+}
+
+export const app = model({
+  posts: local.query<Post[]>({
+    source: posts,
+    initialData: [],
+    staleTime: 7 * 24 * 60 * 60_000,
+    queryFn: () => api.post.list(),
+  }),
+  projects: local.query<Project[], ProjectFilter>({
+    source: projects,
+    initialData: [],
+    staleTime: 5 * 60_000,
+    queryFn: loadProjects,
+  }),
+  // The server fetches this SEO detail; the client fallback only calls restore({ id }).
+  projectDetail: local<Project | null, { id: string }>({
+    source: projects,
+    initialData: null,
+  }),
+})
+```
+
+Use `persist()` for local-owned preferences and drafts. `local` restores server snapshots; it does
+not queue offline mutations or resolve multi-device conflicts. See
+https://library.comwit.io/llm/local.txt for the full contract and options.
 
 ## Reading and starting queries
 
@@ -134,6 +199,7 @@ A selector can start a request or passively read data that was already loaded or
 ```tsx
 const products = useProduct((s) => s.products.load({ page, filter })) // start/load this key
 const stats = useProduct((s) => s.stats) // read current state; never starts a request
+const detail = useProduct((s) => s.detail.restore({ id })) // exact IndexedDB only; no API
 ```
 
 Use selector `.load(arg?)` when the view owns the initial request. Its argument is inferred from `Query<Data, Arg>`, and it returns the ordinary query resource state. Use passive selection when another action or server initialization owns loading. Do not create another query hook.
@@ -169,7 +235,7 @@ Action methods from `state(model)`:
 
 - `.query(arg?, options?)` — fetch; honors cache freshness.
 - `.refetch()` — force the active/last argument; no-op before a successful initial query.
-- `.set(data | statePatch)` — set data and mark success; useful for optimistic and server initialization.
+- `.set(data | statePatch, { arg }?)` — set data and mark success; `arg` identifies an exact local/server-initialized view.
 - Infinite: `.nextFetch(arg?)`, `.previousFetch(arg?, options?)`.
 - Realtime: `.unsubscribe()`.
 
@@ -211,22 +277,34 @@ Plain state is mutable inside actions: assign fields, `push`/`splice` arrays, or
 No separate `hydrate()` API is needed. Initialize during client render through an action that wraps writes in `silent()`; do not delay it to an effect.
 
 ```ts
-initDetail(value: Product) {
-  silent(() => this.m.detail.set(value))
+initDetail(id: string, value: Product) {
+  silent(() => this.m.detail.set(value, { arg: { id } }))
 }
 ```
 
-`.set()` marks the query successful, so client fallbacks can distinguish initialized cache from `initialData`.
+`.set()` marks the resource successful. On a standalone local resource, it also stores the exact
+argument view and canonical entity in IndexedDB. `silent()` suppresses notifications, not storage.
 
 ```tsx
-function DetailInit({ value }: { value: Product }) {
+function DetailInit({ id, value }: { id: string; value: Product }) {
   const init = useProduct((s) => s.actions.initDetail)
-  init(value)
+  init(id, value)
   return <ProductView product={value} />
 }
 ```
 
-For a server `<Suspense>` boundary, the client fallback may passively read the current query: show cached content when `isSuccess`, otherwise show a skeleton. The resolved server branch renders `DetailInit`. Reuse cached content only when its active identity is valid for the route; otherwise keep the fallback neutral.
+For a server `<Suspense>` boundary, the client fallback restores only the exact route view. It does
+not call an API or suspend; show cached content when present and otherwise show a skeleton. The
+resolved server branch renders `DetailInit`.
+
+```tsx
+function DetailFallback({ id }: { id: string }) {
+  const detail = useProduct((s) => s.detail.restore({ id }))
+  return detail.data ? <ProductView product={detail.data} /> : <ProductSkeleton />
+}
+```
+
+If the IndexedDB read is still pending when the server initializer runs, the server value wins.
 
 Library `suspense: true` is available for client query suspension: initial query promises suspend, refetches use `isFetching`, and errors go to the nearest error boundary. Prefer the server-streaming pattern above for App Router server work.
 
@@ -325,7 +403,7 @@ Here `@LoginRequired` guards every method, while `@ConfirmDelete` applies only t
 - View-owned query uses selector `.load(arg)`; passive query intentionally omits it.
 - Command/coordinated query stays in an action.
 - Loading, error, empty, and background-fetch behavior are deliberate.
-- Server init uses `silent()` and query `.set()` where applicable.
+- Server init uses `silent()` and `.set(data, { arg })`; a local fallback uses exact `.restore(arg)`.
 - CRUD keeps list/detail/stats consistent and rolls back failed optimistic writes.
 - Proxy values are snapshotted at serialization boundaries.
 - Decorator support is enabled in TypeScript/Next.js.

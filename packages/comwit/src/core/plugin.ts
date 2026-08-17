@@ -24,7 +24,10 @@ export type FieldPlugin = {
    * Called once per provider to create plugin-level registry state.
    * For query plugin, this creates the QueryBindingRegistry.
    */
-  createRegistryState(defaults?: Record<string, unknown>): unknown
+  createRegistryState(
+    defaults?: Record<string, unknown>,
+    allDefaults?: Record<string, unknown>
+  ): unknown
 
   /**
    * Called when action's state() binds a model proxy.

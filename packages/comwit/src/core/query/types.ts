@@ -1,4 +1,6 @@
 export const RESOURCE_BRAND = Symbol('comwit-resource')
+export const RESOURCE_LIFECYCLE = Symbol('comwit-resource-lifecycle')
+export const RESOURCE_TYPE_OVERRIDE = Symbol('comwit-resource-type-override')
 
 export type AsyncResult<T> = T | Promise<T> | AsyncIterable<T>
 
@@ -36,6 +38,8 @@ export type QueryQueryOptions<TData, TArg> = QueryDefaultOptions & {
   placeholderData?: PlaceholderData<TData, TArg>
   force?: boolean
 }
+
+export type ResourceSetOptions<TArg> = [TArg] extends [void] ? { arg?: TArg } : { arg: TArg }
 
 export type ResourceQueryOptions<TData, TArg> = QueryQueryOptions<TData, TArg>
 
@@ -103,6 +107,12 @@ export type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TResul
     'force'
   >
   queryFn: (arg: TArg, context: ResourceContext<TState>) => AsyncResult<TResult>
+  /** Optional stable cache-key serializer used by resource adapters. */
+  serializeArg?: (arg: TArg) => string
+  /** Selector method name. Ordinary queries expose `load`; adapters may override it. */
+  selectorMethod?: string
+  /** Provider-bound lifecycle adapters. Query itself does not know their implementation. */
+  [RESOURCE_LIFECYCLE]?: ResourceLifecycleFactory[]
   enabled?: (state: any) => boolean
   dependsOn?: (state: any) => any
   refetchInterval?:
@@ -155,7 +165,7 @@ interface ResourceSingleQueryController<TData, TArg> {
   query(arg: TArg, options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
   query(options?: ResourceQueryOptions<TData, TArg>): Promise<unknown>
   refetch(): Promise<unknown>
-  set(next: unknown): unknown
+  set(next: unknown, options?: ResourceSetOptions<TArg>): unknown
 }
 
 interface ResourceInfiniteQueryController<TData, TArg> extends ResourceSingleQueryController<
@@ -234,8 +244,9 @@ type SuspenseInfiniteResourceState<TData, TArg = unknown> = Omit<
  * trap; at the type level, prefer the standalone `snapshot()` helper for
  * nested slices: `snapshot(state.filter)`.
  */
-export type BoundResourceState<T> =
-  T extends RealtimeResourceDescriptor<infer TData, infer TArg>
+export type BoundResourceState<T> = T extends { [RESOURCE_TYPE_OVERRIDE]: { bound: infer TBound } }
+  ? TBound
+  : T extends RealtimeResourceDescriptor<infer TData, infer TArg>
     ? BoundRealtimeResourceState<TData, TArg>
     : T extends InfiniteResourceDescriptor<infer TData, infer TArg, infer TSuspense>
       ? TSuspense extends true
@@ -264,8 +275,11 @@ export type BoundResourceState<T> =
  * `.load(arg)`, which opts that selector into lifecycle-managed fetching while
  * returning the same query state flags and data shape.
  */
-export type SelectableResourceState<T> =
-  T extends RealtimeResourceDescriptor<infer TData, infer TArg>
+export type SelectableResourceState<T> = T extends {
+  [RESOURCE_TYPE_OVERRIDE]: { selectable: infer TSelectable }
+}
+  ? TSelectable
+  : T extends RealtimeResourceDescriptor<infer TData, infer TArg>
     ? SelectableRealtimeResourceState<TData, TArg>
     : T extends InfiniteResourceDescriptor<infer TData, infer TArg, infer TSuspense>
       ? TSuspense extends true
@@ -352,6 +366,8 @@ export type QueryCacheEntry = {
   lastResult?: unknown
   cursorHistory: Array<string | null>
   state: ResourceDataLike
+  /** Whether lifecycle adapters have already attempted restoration for this key. */
+  resourceHydrated?: boolean
 }
 
 export type SuspenseState = {
@@ -372,6 +388,12 @@ export type QueryBindingRegistry = {
    * belong to a model when its observer count transitions to 0.
    */
   runtimesByModel: Map<symbol, Set<ResourceRuntimeState>>
+  /** Provider defaults passed opaquely to resource lifecycle adapters. */
+  providerDefaults?: Record<string, unknown>
+  /** Provider-scoped services shared by lifecycle adapters. */
+  services: Map<symbol, unknown>
+  /** Lazily resolves another model from the same provider. */
+  getModelState?: (model: object) => object
 }
 
 export type ResourceRuntimeState = {
@@ -395,4 +417,47 @@ export type ResourceRuntimeState = {
    * back to >=1.
    */
   gcTimers: Map<QueryCacheKey, ReturnType<typeof setTimeout>>
+}
+
+export type ResourceHydratedView = {
+  data: unknown
+  state: Record<string, unknown>
+  fetchedAt: number
+  cursorHistory?: Array<string | null>
+  lastResult?: unknown
+}
+
+export type ResourceLifecycleBindContext = {
+  state: ResourceDataLike
+  descriptor: AnyResourceDescriptor
+  path: string
+  runtime: ResourceRuntimeState
+  registry: QueryBindingRegistry
+}
+
+export type ResourceLifecycleSuccessContext = {
+  entry: QueryCacheEntry
+  fetchedAt: number
+  requestToken: unknown
+}
+
+export type ResourceLifecycleBinding = {
+  activate?(key: QueryCacheKey, arg: unknown): void
+  hydrate?(): Promise<ResourceHydratedView | undefined>
+  beginRequest?(): unknown
+  afterSuccess?(context: ResourceLifecycleSuccessContext): Promise<void> | void
+  runInternal?<T>(callback: () => T): T
+  preserveSuccessOnError?: boolean
+  decorateController?(controller: ResourceDataLike): ResourceDataLike
+}
+
+export type ResourceLifecycleFactory = {
+  bind(context: ResourceLifecycleBindContext): ResourceLifecycleBinding | undefined
+}
+
+export type ResourceTypeOverride<TBound, TSelectable> = {
+  [RESOURCE_TYPE_OVERRIDE]: {
+    bound: TBound
+    selectable: TSelectable
+  }
 }

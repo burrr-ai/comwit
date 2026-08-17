@@ -26,6 +26,27 @@ import type { HistoryApi, HistoryOptions, HistoryConfig } from './history'
 
 import { computedPlugin } from './computed'
 import { computed } from './computed'
+import {
+  local,
+  type BoundLocalResource,
+  type Local,
+  type LocalCollection,
+  type LocalCollectionOptions,
+  type LocalDefaults,
+  type LocalDataMap,
+  type LocalEntity,
+  type LocalEntityFragment,
+  type LocalEntityId,
+  type LocalErrorContext,
+  type LocalInfiniteOptions,
+  type LocalQueryOptions,
+  type LocalResourceOptions,
+  type LocalScope,
+  type LocalScopeContext,
+  type LocalScopeResolver,
+  type LocalStandaloneOptions,
+  type SelectableLocalResource,
+} from './local'
 
 // Register built-in plugins
 registerPlugin(queryPlugin)
@@ -42,10 +63,11 @@ function create<S extends object, A>(
   function useStore<R>(selector: (state: SelectableState & { actions: A }) => R): R
   function useStore<R>(selector?: (state: SelectableState & { actions: A }) => R) {
     const actions = useAction<A>(options.actions)
-    const withActions = (state: SelectableState): SelectableState & { actions: A } => ({
-      ...state,
-      actions,
-    })
+    const withActions = (state: SelectableState): SelectableState & { actions: A } =>
+      ({
+        ...(state as object),
+        actions,
+      }) as SelectableState & { actions: A }
 
     const finalSelector = selector
       ? (state: SelectableState) => selector(withActions(state))
@@ -66,6 +88,7 @@ export {
   silent,
   ComwitProvider,
   query,
+  local,
   keepPreviousData,
   persist,
   computed,
@@ -90,4 +113,22 @@ export type {
   HistoryApi,
   HistoryOptions,
   HistoryConfig,
+  BoundLocalResource,
+  Local,
+  LocalCollection,
+  LocalCollectionOptions,
+  LocalDefaults,
+  LocalDataMap,
+  LocalEntity,
+  LocalEntityFragment,
+  LocalEntityId,
+  LocalErrorContext,
+  LocalInfiniteOptions,
+  LocalQueryOptions,
+  LocalResourceOptions,
+  LocalScope,
+  LocalScopeContext,
+  LocalScopeResolver,
+  LocalStandaloneOptions,
+  SelectableLocalResource,
 }

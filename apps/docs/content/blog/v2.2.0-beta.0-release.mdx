@@ -1,0 +1,86 @@
+---
+title: 'comwit v2.2.0-beta.0 — Durable on-demand queries'
+date: '2026-08-16'
+description: 'The 2.2 beta adds local.collection() and local(query()) for normalized IndexedDB snapshots, instant exact-argument hydration, and background server revalidation.'
+author: 'Codex'
+---
+
+## Query data can now survive a reload
+
+`local()` adds an IndexedDB-backed layer to the existing query resource without introducing another
+hook or mutation API:
+
+```ts
+const todos = local.collection<TodoEntity>({
+  key: 'todos',
+  version: 1,
+})
+
+const todo = model({
+  list: local(
+    query<TodoListItem[], TodoFilter>({
+      initialData: [],
+      staleTime: 30_000,
+      queryFn: api.todo.list,
+    }),
+    { source: todos }
+  ),
+  detail: local(
+    query<TodoDetail | null, string>({
+      initialData: null,
+      queryFn: api.todo.detail,
+    }),
+    { source: todos }
+  ),
+})
+```
+
+Selectors continue to call `.load(arg)`. Actions continue to use `.query()`, `.refetch()`, `.set()`,
+and direct reactive mutation.
+
+## Normalized entities, exact views
+
+The beta stores canonical entities by ID and separately stores the ordered IDs owned by each
+resource and canonical query argument. List, detail, and infinite resources can share an entity
+without pretending that a list fragment is a complete detail response.
+
+An exact durable view hydrates first. `staleTime` then decides whether to skip the request or
+revalidate in the background. A stale hit keeps `isLoading` false while `isFetching` reports the
+server check. The visible snapshot may change when that check finishes, so UIs can use `isFetching`
+for a subtle update affordance. A failed check keeps the local data visible.
+
+Unseen filters remain server requests. This is an on-demand durable query cache, not an eager full
+database.
+
+## List/detail consistency
+
+List and detail fragments shallowly merge by default. A summary response updates common fields but
+does not erase an omitted detail-only field. `merge` supports API-specific nested behavior, and an
+optional `revision` extractor rejects older server fragments.
+
+Direct entity edits write through to IndexedDB and fan out to loaded views sharing the collection
+and ID. View membership and ordering remain query-owned, so actions still refetch affected lists
+after server mutations.
+
+Responses that started before a newer local edit do not replace the edited row. This protects the
+common optimistic race while preserving the existing rollback/refetch action pattern.
+
+## Deliberate beta boundaries
+
+- Collection `version` is required. There are no migrations; bumping it invalidates and removes old
+  rows for the same scope.
+- Provider `scope` isolates users and tenants. Remount the provider when it changes.
+- `query()` and `query.infinite()` are supported; `query.realtime()` is not yet included.
+- There is no mutation outbox, offline retry queue, CRDT, or multi-device conflict engine.
+- IndexedDB failures degrade to ordinary in-memory query behavior.
+
+Use `persist()` for local-owned settings and drafts. Use `local(query())` for server-owned snapshots
+that need durable first paint and background correction.
+
+## Try the beta
+
+```bash
+yarn add @comwit/state@2.2.0-beta.0
+```
+
+See the complete [`local()` reference](/docs/api/local) before enabling it for user-scoped data.

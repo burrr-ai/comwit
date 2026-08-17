@@ -1,0 +1,56 @@
+---
+title: 'comwit v2.2.0-beta.3 — Collection-scoped local data'
+date: '2026-08-17'
+description: 'The fourth 2.2 beta lets each local collection share public data or lazily derive a user/tenant scope from another model.'
+---
+
+The fourth 2.2 beta moves local persistence boundaries down to collections. Public resources can
+share one IndexedDB cache while personalized resources derive their scope from provider-bound
+state without remounting `ComwitProvider`.
+
+## Public and personalized collections
+
+Use a static scope for content shared by every visitor:
+
+```ts
+const posts = local.collection<Post>({
+  key: 'posts',
+  version: 1,
+  scope: 'public',
+})
+```
+
+Use an inline resolver for personalized data:
+
+```ts
+const projects = local.collection<Project>({
+  key: 'projects',
+  version: 1,
+  scope: ({ state }) => {
+    const userId = state(userModel).me?.id
+    return userId ? `user:${userId}` : null
+  },
+})
+```
+
+The resolver is evaluated when the resource restores, fetches, initializes, or mutates. The
+referenced model may therefore be initialized after the collection module is evaluated. Returning
+`null` or `undefined` skips IndexedDB for that operation instead of falling back to a shared scope.
+
+Collection scope takes precedence over `defaultOptions.local.scope`. Existing provider-scoped
+applications remain compatible.
+
+## Scope transitions
+
+Entity caches, exact views, optimistic revisions, version cleanup, and list/detail fan-out are all
+partitioned by the resolved collection scope. When the scope changes, the previous query cache is
+discarded. A response started under one user is not committed to another user's collection.
+
+Install the beta:
+
+```bash
+yarn add @comwit/state@2.2.0-beta.3
+```
+
+See the complete [`local()` reference](/docs/api/local) for standalone resources, query adapters,
+collection versions, exact argument views, and synchronization behavior.

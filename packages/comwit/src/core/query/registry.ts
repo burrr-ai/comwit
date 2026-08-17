@@ -6,7 +6,9 @@ import type { QueryBindingRegistry } from './types'
  */
 export const DEFAULT_GC_TIME = 5 * 60 * 1000
 
-export function createQueryBindingRegistry(): QueryBindingRegistry {
+export function createQueryBindingRegistry(
+  providerDefaults?: Record<string, unknown>
+): QueryBindingRegistry {
   return {
     boundResourceValue: new WeakMap(),
     boundPathProxy: new WeakMap(),
@@ -14,5 +16,7 @@ export function createQueryBindingRegistry(): QueryBindingRegistry {
     selectorLoads: new WeakMap(),
     suspense: new Map(),
     runtimesByModel: new Map(),
+    providerDefaults,
+    services: new Map(),
   }
 }

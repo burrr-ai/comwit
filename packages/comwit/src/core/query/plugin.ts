@@ -23,8 +23,11 @@ export const queryPlugin: FieldPlugin = {
     return { initialValue: value.initialState }
   },
 
-  createRegistryState(_defaults?: Record<string, unknown>): QueryBindingRegistry {
-    return createQueryBindingRegistry()
+  createRegistryState(
+    _defaults?: Record<string, unknown>,
+    allDefaults?: Record<string, unknown>
+  ): QueryBindingRegistry {
+    return createQueryBindingRegistry(allDefaults)
   },
 
   bindState(
