@@ -669,7 +669,10 @@ function entityId(
   return undefined
 }
 
-function normalizeState(state: ResourceDataLike, metadata: LocalResourceMetadata): NormalizedState {
+function normalizeState(
+  state: Readonly<ResourceDataLike>,
+  metadata: LocalResourceMetadata
+): NormalizedState {
   const plain = snapshot(state) as ResourceDataLike
   const data = plain.data
   let dataKind: DataKind
@@ -726,22 +729,19 @@ function normalizeState(state: ResourceDataLike, metadata: LocalResourceMetadata
 }
 
 function hydrateData(
-  view: ViewRecord,
-  records: EntityRecord[],
+  view: Pick<ViewRecord, 'dataKind' | 'dataMeta'>,
+  values: LocalEntity[],
   metadata: LocalResourceMetadata
 ): unknown {
   if (view.dataKind === 'null') return null
-  if (view.dataKind === 'entity') return records[0]?.value ?? null
+  if (view.dataKind === 'entity') return values[0] ?? null
   if (view.dataKind === 'mapped') {
     if (!metadata.map) {
       throw new Error('local() view requires the map option that created it')
     }
-    return metadata.map.join(
-      records.map((record) => record.value),
-      view.dataMeta
-    )
+    return metadata.map.join(values, view.dataMeta)
   }
-  return records.map((record) => record.value)
+  return values
 }
 
 function compareRevision(
@@ -932,7 +932,11 @@ class LocalManager {
       }
 
       return {
-        data: hydrateData(stored.view, stored.entities, binding.metadata),
+        data: hydrateData(
+          stored.view,
+          stored.entities.map((record) => record.value),
+          binding.metadata
+        ),
         state: stored.view.state,
         fetchedAt: stored.view.fetchedAt,
         cursorHistory: [...stored.view.cursorHistory],
@@ -945,6 +949,49 @@ class LocalManager {
       })
       return undefined
     }
+  }
+
+  reconcileRemoteEmission(
+    binding: LocalResourceBinding,
+    previousState: Readonly<ResourceDataLike>,
+    requestStartRevision: number
+  ): void {
+    const activeView = binding.activeView
+    if (!activeView) return
+
+    let incoming: NormalizedState
+    try {
+      incoming = normalizeState(binding.state, binding.metadata)
+    } catch (error) {
+      this.report(error, {
+        operation: 'normalize',
+        collection: binding.metadata.source.key,
+        resource: binding.resource,
+      })
+      return
+    }
+
+    let previous: NormalizedState | undefined
+    try {
+      previous = normalizeState(previousState, binding.metadata)
+    } catch {
+      // The active collection cache below remains a valid fallback for a new view.
+    }
+
+    const collection = binding.metadata.source
+    const previousById = new Map(
+      (previous?.entities ?? []).map((entity) => [idToken(entity.id), entity.value])
+    )
+    const values = incoming.entities.map(({ id, value }) => {
+      const cached = this.entityCache.get(this.entityCacheKey(activeView.scope, collection, id))
+      const protectLocal = cached !== undefined && cached.localRevision > requestStartRevision
+      if (protectLocal) return cached.value
+
+      const current = previousById.get(idToken(id)) ?? cached?.value
+      return mergeEntity(collection, current, value)
+    })
+
+    binding.applyRemoteEmission(incoming, values)
   }
 
   async commitRemote(
@@ -1315,6 +1362,21 @@ export class LocalResourceBinding {
     return hydrated
   }
 
+  reconcileRemoteEmission(
+    previousState: Readonly<ResourceDataLike>,
+    requestToken: LocalRequestToken
+  ): void {
+    const resolvedScope = this.resolveScope()
+    if (
+      !requestToken.scope ||
+      requestToken.scope !== resolvedScope ||
+      this.activeView?.scope !== resolvedScope
+    ) {
+      return
+    }
+    this.manager.reconcileRemoteEmission(this, previousState, requestToken.revision)
+  }
+
   async commitRemote(
     entry: QueryCacheEntry,
     fetchedAt: number,
@@ -1352,9 +1414,19 @@ export class LocalResourceBinding {
     entry.state = snapshot(this.state) as ResourceDataLike
   }
 
+  applyRemoteEmission(incoming: NormalizedState, values: LocalEntity[]): void {
+    this.runInternal(() => {
+      this.state.data = hydrateData(incoming, values, this.metadata)
+    })
+  }
+
   applyView(view: ViewRecord, records: EntityRecord[]): void {
     this.runInternal(() => {
-      this.state.data = hydrateData(view, records, this.metadata)
+      this.state.data = hydrateData(
+        view,
+        records.map((record) => record.value),
+        this.metadata
+      )
       Object.assign(this.state, view.state)
     })
     this.syncActiveCache()
@@ -1476,6 +1548,14 @@ function createLocalLifecycleFactory(): ResourceLifecycleFactory {
         },
         beginRequest() {
           return binding.currentRevision()
+        },
+        afterApply({ previousState, requestToken }) {
+          binding.reconcileRemoteEmission(
+            previousState,
+            requestToken && typeof requestToken === 'object'
+              ? (requestToken as LocalRequestToken)
+              : { revision: 0 }
+          )
         },
         afterSuccess({ entry, fetchedAt, requestToken }) {
           return binding.commitRemote(

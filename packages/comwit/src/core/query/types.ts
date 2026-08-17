@@ -441,10 +441,22 @@ export type ResourceLifecycleSuccessContext = {
   requestToken: unknown
 }
 
+export type ResourceLifecycleApplyContext = {
+  /** Resource state immediately before this remote result or stream chunk was applied. */
+  previousState: Readonly<ResourceDataLike>
+  /** The raw value returned by the query driver. */
+  result: unknown
+  /** Whether an infinite query appended this result to the current data. */
+  appendData: boolean
+  requestToken: unknown
+}
+
 export type ResourceLifecycleBinding = {
   activate?(key: QueryCacheKey, arg: unknown): void
   hydrate?(): Promise<ResourceHydratedView | undefined>
   beginRequest?(): unknown
+  /** Reconcile an applied remote value synchronously before observers flush. */
+  afterApply?(context: ResourceLifecycleApplyContext): void
   afterSuccess?(context: ResourceLifecycleSuccessContext): Promise<void> | void
   runInternal?<T>(callback: () => T): T
   preserveSuccessOnError?: boolean

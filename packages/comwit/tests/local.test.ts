@@ -400,6 +400,85 @@ describe('local()', () => {
     expect(bound.detail.data.description).toBe('Only the detail endpoint knows this')
   })
 
+  test('preserves canonical fields while a streamed revalidation is still in progress', async () => {
+    const factory = new IDBFactory()
+    const database = `local-stream-revalidate-${crypto.randomUUID()}`
+    const source = local.collection<TodoEntity>({ key: 'todos', version: 1 })
+    const continueStream = deferred<void>()
+    const firstChunkApplied = deferred<void>()
+    let requestCount = 0
+    type TodoPage = { items: TodoListItem[]; total: number }
+
+    async function* listFn() {
+      requestCount++
+      if (requestCount === 1) {
+        yield {
+          items: [{ id: '1', title: 'Initial', status: 'open' as const, updatedAt: 1 }],
+          total: 1,
+        }
+        return
+      }
+
+      yield {
+        items: [{ id: '1', title: 'Refreshed', status: 'open' as const, updatedAt: 3 }],
+        total: 1,
+      }
+      firstChunkApplied.resolve()
+      await continueStream.promise
+    }
+
+    const todoModel = model({
+      list: local.query<TodoPage, { status: 'open' | 'done' }>({
+        source,
+        initialData: { items: [], total: 0 },
+        staleTime: 0,
+        queryFn: listFn,
+        map: {
+          split: (page) => ({ rows: page.items, meta: { total: page.total } }),
+          join: (rows, meta) => ({ items: rows, total: meta?.total ?? 0 }),
+        },
+      }),
+      detail: local.query<TodoDetail | null, string>({
+        source,
+        initialData: null,
+        queryFn: () => ({
+          id: '1',
+          title: 'Detail',
+          status: 'open' as const,
+          updatedAt: 2,
+          description: 'Only the detail endpoint knows this',
+        }),
+      }),
+    })
+    const store = todoModel.instance()
+    const bound = bindResourceState(
+      store.proxy,
+      todoModel.pluginBags.get('query')!,
+      undefined,
+      createQueryBindingRegistry({ local: { indexedDB: factory, database } }),
+      todoModel.key
+    ) as any
+
+    await bound.list.query({ status: 'open' })
+    await bound.detail.query('1')
+
+    const refetch = bound.list.refetch()
+    await firstChunkApplied.promise
+
+    expect(bound.list.data.items[0]).toEqual({
+      id: '1',
+      title: 'Refreshed',
+      status: 'open',
+      updatedAt: 3,
+      description: 'Only the detail endpoint knows this',
+    })
+    expect(bound.list.data.total).toBe(1)
+    expect(bound.list.isFetching).toBe(true)
+
+    continueStream.resolve()
+    await refetch
+  })
+
   test('fans an optimistic entity edit out to loaded views and persists it', async () => {
     const factory = new IDBFactory()
     const database = `local-optimistic-${crypto.randomUUID()}`
