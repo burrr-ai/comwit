@@ -330,6 +330,25 @@ export function createResourceAccessor(
 
   const beginLifecycleRequests = () => lifecycleBindings.map((binding) => binding.beginRequest?.())
 
+  const applyRemoteResult = (result: unknown, appendData: boolean, requestTokens: unknown[]) => {
+    const shouldReconcile = lifecycleBindings.some((binding) => binding.afterApply)
+    const previousState = shouldReconcile
+      ? (snapshot(state) as Readonly<ResourceDataLike>)
+      : undefined
+
+    runInternal(() => mergeResult(state, result, appendData))
+
+    if (!previousState) return
+    lifecycleBindings.forEach((binding, index) =>
+      binding.afterApply?.({
+        previousState,
+        result,
+        appendData,
+        requestToken: requestTokens[index],
+      })
+    )
+  }
+
   const commitLifecycleSuccess = async (
     entry: QueryCacheEntry,
     fetchedAt: number,
@@ -652,7 +671,7 @@ export function createResourceAccessor(
             }
 
             lastYield = chunk
-            runInternal(() => mergeResult(state, chunk))
+            applyRemoteResult(chunk, false, requestTokens)
           }
         } catch (streamError) {
           if (abortController.signal.aborted) {
@@ -677,9 +696,9 @@ export function createResourceAccessor(
 
       // Non-streaming path (original behavior)
       if (descriptor.kind === 'single' || descriptor.kind === 'realtime') {
-        runInternal(() => mergeResult(state, result))
+        applyRemoteResult(result, false, requestTokens)
       } else {
-        runInternal(() => mergeResult(state, result, mode === 'append'))
+        applyRemoteResult(result, mode === 'append', requestTokens)
       }
 
       state.isSuccess = true

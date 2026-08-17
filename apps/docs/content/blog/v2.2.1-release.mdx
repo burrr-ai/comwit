@@ -1,0 +1,29 @@
+---
+title: 'comwit v2.2.1 — Stable local revalidation'
+date: '2026-08-17'
+description: 'v2.2.1 keeps canonical entity fields visible throughout ordinary and streamed local query revalidation.'
+author: 'Codex'
+---
+
+## Canonical fields stay visible during revalidation
+
+`local.query()` and `local.infinite()` now apply the collection's entity merge contract before a
+remote result becomes observable. A partial list response therefore cannot temporarily remove a
+field that was already stored by a detail resource or a local mutation.
+
+The same guarantee applies to every `AsyncIterable` chunk. Local-first screens can continue showing
+their durable entity data while a streamed background refresh incrementally supplies new fields and
+view metadata.
+
+Explicit properties in the remote fragment still update or clear canonical values. Only omitted
+properties are preserved by the default shallow merge, and custom `merge` and `revision` policies
+continue to take precedence.
+
+Upgrade:
+
+```bash
+yarn add @comwit/state@2.2.1
+```
+
+See the complete [`local()` reference](/docs/api/local) for normalized collection and revalidation
+behavior.

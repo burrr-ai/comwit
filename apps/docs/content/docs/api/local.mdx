@@ -227,6 +227,7 @@ exact local view found and stale
 → show it immediately
 → isLoading: false, isFetching: true
 → run queryFn in the background
+→ merge each remote result with canonical entities before observers update
 → commit canonical entities and current view atomically
 
 exact local view missing
@@ -236,6 +237,11 @@ exact local view missing
 If revalidation fails, the local data remains visible with `isSuccess: true` and `isError: true`.
 Visible fields may change when the server response arrives; use `isFetching` for a subtle update
 indicator and copy actively edited forms into separate draft state.
+
+Remote fragments use the collection's normal `merge` behavior before they become observable. This
+also applies to every `AsyncIterable` chunk, so a streamed list revalidation cannot temporarily
+drop fields that only a detail resource or local mutation supplied. Returning a property explicitly
+still updates or clears it; omitting the property preserves its canonical value.
 
 `local.infinite()` accepts the ordinary infinite query options and stores flattened ID ordering,
 cursor, `hasMore`, and cursor history:
