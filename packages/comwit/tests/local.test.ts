@@ -545,6 +545,81 @@ describe('local()', () => {
     expect(bound.list.data[0].title).toBe('Optimistic')
   })
 
+  test('keeps a draft protected across revalidations started after the local edit', async () => {
+    const factory = new IDBFactory()
+    const database = `local-draft-${crypto.randomUUID()}`
+    const source = local.collection<TodoEntity>({ key: 'todos', version: 1 })
+    const listFn = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: '1', title: 'Before', status: 'open', updatedAt: 1 }])
+      .mockResolvedValueOnce([
+        { id: '1', title: 'Stale revalidation', status: 'open', updatedAt: 1 },
+      ])
+      .mockResolvedValueOnce([
+        { id: '1', title: 'Remote after commit', status: 'open', updatedAt: 3 },
+      ])
+    const { bound } = createTodoBound({
+      factory,
+      database,
+      source,
+      staleTime: 0,
+      listFn,
+    })
+
+    await bound.list.query({ status: 'open' })
+    const draft = bound.list.draft()
+    draft[0].title = 'Optimistic'
+    await Promise.resolve()
+
+    expect(bound.list.isDirty).toBe(true)
+    await bound.list.refetch()
+    expect(bound.list.data[0].title).toBe('Optimistic')
+    expect(bound.list.isDirty).toBe(true)
+
+    bound.list.commitDraft([{ id: '1', title: 'Confirmed', status: 'open', updatedAt: 2 }])
+    expect(bound.list.data[0].title).toBe('Confirmed')
+    expect(bound.list.isDirty).toBe(false)
+
+    await bound.list.refetch()
+    expect(bound.list.data[0].title).toBe('Remote after commit')
+  })
+
+  test('scopes drafts by argument view and can discard to the captured baseline', async () => {
+    const factory = new IDBFactory()
+    const database = `local-draft-view-${crypto.randomUUID()}`
+    const source = local.collection<TodoEntity>({ key: 'todos', version: 1 })
+    const listFn = vi.fn(({ status }: { status: 'open' | 'done' }) => [
+      {
+        id: status,
+        title: status === 'open' ? 'Remote open' : 'Remote done',
+        status,
+        updatedAt: 1,
+      },
+    ])
+    const { bound } = createTodoBound({
+      factory,
+      database,
+      source,
+      staleTime: 0,
+      listFn,
+    })
+
+    await bound.list.query({ status: 'open' })
+    bound.list.draft([{ id: 'open', title: 'Draft open', status: 'open', updatedAt: 1 }])
+
+    await bound.list.query({ status: 'done' })
+    expect(bound.list.data[0].title).toBe('Remote done')
+    expect(bound.list.isDirty).toBe(false)
+
+    await bound.list.query({ status: 'open' }, { force: true })
+    expect(bound.list.isDirty).toBe(true)
+    expect(bound.list.data[0].title).toBe('Draft open')
+
+    bound.list.discardDraft()
+    expect(bound.list.data[0].title).toBe('Remote open')
+    expect(bound.list.isDirty).toBe(false)
+  })
+
   test('does not let an older in-flight response restore locally removed membership', async () => {
     const factory = new IDBFactory()
     const database = `local-membership-race-${crypto.randomUUID()}`

@@ -157,8 +157,11 @@ list: local.query<ProductListItem[], ProductFilter>({
 - Exact miss: use ordinary first-load query behavior.
 - Revalidation error: retain local data with `isSuccess: true` and `isError: true`.
 
-Background correction may visibly change data. Use `isFetching` for a subtle indicator and copy
-actively edited forms into separate draft state.
+Background correction may visibly change data. Use `isFetching` for a subtle indicator. In an
+action, call `resource.draft(data?)` before an optimistic server mutation when polling must not
+replace the active argument view. Resolve it with `commitDraft(serverData?)`, or restore the first
+captured baseline with `discardDraft()`. `resource.isDirty` reports the active view's draft state.
+Draft protection is scoped by serialized query argument and is currently memory-only.
 
 `local.infinite()` accepts ordinary infinite query options and persists flattened ID order, cursor,
 `hasMore`, and cursor history. Realtime queries are unsupported in this beta.

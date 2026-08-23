@@ -236,7 +236,42 @@ exact local view missing
 
 If revalidation fails, the local data remains visible with `isSuccess: true` and `isError: true`.
 Visible fields may change when the server response arrives; use `isFetching` for a subtle update
-indicator and copy actively edited forms into separate draft state.
+indicator. Use a protected draft when polling must not replace an optimistic edit before its server
+mutation settles.
+
+### Protected drafts
+
+`draft()` captures the active argument view's baseline and pins its latest local snapshot. Remote
+revalidation may continue, but its data does not replace that view until the draft is resolved.
+
+```ts
+const next = structuredClone(snapshot(this.model.detail.data))
+next.title = title
+this.model.detail.draft(next)
+
+try {
+  const saved = await api.product.update(next)
+  this.model.detail.commitDraft(saved)
+} catch (error) {
+  this.model.detail.discardDraft()
+  throw error
+}
+```
+
+Calling `draft()` without data returns the active data proxy for direct mutation. Repeated calls
+update the protected snapshot without replacing the original rollback baseline.
+
+| Bound action API            | Purpose                                                             |
+| --------------------------- | ------------------------------------------------------------------- |
+| `.isDirty`                  | Whether the active argument view has an unresolved draft            |
+| `.draft(data?)`             | Capture the baseline, optionally set data, and protect revalidation |
+| `.commitDraft(serverData?)` | Release protection, optionally installing canonical server data     |
+| `.discardDraft()`           | Restore the first captured baseline and release protection          |
+
+Drafts are scoped by the canonical query argument, so editing one filter/detail view does not pin
+another. The initial proposal keeps the dirty marker in memory; the optimistic local value itself
+still writes through normally, but restoring dirty intent across a full reload remains a separate
+durability design question.
 
 Remote fragments use the collection's normal `merge` behavior before they become observable. This
 also applies to every `AsyncIterable` chunk, so a streamed list revalidation cannot temporarily
