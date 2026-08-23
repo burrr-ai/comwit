@@ -8,6 +8,8 @@ import {
 } from './query/types'
 import type {
   AnyResourceDescriptor,
+  BoundInfiniteResourceState,
+  BoundSingleResourceState,
   InfiniteResourceBuilderOptions,
   InfiniteResourceDescriptor,
   QueryBindingRegistry,
@@ -19,6 +21,8 @@ import type {
   ResourceSetOptions,
   ResourceRuntimeState,
   ResourceTypeOverride,
+  SelectableInfiniteResourceState,
+  SelectableSingleResourceState,
   SingleResourceBuilderOptions,
   SingleResourceDescriptor,
 } from './query/types'
@@ -163,6 +167,19 @@ type LocalRestoreController<TState, TArg> = [TArg] extends [void]
   ? { restore(): TState }
   : { restore(arg: TArg): TState }
 
+export type LocalDraftController<TData> = {
+  /** Whether the active argument view has a protected local draft. */
+  readonly isDirty: boolean
+  /** Protect the active view from remote revalidation and optionally replace its data. */
+  draft(): TData
+  draft(data: TData): TData
+  /** Release protection and optionally replace the draft with canonical server data. */
+  commitDraft(): TData
+  commitDraft(data: TData): TData
+  /** Restore the data captured by the first draft() call and release protection. */
+  discardDraft(): TData
+}
+
 type LocalActionController<TData, TArg> = [TArg] extends [void]
   ? {
       restore(): Promise<unknown>
@@ -185,6 +202,18 @@ export type Local<TData, TArg = void> = SingleResourceDescriptor<TData, TArg> &
   ResourceTypeOverride<BoundLocalResource<TData, TArg>, SelectableLocalResource<TData, TArg>> & {
     selectorMethod: 'restore'
   }
+
+export type LocalQuery<TData, TArg = void> = SingleResourceDescriptor<TData, TArg> &
+  ResourceTypeOverride<
+    BoundSingleResourceState<TData, TArg> & LocalDraftController<TData>,
+    SelectableSingleResourceState<TData, TArg>
+  >
+
+export type LocalInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg> &
+  ResourceTypeOverride<
+    BoundInfiniteResourceState<TData, TArg> & LocalDraftController<TData>,
+    SelectableInfiniteResourceState<TData, TArg>
+  >
 
 export type LocalStandaloneOptions<
   TData,
@@ -228,10 +257,10 @@ export type LocalFactory = {
   ): LocalCollection<TEntity>
   query<TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
     options: LocalQueryOptions<TData, TArg, TEntity, TMeta>
-  ): SingleResourceDescriptor<TData, TArg>
+  ): LocalQuery<TData, TArg>
   infinite<TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
     options: LocalInfiniteOptions<TData, TArg, TEntity, TMeta>
-  ): InfiniteResourceDescriptor<TData, TArg>
+  ): LocalInfinite<TData, TArg>
 }
 
 function createCollection<TEntity extends LocalEntity>(
@@ -343,7 +372,7 @@ function createStandaloneLocal<TData, TArg = void, TEntity extends LocalEntity =
 
 function createLocalQuery<TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
   options: LocalQueryOptions<TData, TArg, TEntity, TMeta>
-): SingleResourceDescriptor<TData, TArg> {
+): LocalQuery<TData, TArg> {
   const { resourceOptions, localOptions } = splitLocalOptions<
     TEntity,
     TArg,
@@ -354,12 +383,12 @@ function createLocalQuery<TData, TArg = void, TEntity extends LocalEntity = any,
   return attachLocal(
     query(resourceOptions as SingleResourceBuilderOptions<TData, TArg>),
     localOptions
-  )
+  ) as LocalQuery<TData, TArg>
 }
 
 function createLocalInfinite<TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
   options: LocalInfiniteOptions<TData, TArg, TEntity, TMeta>
-): InfiniteResourceDescriptor<TData, TArg> {
+): LocalInfinite<TData, TArg> {
   const { resourceOptions, localOptions } = splitLocalOptions<
     TEntity,
     TArg,
@@ -370,7 +399,7 @@ function createLocalInfinite<TData, TArg = void, TEntity extends LocalEntity = a
   return attachLocal(
     query.infinite(resourceOptions as InfiniteResourceBuilderOptions<TData, TArg>),
     localOptions
-  )
+  ) as LocalInfinite<TData, TArg>
 }
 
 function createLocal(...args: unknown[]): LocalResourceDescriptor {
@@ -1141,9 +1170,9 @@ class LocalManager {
       const current = existing.get(token)
       const protectLocal =
         !local &&
-        requestStartRevision !== undefined &&
         current !== undefined &&
-        current.localRevision > requestStartRevision
+        (binding.isDirty ||
+          (requestStartRevision !== undefined && current.localRevision > requestStartRevision))
       const nextValue = protectLocal
         ? current.value
         : mergeEntity(collection, current?.value, entity)
@@ -1167,9 +1196,9 @@ class LocalManager {
 
     const protectLocalView =
       !local &&
-      requestStartRevision !== undefined &&
       previousView !== undefined &&
-      previousView.localRevision > requestStartRevision
+      (binding.isDirty ||
+        (requestStartRevision !== undefined && previousView.localRevision > requestStartRevision))
 
     const ids = protectLocalView ? [...previousView.ids] : [...incoming.ids]
     if (protectLocalView) {
@@ -1228,6 +1257,11 @@ type LocalRequestToken = {
   revision: number
 }
 
+type LocalDraftState = {
+  baseline: unknown
+  current: ResourceDataLike
+}
+
 export class LocalResourceBinding {
   activeView?: ActiveView
   private activeScope?: string
@@ -1236,6 +1270,7 @@ export class LocalResourceBinding {
   private pendingMutation = false
   private pendingMutationRevision = 0
   private readonly dirtyIds = new Set<string>()
+  private readonly drafts = new Map<QueryCacheKey, LocalDraftState>()
 
   constructor(
     readonly manager: LocalManager,
@@ -1292,6 +1327,7 @@ export class LocalResourceBinding {
     if (!changed) return
     this.runtime.fetchId++
     this.runtime.cacheEntries.clear()
+    this.drafts.clear()
     if (resetOnChange) {
       this.runInternal(() =>
         Object.assign(this.state, structuredClone(this.descriptor.initialState))
@@ -1356,6 +1392,56 @@ export class LocalResourceBinding {
     }
   }
 
+  get isDirty(): boolean {
+    return this.runtime.activeKey !== undefined && this.drafts.has(this.runtime.activeKey)
+  }
+
+  beginDraft(): void {
+    const key = this.runtime.activeKey
+    if (key === undefined) {
+      throw new Error('local draft requires an active view; query or restore it first')
+    }
+    if (this.drafts.has(key)) return
+
+    const plain = snapshot(this.state) as ResourceDataLike
+    this.drafts.set(key, {
+      baseline: structuredClone(plain.data),
+      current: structuredClone(plain),
+    })
+  }
+
+  updateDraft(): void {
+    const key = this.runtime.activeKey
+    const draft = key === undefined ? undefined : this.drafts.get(key)
+    if (draft) draft.current = structuredClone(snapshot(this.state) as ResourceDataLike)
+  }
+
+  commitDraft(): void {
+    const key = this.runtime.activeKey
+    if (key !== undefined) this.drafts.delete(key)
+  }
+
+  discardDraft(): unknown {
+    const key = this.runtime.activeKey
+    if (key === undefined || !this.drafts.has(key)) return this.state.data
+
+    const baseline = this.drafts.get(key)?.baseline
+    this.drafts.delete(key)
+    return structuredClone(baseline)
+  }
+
+  restoreDraftState(previousState: Readonly<ResourceDataLike>): void {
+    const key = this.runtime.activeKey
+    const draft = key === undefined ? undefined : this.drafts.get(key)
+    if (!draft) return
+
+    const restored = structuredClone(draft.current)
+    for (const field of ['isLoading', 'isFetching', 'isSuccess', 'isError', 'error']) {
+      if (field in previousState) restored[field] = previousState[field]
+    }
+    this.runInternal(() => Object.assign(this.state, restored))
+  }
+
   async hydrate(): Promise<LocalHydratedView | undefined> {
     const hydrated = await this.manager.hydrate(this)
     if (!hydrated) return undefined
@@ -1372,6 +1458,10 @@ export class LocalResourceBinding {
       requestToken.scope !== resolvedScope ||
       this.activeView?.scope !== resolvedScope
     ) {
+      return
+    }
+    if (this.isDirty) {
+      this.restoreDraftState(previousState)
       return
     }
     this.manager.reconcileRemoteEmission(this, previousState, requestToken.revision)
@@ -1405,6 +1495,10 @@ export class LocalResourceBinding {
     }
 
     if (!this.activeView || !requestToken.scope) return
+    if (this.isDirty) {
+      this.syncActiveCache()
+      return
+    }
     await this.manager.commitRemote(this, entry, fetchedAt, requestToken.revision)
   }
 
@@ -1489,6 +1583,7 @@ export class LocalResourceBinding {
       const mutationRevision = this.pendingMutationRevision
       this.dirtyIds.clear()
       this.syncActiveCache()
+      this.updateDraft()
       void this.manager.commitLocal(this, dirty, mutationRevision)
     })
   }
@@ -1571,10 +1666,36 @@ function createLocalLifecycleFactory(): ResourceLifecycleFactory {
         },
         preserveSuccessOnError: true,
         decorateController(controller) {
-          if (!metadata?.standalone) return controller
           return new Proxy(controller, {
             get(target, prop, receiver) {
-              if (prop === 'remove') {
+              if (!metadata?.standalone && prop === 'isDirty') return binding.isDirty
+              if (!metadata?.standalone && prop === 'draft') {
+                return (...args: unknown[]) => {
+                  binding.beginDraft()
+                  if (args.length === 0) return binding.state.data
+                  const set = Reflect.get(target, 'set', receiver)
+                  if (typeof set !== 'function') return args[0]
+                  const data = set.call(target, args[0])
+                  binding.updateDraft()
+                  return data
+                }
+              }
+              if (!metadata?.standalone && prop === 'commitDraft') {
+                return (...args: unknown[]) => {
+                  binding.commitDraft()
+                  const set = Reflect.get(target, 'set', receiver)
+                  if (typeof set !== 'function') return binding.state.data
+                  return set.call(target, args.length === 0 ? binding.state.data : args[0])
+                }
+              }
+              if (!metadata?.standalone && prop === 'discardDraft') {
+                return () => {
+                  const baseline = binding.discardDraft()
+                  const set = Reflect.get(target, 'set', receiver)
+                  return typeof set === 'function' ? set.call(target, baseline) : baseline
+                }
+              }
+              if (metadata?.standalone && prop === 'remove') {
                 return (arg?: unknown) => {
                   const set = Reflect.get(target, 'set', receiver)
                   if (typeof set !== 'function') return metadata.initialData

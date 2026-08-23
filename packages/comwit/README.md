@@ -43,5 +43,7 @@ const todo = model({
 `local()` restores an exact IndexedDB view without making an API request, which fits server-owned
 SEO details. `local.query()` and `local.infinite()` add background server revalidation while keeping
 the existing `.load()`, `.query()`, `.refetch()`, `.set()`, and optimistic mutation interfaces.
+Action-side `.draft()`, `.commitDraft()`, and `.discardDraft()` protect an active local view from
+polling responses until its server mutation settles.
 
 [Read the local resource reference](https://library.comwit.io/docs/api/local).
