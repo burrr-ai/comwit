@@ -48,7 +48,7 @@ export type Post = { id: string; title: string; body: string }
 export type PostState = {
   posts: Query<Post[]> // keyed query data
   comments: Query<Comment[], string> // second generic = queryFn arg type
-  current: Query<Post | null, string> // use suspend(slug) when SSR must wait
+  current: Query<Post | null, string> // hydrate the resolved Server Component value
 }
 
 export type PostActions = {
@@ -63,9 +63,10 @@ export type PostActions = {
 - `Query<Data, Arg>` — second generic is the `queryFn` parameter type
 - Plain types for client-owned state
 
-For view-owned requests, call `s.posts.load(arg)` for non-suspending client loading or
-`s.posts.suspend(arg)` when server rendering must wait for the query. Keep a `loadPosts()` action
-when fetching is part of a command, multi-query sequence, preload, or user event.
+For view-owned requests, call `s.posts.load(arg)` for non-suspending client loading. When a Server
+Component owns the resolved value, call `usePost.hydrate(...)` in a small client route adapter before
+the actual UI reads the domain hook. Keep a `loadPosts()` action when fetching is part of a command,
+multi-query sequence, preload, or user event.
 
 ## Cross-domain access
 

@@ -30,19 +30,21 @@ function PostInit({ post }: { post: Post }) {
 }
 ```
 
-Use ordinary reactive actions for user events and imperative workflows. For a query that must
-finish during SSR, use [`.suspend()`](/docs/api/query) in the selector:
+Use ordinary reactive actions for user events and imperative workflows. For a query fetched during
+SSR, await the server function in a Server Component and initialize the cache in a small client
+route adapter:
 
 ```tsx
-function PostPage({ slug }: { slug: string }) {
-  const detail = usePost((state) => state.detail.suspend(slug))
-  if (!detail.data) return <NotFound />
-  return <PostView post={detail.data} />
+function PostRoute({ slug, initialPost }: Props) {
+  usePost.hydrate({ detail: { arg: slug, data: initialPost } })
+  return <PostView />
 }
 ```
 
-`.suspend()` caches the query Promise by argument before suspending. With a surrounding
-`<Suspense>`, React renders its fallback; without one, React 19 streaming SSR waits at the root.
+`hydrate()` runs before the route's normal domain-hook read and initializes the missing query entry
+without an action, public proxy mutation, or subscriber suppression. Experimental `.suspend()` is
+not the default SSR migration path and cannot call a Next.js Server Function during initial client
+render.
 
 ## Legacy behavior
 

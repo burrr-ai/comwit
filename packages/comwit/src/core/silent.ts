@@ -8,8 +8,9 @@ type Synchronous<T extends () => unknown> =
  * Nested calls keep the outer scope active until it completes.
  *
  * @deprecated `silent()` cannot suppress React external-store snapshot checks
- * and is unsafe for render-time initialization. Prefer `suspend()` for
- * render-blocking queries or ordinary actions after commit.
+ * and is unsafe for render-time initialization. Prefer a generated domain
+ * hook's `hydrate()` initializer for resolved server query values, or ordinary
+ * actions after commit.
  */
 export function silent<T extends () => unknown>(fn: Synchronous<T>): void {
   silentDepth++

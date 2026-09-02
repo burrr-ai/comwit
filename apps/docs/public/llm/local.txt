@@ -116,20 +116,21 @@ function ProductFallback({ id }: { id: string }) {
 }
 ```
 
-For state-backed data that must block server rendering, `local.query()` and `local.infinite()` expose
-`.suspend(arg)`. The remote result is staged during render; IndexedDB reconciliation, persistence,
-and entity fanout run only after commit. Standalone `local()` does not expose `.suspend()`. Do not
+For state-backed server data, await the remote value in a Server Component and initialize
+`local.query()` / `local.infinite()` in a small client route adapter. Storage reconciliation,
+persistence, and entity fanout run after commit. Standalone `local()` remains restore-only. Do not
 call a mutating action during render, including one wrapped in deprecated `silent()`.
 
 ```tsx
-const detail = useProduct((state) => state.detail.suspend({ id }))
+useProduct.hydrate({ detail: { arg: { id }, data: initialDetail } })
+const detail = useProduct((state) => state.detail.data)
 ```
 
 ## Query-backed local resources
 
 Use `local.query()` where a mounted client view owns remote loading. Its public interface is the
-ordinary query interface: `.load()`, `.suspend()`, `.query()`, `.refetch()`, `.set()`, and the same
-status fields.
+ordinary query interface: `.load()`, experimental `.suspend()`, `.query()`, `.refetch()`, `.set()`,
+and the same status fields.
 
 ```ts
 list: local.query<ProductListItem[], ProductFilter>({

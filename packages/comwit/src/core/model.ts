@@ -21,6 +21,7 @@ import {
   type HistoryOptions,
 } from './history'
 import { bindResourceState } from './query/bind'
+import { hydrateQueryResources } from './query/hydrate'
 import {
   commitQuerySelectorSuspenseLoads,
   createQuerySelectorState,
@@ -33,6 +34,7 @@ import { QUERY_PLUGIN_NAME } from './query/plugin'
 import type {
   QueryBindingRegistry,
   QueryDefaultOptions,
+  QueryHydrationEntries,
   ResourceDescriptorMap,
   SelectableResourceState,
 } from './query/types'
@@ -42,6 +44,7 @@ const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEff
 export type StoreEntry<T extends object = any> = {
   proxy: T
   getSnapshot(): T
+  hasReadSnapshot(): boolean
   subscribe(listener: () => void): () => void
   history?: HistoryController
 }
@@ -106,6 +109,7 @@ export function model<T extends object, D extends object = {}>(
       const hasExtensions = derivedGetters != null || rules != null || hasComputed || hasHistory
 
       let computedProxyRef: object | null = null
+      let snapshotRead = false
       let publicProxy: unknown = p
       if (hasComputed) {
         computedProxyRef = createComputedProxy(p as object, computedBag!)
@@ -161,6 +165,7 @@ export function model<T extends object, D extends object = {}>(
         proxy: publicProxy as T & Readonly<D>,
         history: history ?? undefined,
         getSnapshot() {
+          snapshotRead = true
           if (!hasExtensions) return snapshot(p) as T & Readonly<D>
 
           const base = snapshot(p)
@@ -185,6 +190,9 @@ export function model<T extends object, D extends object = {}>(
           }
 
           return Object.freeze(result) as T & Readonly<D>
+        },
+        hasReadSnapshot() {
+          return snapshotRead
         },
         subscribe(listener) {
           const unsubProxy = subscribe(p, () => {
@@ -344,6 +352,47 @@ export function useModel<T extends object, R>(
   }
 
   return result
+}
+
+/** Initialize resolved query values before this model's first external-store snapshot. */
+export function useHydrateModel<T extends object>(
+  m: Model<T>,
+  entries: QueryHydrationEntries<T> | null | undefined
+): void {
+  const registry = useStoreRegistry()
+  const queryBag = m.pluginBags.get(QUERY_PLUGIN_NAME) as ResourceDescriptorMap | undefined
+  const queryRegistry = registry.pluginStates.get(QUERY_PLUGIN_NAME) as
+    | QueryBindingRegistry
+    | undefined
+  let hydration:
+    | {
+        controller: object
+        descriptors: ResourceDescriptorMap
+        entries: QueryHydrationEntries<T>
+        mayInitialize: boolean
+      }
+    | undefined
+
+  if (entries != null && queryBag?.size && queryRegistry) {
+    const store = registry.get(m)
+    const queryDefaults = registry.pluginDefaults.get(QUERY_PLUGIN_NAME) as
+      | QueryDefaultOptions
+      | undefined
+    const controller = bindResourceState(store.proxy, queryBag, queryDefaults, queryRegistry, m.key)
+
+    hydration = {
+      controller,
+      descriptors: queryBag,
+      entries,
+      mayInitialize: !store.hasReadSnapshot(),
+    }
+    hydrateQueryResources({ ...hydration, phase: 'render' })
+  }
+
+  useCommitEffect(() => {
+    if (!hydration) return
+    hydrateQueryResources({ ...hydration, phase: 'commit' })
+  })
 }
 
 function notifySubscriberChange(

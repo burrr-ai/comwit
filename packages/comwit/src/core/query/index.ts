@@ -3,6 +3,7 @@ export type {
   PlaceholderData,
   QueryDefaultOptions,
   QueryQueryOptions,
+  QueryHydrationEntries,
   ResourceQueryOptions,
   ResourceContext,
   ResourceBaseState,

@@ -67,16 +67,29 @@ return posts.data.map((post) => <Card key={post.id} post={post} />)
 
 Selecting `s.posts` without `.load(...)` only observes existing state; it does not fetch. Existing action-driven loading remains valid for commands and coordinated workflows.
 
-Call `.suspend(arg)` when rendering must wait for the keyed query:
+For data fetched by a Server Component, call the generated hook's `hydrate()` method in a small
+client route adapter before reading the hook normally:
 
 ```tsx
-const post = usePost((s) => s.detail.suspend(slug))
-if (!post.data) return <NotFound />
-return <PostDetail post={post.data} />
+function PostRoute({ slug, initialPost }: Props) {
+  usePost.hydrate({ detail: { arg: slug, data: initialPost } })
+  return <PostDetail />
+}
+
+function PostDetail() {
+  const post = usePost((s) => s.detail.data)
+  if (!post) return <NotFound />
+  return <article>{post.title}</article>
+}
 ```
 
-`.suspend()` starts or reuses the query Promise during render. A `<Suspense>` ancestor shows its
-fallback; with no explicit boundary, React 19 streaming SSR waits at the root.
+`hydrate()` returns nothing. A new entry initializes before the following domain-hook read takes its
+first snapshot; an observed entry is replaced only after the requesting render commits. Call it
+unconditionally like a hook. `null` and `undefined` are safe no-ops.
+
+Selector `.suspend(arg)` is experimental. It starts or reuses `queryFn` during render and accepts no
+Promise or initial-data override. Do not use it with a Next.js Server Function; run that function in
+a Server Component and use `hydrate()` instead.
 
 ## Calling actions
 
@@ -90,5 +103,5 @@ useEffect(() => {
 }, [])
 ```
 
-The effect pattern is backward compatible. Prefer selector `.load(...)` when the view wants to
-render `isLoading`; prefer `.suspend(...)` when the tree should not commit before data is ready.
+The effect pattern is backward compatible. Prefer selector `.load(...)` when the view owns client
+fetching and `hydrate(...)` when a Server Component owns the resolved query value.

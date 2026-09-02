@@ -172,7 +172,7 @@ posts: Query.Suspense<Post[]>
 trending: Query.SuspenseInfinite<Post[]>
 ```
 
-## Suspense Support
+## Experimental Suspense Support
 
 Choose Suspense where the query is consumed:
 
@@ -205,8 +205,9 @@ replace the value used by the currently committed screen. Existing successful ke
 freshness revalidation starts after commit.
 
 The descriptor option `{ suspense: true }` and `Query.Suspense*` aliases are deprecated. They retain
-legacy behavior for compatibility. New code omits the option, uses `Query<T, Arg>`, and selects
-`.suspend(arg)` at the call site.
+legacy behavior for compatibility. Default new code uses `.load(arg)` for client fetching and the
+generated domain hook's `.hydrate(entries)` for resolved Server Component data. `.suspend(arg)` is
+an experimental opt-in for isomorphic query functions.
 
 ## Methods
 
@@ -449,19 +450,26 @@ if (posts.isError) return <p>Error: {posts.error}</p>
 
 ## Next.js server rendering
 
-Use `.suspend(routeArg)` when a Client Component's server-rendered output depends on the query:
+Await the server function in a Server Component and hydrate the resolved entry in a small client
+route adapter:
 
 ```tsx
-function ProductDetail({ id }: { id: string }) {
-  const detail = useProduct((state) => state.detail.suspend({ id }))
-  if (!detail.data) return <NotFound />
-  return <ProductView product={detail.data} />
+function ProductRoute({ id, initialDetail }: Props) {
+  useProduct.hydrate({ detail: { arg: { id }, data: initialDetail } })
+  return <ProductDetail />
+}
+
+function ProductDetail() {
+  const detail = useProduct((state) => state.detail.data)
+  return detail ? <ProductView product={detail} /> : <NotFound />
 }
 ```
 
-The serialized argument isolates route entries and deduplicates retries. An explicit `<Suspense>`
-streams a fallback; without one, React 19 streaming SSR blocks at the root until the Promise
-settles. Server and browser runtimes do not share the in-memory query cache, so browser hydration
-may run `queryFn` again. Legacy `renderToString()` and framework-specific cache rules are outside
-this contract. Do not initialize the same store by invoking a mutating action during render, even
-through deprecated `silent()`.
+The route adapter calls `hydrate()` before the actual UI takes its first domain snapshot. No
+business-data prop reaches the UI, and `queryFn` is not called again for the hydrated entry. Do not
+initialize the same store by invoking a mutating action during render, even through deprecated
+`silent()`.
+
+Experimental `.suspend(routeArg)` can still block rendering for an isomorphic `queryFn`. It cannot
+call a Next.js Server Function from a Client Component's initial render, and server/browser caches
+remain separate without explicit hydration.

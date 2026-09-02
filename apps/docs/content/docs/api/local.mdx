@@ -104,8 +104,8 @@ export const product = model({
 })
 ```
 
-`local.query()` retains `.load()`, `.suspend()`, `.query()`, `.refetch()`, `.set()`, and the ordinary
-query state.
+`local.query()` retains `.load()`, experimental `.suspend()`, `.query()`, `.refetch()`, `.set()`, and
+the ordinary query state.
 Standalone `local()` exposes `.restore()`, `.set()`, `.remove()`, and the same data/status fields but
 has no API driver.
 
@@ -153,10 +153,10 @@ under a new URL.
 
 ### Server-rendered remote data
 
-Standalone `local()` only restores IndexedDB and never starts remote work. Use `local.query()` or
-`local.infinite()` with `.suspend(arg)` when remote data must block server rendering. The remote
-result is staged in the key cache during render; IndexedDB reconciliation, persistence, and entity
-fanout run only after the rendered tree commits.
+Standalone `local()` only restores IndexedDB and never starts remote work. For `local.query()` or
+`local.infinite()`, await remote data in a Server Component and initialize the resolved entry with
+the generated domain hook's `hydrate()` method. IndexedDB reconciliation, persistence, and entity
+fanout run after the route adapter commits.
 
 ```ts
 detail: local.query<ProductDetail | null, { id: string }>({
@@ -167,17 +167,21 @@ detail: local.query<ProductDetail | null, { id: string }>({
 ```
 
 ```tsx
-function ProductDetail({ id }: { id: string }) {
-  const detail = useProduct((state) => state.detail.suspend({ id }))
-  if (!detail.data) return <NotFound />
-  return <ProductView product={detail.data} />
+function ProductRoute({ id, initialDetail }: Props) {
+  useProduct.hydrate({ detail: { arg: { id }, data: initialDetail } })
+  return <ProductDetail />
+}
+
+function ProductDetail() {
+  const detail = useProduct((state) => state.detail.data)
+  return detail ? <ProductView product={detail} /> : <NotFound />
 }
 ```
 
-Standalone `local()` does not expose `.suspend()`. Keep `.restore(arg)` for an exact,
-non-suspending cached fallback. Do not call a render-body action that writes a resolved server value
-through `.set()` or deprecated `silent()`; that mutates an external-store snapshot React may
-already be checking.
+Standalone `local()` is restore-only and is not a `hydrate()` target. Keep `.restore(arg)` for an
+exact, non-suspending cached fallback. Experimental `.suspend(arg)` remains available on query-backed
+local resources with isomorphic query functions. Do not call a render-body action that writes a
+resolved server value through `.set()` or deprecated `silent()`.
 
 ### Standalone methods
 

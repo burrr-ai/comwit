@@ -164,6 +164,60 @@ function selectorLoadTypeContract() {
 
 void selectorLoadTypeContract
 
+function hydrationTypeContract() {
+  useSelectorModel.hydrate({
+    list: { arg: { page: 1 }, data: ['one'] },
+    total: { data: 1 },
+  })
+  useSelectorModel.hydrate(null)
+  useSelectorModel.hydrate(undefined)
+
+  // @ts-expect-error argument queries require their inferred argument
+  useSelectorModel.hydrate({ list: { data: ['one'] } })
+  // @ts-expect-error hydration data is inferred from Query<TData, TArg>
+  useSelectorModel.hydrate({ list: { arg: { page: 1 }, data: [1] } })
+  // @ts-expect-error no-argument queries do not accept an argument
+  useSelectorModel.hydrate({ total: { arg: { page: 1 }, data: 1 } })
+  // @ts-expect-error plain model fields are not hydratable query entries
+  useSelectorModel.hydrate({ missing: { data: 1 } })
+
+  useSelectorModel((state) => state.list.suspend({ page: 1 }))
+  // @ts-expect-error experimental suspend owns its queryFn and accepts no Promise override
+  useSelectorModel((state) => state.list.suspend({ page: 1 }, Promise.resolve(['one'])))
+  // @ts-expect-error experimental suspend accepts no initialData options
+  useSelectorModel((state) => state.list.suspend({ page: 1 }, { initialData: ['one'] }))
+}
+
+void hydrationTypeContract
+
+const hydrationSource = local.collection<{ id: string }>({ key: 'hydrate-types', version: 1 })
+const hydrationModel = model({
+  nested: {
+    detail: local.query<{ id: string } | null, { id: string }>({
+      source: hydrationSource,
+      initialData: null,
+      queryFn: async ({ id }) => ({ id }),
+    }),
+  },
+  events: query.realtime<string[]>({
+    initialData: [],
+    queryFn: async () => [],
+    subscribe: () => () => {},
+  }),
+})
+const useHydrationModel = create(hydrationModel, { actions: [] })
+
+function nestedHydrationTypeContract() {
+  useHydrationModel.hydrate({
+    nested: { detail: { arg: { id: 'one' }, data: { id: 'one' } } },
+  })
+
+  // @ts-expect-error realtime resources cannot be hydrated with resolved query seeds
+  useHydrationModel.hydrate({ events: { data: [] } })
+}
+
+void nestedHydrationTypeContract
+
 test('standalone local resources expose restore in selectors and exact set in actions', () => {
   type Product = { id: string; title: string }
   type DetailArg = { id: string }

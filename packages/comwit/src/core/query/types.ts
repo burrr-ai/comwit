@@ -3,6 +3,7 @@ export const RESOURCE_LIFECYCLE = Symbol('comwit-resource-lifecycle')
 export const RESOURCE_TYPE_OVERRIDE = Symbol('comwit-resource-type-override')
 export const RESOURCE_SUSPEND_PREPARE = Symbol('comwit-resource-suspend-prepare')
 export const RESOURCE_SUSPEND_COMMIT = Symbol('comwit-resource-suspend-commit')
+export const RESOURCE_HYDRATE = Symbol('comwit-resource-hydrate')
 
 export type AsyncResult<T> = T | Promise<T> | AsyncIterable<T>
 
@@ -201,8 +202,14 @@ type ResourceLoadController<TState, TArg> = [TArg] extends [void]
   : { load(arg: TArg): TState }
 
 type ResourceSuspendController<TState, TArg> = [TArg] extends [void]
-  ? { suspend(): TState }
-  : { suspend(arg: TArg): TState }
+  ? {
+      /** @experimental Render-time query execution is not compatible with every SSR transport. */
+      suspend(): TState
+    }
+  : {
+      /** @experimental Render-time query execution is not compatible with every SSR transport. */
+      suspend(arg: TArg): TState
+    }
 
 export type SelectableSingleResourceState<TData, TArg = void> = ResourceSingleState<TData> &
   ResourceLoadController<ResourceSingleState<TData>, TArg> &
@@ -308,6 +315,47 @@ export type SelectableResourceState<T> = T extends {
               ? { [K in keyof T]: SelectableResourceState<T[K]> }
               : T
 
+type QueryHydrationSeed<TData, TArg> = [TArg] extends [void]
+  ? { data: TData; arg?: never }
+  : { data: TData; arg: TArg }
+
+type QueryHydrationNode<T> =
+  T extends RealtimeResourceDescriptor<unknown, unknown>
+    ? never
+    : T extends { selectorMethod: 'restore' }
+      ? never
+      : T extends { [RESOURCE_TYPE_OVERRIDE]: unknown }
+        ? never
+        : T extends InfiniteResourceDescriptor<infer TData, infer TArg, boolean>
+          ? QueryHydrationSeed<TData, TArg>
+          : T extends SingleResourceDescriptor<infer TData, infer TArg, boolean>
+            ? QueryHydrationSeed<TData, TArg>
+            : T extends readonly unknown[]
+              ? never
+              : T extends (...args: any[]) => any
+                ? never
+                : T extends object
+                  ? HydratableQueryKeys<T> extends never
+                    ? never
+                    : QueryHydrationEntries<T>
+                  : never
+
+type HydratableQueryKeys<T extends object> = {
+  [K in keyof T]-?: QueryHydrationNode<T[K]> extends never ? never : K
+}[keyof T]
+
+/**
+ * Resolved server query values accepted by a generated domain hook's
+ * `hydrate()` initializer. Realtime and plain model fields are excluded.
+ */
+export type QueryHydrationEntries<T extends object> = {
+  [K in HydratableQueryKeys<T>]?: QueryHydrationNode<T[K]>
+} extends infer TEntries
+  ? [HydratableQueryKeys<T>] extends [never]
+    ? never
+    : TEntries
+  : never
+
 export type DependentQueryOptions<TData> = {
   enabled?: (state: any) => boolean
   dependsOn?: (state: any) => any
@@ -385,6 +433,8 @@ export type QueryCacheEntry = {
   suspendError?: Error
   /** Whether the staged result still needs to become the active proxy after commit. */
   suspendNeedsCommit?: boolean
+  /** Whether resolved hydration still needs lifecycle persistence after commit. */
+  hydrationNeedsCommit?: boolean
   /** Whether lifecycle adapters have already attempted restoration for this key. */
   resourceHydrated?: boolean
 }

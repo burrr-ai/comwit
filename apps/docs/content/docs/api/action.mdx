@@ -48,10 +48,9 @@ export const postActions = action<Pick<PostActions, 'init' | 'loadPosts' | 'crea
 )
 ```
 
-Do not call a mutating action directly during render. For data that must resolve during server
-rendering, model it as a [`query()`](/docs/api/query) and call `.suspend(arg)` from the consuming
-selector. Actions remain the right place for user events, imperative preloads, and coordinated
-workflows.
+Do not call a mutating action directly during render. Await server-owned data in a Server Component
+and initialize its query entry with `useDomain.hydrate(...)` in the client route adapter. Actions
+remain the right place for user events, imperative preloads, and coordinated workflows.
 
 ## Factory parameters
 
