@@ -5,6 +5,7 @@ export {
   useModel,
   create,
   silent,
+  useHydrate,
   ComwitProvider,
   keepPreviousData,
   query,

@@ -1,7 +1,6 @@
 /**
- * Suppress state change notifications within the callback scope.
- * Use this for SSR initialization or hydration where mutations
- * should not trigger re-renders.
+ * Suppress state change notifications within a synchronous callback scope.
+ * Nested calls keep the outer scope active until it completes.
  *
  * @example
  * ```ts
@@ -12,17 +11,19 @@
  * })
  * ```
  */
-let _silent = false
+let silentDepth = 0
 
-export function silent(fn: () => void) {
-  _silent = true
+type Synchronous<T extends () => unknown> = ReturnType<T> extends PromiseLike<unknown> ? never : T
+
+export function silent<T extends () => unknown>(fn: Synchronous<T>): ReturnType<T> {
+  silentDepth++
   try {
-    fn()
+    return (fn as T)() as ReturnType<T>
   } finally {
-    _silent = false
+    silentDepth--
   }
 }
 
 export function isSilent() {
-  return _silent
+  return silentDepth > 0
 }

@@ -274,24 +274,34 @@ Plain state is mutable inside actions: assign fields, `push`/`splice` arrays, or
 
 ## Server data and App Router Suspense
 
-No separate `hydrate()` API is needed. Initialize during client render through an action that wraps writes in `silent()`; do not delay it to an effect.
+Never mutate a model during component render. `silent()` only suppresses subscriber callbacks;
+React also checks `useSyncExternalStore` snapshots and may discard a render whose snapshot changed.
+
+Keep the initialization action synchronous and reactive:
 
 ```ts
 initDetail(id: string, value: Product) {
-  silent(() => this.m.detail.set(value, { arg: { id } }))
+  this.m.detail.set(value, { arg: { id } })
 }
 ```
 
 `.set()` marks the resource successful. On a standalone local resource, it also stores the exact
-argument view and canonical entity in IndexedDB. `silent()` suppresses notifications, not storage.
+argument view and canonical entity in IndexedDB.
+
+Schedule the action with `useHydrate()` in the Client Component that receives the resolved server
+value:
 
 ```tsx
 function DetailInit({ id, value }: { id: string; value: Product }) {
-  const init = useProduct((s) => s.actions.initDetail)
-  init(id, value)
+  const actions = useProduct((s) => s.actions)
+  useHydrate(() => actions.initDetail(id, value), [id, value, actions])
   return <ProductView product={value} />
 }
 ```
+
+`useHydrate()` runs after commit, once per dependency tuple, and deduplicates React Strict Mode
+effect replay. Render the resolved value from props when it must appear in the server HTML; store
+hydration prepares later consumers and navigation.
 
 For a server `<Suspense>` boundary, the client fallback restores only the exact route view. It does
 not call an API or suspend; show cached content when present and otherwise show a skeleton. The
@@ -344,7 +354,8 @@ await search(snapshot(this.m.filters)) // nested slice
 
 - `snapshot(proxy)` returns a frozen plain snapshot and throws for non-proxies.
 - `isProxy(value)` detects comwit proxies.
-- `silent(fn)` suppresses subscriber notifications; it is not a history-ignore helper.
+- `silent(fn)` suppresses subscriber notifications inside a synchronous scope; it is not a
+  render-hydration or history-ignore helper.
 
 ## Decorators and custom interception
 
@@ -403,7 +414,8 @@ Here `@LoginRequired` guards every method, while `@ConfirmDelete` applies only t
 - View-owned query uses selector `.load(arg)`; passive query intentionally omits it.
 - Command/coordinated query stays in an action.
 - Loading, error, empty, and background-fetch behavior are deliberate.
-- Server init uses `silent()` and `.set(data, { arg })`; a local fallback uses exact `.restore(arg)`.
+- Server init calls an ordinary `.set(data, { arg })` action through `useHydrate()`; a local fallback
+  uses exact `.restore(arg)`.
 - CRUD keeps list/detail/stats consistent and rolls back failed optimistic writes.
 - Proxy values are snapshotted at serialization boundaries.
 - Decorator support is enabled in TypeScript/Next.js.

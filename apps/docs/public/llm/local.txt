@@ -116,25 +116,31 @@ function ProductFallback({ id }: { id: string }) {
 }
 ```
 
-When the server branch resolves, initialize the same exact view during client render:
+When the server branch resolves, initialize the same exact view after the Client Component commits:
 
 ```ts
 initDetail(id: string, value: ProductDetail) {
-  silent(() => {
-    this.model.detail.set(value, { arg: { id } })
-  })
+  this.model.detail.set(value, { arg: { id } })
 }
 ```
 
-`silent()` suppresses React notifications, not persistence. The server value updates IndexedDB and
-canonical list rows. If an older IndexedDB restore is still pending, it is discarded and cannot
-overwrite the server result.
+```tsx
+function ProductInit({ id, value }: { id: string; value: ProductDetail }) {
+  const actions = useProduct((state) => state.actions)
+  useHydrate(() => actions.initDetail(id, value), [id, value, actions])
+  return <ProductView product={value} />
+}
+```
+
+`useHydrate()` runs after commit and avoids mutating an external store during render. The server
+value updates IndexedDB and canonical list rows. If an older IndexedDB restore is still pending, it
+is discarded and cannot overwrite the server result.
 
 ```text
 server detail fetch starts
   ├─ fallback restore({ id }): exact hit → cached detail; miss/pending → skeleton
-  └─ server resolves: silent(detail.set(value, { arg: { id } }))
-                       → visible detail + canonical fanout + IndexedDB commit
+  └─ server resolves: commit-phase useHydrate(detail.set(value, { arg: { id } }))
+                       → canonical fanout + IndexedDB commit
 ```
 
 ## Query-backed local resources

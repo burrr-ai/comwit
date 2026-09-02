@@ -390,7 +390,7 @@ function Page() {
 For App Router server streaming where the server owns the detail request, prefer a standalone
 [`local()`](/docs/api/local) resource. Its client fallback calls `restore({ id })`, which checks only
 the exact IndexedDB view and does not issue another API request. The resolved server branch writes
-the exact value with `silent(() => resource.set(data, { arg: { id } }))`.
+the exact value from `useHydrate()` after the Client Component commits.
 
 ```tsx
 function ProductFallback({ id }: { id: string }) {
@@ -400,10 +400,11 @@ function ProductFallback({ id }: { id: string }) {
 
 function ProductInit({ id, product }: { id: string; product: Product }) {
   const actions = useProduct((state) => state.actions)
-  actions.init(id, product) // uses silent(() => detail.set(product, { arg: { id } }))
+  useHydrate(() => actions.init(id, product), [id, product, actions])
   return <ProductView product={product} />
 }
 ```
 
 If no exact value exists or restoration is pending, the fallback stays a skeleton. A server
-initializer wins over an older IndexedDB read that is still pending.
+initializer wins over an older IndexedDB read that is still pending. The `init` action uses ordinary
+`.set(product, { arg: { id } })`; do not wrap it in `silent()`.

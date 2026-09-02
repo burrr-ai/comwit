@@ -25,3 +25,14 @@ Pass the URL to Claude Code. It handles the rest.
 
 The `2.2` beta adds normalized IndexedDB-backed standalone resources through `local()`, plus
 query-backed revalidation through [`local.query()` and `local.infinite()`](https://library.comwit.io/docs/api/local).
+
+For Server Component values, call the model action through `useHydrate()` instead of mutating the
+store during render:
+
+```tsx
+const actions = usePost((state) => state.actions)
+useHydrate(() => actions.init(post), [post, actions])
+```
+
+`silent()` only suppresses synchronous subscriber notifications; it does not disable React's
+external-store snapshot consistency checks.

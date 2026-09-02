@@ -1,0 +1,65 @@
+---
+title: 'useHydrate()'
+group: 'API'
+slug: 'api/hydrate'
+order: 9
+---
+
+# useHydrate()
+
+Synchronizes server-provided values into a model after React commits the matching render.
+
+```ts
+import { useHydrate } from '@comwit/state'
+```
+
+## Usage
+
+Keep the action synchronous and use ordinary reactive mutations:
+
+```ts
+export const postActions = action<Pick<PostActions, 'init'>>(({ state }) => {
+  const model = state(post)
+
+  return {
+    init(value: Post) {
+      model.current = value
+    },
+  }
+})
+```
+
+Call the action through `useHydrate()` in the Client Component that receives the server value:
+
+```tsx
+'use client'
+
+function PostInit({ post }: { post: Post }) {
+  const selected = usePost((state) => ({ actions: state.actions }))
+
+  useHydrate(() => selected.actions.init(post), [post, selected.actions])
+  return null
+}
+```
+
+The callback runs during React's layout commit phase, never during server rendering or the render
+phase. It runs once for each dependency tuple. React Strict Mode may replay the effect in
+development, but `useHydrate()` ignores a replay with identical dependencies.
+
+## Server rendering
+
+Render server data from props when it must appear in the initial HTML. `useHydrate()` synchronizes
+the mounted client store for later consumers and navigation; it does not mutate a store during the
+server render.
+
+```tsx
+function PostInit({ post }: { post: Post }) {
+  const actions = usePost((state) => state.actions)
+  useHydrate(() => actions.init(post), [post, actions])
+
+  return <PostView post={post} />
+}
+```
+
+Models remain lazily scoped to the existing `ComwitProvider`; no Provider configuration or eager
+store creation is required.

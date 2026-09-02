@@ -45,3 +45,17 @@ SEO details. `local.query()` and `local.infinite()` add background server revali
 the existing `.load()`, `.query()`, `.refetch()`, `.set()`, and optimistic mutation interfaces.
 
 [Read the local resource reference](https://library.comwit.io/docs/api/local).
+
+## Server data hydration
+
+Synchronize Server Component props after the Client Component commits. Do not mutate a model
+directly during render, even through `silent()`; React checks external-store snapshots separately
+from subscriber notifications.
+
+```tsx
+const actions = usePost((state) => state.actions)
+useHydrate(() => actions.init(post), [post, actions])
+```
+
+`useHydrate()` runs once for each dependency tuple and ignores Strict Mode effect replay with the
+same dependencies.

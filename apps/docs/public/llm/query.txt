@@ -422,7 +422,7 @@ if (posts.isError) return <p>Error: {posts.error}</p>
 
 For App Router streaming with server-owned detail fetching, prefer a standalone `local()` resource.
 The fallback calls `restore(routeArg)`, which checks only the exact IndexedDB view and never starts
-an API request or suspends. The resolved server branch initializes it with
-`silent(() => resource.set(serverData, { arg: routeArg }))`. See the local reference for the full
-pattern. Ordinary query fields may still be read passively, but their active value must already be
-known to match the current route.
+an API request or suspends. The resolved server branch calls an ordinary
+`resource.set(serverData, { arg: routeArg })` action through `useHydrate()` after commit. See the
+local reference for the full pattern. Ordinary query fields may still be read passively, but their
+active value must already be known to match the current route.

@@ -152,15 +152,14 @@ under a new URL.
 
 ### Server result initialization
 
-The resolved server branch initializes the same exact view during client render. Include the
-argument because the server branch may resolve before the fallback has activated the resource.
+The resolved server branch initializes the same exact view after the Client Component commits.
+Include the argument because the server branch may resolve before the fallback has activated the
+resource.
 
 ```ts
 initDetail(id: string, value: ProductDetail) {
-  silent(() => {
-    this.model.detail.set(value, {
-      arg: { id },
-    })
+  this.model.detail.set(value, {
+    arg: { id },
   })
 }
 ```
@@ -169,15 +168,15 @@ initDetail(id: string, value: ProductDetail) {
 'use client'
 
 function ProductInit({ id, value }: { id: string; value: ProductDetail }) {
-  const initDetail = useProduct((state) => state.actions.initDetail)
-  initDetail(id, value)
+  const actions = useProduct((state) => state.actions)
+  useHydrate(() => actions.initDetail(id, value), [id, value, actions])
   return <ProductView product={value} />
 }
 ```
 
-`silent()` suppresses React notifications, not local persistence. `set()` marks the resource
-successful, writes the exact detail view and canonical entity to IndexedDB, and fans shared fields
-out to loaded product lists.
+`useHydrate()` keeps render free of external-store mutations. After commit, `set()` marks the
+resource successful, writes the exact detail view and canonical entity to IndexedDB, and fans
+shared fields out to loaded product lists.
 
 ```text
 server detail fetch starts
@@ -185,7 +184,7 @@ server detail fetch starts
   │    ├─ hit  → cached detail
   │    └─ miss → skeleton
   └─ server resolves
-       → silent(detail.set(serverValue, { arg: { id } }))
+       → commit: useHydrate(detail.set(serverValue, { arg: { id } }))
        → server value + IndexedDB commit
 ```
 

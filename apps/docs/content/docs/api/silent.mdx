@@ -7,50 +7,60 @@ order: 8
 
 # silent()
 
-Suppresses re-renders during state mutations. Used for SSR hydration.
+Suppresses subscriber notifications during synchronous state mutations.
 
 ```ts
 import { silent } from '@comwit/state'
 ```
 
-## Why
+## Usage
 
-When a server component passes initial data to a client component, you need to set that data into the store without triggering a re-render. `silent()` does exactly that.
-
-## Usage in actions
+Use `silent()` when a synchronous internal update must not notify React or other model subscribers.
+Nested calls keep the outer silent scope active.
 
 ```ts
-import { action, silent } from '@comwit/state'
-
-export const postActions = action<Pick<PostActions, 'init'>>(({ state }) => {
-  class Actions {
-    private model = state(post)
-
-    init(data: Post) {
-      silent(() => {
-        this.model.current = data
-      })
-    }
-  }
-  return new Actions()
+silent(() => {
+  model.primary = nextPrimary
+  silent(() => {
+    model.secondary = nextSecondary
+  })
 })
 ```
 
-## Usage in components
+The callback must be synchronous. An `async` callback cannot remain request-local across `await`
+boundaries, so TypeScript rejects Promise-returning callbacks.
 
-Call `init` directly in the component body — not inside `useEffect`. Since `silent()` prevents re-renders, this is safe:
+## Not for render-time hydration
+
+Do not call an action that mutates a model from a component's render body, even when the action uses
+`silent()`. React's `useSyncExternalStore` checks snapshots independently of subscriber
+notifications. If the snapshot changes during render, React may discard and retry the uncommitted
+tree.
 
 ```tsx
-function PostDetail({ initialPost }: { initialPost: Post }) {
-  const { actions } = usePost((s) => ({ actions: s.actions }))
+// Incorrect
+function PostInit({ initialPost }: { initialPost: Post }) {
+  const actions = usePost((state) => state.actions)
   actions.init(initialPost)
-
-  return <Article />
+  return null
 }
 ```
 
+Use [`useHydrate()`](/docs/api/hydrate) to schedule server-provided state after React commits:
+
+```tsx
+function PostInit({ initialPost }: { initialPost: Post }) {
+  const actions = usePost((state) => state.actions)
+  useHydrate(() => actions.init(initialPost), [initialPost, actions])
+  return null
+}
+```
+
+The hydration action should perform ordinary mutations without `silent()`. This lets mounted
+consumers observe the committed update.
+
 ## How it works
 
-`silent(fn)` sets an internal flag that tells the proxy system to skip notifying subscribers. Mutations still happen — they just don't trigger React re-renders. The flag is reset after the callback completes.
-
-This is the bridge between Next.js server components and comwit's client-side state.
+`silent(fn)` increments a synchronous scope depth while `fn` runs. Model mutations still happen,
+but subscriber callbacks are skipped until the outermost scope exits. Snapshot versions still
+change, which is why `silent()` cannot make render-time external-store mutations safe.
