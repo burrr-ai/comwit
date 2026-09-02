@@ -104,11 +104,12 @@ export const product = model({
 })
 ```
 
-`local.query()` retains `.load()`, `.query()`, `.refetch()`, `.set()`, and the ordinary query state.
+`local.query()` retains `.load()`, `.suspend()`, `.query()`, `.refetch()`, `.set()`, and the ordinary
+query state.
 Standalone `local()` exposes `.restore()`, `.set()`, `.remove()`, and the same data/status fields but
 has no API driver.
 
-## App Router SEO detail and server Suspense
+## App Router exact cached fallback
 
 A common detail route fetches on the server for SEO. The server `<Suspense>` fallback should not make
 another API request. It only checks whether an exact IndexedDB detail is available and otherwise
@@ -150,46 +151,33 @@ function ProductFallback({ id }: { id: string }) {
 Passing the route identity to `restore()` prevents a previous route's active detail from appearing
 under a new URL.
 
-### Server result initialization
+### Server-rendered remote data
 
-The resolved server branch initializes the same exact view after the Client Component commits.
-Include the argument because the server branch may resolve before the fallback has activated the
-resource.
+Standalone `local()` only restores IndexedDB and never starts remote work. Use `local.query()` or
+`local.infinite()` with `.suspend(arg)` when remote data must block server rendering. The remote
+result is staged in the key cache during render; IndexedDB reconciliation, persistence, and entity
+fanout run only after the rendered tree commits.
 
 ```ts
-initDetail(id: string, value: ProductDetail) {
-  this.model.detail.set(value, {
-    arg: { id },
-  })
-}
+detail: local.query<ProductDetail | null, { id: string }>({
+  source: products,
+  initialData: null,
+  queryFn: ({ id }) => api.product.detail(id),
+})
 ```
 
 ```tsx
-'use client'
-
-function ProductInit({ id, value }: { id: string; value: ProductDetail }) {
-  const actions = useProduct((state) => state.actions)
-  useHydrate(() => actions.initDetail(id, value), [id, value, actions])
-  return <ProductView product={value} />
+function ProductDetail({ id }: { id: string }) {
+  const detail = useProduct((state) => state.detail.suspend({ id }))
+  if (!detail.data) return <NotFound />
+  return <ProductView product={detail.data} />
 }
 ```
 
-`useHydrate()` keeps render free of external-store mutations. After commit, `set()` marks the
-resource successful, writes the exact detail view and canonical entity to IndexedDB, and fans
-shared fields out to loaded product lists.
-
-```text
-server detail fetch starts
-  ├─ fallback: restore({ id })
-  │    ├─ hit  → cached detail
-  │    └─ miss → skeleton
-  └─ server resolves
-       → commit: useHydrate(detail.set(serverValue, { arg: { id } }))
-       → server value + IndexedDB commit
-```
-
-If an IndexedDB read is still pending when `set()` runs, its result is discarded. A late local
-restore cannot overwrite the newer server initialization.
+Standalone `local()` does not expose `.suspend()`. Keep `.restore(arg)` for an exact,
+non-suspending cached fallback. Do not call a render-body action that writes a resolved server value
+through `.set()` or deprecated `silent()`; that mutates an external-store snapshot React may
+already be checking.
 
 ### Standalone methods
 

@@ -111,9 +111,9 @@ const editorActions = action(({ state }) => ({
 }))
 ```
 
-This is different from [`silent()`](/docs/api/silent). `silent()` suppresses subscriber
+This is different from deprecated [`silent()`](/docs/api/silent). `silent()` suppresses subscriber
 notifications during a synchronous mutation scope. `$history.ignore()` only skips history
-recording.
+recording and is the correct API for history control.
 
 ## Manual Transactions
 

@@ -1,6 +1,8 @@
 export const RESOURCE_BRAND = Symbol('comwit-resource')
 export const RESOURCE_LIFECYCLE = Symbol('comwit-resource-lifecycle')
 export const RESOURCE_TYPE_OVERRIDE = Symbol('comwit-resource-type-override')
+export const RESOURCE_SUSPEND_PREPARE = Symbol('comwit-resource-suspend-prepare')
+export const RESOURCE_SUSPEND_COMMIT = Symbol('comwit-resource-suspend-commit')
 
 export type AsyncResult<T> = T | Promise<T> | AsyncIterable<T>
 
@@ -83,7 +85,9 @@ export type Query<TData, TArg = void> = SingleResourceDescriptor<TData, TArg>
 export namespace Query {
   export type Single<TData, TArg = void> = Query<TData, TArg>
   export type Infinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg>
+  /** @deprecated Use the selector-level `.suspend(arg)` method instead. */
   export type Suspense<TData, TArg = void> = SingleResourceDescriptor<TData, TArg, true>
+  /** @deprecated Use the selector-level `.suspend(arg)` method instead. */
   export type SuspenseInfinite<TData, TArg = void> = InfiniteResourceDescriptor<TData, TArg, true>
   export type Realtime<TData, TArg = void> = RealtimeResourceDescriptor<TData, TArg>
 }
@@ -99,6 +103,7 @@ export type InfiniteResourceLoadResult<TData> =
 export type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TResult> = {
   [RESOURCE_BRAND]: true
   kind: ResourceKind
+  /** @deprecated Use the selector-level `.suspend(arg)` method instead. */
   suspense?: boolean
   streamBatchInterval?: number
   initialState: TState
@@ -195,10 +200,16 @@ type ResourceLoadController<TState, TArg> = [TArg] extends [void]
   ? { load(): TState }
   : { load(arg: TArg): TState }
 
+type ResourceSuspendController<TState, TArg> = [TArg] extends [void]
+  ? { suspend(): TState }
+  : { suspend(arg: TArg): TState }
+
 export type SelectableSingleResourceState<TData, TArg = void> = ResourceSingleState<TData> &
-  ResourceLoadController<ResourceSingleState<TData>, TArg>
+  ResourceLoadController<ResourceSingleState<TData>, TArg> &
+  ResourceSuspendController<ResourceSingleState<TData>, TArg>
 export type SelectableInfiniteResourceState<TData, TArg = void> = ResourceInfiniteState<TData> &
-  ResourceLoadController<ResourceInfiniteState<TData>, TArg>
+  ResourceLoadController<ResourceInfiniteState<TData>, TArg> &
+  ResourceSuspendController<ResourceInfiniteState<TData>, TArg>
 export type SelectableRealtimeResourceState<TData, TArg = void> = ResourceRealtimeState<TData> &
   ResourceLoadController<ResourceRealtimeState<TData>, TArg>
 
@@ -305,6 +316,7 @@ export type DependentQueryOptions<TData> = {
 
 export type SingleResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
+  /** @deprecated Use the selector-level `.suspend(arg)` method instead. */
   suspense?: boolean
   streamBatchInterval?: number
   queryFn: (
@@ -316,6 +328,7 @@ export type SingleResourceBuilderOptions<TData, TArg = void> = {
 
 export type InfiniteResourceBuilderOptions<TData, TArg = void> = {
   initialData: TData
+  /** @deprecated Use the selector-level `.suspend(arg)` method instead. */
   suspense?: boolean
   streamBatchInterval?: number
   queryFn: (
@@ -366,6 +379,12 @@ export type QueryCacheEntry = {
   lastResult?: unknown
   cursorHistory: Array<string | null>
   state: ResourceDataLike
+  /** Real query promise staged by selector `.suspend()` before the resource is observable. */
+  suspendPromise?: Promise<unknown>
+  /** Rejection retained for an ErrorBoundary on the next render retry. */
+  suspendError?: Error
+  /** Whether the staged result still needs to become the active proxy after commit. */
+  suspendNeedsCommit?: boolean
   /** Whether lifecycle adapters have already attempted restoration for this key. */
   resourceHydrated?: boolean
 }
@@ -379,7 +398,7 @@ export type QueryBindingRegistry = {
   boundResourceValue: WeakMap<object, Record<string, unknown>>
   boundPathProxy: WeakMap<object, Map<string, object>>
   boundResourceRuntime: WeakMap<object, ResourceRuntimeState>
-  /** In-flight requests started by selector `.load()` calls, keyed per resource. */
+  /** In-flight selector requests keyed per bound resource and serialized argument. */
   selectorLoads: WeakMap<object, Map<QueryCacheKey, Promise<unknown>>>
   suspense: Map<string, SuspenseState>
   /**

@@ -1,6 +1,7 @@
 # comwit — Query System Reference
 
-> Full API reference for selector `.load()`, imperative query methods, `query.infinite()`, `query.realtime()`, Suspense, caching, and resource state.
+> Full API reference for selector `.load()` / `.suspend()`, imperative query methods,
+> `query.infinite()`, `query.realtime()`, caching, and resource state.
 
 For IndexedDB-backed normalized list/detail/infinite views, see
 https://library.comwit.io/llm/local.txt. `local.query()` and `local.infinite()` preserve every
@@ -8,7 +9,7 @@ corresponding query method below; standalone `local()` has no network driver.
 
 ## query(opts)
 
-Creates a single resource descriptor for client-side data fetching. Used inside `model()`.
+Creates a single data-fetching resource descriptor. Used inside `model()`.
 
 ```ts
 import { model, query } from '@comwit/state'
@@ -31,7 +32,7 @@ export const post = model<PostState>({
 | ----------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `initialData`     | `TData`                                     | **Required.** Initial value before any fetch.                                                      |
 | `queryFn`         | `(arg, context) => TData \| Promise<TData>` | **Required.** Fetcher function.                                                                    |
-| `suspense`        | `boolean`                                   | Enable React Suspense integration. Default `false`.                                                |
+| `suspense`        | `boolean`                                   | **Deprecated.** Choose `.suspend(arg)` in the selector instead.                                    |
 | `staleTime`       | `number`                                    | Milliseconds before cached data is considered stale. Default `0`.                                  |
 | `gcTime`          | `number`                                    | Milliseconds a cache entry survives after the model loses its last observer. Default `5 * 60_000`. |
 | `placeholderData` | `TData \| (arg, previousData) => TData`     | Data shown while fetching. Use `keepPreviousData` helper.                                          |
@@ -154,7 +155,7 @@ messages: Query.Realtime<Message[], string> // with argument
 ```ts
 import { Query } from '@comwit/state'
 
-// Single query — fetched client-side
+// Single query
 posts: Query<Post[]>
 
 // Single query with argument
@@ -166,44 +167,46 @@ trending: Query.Infinite<Post[]>
 // Realtime query
 messages: Query.Realtime<Message[]>
 
-// Suspense variants — data is NonNullable, throws promise during loading
+// Legacy Suspense variants — deprecated; use Query<T> plus selector .suspend()
 posts: Query.Suspense<Post[]>
 trending: Query.SuspenseInfinite<Post[]>
 ```
 
 ## Suspense Support
 
-Enable suspense per-query by passing `{ suspense: true }`:
-
-```ts
-const post = model<PostState>({
-  posts: query<Post[]>({
-    initialData: [],
-    suspense: true,
-    queryFn: () => api.post.findAll(),
-  }),
-})
-```
-
-Use `Query.Suspense<T>` or `Query.SuspenseInfinite<T>` as the type. With suspense enabled:
-
-- During initial load, a Promise is thrown (caught by React `<Suspense>`).
-- On error, the error is thrown (caught by React `<ErrorBoundary>`).
-- After success, `data` is guaranteed non-nullable.
-- Refetches do NOT trigger Suspense — only the initial load does.
+Choose Suspense where the query is consumed:
 
 ```tsx
 function PostList() {
-  const { posts } = usePost((s) => ({ posts: s.posts }))
-  // No need for isLoading check — Suspense handles it
+  const posts = usePost((state) => state.posts.suspend())
   return posts.data.map((post) => <Card key={post.id} post={post} />)
 }
 
-// Wrap with Suspense boundary
 ;<Suspense fallback={<Skeleton />}>
   <PostList />
 </Suspense>
 ```
+
+`.suspend(arg)` starts or reuses the serialized key's query Promise during render, stores it before
+throwing, and returns successful state when React retries. If no explicit `<Suspense>` exists, the
+React 19 streaming server renderer waits at the root. A rejected initial query reaches the nearest
+error boundary. Refetches retain successful data and do not suspend again.
+
+For browser mounting and hydration, keep a `<Suspense>` boundary below `ComwitProvider`. If the
+client root suspends before that Provider commits, its provider-scoped cache can be discarded and
+the query can restart.
+
+```text
+suspend(arg) → stage Promise by key → throw → resolve staged entry → React retry → commit entry
+```
+
+Staging a new key does not mutate the active observable resource. An abandoned route render cannot
+replace the value used by the currently committed screen. Existing successful keys stay visible;
+freshness revalidation starts after commit.
+
+The descriptor option `{ suspense: true }` and `Query.Suspense*` aliases are deprecated. They retain
+legacy behavior for compatibility. New code omits the option, uses `Query<T, Arg>`, and selects
+`.suspend(arg)` at the call site.
 
 ## Methods
 
@@ -227,6 +230,30 @@ const comments = usePost((state) => state.comments.load(postId))
 - Call-time options are deliberately unavailable. Configure provider/query defaults, or use an action method below for forced or coordinated requests.
 
 Selector loading is additive. Existing `useEffect(() => actions.load(), [])` and event-driven actions continue to work.
+
+### .suspend(arg?) — React selectors
+
+Call `.suspend()` only inside a selector:
+
+```tsx
+const post = usePost((state) => state.post.suspend(postId))
+```
+
+- A cache hit returns the successful query state.
+- A cache miss starts `queryFn` during render and stores the in-flight Promise by serialized arg.
+- Pending work throws that same Promise, so React retries instead of starting duplicate requests.
+- With `<Suspense>`, the nearest fallback renders. Without it, React 19 streaming SSR waits at the
+  root.
+- Initial errors are thrown to the nearest error boundary.
+- If `enabled` or `dependsOn` blocks execution, the selector returns the current initial state
+  without throwing.
+- The `queryFn` must work in every environment where the Client Component renders, including the
+  Next.js server-rendered pass when used for SSR.
+- Promise- or value-returning single and infinite queries are supported, including `local.query()`
+  and `local.infinite()` adapters. Local storage reconciliation waits until commit. Realtime
+  queries and async-iterable fetchers are not supported.
+
+Use `.load(arg)` instead when the component must commit and render `isLoading` itself.
 
 ### .query(arg?, options?)
 
@@ -315,7 +342,9 @@ await this.model.trending.previousFetch()
 
 ```
 query() defined in model
-  -> selector .load(arg) after commit OR action .query(arg)
+  -> selector .load(arg) after commit
+  -> selector .suspend(arg) during render
+  -> action .query(arg) imperatively
     -> queryFn executes, data loaded
     -> cache entry created with key = serialized arg
     -> within staleTime -> cached data returned, no fetch
@@ -418,11 +447,21 @@ if (posts.isLoading) return <Skeleton />
 if (posts.isError) return <p>Error: {posts.error}</p>
 ```
 
-## Server Suspense fallback guidance
+## Next.js server rendering
 
-For App Router streaming with server-owned detail fetching, prefer a standalone `local()` resource.
-The fallback calls `restore(routeArg)`, which checks only the exact IndexedDB view and never starts
-an API request or suspends. The resolved server branch calls an ordinary
-`resource.set(serverData, { arg: routeArg })` action through `useHydrate()` after commit. See the
-local reference for the full pattern. Ordinary query fields may still be read passively, but their
-active value must already be known to match the current route.
+Use `.suspend(routeArg)` when a Client Component's server-rendered output depends on the query:
+
+```tsx
+function ProductDetail({ id }: { id: string }) {
+  const detail = useProduct((state) => state.detail.suspend({ id }))
+  if (!detail.data) return <NotFound />
+  return <ProductView product={detail.data} />
+}
+```
+
+The serialized argument isolates route entries and deduplicates retries. An explicit `<Suspense>`
+streams a fallback; without one, React 19 streaming SSR blocks at the root until the Promise
+settles. Server and browser runtimes do not share the in-memory query cache, so browser hydration
+may run `queryFn` again. Legacy `renderToString()` and framework-specific cache rules are outside
+this contract. Do not initialize the same store by invoking a mutating action during render, even
+through deprecated `silent()`.

@@ -18,7 +18,7 @@ state/{domain}/
   ├── actions/
   │   ├── crud.ts       # CRUD operations
   │   ├── load.ts       # Data fetching via query()
-  │   ├── init.ts       # Server-data actions used by useHydrate()
+  │   ├── init.ts       # Optional imperative initialization
   │   └── ...           # One file per concern
   └── index.ts          # create() hook + re-exports
 ```
@@ -46,9 +46,9 @@ import { Query } from '@comwit/state'
 export type Post = { id: string; title: string; body: string }
 
 export type PostState = {
-  posts: Query<Post[]> // client-fetched data
+  posts: Query<Post[]> // keyed query data
   comments: Query<Comment[], string> // second generic = queryFn arg type
-  current: Post | null // SSR-hydrated data
+  current: Query<Post | null, string> // use suspend(slug) when SSR must wait
 }
 
 export type PostActions = {
@@ -59,11 +59,13 @@ export type PostActions = {
 }
 ```
 
-- `Query<Data>` for client-fetched fields — provides `.data`, `.isLoading`, `.isError`, `.error`
+- `Query<Data>` for keyed query fields — provides `.data`, `.isLoading`, `.isError`, `.error`
 - `Query<Data, Arg>` — second generic is the `queryFn` parameter type
-- Plain types for SSR-hydrated or local state
+- Plain types for client-owned state
 
-For view-owned requests, components can call `s.posts.load(arg)` directly in the existing domain hook selector. Keep a `loadPosts()` action when fetching is part of a command, multi-query sequence, preload, or user event. No additional hook is needed.
+For view-owned requests, call `s.posts.load(arg)` for non-suspending client loading or
+`s.posts.suspend(arg)` when server rendering must wait for the query. Keep a `loadPosts()` action
+when fetching is part of a command, multi-query sequence, preload, or user event.
 
 ## Cross-domain access
 

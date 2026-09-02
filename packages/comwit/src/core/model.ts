@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from 'react'
 import { createProxy, snapshot, subscribe } from './proxy'
 import { getPlugins, type PluginBag } from './plugin'
 import { useStoreRegistry } from './provider'
@@ -15,7 +22,9 @@ import {
 } from './history'
 import { bindResourceState } from './query/bind'
 import {
+  commitQuerySelectorSuspenseLoads,
   createQuerySelectorState,
+  prepareQuerySelectorSuspense,
   querySelectorLoadKey,
   runQuerySelectorLoads,
   type QuerySelectorLoad,
@@ -27,6 +36,8 @@ import type {
   ResourceDescriptorMap,
   SelectableResourceState,
 } from './query/types'
+
+const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 export type StoreEntry<T extends object = any> = {
   proxy: T
@@ -305,12 +316,22 @@ export function useModel<T extends object, R>(
   }, [queryBag, queryController, queryRegistry, store])
 
   const result = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
-  const selectorLoadKey = querySelectorLoadKey(queryLoadsRef.current)
+  const queryLoads = queryLoadsRef.current
+  const selectorLoadKey = querySelectorLoadKey(queryLoads)
+
+  useCommitEffect(() => {
+    if (!queryRegistry || queryLoads.length === 0) return
+    commitQuerySelectorSuspenseLoads(queryLoads, queryRegistry)
+  }, [queryRegistry, selectorLoadKey])
 
   useEffect(() => {
-    if (!queryRegistry || queryLoadsRef.current.length === 0) return
-    runQuerySelectorLoads(queryLoadsRef.current, queryRegistry)
+    if (!queryRegistry || queryLoads.length === 0) return
+    runQuerySelectorLoads(queryLoads, queryRegistry)
   }, [queryRegistry, selectorLoadKey])
+
+  if (queryRegistry) {
+    prepareQuerySelectorSuspense(queryLoads, queryRegistry)
+  }
 
   // Run plugin onRender hooks
   const plugins = getPlugins()

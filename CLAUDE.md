@@ -48,7 +48,8 @@ yarn format:check                   # CI check
 
 - **provider.tsx** — `<ComwitProvider>` creates a React context holding a `StoreRegistry` (Map of Model → StoreEntry), shared `queryDefaults`, `queryBinding` registry, and user-provided `context` object.
 
-- **silent.ts** — `silent(() => { ... })` suppresses re-render notifications during mutations (for SSR/hydration).
+- **silent.ts** — Deprecated synchronous subscriber-notification suppression. It does not make
+  render-time external-store mutations safe; selector `.suspend(arg)` is the SSR query path.
 
 ### Interceptors (`packages/comwit/src/interceptors/`)
 

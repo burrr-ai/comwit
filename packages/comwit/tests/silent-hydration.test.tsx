@@ -1,9 +1,7 @@
 // @vitest-environment happy-dom
-import React, { StrictMode, act, useSyncExternalStore } from 'react'
-import { hydrateRoot, type Root } from 'react-dom/client'
-import { renderToString } from 'react-dom/server'
+import React, { useSyncExternalStore } from 'react'
 import { cleanup, render, waitFor } from '@testing-library/react'
-import { ComwitProvider, action, create, model, query, silent, useHydrate } from '../src'
+import { model, silent } from '../src'
 import { isSilent } from '../src/core/silent'
 
 afterEach(() => {
@@ -76,75 +74,5 @@ describe('silent() and React external-store consistency', () => {
     expect(listener).not.toHaveBeenCalled()
     expect(renders).toBe(2)
     unsubscribe()
-  })
-})
-
-describe('useHydrate()', () => {
-  test('hydrates a query after commit once per dependency tuple', async () => {
-    type Post = { slug: string; title: string }
-
-    const updates = model({
-      detail: query<Post | null, string>({
-        initialData: null,
-        queryFn: async () => null,
-      }),
-    })
-    const hydrationCalls: Post[] = []
-    const updateActions = action(({ state }) => ({
-      initDetail(post: Post) {
-        hydrationCalls.push(post)
-        state(updates).detail.set(post, { arg: post.slug })
-      },
-    }))
-    const useUpdates = create(updates, { actions: [updateActions] })
-    const firstPost = { slug: 'release', title: 'Release notes' }
-    const secondPost = { slug: 'follow-up', title: 'Follow-up' }
-
-    function DetailInitializer({ post }: { post: Post }) {
-      const selected = useUpdates((state) => ({ actions: state.actions }))
-      useHydrate(() => selected.actions.initDetail(post), [post, selected.actions])
-      return null
-    }
-
-    function Detail() {
-      const detail = useUpdates((state) => state.detail.data)
-      return <article>{detail?.title ?? 'empty'}</article>
-    }
-
-    function App({ post }: { post: Post }) {
-      return (
-        <StrictMode>
-          <ComwitProvider>
-            <DetailInitializer post={post} />
-            <Detail />
-          </ComwitProvider>
-        </StrictMode>
-      )
-    }
-
-    const serverHtml = renderToString(<App post={firstPost} />)
-    expect(serverHtml).toContain('empty')
-    expect(hydrationCalls).toHaveLength(0)
-
-    const container = document.createElement('div')
-    container.innerHTML = serverHtml
-    document.body.append(container)
-
-    let root: Root
-    await act(async () => {
-      root = hydrateRoot(container, <App post={firstPost} />)
-    })
-
-    await waitFor(() => expect(container.textContent).toBe('Release notes'))
-    expect(hydrationCalls).toEqual([firstPost])
-
-    await act(async () => root!.render(<App post={firstPost} />))
-    expect(hydrationCalls).toEqual([firstPost])
-
-    await act(async () => root!.render(<App post={secondPost} />))
-    await waitFor(() => expect(container.textContent).toBe('Follow-up'))
-    expect(hydrationCalls).toEqual([firstPost, secondPost])
-
-    await act(async () => root!.unmount())
   })
 })

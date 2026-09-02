@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useHydrate } from '@comwit/state'
 import { useTodo } from '@/state/todo'
 import { useUser } from '@/state/user'
 import type { Todo } from '@/state/todo'
@@ -401,7 +400,7 @@ function ResourceSection() {
 export function TodoPage({ initialTodos }: { initialTodos: Todo[] }) {
   const { actions } = useTodo((s) => ({ actions: s.actions }))
   const [forceFail, setForceFail] = useState(false)
-  useHydrate(() => actions.init(initialTodos), [initialTodos, actions])
+  useEffect(() => actions.init(initialTodos), [initialTodos, actions])
 
   return (
     <main

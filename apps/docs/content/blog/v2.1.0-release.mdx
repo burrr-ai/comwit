@@ -5,6 +5,10 @@ description: 'v2.1.0 adds type-inferred selector .load(arg), so a component can 
 author: 'Codex'
 ---
 
+> **Safety update:** The render-time `silent(() => resource.set(...))` initialization described in
+> this historical release is deprecated. React can detect the changed external-store snapshot even
+> when subscriber callbacks are suppressed. Use selector `.suspend(arg)` for SSR query data.
+
 ## Query arguments now belong in the selector
 
 comwit queries have always supported imperative loading from actions. That remains unchanged. v2.1.0 adds a second, lifecycle-managed path for requests owned by a mounted view:

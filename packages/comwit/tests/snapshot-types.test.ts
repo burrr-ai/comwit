@@ -118,8 +118,13 @@ test('selector load infers query arguments from the model', () => {
   expectTypeOf<Parameters<CatalogState['list']['load']>>().toEqualTypeOf<
     [{ page: number; filter?: string }]
   >()
+  expectTypeOf<Parameters<CatalogState['list']['suspend']>>().toEqualTypeOf<
+    [{ page: number; filter?: string }]
+  >()
   expectTypeOf<Parameters<CatalogState['total']['load']>>().toEqualTypeOf<[]>()
+  expectTypeOf<Parameters<CatalogState['total']['suspend']>>().toEqualTypeOf<[]>()
   expectTypeOf<ReturnType<CatalogState['list']['load']>['data']>().toEqualTypeOf<string[]>()
+  expectTypeOf<ReturnType<CatalogState['list']['suspend']>['data']>().toEqualTypeOf<string[]>()
 })
 
 const selectorModel = model({
@@ -133,18 +138,28 @@ const useSelectorModel = create(selectorModel, { actions: [] })
 
 function selectorLoadTypeContract() {
   useModel(selectorModel, (state) => state.list.load({ page: 1 }).data)
+  useModel(selectorModel, (state) => state.list.suspend({ page: 1 }).data)
   useSelectorModel((state) => state.total.load().data)
+  useSelectorModel((state) => state.total.suspend().data)
 
   // @ts-expect-error argument queries require their inferred argument
   useModel(selectorModel, (state) => state.list.load())
+  // @ts-expect-error argument queries require their inferred argument
+  useModel(selectorModel, (state) => state.list.suspend())
   // @ts-expect-error no-argument queries do not accept an argument
   useSelectorModel((state) => state.total.load({ page: 1 }))
+  // @ts-expect-error no-argument queries do not accept an argument
+  useSelectorModel((state) => state.total.suspend({ page: 1 }))
 
   // `.load()` is collected only while a selector executes.
   // @ts-expect-error the selector-less result is passive
   useModel(selectorModel).list.load({ page: 1 })
+  // @ts-expect-error the selector-less result is passive
+  useModel(selectorModel).list.suspend({ page: 1 })
   // @ts-expect-error the selector-less domain hook result is passive
   useSelectorModel().total.load()
+  // @ts-expect-error the selector-less domain hook result is passive
+  useSelectorModel().total.suspend()
 }
 
 void selectorLoadTypeContract

@@ -1,24 +1,21 @@
-/**
- * Suppress state change notifications within a synchronous callback scope.
- * Nested calls keep the outer scope active until it completes.
- *
- * @example
- * ```ts
- * import { silent } from '@comwit/state'
- *
- * silent(() => {
- *   model.todos = serverData.todos
- * })
- * ```
- */
 let silentDepth = 0
 
-type Synchronous<T extends () => unknown> = ReturnType<T> extends PromiseLike<unknown> ? never : T
+type Synchronous<T extends () => unknown> =
+  Extract<ReturnType<T>, PromiseLike<unknown>> extends never ? T : never
 
-export function silent<T extends () => unknown>(fn: Synchronous<T>): ReturnType<T> {
+/**
+ * Suppress subscriber notifications within a synchronous callback scope.
+ * Nested calls keep the outer scope active until it completes.
+ *
+ * @deprecated `silent()` cannot suppress React external-store snapshot checks
+ * and is unsafe for render-time initialization. Prefer `suspend()` for
+ * render-blocking queries or ordinary actions after commit.
+ */
+export function silent<T extends () => unknown>(fn: Synchronous<T>): void {
   silentDepth++
   try {
-    return (fn as T)() as ReturnType<T>
+    const callback = fn as T
+    callback()
   } finally {
     silentDepth--
   }

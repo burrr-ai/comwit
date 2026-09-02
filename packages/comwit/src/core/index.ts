@@ -2,7 +2,6 @@ import { model, Model, useModel, type ModelOptions, type ValidationState } from 
 import { action, ActionFactory, useAction } from './action'
 import { ComwitProvider, type RegistryDefaults } from './provider'
 import { silent } from './silent'
-import { useHydrate } from './hydrate'
 import { snapshot, isProxy, type Snapshotable } from './proxy'
 import {
   keepPreviousData,
@@ -87,7 +86,6 @@ export {
   useModel,
   create,
   silent,
-  useHydrate,
   ComwitProvider,
   query,
   local,

@@ -7,15 +7,15 @@ order: 6
 
 # query()
 
-Declares a client-side data fetching field inside a model.
+Declares a data-fetching field inside a model.
 
 ```ts
 import { query } from '@comwit/state'
 ```
 
 Use [`local.query()`](/docs/api/local) when the exact argument should restore from IndexedDB before
-stale data revalidates in the background. Standalone `local()` is available when a server component
-or action owns remote loading.
+stale data revalidates in the background. Standalone `local()` is available for exact IndexedDB
+restore without a query function.
 
 ## Basic usage
 
@@ -43,7 +43,14 @@ export type PostState = {
 
 ## Load from a selector
 
-Inside `useModel()` or a hook created by `create()`, call `.load(arg)` on the query field to declare that this component needs that query:
+Inside `useModel()` or a hook created by `create()`, choose one of two selector methods:
+
+- `.load(arg)` is non-suspending. It reports loading state immediately and starts the request after
+  commit.
+- `.suspend(arg)` is Suspense-native. It starts or reuses a keyed Promise during render and throws
+  while that Promise is pending.
+
+Use `.load(arg)` when the component renders its own loading state:
 
 ```tsx
 const list = useProduct((state) => state.products.load({ page, filter }))
@@ -73,13 +80,34 @@ const cached = useDashboard((state) => state.list) // passive read
 
 Existing effect-driven actions remain supported. Use selector `load` when the request belongs to the mounted view; use action `.query()` when loading is part of a command, sequence, preload, or user event.
 
+Use `.suspend(arg)` when server rendering should wait for the data:
+
+```tsx
+function ProductDetail({ slug }: { slug: string }) {
+  const detail = useProduct((state) => state.detail.suspend(slug))
+  if (!detail.data) return <NotFound />
+  return <ProductView product={detail.data} />
+}
+```
+
+The query Promise is cached by its serialized argument before React suspends, so retries reuse the
+same work. A surrounding `<Suspense>` streams its fallback. Without an explicit boundary, the
+React 19 streaming server renderer waits at the root and retries when the Promise settles. Errors
+propagate to the nearest error boundary.
+
+During browser mounting or hydration, place that boundary below `ComwitProvider`. If the client
+root suspends before the Provider commits, React can discard its provider-scoped cache and restart
+the query.
+
 ## Methods
 
-Inside React selectors, a query exposes `.load(arg?)` and returns its query state. Once accessed via `state()` in an action, it exposes these imperative methods:
+Inside React selectors, a query exposes `.load(arg?)` and `.suspend(arg?)`. Once accessed via
+`state()` in an action, it exposes these imperative methods:
 
 | Method                 | Where    | Description                                                                       |
 | ---------------------- | -------- | --------------------------------------------------------------------------------- |
-| `.load(arg?)`          | Selector | Declare the query for this mounted component and return its state.                |
+| `.load(arg?)`          | Selector | Non-suspending load; starts after commit and returns loading state.               |
+| `.suspend(arg?)`       | Selector | Start during render and suspend until the keyed query settles.                    |
 | `.query(arg?)`         | Action   | Fetch data. Respects staleTime — skips if data is fresh.                          |
 | `.refetch()`           | Action   | Force re-fetch with the last used argument.                                       |
 | `.set(data, { arg }?)` | Action   | Manually set data and mark success; `arg` establishes an exact resource identity. |
@@ -108,7 +136,7 @@ Pass options at the query definition or globally via `ComwitProvider`:
 | `enabled`         | `(state) => boolean` — skip query when condition is false                                        |
 | `dependsOn`       | `(state) => any` — block query until dependency is truthy/resolved                               |
 | `refetchInterval` | `number \| false \| (data, error?) => number \| false` — auto-poll interval                      |
-| `suspense`        | `boolean` — enable React Suspense integration                                                    |
+| `suspense`        | **Deprecated.** Use selector `.suspend(arg)` instead.                                            |
 
 ## queryFn context
 
@@ -340,71 +368,65 @@ Set `refetchInterval: false` to disable polling.
 
 ---
 
-## Suspense
+## SSR and Suspense
 
-Integrate with React `<Suspense>` boundaries. The component suspends on initial load and renders once data is available.
-
-```ts
-import { query } from '@comwit/state'
-import type { Query } from '@comwit/state'
-
-// types.ts
-type PostState = {
-  posts: Query.Suspense<Post[]>
-}
-
-// model.ts
-const post = model<PostState>({
-  posts: query<Post[]>({
-    initialData: [],
-    queryFn: () => api.post.findAll(),
-    suspense: true,
-  }),
-})
-```
+`suspend()` is the explicit blocking read. It prepares the key-scoped query Promise during render,
+stores it before suspension, and reuses it on every retry:
 
 ```tsx
-// component.tsx
 function PostList() {
-  const posts = usePost((s) => s.posts.data)
-  // data is guaranteed non-null here — Suspense handles the loading state
-  return posts.map((p) => <div key={p.id}>{p.title}</div>)
-}
-
-function Page() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <PostList />
-    </Suspense>
-  )
+  const posts = usePost((state) => state.posts.suspend())
+  return posts.data.map((post) => <PostCard key={post.id} post={post} />)
 }
 ```
 
-### Behavior
+```text
+Client Component server render calls suspend(arg)
+  → cache miss: store queryFn Promise under the serialized arg
+  → throw the same Promise; Suspense boundary or React root waits
+  → Promise resolves into a staged cache entry
+  → React retries; selector reads the resolved entry
+  → commit activates it for ordinary client mutations and refetches
+```
 
-- Initial `.query()` call suspends (throws a Promise for React to catch)
-- `refetch()` does **not** suspend — uses background fetching with `isFetching`
-- Errors are thrown to the nearest `ErrorBoundary`
-- Use `Query.Suspense<T>` or `Query.SuspenseInfinite<T>` for correct typing (`data` is `NonNullable`)
+Preparing a new key does not mutate the currently active observable resource. If React abandons a
+route render, the previously committed screen therefore keeps its own value. An already committed
+key remains visible and any freshness revalidation starts after commit. This uses the existing
+Provider registry; models still initialize lazily when their domain hook is rendered.
 
-For App Router server streaming where the server owns the detail request, prefer a standalone
-[`local()`](/docs/api/local) resource. Its client fallback calls `restore({ id })`, which checks only
-the exact IndexedDB view and does not issue another API request. The resolved server branch writes
-the exact value from `useHydrate()` after the Client Component commits.
+Choose the user experience with the React tree:
 
 ```tsx
-function ProductFallback({ id }: { id: string }) {
-  const detail = useProduct((state) => state.detail.restore({ id }))
-  return detail.data ? <ProductView product={detail.data} /> : <ProductSkeleton />
-}
+// Streams the fallback while the query is pending.
+<Suspense fallback={<PostSkeleton />}>
+  <PostList />
+</Suspense>
 
-function ProductInit({ id, product }: { id: string; product: Product }) {
-  const actions = useProduct((state) => state.actions)
-  useHydrate(() => actions.init(id, product), [id, product, actions])
-  return <ProductView product={product} />
-}
+// With no explicit boundary, React 19 streaming SSR waits at the root.
+<PostList />
 ```
 
-If no exact value exists or restoration is pending, the fallback stays a skeleton. A server
-initializer wins over an older IndexedDB read that is still pending. The `init` action uses ordinary
-`.set(product, { arg: { id } })`; do not wrap it in `silent()`.
+On the server-rendered pass of a Next.js Client Component, `suspend()` starts the query before its
+subtree commits. Server and browser runtimes do not share this in-memory cache, so the browser may
+run the query again while hydrating. Within each runtime, the serialized argument deduplicates the
+work. The `queryFn` must therefore be safe in every environment where that Client Component
+renders. Legacy `renderToString()` and framework-specific cache rules are outside this contract.
+
+Successful data is returned on retry. A rejected initial query throws its error to the nearest
+error boundary. A later `refetch()` keeps successful data visible and uses `isFetching`; it does
+not suspend again. If `enabled` or `dependsOn` blocks the request, `.suspend()` returns the current
+initial state without throwing.
+
+`.suspend()` supports promise- or value-returning `query()` and `query.infinite()` fetchers.
+`local.query()` and `local.infinite()` also stage the remote result and defer their storage
+lifecycle until commit. Realtime queries and async-iterable streaming fetchers are not supported by
+this render path.
+
+The descriptor option `suspense: true` and the `Query.Suspense*` aliases remain only for backward
+compatibility and are deprecated. They retain legacy behavior until removed. New code omits the
+option, uses `.load()` for the non-suspending path, and selects `.suspend()` at the call site when
+React should wait.
+
+Do not call a mutating action from a render body to initialize the same store, even if it uses
+`silent()`. Subscriber suppression cannot disable React's external-store snapshot consistency
+checks.

@@ -5,62 +5,47 @@ slug: 'api/silent'
 order: 8
 ---
 
-# silent()
+# silent() (deprecated)
 
-Suppresses subscriber notifications during synchronous state mutations.
+> Deprecated. Do not use `silent()` for new code.
+
+`silent()` suppresses subscriber notifications during synchronous state mutations. It does not
+freeze the external-store snapshot React reads.
 
 ```ts
 import { silent } from '@comwit/state'
 ```
 
-## Usage
+## Why it is deprecated
 
-Use `silent()` when a synchronous internal update must not notify React or other model subscribers.
-Nested calls keep the outer silent scope active.
-
-```ts
-silent(() => {
-  model.primary = nextPrimary
-  silent(() => {
-    model.secondary = nextSecondary
-  })
-})
-```
-
-The callback must be synchronous. An `async` callback cannot remain request-local across `await`
-boundaries, so TypeScript rejects Promise-returning callbacks.
-
-## Not for render-time hydration
-
-Do not call an action that mutates a model from a component's render body, even when the action uses
-`silent()`. React's `useSyncExternalStore` checks snapshots independently of subscriber
-notifications. If the snapshot changes during render, React may discard and retry the uncommitted
-tree.
+React's `useSyncExternalStore` compares snapshots before commit even when no listener fires. A
+render-time mutation can therefore invalidate and restart the render tree indefinitely:
 
 ```tsx
-// Incorrect
-function PostInit({ initialPost }: { initialPost: Post }) {
+// Do not do this.
+function PostInit({ post }: { post: Post }) {
   const actions = usePost((state) => state.actions)
-  actions.init(initialPost)
+  actions.init(post) // silent() inside init does not make this render-safe
   return null
 }
 ```
 
-Use [`useHydrate()`](/docs/api/hydrate) to schedule server-provided state after React commits:
+Use ordinary reactive actions for user events and imperative workflows. For a query that must
+finish during SSR, use [`.suspend()`](/docs/api/query) in the selector:
 
 ```tsx
-function PostInit({ initialPost }: { initialPost: Post }) {
-  const actions = usePost((state) => state.actions)
-  useHydrate(() => actions.init(initialPost), [initialPost, actions])
-  return null
+function PostPage({ slug }: { slug: string }) {
+  const detail = usePost((state) => state.detail.suspend(slug))
+  if (!detail.data) return <NotFound />
+  return <PostView post={detail.data} />
 }
 ```
 
-The hydration action should perform ordinary mutations without `silent()`. This lets mounted
-consumers observe the committed update.
+`.suspend()` caches the query Promise by argument before suspending. With a surrounding
+`<Suspense>`, React renders its fallback; without one, React 19 streaming SSR waits at the root.
 
-## How it works
+## Legacy behavior
 
-`silent(fn)` increments a synchronous scope depth while `fn` runs. Model mutations still happen,
-but subscriber callbacks are skipped until the outermost scope exits. Snapshot versions still
-change, which is why `silent()` cannot make render-time external-store mutations safe.
+Existing synchronous calls remain supported for compatibility, including nested calls. Async
+callbacks are not supported. Prefer normal mutations so mounted consumers observe every committed
+change.

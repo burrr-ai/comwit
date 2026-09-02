@@ -54,7 +54,8 @@ const { posts } = usePost((s) => ({ posts: s.posts }))
 
 ## Reading query fields
 
-Call `.load(arg)` in the selector when the mounted component owns the request. It returns the query state and makes the first render loading-aware:
+Call `.load(arg)` in the selector when the mounted component owns a non-suspending request. It
+returns loading state immediately and starts the query after commit:
 
 ```tsx
 const posts = usePost((s) => s.posts.load({ page }))
@@ -65,6 +66,17 @@ return posts.data.map((post) => <Card key={post.id} post={post} />)
 ```
 
 Selecting `s.posts` without `.load(...)` only observes existing state; it does not fetch. Existing action-driven loading remains valid for commands and coordinated workflows.
+
+Call `.suspend(arg)` when rendering must wait for the keyed query:
+
+```tsx
+const post = usePost((s) => s.detail.suspend(slug))
+if (!post.data) return <NotFound />
+return <PostDetail post={post.data} />
+```
+
+`.suspend()` starts or reuses the query Promise during render. A `<Suspense>` ancestor shows its
+fallback; with no explicit boundary, React 19 streaming SSR waits at the root.
 
 ## Calling actions
 
@@ -78,4 +90,5 @@ useEffect(() => {
 }, [])
 ```
 
-The effect pattern is backward compatible. Prefer selector `.load(...)` for a request whose argument already comes from render props or route state, because the query key is known during the first render and no empty state flashes before the effect.
+The effect pattern is backward compatible. Prefer selector `.load(...)` when the view wants to
+render `isLoading`; prefer `.suspend(...)` when the tree should not commit before data is ready.

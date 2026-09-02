@@ -101,10 +101,10 @@ independent view key and freshness while canonical entity fields fan out between
 The `arg` passed to `restore`, `set`, or `remove` is the durable identity. Always pass a route ID for
 a detail resource so another route's active value cannot appear under the current URL.
 
-## Next.js App Router SEO and Suspense fallback
+## Next.js exact cached fallback
 
-For SEO, fetch detail in the server component. Its client fallback does not make another API call:
-it restores the exact local view and shows cached content only when present.
+Standalone `local()` never starts an API request. A client fallback can restore an exact local view
+and show cached content only when present:
 
 ```tsx
 'use client'
@@ -116,37 +116,20 @@ function ProductFallback({ id }: { id: string }) {
 }
 ```
 
-When the server branch resolves, initialize the same exact view after the Client Component commits:
-
-```ts
-initDetail(id: string, value: ProductDetail) {
-  this.model.detail.set(value, { arg: { id } })
-}
-```
+For state-backed data that must block server rendering, `local.query()` and `local.infinite()` expose
+`.suspend(arg)`. The remote result is staged during render; IndexedDB reconciliation, persistence,
+and entity fanout run only after commit. Standalone `local()` does not expose `.suspend()`. Do not
+call a mutating action during render, including one wrapped in deprecated `silent()`.
 
 ```tsx
-function ProductInit({ id, value }: { id: string; value: ProductDetail }) {
-  const actions = useProduct((state) => state.actions)
-  useHydrate(() => actions.initDetail(id, value), [id, value, actions])
-  return <ProductView product={value} />
-}
-```
-
-`useHydrate()` runs after commit and avoids mutating an external store during render. The server
-value updates IndexedDB and canonical list rows. If an older IndexedDB restore is still pending, it
-is discarded and cannot overwrite the server result.
-
-```text
-server detail fetch starts
-  ├─ fallback restore({ id }): exact hit → cached detail; miss/pending → skeleton
-  └─ server resolves: commit-phase useHydrate(detail.set(value, { arg: { id } }))
-                       → canonical fanout + IndexedDB commit
+const detail = useProduct((state) => state.detail.suspend({ id }))
 ```
 
 ## Query-backed local resources
 
 Use `local.query()` where a mounted client view owns remote loading. Its public interface is the
-ordinary query interface: `.load()`, `.query()`, `.refetch()`, `.set()`, and the same status fields.
+ordinary query interface: `.load()`, `.suspend()`, `.query()`, `.refetch()`, `.set()`, and the same
+status fields.
 
 ```ts
 list: local.query<ProductListItem[], ProductFilter>({

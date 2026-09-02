@@ -48,8 +48,10 @@ export const postActions = action<Pick<PostActions, 'init' | 'loadPosts' | 'crea
 )
 ```
 
-When `init` receives Server Component data, call it with [`useHydrate()`](/docs/api/hydrate).
-Do not call a mutating action directly during render.
+Do not call a mutating action directly during render. For data that must resolve during server
+rendering, model it as a [`query()`](/docs/api/query) and call `.suspend(arg)` from the consuming
+selector. Actions remain the right place for user events, imperative preloads, and coordinated
+workflows.
 
 ## Factory parameters
 

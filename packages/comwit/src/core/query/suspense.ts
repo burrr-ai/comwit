@@ -8,6 +8,8 @@ export function checkSuspense(
   resourceDescriptors: ResourceDescriptorMap,
   registry: QueryBindingRegistry
 ): void {
+  // Backward compatibility for the deprecated descriptor-level
+  // `suspense: true` behavior.
   for (const [path, descriptor] of resourceDescriptors) {
     if (!descriptor.suspense) continue
 
