@@ -22,7 +22,7 @@ https://library.comwit.io/llms.txt
 
 Pass the URL to Claude Code. It handles the rest.
 
-## Durable on-demand queries (2.2 beta)
+## Durable on-demand queries
 
 ```ts
 const todos = local.collection<Todo>({ key: 'todos', version: 1 })

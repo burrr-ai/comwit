@@ -23,8 +23,8 @@ https://library.comwit.io/llms.txt
 
 Pass the URL to Claude Code. It handles the rest.
 
-The `2.2` beta adds normalized IndexedDB-backed standalone resources through `local()`, plus
-query-backed revalidation through [`local.query()` and `local.infinite()`](https://library.comwit.io/docs/api/local).
+Normalized IndexedDB-backed standalone resources are available through `local()`, with query-backed
+revalidation through [`local.query()` and `local.infinite()`](https://library.comwit.io/docs/api/local).
 
 Queries use `.load()` for ordinary non-suspending, effect-driven fetching. Resolved data fetched by
 a Server Component can initialize the provider-scoped query cache before the first passive read:
