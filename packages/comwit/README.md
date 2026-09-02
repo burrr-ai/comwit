@@ -22,7 +22,7 @@ https://library.comwit.io/llms.txt
 
 Pass the URL to Claude Code. It handles the rest.
 
-## Durable on-demand queries (2.2 beta)
+## Durable on-demand queries
 
 ```ts
 const todos = local.collection<Todo>({ key: 'todos', version: 1 })
@@ -40,8 +40,34 @@ const todo = model({
 })
 ```
 
-`local()` restores an exact IndexedDB view without making an API request, which fits server-owned
-SEO details. `local.query()` and `local.infinite()` add background server revalidation while keeping
-the existing `.load()`, `.query()`, `.refetch()`, `.set()`, and optimistic mutation interfaces.
+`local()` restores an exact IndexedDB view without making an API request. `local.query()` and
+`local.infinite()` add background server revalidation while keeping the `.load()`, `.query()`,
+`.refetch()`, `.set()`, and optimistic mutation interfaces.
 
 [Read the local resource reference](https://library.comwit.io/docs/api/local).
+
+## Loading and hydrating queries
+
+Use `.load()` when the mounted client component owns the request:
+
+```tsx
+// Non-suspending: reports loading state, then starts after commit.
+const list = usePost((state) => state.posts.load(filter))
+
+// Server Component result: initialize cache, then read passively.
+usePost.hydrate({ detail: { arg: slug, data: initialDetail } })
+const detail = usePost((state) => state.detail.data)
+```
+
+The Server Component awaits its server function and passes the resolved seed only to a small client
+route adapter. `hydrate()` initializes a complete success entry before the following domain hook
+reads its first external-store snapshot. It returns nothing, never calls `queryFn`, and ignores
+repeated equivalent values. A later value for an observed entry is applied in the requesting
+render's layout commit, so an abandoned transition cannot tear the current screen.
+
+Selector `.suspend(arg)` is experimental. It is intended only for query functions that may execute
+during render in every runtime; it does not accept a Promise or initial-data override. Next.js
+Server Functions must instead run in a Server Component and use `hydrate()` as above.
+
+Do not initialize state by calling a mutating action during render, even through `silent()`.
+`silent()` is deprecated and cannot suppress React's external-store snapshot checks.

@@ -1,4 +1,11 @@
-import { model, Model, useModel, type ModelOptions, type ValidationState } from './model'
+import {
+  model,
+  Model,
+  useHydrateModel,
+  useModel,
+  type ModelOptions,
+  type ValidationState,
+} from './model'
 import { action, ActionFactory, useAction } from './action'
 import { ComwitProvider, type RegistryDefaults } from './provider'
 import { silent } from './silent'
@@ -8,6 +15,7 @@ import {
   PlaceholderData,
   Query,
   QueryDefaultOptions,
+  QueryHydrationEntries,
   QueryQueryOptions,
   SelectableResourceState,
   query,
@@ -76,7 +84,11 @@ function create<S extends object, A>(
     return useModel(m, finalSelector)
   }
 
-  return useStore
+  function useHydrate(entries: QueryHydrationEntries<S> | null | undefined): void {
+    useHydrateModel(m, entries)
+  }
+
+  return Object.assign(useStore, { hydrate: useHydrate })
 }
 
 export {
@@ -102,6 +114,7 @@ export type {
   PlaceholderData,
   QueryDefaultOptions,
   QueryQueryOptions,
+  QueryHydrationEntries,
   SelectableResourceState,
   RegistryDefaults,
   ModelOptions,

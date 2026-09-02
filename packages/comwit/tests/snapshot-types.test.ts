@@ -118,8 +118,13 @@ test('selector load infers query arguments from the model', () => {
   expectTypeOf<Parameters<CatalogState['list']['load']>>().toEqualTypeOf<
     [{ page: number; filter?: string }]
   >()
+  expectTypeOf<Parameters<CatalogState['list']['suspend']>>().toEqualTypeOf<
+    [{ page: number; filter?: string }]
+  >()
   expectTypeOf<Parameters<CatalogState['total']['load']>>().toEqualTypeOf<[]>()
+  expectTypeOf<Parameters<CatalogState['total']['suspend']>>().toEqualTypeOf<[]>()
   expectTypeOf<ReturnType<CatalogState['list']['load']>['data']>().toEqualTypeOf<string[]>()
+  expectTypeOf<ReturnType<CatalogState['list']['suspend']>['data']>().toEqualTypeOf<string[]>()
 })
 
 const selectorModel = model({
@@ -133,21 +138,85 @@ const useSelectorModel = create(selectorModel, { actions: [] })
 
 function selectorLoadTypeContract() {
   useModel(selectorModel, (state) => state.list.load({ page: 1 }).data)
+  useModel(selectorModel, (state) => state.list.suspend({ page: 1 }).data)
   useSelectorModel((state) => state.total.load().data)
+  useSelectorModel((state) => state.total.suspend().data)
 
   // @ts-expect-error argument queries require their inferred argument
   useModel(selectorModel, (state) => state.list.load())
+  // @ts-expect-error argument queries require their inferred argument
+  useModel(selectorModel, (state) => state.list.suspend())
   // @ts-expect-error no-argument queries do not accept an argument
   useSelectorModel((state) => state.total.load({ page: 1 }))
+  // @ts-expect-error no-argument queries do not accept an argument
+  useSelectorModel((state) => state.total.suspend({ page: 1 }))
 
   // `.load()` is collected only while a selector executes.
   // @ts-expect-error the selector-less result is passive
   useModel(selectorModel).list.load({ page: 1 })
+  // @ts-expect-error the selector-less result is passive
+  useModel(selectorModel).list.suspend({ page: 1 })
   // @ts-expect-error the selector-less domain hook result is passive
   useSelectorModel().total.load()
+  // @ts-expect-error the selector-less domain hook result is passive
+  useSelectorModel().total.suspend()
 }
 
 void selectorLoadTypeContract
+
+function hydrationTypeContract() {
+  useSelectorModel.hydrate({
+    list: { arg: { page: 1 }, data: ['one'] },
+    total: { data: 1 },
+  })
+  useSelectorModel.hydrate(null)
+  useSelectorModel.hydrate(undefined)
+
+  // @ts-expect-error argument queries require their inferred argument
+  useSelectorModel.hydrate({ list: { data: ['one'] } })
+  // @ts-expect-error hydration data is inferred from Query<TData, TArg>
+  useSelectorModel.hydrate({ list: { arg: { page: 1 }, data: [1] } })
+  // @ts-expect-error no-argument queries do not accept an argument
+  useSelectorModel.hydrate({ total: { arg: { page: 1 }, data: 1 } })
+  // @ts-expect-error plain model fields are not hydratable query entries
+  useSelectorModel.hydrate({ missing: { data: 1 } })
+
+  useSelectorModel((state) => state.list.suspend({ page: 1 }))
+  // @ts-expect-error experimental suspend owns its queryFn and accepts no Promise override
+  useSelectorModel((state) => state.list.suspend({ page: 1 }, Promise.resolve(['one'])))
+  // @ts-expect-error experimental suspend accepts no initialData options
+  useSelectorModel((state) => state.list.suspend({ page: 1 }, { initialData: ['one'] }))
+}
+
+void hydrationTypeContract
+
+const hydrationSource = local.collection<{ id: string }>({ key: 'hydrate-types', version: 1 })
+const hydrationModel = model({
+  nested: {
+    detail: local.query<{ id: string } | null, { id: string }>({
+      source: hydrationSource,
+      initialData: null,
+      queryFn: async ({ id }) => ({ id }),
+    }),
+  },
+  events: query.realtime<string[]>({
+    initialData: [],
+    queryFn: async () => [],
+    subscribe: () => () => {},
+  }),
+})
+const useHydrationModel = create(hydrationModel, { actions: [] })
+
+function nestedHydrationTypeContract() {
+  useHydrationModel.hydrate({
+    nested: { detail: { arg: { id: 'one' }, data: { id: 'one' } } },
+  })
+
+  // @ts-expect-error realtime resources cannot be hydrated with resolved query seeds
+  useHydrationModel.hydrate({ events: { data: [] } })
+}
+
+void nestedHydrationTypeContract
 
 test('standalone local resources expose restore in selectors and exact set in actions', () => {
   type Product = { id: string; title: string }

@@ -1,8 +1,12 @@
 import { snapshot } from '../proxy'
+import { isEqual } from '../../utils'
 import { DEFAULT_GC_TIME } from './registry'
 import {
   RESOURCE_LIFECYCLE,
+  RESOURCE_HYDRATE,
   RESOURCE_QUERY_OPTION_KEYS,
+  RESOURCE_SUSPEND_COMMIT,
+  RESOURCE_SUSPEND_PREPARE,
   type AnyResourceDescriptor,
   type ConnectionStatus,
   type InfiniteResourceDescriptor,
@@ -205,6 +209,22 @@ function applyCachedState(target: ResourceDataLike, cached: QueryCacheEntry) {
 
 function updateCachedState(entry: QueryCacheEntry, source: ResourceDataLike) {
   entry.state = snapshot(source) as ResourceDataLike
+}
+
+function deepFreezePlain<T>(value: T, seen = new WeakSet<object>()): T {
+  if (typeof value !== 'object' || value === null || seen.has(value)) return value
+  const prototype = Object.getPrototypeOf(value)
+  if (!Array.isArray(value) && prototype !== Object.prototype && prototype !== null) return value
+
+  seen.add(value)
+  for (const key of Reflect.ownKeys(value)) {
+    deepFreezePlain(Reflect.get(value, key), seen)
+  }
+  return Object.freeze(value)
+}
+
+function immutableResourceState(source: ResourceDataLike): ResourceDataLike {
+  return deepFreezePlain(structuredClone(source)) as ResourceDataLike
 }
 
 /**
@@ -770,6 +790,212 @@ export function createResourceAccessor(
     }
   }
 
+  /**
+   * Experimental: prepare an initial query for selector `.suspend()` without touching the
+   * observable resource proxy. Cache entries live outside the proxy, so a
+   * discarded concurrent render cannot leak a new active value into the
+   * currently committed screen.
+   */
+  const prepareSuspend = (
+    arg: unknown,
+    hasArg: boolean,
+    key: QueryCacheKey,
+    controller: object
+  ): Promise<unknown> | undefined => {
+    const queryArg = hasArg ? arg : undefined
+    let entry = runtime.cacheEntries.get(key)
+    if (!entry) {
+      entry = createCacheEntry(state, key, queryArg)
+      entry.state = immutableResourceState(descriptor.initialState)
+      runtime.cacheEntries.set(key, entry)
+    }
+    entry.arg = queryArg
+
+    if (entry.hasQueried) return
+    if (entry.suspendError) throw entry.suspendError
+    if (entry.suspendPromise) return entry.suspendPromise
+
+    // Reuse an effect/direct query that was already started for this exact
+    // controller and key. It began after a previous commit, so it is safe to
+    // observe from Suspense without creating a competing request.
+    const existingPromise = registry.selectorLoads.get(controller)?.get(key)
+    if (existingPromise) return existingPromise
+
+    if (descriptor.enabled && modelState && !descriptor.enabled(modelState)) return
+    if (descriptor.dependsOn && modelState) {
+      const dependency = descriptor.dependsOn(modelState)
+      if (
+        dependency && typeof dependency === 'object' && 'isSuccess' in dependency
+          ? !dependency.isSuccess
+          : dependency == null
+      ) {
+        return
+      }
+    }
+
+    const contextState = immutableResourceState(descriptor.initialState)
+
+    let result: unknown
+    let promise: Promise<unknown>
+    try {
+      if (descriptor.kind === 'single' || descriptor.kind === 'realtime') {
+        const typedDescriptor = descriptor as SingleResourceDescriptor<unknown, unknown>
+        result = typedDescriptor.queryFn(queryArg, {
+          state: contextState as Readonly<ResourceSingleState<unknown>>,
+        })
+      } else {
+        const typedDescriptor = descriptor as InfiniteResourceDescriptor<unknown, unknown>
+        result = typedDescriptor.queryFn(queryArg, {
+          state: contextState as Readonly<ResourceInfiniteState<unknown>>,
+        })
+      }
+
+      if (isAsyncIterable(result)) {
+        promise = Promise.reject(
+          new Error(`[comwit] .suspend() does not support streaming resource "${path}"`)
+        )
+      } else {
+        promise = Promise.resolve(result)
+      }
+    } catch (error) {
+      promise = Promise.reject(error)
+    }
+
+    entry.suspendPromise = promise
+    entry.suspendError = undefined
+    entry.suspendNeedsCommit = false
+
+    let pending = registry.selectorLoads.get(controller)
+    if (!pending) {
+      pending = new Map()
+      registry.selectorLoads.set(controller, pending)
+    }
+    pending.set(key, promise)
+
+    const stagedEntry = entry
+    promise.then(
+      (queryResult) => {
+        if (stagedEntry.suspendPromise !== promise) return
+
+        if (isAsyncIterable(queryResult)) {
+          stagedEntry.suspendPromise = undefined
+          stagedEntry.suspendError = new Error(
+            `[comwit] .suspend() does not support streaming resource "${path}"`
+          )
+          stagedEntry.state = immutableResourceState({
+            ...structuredClone(descriptor.initialState),
+            isLoading: false,
+            isFetching: false,
+            isSuccess: false,
+            isError: true,
+            error: stagedEntry.suspendError.message,
+          })
+          return
+        }
+
+        try {
+          const nextState = structuredClone(descriptor.initialState) as ResourceDataLike
+          mergeResult(nextState, queryResult, false)
+          nextState.isLoading = false
+          nextState.isFetching = false
+          nextState.isSuccess = true
+          nextState.isError = false
+          nextState.error = null
+
+          stagedEntry.state = immutableResourceState(nextState)
+          stagedEntry.hasQueried = true
+          stagedEntry.lastFetchedAt = Date.now()
+          stagedEntry.lastResult = queryResult
+          stagedEntry.suspendPromise = undefined
+          stagedEntry.suspendError = undefined
+          stagedEntry.suspendNeedsCommit = true
+
+          if (descriptor.kind === 'infinite') {
+            stagedEntry.cursorHistory = [(nextState as ResourceInfiniteState<unknown>).cursor]
+          }
+        } catch (error) {
+          stagedEntry.suspendPromise = undefined
+          stagedEntry.suspendError =
+            error instanceof Error ? error : new Error(normalizeError(error))
+        }
+      },
+      (error) => {
+        if (stagedEntry.suspendPromise !== promise) return
+        stagedEntry.suspendPromise = undefined
+        stagedEntry.suspendError = error instanceof Error ? error : new Error(normalizeError(error))
+        stagedEntry.state = immutableResourceState({
+          ...structuredClone(descriptor.initialState),
+          isLoading: false,
+          isFetching: false,
+          isSuccess: false,
+          isError: true,
+          error: normalizeError(error),
+        })
+      }
+    )
+
+    promise
+      .catch(() => {})
+      .finally(() => {
+        if (pending?.get(key) === promise) pending.delete(key)
+      })
+
+    return promise
+  }
+
+  /** Apply a render-staged value only after the selecting tree commits. */
+  const commitSuspend = async (
+    arg: unknown,
+    hasArg: boolean,
+    key: QueryCacheKey
+  ): Promise<unknown> => {
+    const queryArg = hasArg ? arg : undefined
+    const entry = runtime.cacheEntries.get(key)
+    if (!entry?.hasQueried) return Promise.resolve()
+
+    if (!entry.suspendNeedsCommit) {
+      // A previously committed cache hit remains visible while its normal
+      // stale-time refresh runs in the background.
+      return executeQuery(queryArg, undefined, hasArg, 'replace', false)
+    }
+
+    runtime.fetchId++
+    runtime.lastArg = queryArg
+    runtime.activeKey = key
+    activateLifecycle(key, queryArg)
+
+    const gcTimer = runtime.gcTimers.get(key)
+    if (gcTimer !== undefined) {
+      clearTimeout(gcTimer)
+      runtime.gcTimers.delete(key)
+    }
+
+    if (lifecycleBindings.length > 0) {
+      // Durable restoration is intentionally skipped during render. Once the
+      // tree commits, reconcile the remote result against the live local cache
+      // and persist/fan out through the normal lifecycle hooks.
+      const requestTokens = beginLifecycleRequests()
+      applyRemoteResult(entry.lastResult, false, requestTokens)
+      state.isLoading = false
+      state.isFetching = false
+      state.isSuccess = true
+      state.isError = false
+      state.error = null
+      entry.resourceHydrated = true
+      updateCachedState(entry, state)
+      await commitLifecycleSuccess(entry, entry.lastFetchedAt, requestTokens)
+      updateCachedState(entry, state)
+    } else {
+      runInternal(() => applyCachedState(state, entry))
+    }
+    entry.suspendNeedsCommit = false
+
+    if (descriptor.kind === 'realtime') startSubscription()
+    scheduleRefetchInterval()
+
+    return entry.lastResult
+  }
+
   const queryFn = (...rawArgs: unknown[]) => {
     const parsed = parseQueryArgs(rawArgs)
     return executeQuery(parsed.arg, parsed.options, parsed.hasArg, 'replace', false)
@@ -916,8 +1142,100 @@ export function createResourceAccessor(
     return next
   }
 
+  /**
+   * Initialize one resolved server value before React reads this model's first
+   * external-store snapshot. This is deliberately separate from the public
+   * proxy/action surface; observed entries are applied only during commit.
+   */
+  const hydrateResource = (
+    arg: unknown,
+    hasArg: boolean,
+    key: QueryCacheKey,
+    data: unknown,
+    mayInitialize: boolean,
+    phase: 'render' | 'commit'
+  ): boolean => {
+    if (descriptor.kind === 'realtime' || descriptor.selectorMethod === 'restore') return false
+
+    const existing = runtime.cacheEntries.get(key)
+    const isSameActiveEntry =
+      existing?.hasQueried === true &&
+      runtime.activeKey === key &&
+      isEqual(existing.state.data, data)
+
+    if (phase === 'render') {
+      if (isSameActiveEntry) return true
+
+      // A brand-new, unread model can be initialized before its first
+      // useSyncExternalStore snapshot. Existing observable state is deferred
+      // to the layout commit of the render that requested the hydration.
+      if (!mayInitialize || runtime.activeKey !== undefined || runtime.cacheEntries.size > 0) {
+        return false
+      }
+    } else if (isSameActiveEntry) {
+      if (existing.hydrationNeedsCommit) {
+        existing.hydrationNeedsCommit = false
+        if (lifecycleBindings.length > 0) {
+          const requestTokens = beginLifecycleRequests()
+          void commitLifecycleSuccess(existing, existing.lastFetchedAt, requestTokens)
+            .then(() => {
+              updateCachedState(existing, state)
+            })
+            .catch(() => {})
+        }
+      }
+      return true
+    }
+
+    const queryArg = hasArg ? arg : undefined
+    const fetchedAt = Date.now()
+    const nextState = structuredClone(descriptor.initialState) as ResourceDataLike
+    nextState.data = structuredClone(data)
+    nextState.isLoading = false
+    nextState.isFetching = false
+    nextState.isSuccess = true
+    nextState.isError = false
+    nextState.error = null
+
+    const entry = existing ?? createCacheEntry(state, key, queryArg)
+    entry.arg = queryArg
+    entry.hasQueried = true
+    entry.resourceHydrated = true
+    entry.lastFetchedAt = fetchedAt
+    entry.lastResult = data
+    entry.state = immutableResourceState(nextState)
+    entry.suspendPromise = undefined
+    entry.suspendError = undefined
+    entry.suspendNeedsCommit = false
+    entry.hydrationNeedsCommit = lifecycleBindings.length > 0
+    if (descriptor.kind === 'infinite') {
+      entry.cursorHistory = [(nextState as ResourceInfiniteState<unknown>).cursor]
+    }
+
+    runtime.fetchId++
+    runtime.lastArg = queryArg
+    runtime.activeKey = key
+    activateLifecycle(key, queryArg)
+    runtime.cacheEntries.set(key, entry)
+    runInternal(() => Object.assign(state, structuredClone(nextState)))
+
+    if (phase === 'commit' && entry.hydrationNeedsCommit) {
+      entry.hydrationNeedsCommit = false
+      const requestTokens = beginLifecycleRequests()
+      void commitLifecycleSuccess(entry, fetchedAt, requestTokens)
+        .then(() => {
+          updateCachedState(entry, state)
+        })
+        .catch(() => {})
+    }
+    return true
+  }
+
   const baseBound = new Proxy(state, {
     get(target, prop) {
+      if (prop === RESOURCE_HYDRATE) return hydrateResource
+      if (prop === RESOURCE_SUSPEND_PREPARE) return prepareSuspend
+      if (prop === RESOURCE_SUSPEND_COMMIT) return commitSuspend
       if (prop === 'query') return queryFn
       if (descriptor.selectorMethod && prop === descriptor.selectorMethod) return queryFn
       if (prop === 'refetch') return refetch

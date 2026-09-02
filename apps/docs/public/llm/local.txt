@@ -101,10 +101,10 @@ independent view key and freshness while canonical entity fields fan out between
 The `arg` passed to `restore`, `set`, or `remove` is the durable identity. Always pass a route ID for
 a detail resource so another route's active value cannot appear under the current URL.
 
-## Next.js App Router SEO and Suspense fallback
+## Next.js exact cached fallback
 
-For SEO, fetch detail in the server component. Its client fallback does not make another API call:
-it restores the exact local view and shows cached content only when present.
+Standalone `local()` never starts an API request. A client fallback can restore an exact local view
+and show cached content only when present:
 
 ```tsx
 'use client'
@@ -116,31 +116,21 @@ function ProductFallback({ id }: { id: string }) {
 }
 ```
 
-When the server branch resolves, initialize the same exact view during client render:
+For state-backed server data, await the remote value in a Server Component and initialize
+`local.query()` / `local.infinite()` in a small client route adapter. Storage reconciliation,
+persistence, and entity fanout run after commit. Standalone `local()` remains restore-only. Do not
+call a mutating action during render, including one wrapped in deprecated `silent()`.
 
-```ts
-initDetail(id: string, value: ProductDetail) {
-  silent(() => {
-    this.model.detail.set(value, { arg: { id } })
-  })
-}
-```
-
-`silent()` suppresses React notifications, not persistence. The server value updates IndexedDB and
-canonical list rows. If an older IndexedDB restore is still pending, it is discarded and cannot
-overwrite the server result.
-
-```text
-server detail fetch starts
-  ├─ fallback restore({ id }): exact hit → cached detail; miss/pending → skeleton
-  └─ server resolves: silent(detail.set(value, { arg: { id } }))
-                       → visible detail + canonical fanout + IndexedDB commit
+```tsx
+useProduct.hydrate({ detail: { arg: { id }, data: initialDetail } })
+const detail = useProduct((state) => state.detail.data)
 ```
 
 ## Query-backed local resources
 
 Use `local.query()` where a mounted client view owns remote loading. Its public interface is the
-ordinary query interface: `.load()`, `.query()`, `.refetch()`, `.set()`, and the same status fields.
+ordinary query interface: `.load()`, experimental `.suspend()`, `.query()`, `.refetch()`, `.set()`,
+and the same status fields.
 
 ```ts
 list: local.query<ProductListItem[], ProductFilter>({

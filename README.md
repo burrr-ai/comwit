@@ -23,5 +23,26 @@ https://library.comwit.io/llms.txt
 
 Pass the URL to Claude Code. It handles the rest.
 
-The `2.2` beta adds normalized IndexedDB-backed standalone resources through `local()`, plus
-query-backed revalidation through [`local.query()` and `local.infinite()`](https://library.comwit.io/docs/api/local).
+Normalized IndexedDB-backed standalone resources are available through `local()`, with query-backed
+revalidation through [`local.query()` and `local.infinite()`](https://library.comwit.io/docs/api/local).
+
+Queries use `.load()` for ordinary non-suspending, effect-driven fetching. Resolved data fetched by
+a Server Component can initialize the provider-scoped query cache before the first passive read:
+
+```tsx
+const list = usePost((state) => state.posts.load(filter))
+
+usePost.hydrate({ detail: { arg: slug, data: initialDetail } })
+const detail = usePost((state) => state.detail.data)
+```
+
+Fetch and await `initialDetail` in a Server Component, then pass it only to a small client route
+adapter that calls `hydrate()` before the normal domain hook. Actual UI reads the domain hook and
+does not receive server data props. `hydrate()` is idempotent; it does not call `queryFn` or use a
+mutating action. A brand-new entry initializes before its first snapshot, while an observed entry
+is replaced only after the requesting render commits.
+
+Selector `.suspend(arg)` remains experimental for isomorphic query functions. Next.js Server
+Functions cannot be called from a Client Component's initial render, and server and browser caches
+still require explicit hydration. The descriptor-level `suspense` option and render-time `silent()`
+hydration are deprecated. No Provider change is required; models remain lazy until accessed.

@@ -1,0 +1,77 @@
+---
+title: 'comwit v2.3.0 — Render-safe server hydration'
+date: '2026-09-02'
+description: 'v2.3.0 adds typed domain-hook hydration for resolved Server Component data and makes external-store initialization safe under React 19.'
+author: 'Codex'
+---
+
+## Server data now initializes before the first snapshot
+
+v2.3.0 adds `useDomain.hydrate(entries)` to hooks created by `create()`. A small Client Component
+route adapter can initialize resolved Server Component data before the actual UI reads its first
+`useSyncExternalStore` snapshot.
+
+```tsx
+// Server Component
+const initialPost = await serverApi.findBySlug(slug)
+return <BlogRoute slug={slug} initialPost={initialPost} />
+
+// Client route adapter
+function BlogRoute({ slug, initialPost }: Props) {
+  useBlogSocial.hydrate({
+    post: { arg: slug, data: initialPost },
+  })
+  return <BlogArticle />
+}
+
+// Actual UI
+function BlogArticle() {
+  const post = useBlogSocial((state) => state.post.data)
+  return post ? <Article post={post} /> : null
+}
+```
+
+The route adapter is the only component that receives the resolved server value. Business UI keeps
+reading the normal domain hook and does not need duplicate data props.
+
+## Typed, complete query entries
+
+`hydrate()` infers the accepted fields and every `arg` and `data` type from the model. It records
+freshness internally, selects the serialized argument as active, and creates a complete successful
+query entry with loading and fetching disabled. `null` and `undefined` inputs are safe no-ops.
+
+The initializer supports `query()`, `query.infinite()`, `local.query()`, and `local.infinite()`.
+Hydrated local query entries reconcile canonical entities and persist to IndexedDB after commit.
+Realtime and standalone `local()` resources are intentionally excluded.
+
+Equivalent hydration for the same provider, field, key, and data is idempotent. New unread entries
+can initialize before their first snapshot. Updates to an already observed entry wait for the
+requesting render to commit, so an abandoned route transition cannot overwrite the currently
+visible state. A hydrated value also invalidates older pending requests for that key.
+
+## Why `silent()` was not enough
+
+`silent()` suppressed subscriber callbacks but did not suppress React external-store snapshot
+checks. Mutating a model after `useSyncExternalStore` had read it could make React 19 discard and
+retry the uncommitted render repeatedly under Next.js Cache Components and partial prerendering.
+
+`silent()` is now deprecated and must not be used for render-time hydration. The new hydration path
+does not invoke an action, the public proxy, `.set()`, or `silent()` during render.
+
+## Query loading and experimental Suspense
+
+Selector `.load(arg)` remains the default non-suspending client query path and still starts work
+after commit. Selector `.suspend(arg)` remains available as an experimental render-time query path
+for isomorphic HTTP query functions. It accepts no Promise or initial-data override. Next.js Server
+Functions must run in a Server Component and pass their resolved value through `hydrate()`.
+
+The descriptor-level `suspense` option and `Query.Suspense*` aliases remain deprecated compatibility
+APIs.
+
+## Upgrade
+
+```bash
+yarn add @comwit/state@2.3.0
+```
+
+[npm](https://www.npmjs.com/package/@comwit/state) · [query reference](/docs/api/query)

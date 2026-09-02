@@ -3,6 +3,7 @@ export type {
   PlaceholderData,
   QueryDefaultOptions,
   QueryQueryOptions,
+  QueryHydrationEntries,
   ResourceQueryOptions,
   ResourceContext,
   ResourceBaseState,
@@ -42,6 +43,8 @@ export { createResourceAccessor, mergeResult, serializeQueryArg } from './access
 // React selector auto-load
 export {
   createQuerySelectorState,
+  commitQuerySelectorSuspenseLoads,
+  prepareQuerySelectorSuspense,
   runQuerySelectorLoads,
   querySelectorLoadKey,
   type QuerySelectorLoad,

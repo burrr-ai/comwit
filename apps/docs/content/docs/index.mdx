@@ -17,7 +17,10 @@ You don't learn a state library anymore. Your LLM does. comwit is architected so
 
 ## Next.js native
 
-Not a generic React library bolted onto Next.js after the fact. comwit was built from day one for App Router, server components, and SSR. State initializes on the server without hydration mismatches, without workarounds, without ceremony.
+Not a generic React library bolted onto Next.js after the fact. comwit was built for App Router,
+server components, and SSR. A Server Component can pass a resolved query seed to a small client
+adapter, which initializes the domain cache with `useDomain.hydrate()` before the UI reads it;
+ordinary `load()` keeps the familiar client loading-state flow.
 
 ## OOP because LLMs think in objects
 

@@ -16,7 +16,7 @@ import { action } from '@comwit/state'
 ## Usage
 
 ```ts
-import { action, silent, OnError, OnSuccess } from '@comwit/state'
+import { action, OnError, OnSuccess } from '@comwit/state'
 import { post } from './model'
 import { user } from '@/state/user/model'
 import type { PostActions, AppContext } from './types'
@@ -28,9 +28,7 @@ export const postActions = action<Pick<PostActions, 'init' | 'loadPosts' | 'crea
       private user = state(user) // cross-domain read
 
       init(data: Post) {
-        silent(() => {
-          this.model.current = data
-        })
+        this.model.current = data
       }
 
       async loadPosts() {
@@ -49,6 +47,10 @@ export const postActions = action<Pick<PostActions, 'init' | 'loadPosts' | 'crea
   }
 )
 ```
+
+Do not call a mutating action directly during render. Await server-owned data in a Server Component
+and initialize its query entry with `useDomain.hydrate(...)` in the client route adapter. Actions
+remain the right place for user events, imperative preloads, and coordinated workflows.
 
 ## Factory parameters
 

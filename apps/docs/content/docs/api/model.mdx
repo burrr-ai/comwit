@@ -47,7 +47,8 @@ export const app = model<AppState>({
 
 `model(initial)` takes an object of initial values and returns a `Model<T>`.
 
-- Fields using [`query()`](/docs/api/query) become client-fetched data with loading states
+- Fields using [`query()`](/docs/api/query) become keyed data resources; selectors use `.load()`
+  for client fetching and generated domain hooks use `.hydrate()` for resolved server data
 - Fields using [`persist()`](/docs/api/persist) are automatically synced to storage
 - Plain fields (strings, objects, arrays, null) are reactive local state
 - Models with `history: true` expose [`$history`](/docs/api/history) for undo and redo

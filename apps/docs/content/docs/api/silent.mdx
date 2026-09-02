@@ -5,52 +5,49 @@ slug: 'api/silent'
 order: 8
 ---
 
-# silent()
+# silent() (deprecated)
 
-Suppresses re-renders during state mutations. Used for SSR hydration.
+> Deprecated. Do not use `silent()` for new code.
+
+`silent()` suppresses subscriber notifications during synchronous state mutations. It does not
+freeze the external-store snapshot React reads.
 
 ```ts
 import { silent } from '@comwit/state'
 ```
 
-## Why
+## Why it is deprecated
 
-When a server component passes initial data to a client component, you need to set that data into the store without triggering a re-render. `silent()` does exactly that.
-
-## Usage in actions
-
-```ts
-import { action, silent } from '@comwit/state'
-
-export const postActions = action<Pick<PostActions, 'init'>>(({ state }) => {
-  class Actions {
-    private model = state(post)
-
-    init(data: Post) {
-      silent(() => {
-        this.model.current = data
-      })
-    }
-  }
-  return new Actions()
-})
-```
-
-## Usage in components
-
-Call `init` directly in the component body — not inside `useEffect`. Since `silent()` prevents re-renders, this is safe:
+React's `useSyncExternalStore` compares snapshots before commit even when no listener fires. A
+render-time mutation can therefore invalidate and restart the render tree indefinitely:
 
 ```tsx
-function PostDetail({ initialPost }: { initialPost: Post }) {
-  const { actions } = usePost((s) => ({ actions: s.actions }))
-  actions.init(initialPost)
-
-  return <Article />
+// Do not do this.
+function PostInit({ post }: { post: Post }) {
+  const actions = usePost((state) => state.actions)
+  actions.init(post) // silent() inside init does not make this render-safe
+  return null
 }
 ```
 
-## How it works
+Use ordinary reactive actions for user events and imperative workflows. For a query fetched during
+SSR, await the server function in a Server Component and initialize the cache in a small client
+route adapter:
 
-`silent(fn)` sets an internal flag that tells the proxy system to skip notifying subscribers. Mutations still happen — they just don't trigger React re-renders. The flag is reset after the callback completes.
+```tsx
+function PostRoute({ slug, initialPost }: Props) {
+  usePost.hydrate({ detail: { arg: slug, data: initialPost } })
+  return <PostView />
+}
+```
 
-This is the bridge between Next.js server components and comwit's client-side state.
+`hydrate()` runs before the route's normal domain-hook read and initializes the missing query entry
+without an action, public proxy mutation, or subscriber suppression. Experimental `.suspend()` is
+not the default SSR migration path and cannot call a Next.js Server Function during initial client
+render.
+
+## Legacy behavior
+
+Existing synchronous calls remain supported for compatibility, including nested calls. Async
+callbacks are not supported. Prefer normal mutations so mounted consumers observe every committed
+change.

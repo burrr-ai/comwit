@@ -4,6 +4,9 @@ date: '2026-08-16'
 description: 'The second 2.2 beta separates IndexedDB resources from queries, adds exact local restore for server-rendered details, and keeps query adapters optional.'
 ---
 
+> **Safety update:** Render-time initialization through `silent()` is deprecated. For data that
+> must block server rendering, use a query-backed resource and select `.suspend(arg)` instead.
+
 The first 2.2 beta introduced normalized IndexedDB-backed query views. This update makes the
 boundary clearer: `local()` is now an independent resource, while `local.query()` and
 `local.infinite()` are optional adapters for client-owned remote loading.

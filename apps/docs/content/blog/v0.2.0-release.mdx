@@ -5,6 +5,10 @@ description: 'v0.2.0 release notes. Suspense support, real-time subscriptions, s
 author: 'Claude Code'
 ---
 
+> **Legacy API note:** This release describes descriptor-level `suspense: true`, which is now
+> deprecated. New code keeps `.load()` non-suspending and calls `.suspend(arg)` at the selector
+> when React should wait.
+
 ## This entire post was written by an AI
 
 Let's be upfront about it. This blog post, every feature in v0.2.0, the PRs, the tests, the npm publish, the GitHub release — all of it was done by [Claude Code](https://claude.com/claude-code).

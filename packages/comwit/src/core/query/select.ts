@@ -7,6 +7,7 @@ import type {
   ResourceDescriptorMap,
   ResourceRuntimeState,
 } from './types'
+import { RESOURCE_SUSPEND_COMMIT, RESOURCE_SUSPEND_PREPARE } from './types'
 
 export type QuerySelectorLoad = {
   arg: unknown
@@ -15,6 +16,7 @@ export type QuerySelectorLoad = {
   key: QueryCacheKey
   path: string
   method: string
+  mode: 'load' | 'suspend'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -63,7 +65,9 @@ function cachedState(
   if (activeEntry) return state
 
   const entry = runtime?.cacheEntries.get(key)
-  const pending = selectorLoadsFor(registry, controller)?.has(key) ?? false
+  const pending =
+    entry?.suspendPromise !== undefined ||
+    (selectorLoadsFor(registry, controller)?.has(key) ?? false)
 
   if (entry?.hasQueried) {
     return Object.freeze({
@@ -92,13 +96,24 @@ function createResourceSelector(
   return new Proxy(state, {
     get(target, prop, receiver) {
       const selectorMethod = descriptor.selectorMethod ?? 'load'
-      if (prop !== selectorMethod) return Reflect.get(target, prop, receiver)
+      const isSuspend =
+        prop === 'suspend' && selectorMethod === 'load' && descriptor.kind !== 'realtime'
+      if (prop !== selectorMethod && !isSuspend) return Reflect.get(target, prop, receiver)
 
       return (...args: unknown[]) => {
         const hasArg = args.length > 0
         const arg = hasArg ? args[0] : undefined
         const key = serializeResourceArg(descriptor, arg)
-        loads.push({ arg, controller, hasArg, key, path, method: selectorMethod })
+        const load: QuerySelectorLoad = {
+          arg,
+          controller,
+          hasArg,
+          key,
+          path,
+          method: isSuspend ? 'suspend' : selectorMethod,
+          mode: isSuspend ? 'suspend' : 'load',
+        }
+        loads.push(load)
 
         const runtime = registry.boundResourceRuntime.get(controller)
         return cachedState(state, runtime, controller, descriptor, key, registry)
@@ -154,20 +169,92 @@ export function createQuerySelectorState<T extends object>(
 }
 
 export function querySelectorLoadKey(loads: QuerySelectorLoad[]): string {
-  return JSON.stringify(loads.map(({ path, key }) => [path, key]))
+  return JSON.stringify(loads.map(({ path, key, mode }) => [path, key, mode]))
+}
+
+/**
+ * Starts every `.suspend()` request collected by the current selector after
+ * useSyncExternalStore has finished reading its snapshot. The accessor only
+ * mutates its non-observable key cache during this phase.
+ */
+export function prepareQuerySelectorSuspense(
+  loads: QuerySelectorLoad[],
+  registry: QueryBindingRegistry
+): void {
+  const suspendLoads = loads.filter((load) => load.mode === 'suspend')
+  if (suspendLoads.length === 0) return
+
+  const seen = new WeakMap<object, Set<QueryCacheKey>>()
+  let firstPromise: Promise<unknown> | undefined
+  let firstError: unknown
+
+  for (const load of suspendLoads) {
+    let controllerKeys = seen.get(load.controller)
+    if (!controllerKeys) {
+      controllerKeys = new Set()
+      seen.set(load.controller, controllerKeys)
+    }
+    if (controllerKeys.has(load.key)) continue
+    controllerKeys.add(load.key)
+
+    const prepare = Reflect.get(load.controller, RESOURCE_SUSPEND_PREPARE)
+    if (typeof prepare !== 'function') continue
+
+    try {
+      const promise = prepare.call(
+        load.controller,
+        load.arg,
+        load.hasArg,
+        load.key,
+        load.controller
+      )
+      if (!firstPromise && promise instanceof Promise) firstPromise = promise
+    } catch (error) {
+      firstError ??= error
+    }
+  }
+
+  if (firstError !== undefined) throw firstError
+  if (firstPromise) throw firstPromise
 }
 
 export function runQuerySelectorLoads(
   loads: QuerySelectorLoad[],
   registry: QueryBindingRegistry
 ): void {
-  const seen = new Set<string>()
+  runSelectedQueryLoads(
+    loads.filter((load) => load.mode === 'load'),
+    registry,
+    false
+  )
+}
+
+/** Commit render-staged `.suspend()` entries after React commits the tree. */
+export function commitQuerySelectorSuspenseLoads(
+  loads: QuerySelectorLoad[],
+  registry: QueryBindingRegistry
+): void {
+  runSelectedQueryLoads(
+    loads.filter((load) => load.mode === 'suspend'),
+    registry,
+    true
+  )
+}
+
+function runSelectedQueryLoads(
+  loads: QuerySelectorLoad[],
+  registry: QueryBindingRegistry,
+  commitSuspense: boolean
+): void {
+  const selected = new Map<string, QuerySelectorLoad>()
 
   for (const load of loads) {
     const identity = `${load.path}\u0000${load.key}`
-    if (seen.has(identity)) continue
-    seen.add(identity)
+    const previous = selected.get(identity)
+    if (!previous || load.mode === 'suspend') selected.set(identity, load)
+  }
 
+  for (const load of selected.values()) {
     let pending = registry.selectorLoads.get(load.controller)
     if (!pending) {
       pending = new Map()
@@ -175,14 +262,18 @@ export function runQuerySelectorLoads(
     }
     if (pending.has(load.key)) continue
 
-    const controllerMethod = load.controller[load.method === 'load' ? 'query' : load.method]
+    const controllerMethod = commitSuspense
+      ? Reflect.get(load.controller, RESOURCE_SUSPEND_COMMIT)
+      : load.controller[load.method === 'load' ? 'query' : load.method]
     if (typeof controllerMethod !== 'function') continue
 
     let promise: Promise<unknown>
     try {
-      const result = load.hasArg
-        ? controllerMethod.call(load.controller, load.arg, undefined)
-        : controllerMethod.call(load.controller)
+      const result = commitSuspense
+        ? controllerMethod.call(load.controller, load.arg, load.hasArg, load.key)
+        : load.hasArg
+          ? controllerMethod.call(load.controller, load.arg, undefined)
+          : controllerMethod.call(load.controller)
       promise = Promise.resolve(result)
     } catch (error) {
       promise = Promise.reject(error)

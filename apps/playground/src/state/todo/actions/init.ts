@@ -1,4 +1,4 @@
-import { action, silent } from '@comwit/state'
+import { action } from '@comwit/state'
 import type { Todo, TodoActions, TodoState } from '../types'
 import { todoModel } from '../model'
 
@@ -9,15 +9,13 @@ export const todoInitActions = action<Pick<TodoActions, 'init'>>(({ state }) => 
     constructor(private readonly model: TodoState) {}
 
     init(todos: Todo[]) {
-      silent(() => {
-        const seen = new Set<string>()
-        this.model.todos = todos.filter((todo) => {
-          if (seen.has(todo.id)) {
-            return false
-          }
-          seen.add(todo.id)
-          return true
-        })
+      const seen = new Set<string>()
+      this.model.todos = todos.filter((todo) => {
+        if (seen.has(todo.id)) {
+          return false
+        }
+        seen.add(todo.id)
+        return true
       })
     }
   }

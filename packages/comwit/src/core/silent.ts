@@ -1,28 +1,27 @@
-/**
- * Suppress state change notifications within the callback scope.
- * Use this for SSR initialization or hydration where mutations
- * should not trigger re-renders.
- *
- * @example
- * ```ts
- * import { silent } from '@comwit/state'
- *
- * silent(() => {
- *   model.todos = serverData.todos
- * })
- * ```
- */
-let _silent = false
+let silentDepth = 0
 
-export function silent(fn: () => void) {
-  _silent = true
+type Synchronous<T extends () => unknown> =
+  Extract<ReturnType<T>, PromiseLike<unknown>> extends never ? T : never
+
+/**
+ * Suppress subscriber notifications within a synchronous callback scope.
+ * Nested calls keep the outer scope active until it completes.
+ *
+ * @deprecated `silent()` cannot suppress React external-store snapshot checks
+ * and is unsafe for render-time initialization. Prefer a generated domain
+ * hook's `hydrate()` initializer for resolved server query values, or ordinary
+ * actions after commit.
+ */
+export function silent<T extends () => unknown>(fn: Synchronous<T>): void {
+  silentDepth++
   try {
-    fn()
+    const callback = fn as T
+    callback()
   } finally {
-    _silent = false
+    silentDepth--
   }
 }
 
 export function isSilent() {
-  return _silent
+  return silentDepth > 0
 }

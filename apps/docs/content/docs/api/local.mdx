@@ -104,11 +104,12 @@ export const product = model({
 })
 ```
 
-`local.query()` retains `.load()`, `.query()`, `.refetch()`, `.set()`, and the ordinary query state.
+`local.query()` retains `.load()`, experimental `.suspend()`, `.query()`, `.refetch()`, `.set()`, and
+the ordinary query state.
 Standalone `local()` exposes `.restore()`, `.set()`, `.remove()`, and the same data/status fields but
 has no API driver.
 
-## App Router SEO detail and server Suspense
+## App Router exact cached fallback
 
 A common detail route fetches on the server for SEO. The server `<Suspense>` fallback should not make
 another API request. It only checks whether an exact IndexedDB detail is available and otherwise
@@ -150,47 +151,37 @@ function ProductFallback({ id }: { id: string }) {
 Passing the route identity to `restore()` prevents a previous route's active detail from appearing
 under a new URL.
 
-### Server result initialization
+### Server-rendered remote data
 
-The resolved server branch initializes the same exact view during client render. Include the
-argument because the server branch may resolve before the fallback has activated the resource.
+Standalone `local()` only restores IndexedDB and never starts remote work. For `local.query()` or
+`local.infinite()`, await remote data in a Server Component and initialize the resolved entry with
+the generated domain hook's `hydrate()` method. IndexedDB reconciliation, persistence, and entity
+fanout run after the route adapter commits.
 
 ```ts
-initDetail(id: string, value: ProductDetail) {
-  silent(() => {
-    this.model.detail.set(value, {
-      arg: { id },
-    })
-  })
-}
+detail: local.query<ProductDetail | null, { id: string }>({
+  source: products,
+  initialData: null,
+  queryFn: ({ id }) => api.product.detail(id),
+})
 ```
 
 ```tsx
-'use client'
+function ProductRoute({ id, initialDetail }: Props) {
+  useProduct.hydrate({ detail: { arg: { id }, data: initialDetail } })
+  return <ProductDetail />
+}
 
-function ProductInit({ id, value }: { id: string; value: ProductDetail }) {
-  const initDetail = useProduct((state) => state.actions.initDetail)
-  initDetail(id, value)
-  return <ProductView product={value} />
+function ProductDetail() {
+  const detail = useProduct((state) => state.detail.data)
+  return detail ? <ProductView product={detail} /> : <NotFound />
 }
 ```
 
-`silent()` suppresses React notifications, not local persistence. `set()` marks the resource
-successful, writes the exact detail view and canonical entity to IndexedDB, and fans shared fields
-out to loaded product lists.
-
-```text
-server detail fetch starts
-  ├─ fallback: restore({ id })
-  │    ├─ hit  → cached detail
-  │    └─ miss → skeleton
-  └─ server resolves
-       → silent(detail.set(serverValue, { arg: { id } }))
-       → server value + IndexedDB commit
-```
-
-If an IndexedDB read is still pending when `set()` runs, its result is discarded. A late local
-restore cannot overwrite the newer server initialization.
+Standalone `local()` is restore-only and is not a `hydrate()` target. Keep `.restore(arg)` for an
+exact, non-suspending cached fallback. Experimental `.suspend(arg)` remains available on query-backed
+local resources with isomorphic query functions. Do not call a render-body action that writes a
+resolved server value through `.set()` or deprecated `silent()`.
 
 ### Standalone methods
 
@@ -254,7 +245,7 @@ feed: local.infinite<ProductListItem[], ProductFilter>({
 })
 ```
 
-`query.realtime()` is not supported in this beta.
+`query.realtime()` is not supported by the experimental `.suspend()` path.
 
 ## Provider setup
 
