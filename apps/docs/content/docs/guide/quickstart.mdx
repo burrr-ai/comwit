@@ -7,7 +7,8 @@ order: 1
 
 # Quickstart
 
-Get comwit running in a Next.js project in under 5 minutes.
+Install, define a domain, and use its hook. These examples work with React 18 or 19; the provider
+placement below uses the Next.js App Router.
 
 ## 1. Install
 
@@ -15,53 +16,31 @@ Get comwit running in a Next.js project in under 5 minutes.
 npm i @comwit/state
 ```
 
-> Migrating from the old `comwit` package? See the [v2.0.0 release notes](/blog/v2.0.0-release). The API is identical — only the package name changed.
+If you're building with an agent, give it [`llms.txt`](/llms.txt). It contains the core setup and
+usage contract. You can also follow the steps below yourself.
 
-## 2. Setup Provider
-
-Create `app/providers.tsx` and wrap your root layout.
+## 2. Add the provider
 
 ```tsx
 // app/providers.tsx
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { keepPreviousData, ComwitProvider } from '@comwit/state'
-import { ReactNode } from 'react'
-
-type AppContext = {
-  router: { push: (href: string) => void }
-}
+import { ComwitProvider } from '@comwit/state'
+import type { ReactNode } from 'react'
 
 export function Providers({ children }: { children: ReactNode }) {
-  const router = useRouter()
-  const context: AppContext = { router }
-
   return (
-    <ComwitProvider
-      context={context}
-      defaultOptions={{
-        query: {
-          staleTime: 30_000,
-          gcTime: 5 * 60_000,
-          placeholderData: keepPreviousData,
-        },
-        persist: {
-          debounceMs: 100,
-        },
-      }}
-    >
-      {children}
-    </ComwitProvider>
+    <ComwitProvider defaultOptions={{ query: { staleTime: 30_000 } }}>{children}</ComwitProvider>
   )
 }
 ```
 
 ```tsx
 // app/layout.tsx
+import type { ReactNode } from 'react'
 import { Providers } from './providers'
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
@@ -72,51 +51,145 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-You can also configure global interceptors that apply to all action methods:
+In a React app, wrap your root component with `ComwitProvider` instead. Shared context, persistence,
+and global interceptors are optional; see [Provider](/docs/api/provider).
+
+## 3. Define a domain
+
+Start with a small counter. The state contract and action contract tell both TypeScript and your
+agent what the feature exposes.
+
+```ts
+// state/counter/types.ts
+export type CounterState = { count: number }
+export type CounterActions = { increment(): void; reset(): void }
+```
+
+```ts
+// state/counter/model.ts
+import { model } from '@comwit/state'
+import type { CounterState } from './types'
+
+export const counter = model<CounterState>({ count: 0 })
+```
+
+```ts
+// state/counter/actions/interact.ts
+import { action } from '@comwit/state'
+import { counter } from '../model'
+import type { CounterActions } from '../types'
+
+export const counterActions = action<CounterActions>(({ state }) => {
+  class Actions {
+    private counter = state(counter)
+
+    increment() {
+      this.counter.count += 1
+    }
+
+    reset() {
+      this.counter.count = 0
+    }
+  }
+  return new Actions()
+})
+```
+
+```ts
+// state/counter/index.ts
+import { create } from '@comwit/state'
+import { counter } from './model'
+import { counterActions } from './actions/interact'
+import type { CounterState, CounterActions } from './types'
+
+export const useCounter = create<CounterState, CounterActions>(counter, {
+  actions: [counterActions],
+})
+```
+
+## 4. Read state, call actions
 
 ```tsx
-import { OnError, Log, ComwitProvider } from '@comwit/state'
+// app/page.tsx
+'use client'
 
-<ComwitProvider
-  context={context}
-  defaultOptions={{
-    query: { staleTime: 30_000 },
-    interceptors: [
-      OnError((e) => Sentry.captureException(e)),
-      Log('info'),
-    ],
-  }}
->
+import { useCounter } from '@/state/counter'
+
+export default function CounterPage() {
+  const { count, actions } = useCounter((s) => ({
+    count: s.count,
+    actions: s.actions,
+  }))
+
+  return (
+    <main>
+      <p>Count: {count}</p>
+      <button onClick={actions.increment}>Add one</button>
+      <button onClick={actions.reset}>Reset</button>
+    </main>
+  )
+}
 ```
 
-`ComwitProvider` takes two props:
+The action changes the object. The selector subscribes to `count`. Each provider owns an independent
+counter, so separate app roots and server requests do not share a singleton state instance.
 
-- **context** — shared values (router, auth, etc.) available in all actions
-- **defaultOptions.query** — global query defaults (staleTime, gcTime, placeholderData)
-- **defaultOptions.persist** — global persist defaults (debounceMs)
-- **defaultOptions.interceptors** — global interceptors applied to all action methods
+## 5. Add server data when you need it
 
-Execution order: Provider interceptors (outermost) -> Class interceptors -> Method interceptors -> actual method.
+Use a query field and call `.load()` from the view that owns the request. Here `/api/products` is
+your app's endpoint returning `Product[]`:
 
-## 3. Create `state/.ai.md`
+```ts
+// state/product/index.ts — a compact domain; split files as it grows
+import { create, model, query } from '@comwit/state'
 
-Create `src/state/.ai.md` (or `state/.ai.md`). This file tells your LLM how to write state code. Copy the full template from the [README](https://github.com/meursyphus/comwit).
+type Product = { id: string; title: string }
 
-This is what makes comwit different — the `.ai.md` file is the documentation. Your LLM reads it and generates correct state code on the first try.
+const product = model({
+  list: query<Product[]>({
+    initialData: [],
+    queryFn: async () => {
+      const response = await fetch('/api/products')
+      if (!response.ok) throw new Error('Could not load products')
+      return (await response.json()) as Product[]
+    },
+  }),
+})
 
-## 4. Update `CLAUDE.md`
-
-Add this to your project's `CLAUDE.md`:
-
-```md
-## State Management
-
-This project uses comwit. When working on files in state/, always read state/.ai.md first.
+export const useProduct = create(product, { actions: [] })
 ```
 
-That's it. Your LLM now knows how to use comwit. Start building features by describing what state you need.
+```tsx
+'use client'
+
+import { useProduct } from '@/state/product'
+
+export function ProductList() {
+  const list = useProduct((s) => s.list.load())
+
+  if (list.isLoading) return <p>Loading products…</p>
+  if (list.isError && !list.isSuccess) return <p>{list.error}</p>
+  if (list.data.length === 0) return <p>No products yet.</p>
+
+  return (
+    <ul aria-busy={list.isFetching}>
+      {list.data.map((product) => (
+        <li key={product.id}>{product.title}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+`.load()` returns loading state during render and starts the request after commit. Selecting
+`s.list` alone is a passive read. For data already fetched by a Server Component, follow the
+[Next.js guide](/docs/guide/nextjs) and use `useProduct.hydrate(...)`.
 
 ## Next steps
 
-- [Project Structure](/docs/guide/structure) — how to organize state domains
-- [LLM Setup](/docs/llm-setup) — the full .ai.md and CLAUDE.md workflow
+- [Project Structure](/docs/guide/structure) — organize domains and their public contracts.
+- [query()](/docs/api/query) — arguments, pagination, streaming, and subscriptions.
+- [local()](/docs/api/local) — restore normalized IndexedDB data before revalidation.
+
+Migrating from `comwit`? Version 2 uses the `@comwit/state` package name. See the
+[v2.0.0 release notes](/blog/v2.0.0-release).

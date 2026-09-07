@@ -3,9 +3,10 @@ import { getDocBySlug } from '@/lib/mdx'
 import { notFound } from 'next/navigation'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeSlug from 'rehype-slug'
 
 export const metadata = {
-  title: 'Why comwit — comwit docs',
+  title: 'Introduction — comwit docs',
 }
 
 export default function DocsIndexPage() {
@@ -13,13 +14,13 @@ export default function DocsIndexPage() {
   if (!doc) notFound()
 
   return (
-    <article className="prose prose-neutral max-w-none text-foreground/80 prose-headings:text-foreground prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-lg prose-p:text-sm prose-p:leading-relaxed prose-hr:border-border prose-strong:text-foreground">
+    <article className="prose max-w-none">
       <MDXRemote
         source={doc.content}
         options={{
           mdxOptions: {
             remarkPlugins: [remarkGfm],
-            rehypePlugins: [rehypeHighlight],
+            rehypePlugins: [rehypeSlug, rehypeHighlight],
           },
         }}
       />

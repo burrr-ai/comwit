@@ -1,81 +1,68 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 
-interface TocItem {
-  id: string
-  text: string
-  level: number
-}
+type TocItem = { id: string; text: string; level: number }
 
-export function TableOfContents() {
+function PageContents() {
   const [headings, setHeadings] = useState<TocItem[]>([])
   const [activeId, setActiveId] = useState('')
 
   useEffect(() => {
-    const article = document.querySelector('article')
-    if (!article) return
-
-    const elements = article.querySelectorAll('h2, h3')
-    const items: TocItem[] = Array.from(elements).map((el) => {
-      if (!el.id) {
-        el.id =
-          el.textContent
-            ?.toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/(^-|-$)/g, '') ?? ''
-      }
-      return {
-        id: el.id,
-        text: el.textContent ?? '',
-        level: parseInt(el.tagName[1]),
-      }
-    })
-    setHeadings(items)
+    let observer: IntersectionObserver | undefined
+    const collect = () => {
+      const article = document.querySelector('article')
+      if (!article) return
+      const elements = Array.from(article.querySelectorAll('h2, h3'))
+      const items = elements
+        .filter((element) => element.id)
+        .map((element) => ({
+          id: element.id,
+          text: element.textContent || '',
+          level: Number(element.tagName[1]),
+        }))
+      setHeadings(items)
+      observer?.disconnect()
+      observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) if (entry.isIntersecting) setActiveId(entry.target.id)
+        },
+        { rootMargin: '-110px 0px -60% 0px', threshold: 0.1 }
+      )
+      elements.forEach((element) => observer?.observe(element))
+    }
+    // The route's MDX can stream in after the persistent layout mounts.
+    const mutations = new MutationObserver(collect)
+    const main = document.getElementById('docs-content')
+    if (main) mutations.observe(main, { childList: true, subtree: true })
+    collect()
+    return () => {
+      mutations.disconnect()
+      observer?.disconnect()
+    }
   }, [])
 
-  useEffect(() => {
-    if (headings.length === 0) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id)
-          }
-        }
-      },
-      { rootMargin: '-80px 0px -60% 0px', threshold: 0.1 }
-    )
-
-    for (const { id } of headings) {
-      const el = document.getElementById(id)
-      if (el) observer.observe(el)
-    }
-
-    return () => observer.disconnect()
-  }, [headings])
-
-  if (headings.length === 0) return null
-
+  if (!headings.length) return null
   return (
-    <nav className="space-y-2">
-      <h4 className="text-[10px] uppercase tracking-[0.25em] text-muted/70 font-medium mb-3">
-        On this page
-      </h4>
-      {headings.map((h) => (
+    <nav aria-label="On this page">
+      <h2 className="toc-title">On this page</h2>
+      {headings.map((heading) => (
         <a
-          key={h.id}
-          href={`#${h.id}`}
-          className={`
-            block text-[12px] leading-tight tracking-wide transition-colors
-            ${h.level === 3 ? 'pl-3' : ''}
-            ${activeId === h.id ? 'text-foreground' : 'text-foreground/40 hover:text-foreground/60'}
-          `}
+          key={heading.id}
+          href={`#${heading.id}`}
+          className="toc-link"
+          style={heading.level === 3 ? { paddingLeft: 12 } : undefined}
+          aria-current={activeId === heading.id ? 'location' : undefined}
         >
-          {h.text}
+          {heading.text}
         </a>
       ))}
     </nav>
   )
+}
+
+export function TableOfContents() {
+  const pathname = usePathname()
+  return <PageContents key={pathname} />
 }

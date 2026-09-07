@@ -278,8 +278,9 @@ require a provider change.
 | `indexedDB`     | `IDBFactory`               | browser global  | Advanced injection for tests or browser-compatible runtimes |
 
 If IndexedDB is unavailable or fails, standalone resources retain their in-memory value and query
-adapters degrade to ordinary queries. Server environments therefore skip the IndexedDB lifecycle
-without throwing; a server-side `local.query().load()` proceeds through its normal query driver.
+adapters degrade to ordinary queries. Server environments skip the IndexedDB lifecycle
+without throwing. Selector `.load()` still waits for client commit before starting a request; use
+`hydrate()` for resolved server data, or an imperative `.query()` in an appropriate non-render workflow.
 
 ## On-demand normalized storage
 
@@ -434,11 +435,7 @@ rows for the same scope and collection.
 | `serializeArg`  | No       | Custom argument serializer; must return a collision-safe stable string |
 | `map`           | No       | Entity adapter for response envelopes                                  |
 
-## Query coupling and compatibility
-
-Query internals know only a generic resource lifecycle. They do not import `local`, IndexedDB, or
-collections. `local.query()` and `local.infinite()` install the local lifecycle adapter; standalone
-`local()` uses the same neutral resource state engine without a network driver.
+## Compatibility
 
 The beta.0 wrapper remains as a deprecated compatibility alias:
 

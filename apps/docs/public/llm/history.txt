@@ -38,13 +38,15 @@ history.canRedo
 Each action method call is recorded as one transaction.
 
 ```ts
-const todoActions = action(({ state }) => ({
-  add(title: string) {
-    const s = state(todo)
-    s.items.push({ id: crypto.randomUUID(), title, done: false })
-    s.selectedId = s.items.at(-1)!.id
-  },
-}))
+const todoActions = action(({ state }) => {
+  const s = state(todo)
+  return {
+    add(title: string) {
+      s.items.push({ id: crypto.randomUUID(), title, done: false })
+      s.selectedId = s.items.at(-1)!.id
+    },
+  }
+})
 ```
 
 Calling `s.$history.undo()` reverts both mutations together.

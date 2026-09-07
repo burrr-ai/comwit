@@ -15,6 +15,7 @@ Wrap the client tree once. Models remain lazy and are created only when accessed
 'use client'
 
 <ComwitProvider
+  key={user.id}
   context={{ router }}
   defaultOptions={{
     query: { staleTime: 30_000, gcTime: 5 * 60_000 },
@@ -50,7 +51,7 @@ should normally call one action.
 import type { Local, Query } from '@comwit/state'
 
 export type ProductState = {
-  products: Query<Pageable<Product>, ProductFilter>
+  products: Query<Product[], ProductFilter>
   detail: Query<Product | null, string>
   draft: Local<Product | null, string>
   selectedIds: string[]
@@ -70,7 +71,7 @@ const products = local.collection<Product>({ key: 'products', version: 1 })
 export const product = model<ProductState>({
   products: local.query({
     source: products,
-    initialData: EMPTY_PAGE,
+    initialData: [],
     queryFn: (filter) => api.product.list(filter),
   }),
   detail: query({
@@ -196,20 +197,7 @@ mutating action during render to initialize the same store.
 ## SSR safety
 
 Await server-owned reads in a Server Component. Pass the resolved value only to the route adapter,
-hydrate the query cache there, and let the actual UI read the domain hook:
-
-```tsx
-function ProductDetailRoute({ slug, initialDetail }: Props) {
-  useProduct.hydrate({ detail: { arg: slug, data: initialDetail } })
-  return <ProductDetail />
-}
-
-function ProductDetail() {
-  const detail = useProduct((state) => state.detail.data)
-  if (!detail) return <NotFound />
-  return <ProductView product={detail} />
-}
-```
+hydrate the query cache there, and let the actual UI read the domain hook as shown above.
 
 Do not use `silent()` for render-time hydration. It suppresses subscriber callbacks but React also
 checks external-store snapshots before commit. Changing a snapshot during render can cause the
@@ -233,6 +221,13 @@ normalization, mapping, scope, and migration rules: https://library.comwit.io/ll
 export const useProduct = create<ProductState, ProductActions>(product, {
   actions: [productActions],
 })
+```
+
+```tsx
+function SaveTitle({ title }: { title: string }) {
+  const actions = useProduct((state) => state.actions)
+  return <button onClick={() => actions.updateTitle(title)}>Save title</button>
+}
 ```
 
 Use narrow selectors. Convert reactive proxies before server actions or serialization:

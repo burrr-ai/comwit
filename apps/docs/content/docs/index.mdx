@@ -3,45 +3,48 @@ title: 'Introduction'
 order: 0
 ---
 
-# Why comwit
+# One domain. One hook.
 
-Most state libraries were designed for humans reading docs. comwit was designed for LLMs writing code. That changes everything about how a library should be structured.
+comwit is state management for React and Next.js, built for vibe coding. Give your coding agent
+[`llms.txt`](/llms.txt): one compact guide covers the core interface, domain structure, and examples
+it needs to start building.
 
-Sponsored by [burrr.ai](https://burrr.ai). Battle-tested through 1000+ projects on [comwit.io](https://comwit.io).
+It powers the [comwit.io](https://comwit.io) vibe coding platform, where more than **1,000 projects**
+use it. Sponsored by [burrr.ai](https://burrr.ai).
 
----
+## The interface
 
-## Optimized for vibe coding
+```tsx
+// Load when the view mounts. Render the query state directly.
+const products = useProduct((s) => s.products.load(filter))
 
-You don't learn a state library anymore. Your LLM does. comwit is architected so that LLMs spend fewer tokens understanding context and generating correct code. Less token overhead means faster results, fewer hallucinations, and less back-and-forth. The library is the prompt.
+// Read existing data without starting a request.
+const detail = useProduct((s) => s.detail.data)
 
-## Next.js native
+// Keep mutations and side effects in the domain.
+const actions = useProduct((s) => s.actions)
+```
 
-Not a generic React library bolted onto Next.js after the fact. comwit was built for App Router,
-server components, and SSR. A Server Component can pass a resolved query seed to a small client
-adapter, which initializes the domain cache with `useDomain.hydrate()` before the UI reads it;
-ordinary `load()` keeps the familiar client loading-state flow.
+A domain defines its types, initial state, and actions. `create()` combines them into a hook.
+Actions mutate state directly; components subscribe to the fields they use. One `ComwitProvider`
+scopes the state for your app, and models initialize on access.
 
-## OOP because LLMs think in objects
+## Pick the data flow
 
-Object-oriented patterns are what LLMs generate most reliably. Direct mutation, no reducers, no dispatch ceremony, no action creators. When the mental model is "change the object," LLMs get it right on the first try.
+| You need to…                                          | Use                                            |
+| ----------------------------------------------------- | ---------------------------------------------- |
+| Fetch for a mounted view                              | [`query()` + `.load(arg)`](/docs/api/query)    |
+| Render data fetched by a Server Component             | [`useDomain.hydrate(...)`](/docs/guide/nextjs) |
+| Restore an exact IndexedDB snapshot and revalidate    | [`local.query()`](/docs/api/local)             |
+| Restore cached data without an API call               | [`local()` + `.restore(arg)`](/docs/api/local) |
+| Save preferences or a local draft                     | [`persist()`](/docs/api/persist)               |
+| Run a command, optimistic update, or several requests | [`action()`](/docs/api/action)                 |
 
-## Domain-driven, type-first
+Related lists, details, filters, and UI state stay in the same domain. Add derived values,
+validation, undo/redo, or action decorators when the feature needs them.
 
-Each feature is a self-contained domain. Types define the contract. An LLM reads one types file and understands the entire domain — its shape, its capabilities, its boundaries. This is enforced structure, not optional convention.
+## Start building
 
-## Bottom-up, not top-down
-
-No central store. No giant root config. No provider hierarchy. Start with one domain, add more as you build. Models initialize lazily, on first access. Features compose — they don't depend on a master plan.
-
-## State and API in one place
-
-State management and server API calls live in the same domain. No separate API layer, no action-at-a-distance, no tracing through five files to understand one feature. One domain, one concern, one place to look.
-
-## Best practices are the only option
-
-The architecture forces separation of concerns, explicit dependencies, and typed interfaces. It's not "you should do this" — it's "you can only do this." LLMs thrive on constraints. So does your codebase.
-
----
-
-comwit is a set of hard opinions about how state should be organized — opinions that make code easier to write, easier to read, and dramatically easier for machines to generate correctly.
+- [Quickstart](/docs/guide/quickstart) — install, create a domain, and render it.
+- [LLM Setup](/docs/llm-setup) — hand your agent the interface in one file.
+- [Project Structure](/docs/guide/structure) — grow from one domain to a full app.

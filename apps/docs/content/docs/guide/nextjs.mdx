@@ -1,0 +1,144 @@
+---
+title: 'Next.js & Server Data'
+group: 'Guide'
+slug: 'guide/nextjs'
+order: 3
+---
+
+# Server data, domain state
+
+Fetch in a Server Component, pass the resolved value to a small Client Component, then initialize
+the domain with `useDomain.hydrate()`. The rest of the UI reads the same domain hook it uses for
+client interactions.
+
+```text
+Server Component → resolved data → client route adapter → domain hook → UI
+```
+
+Add the [provider](/docs/guide/quickstart) once above the route.
+
+## 1. Define the query
+
+The query function is used for later client loads or action-driven refetches. The initial server
+seed does not invoke it.
+
+```ts
+// state/product/index.ts
+import { create, model, query } from '@comwit/state'
+
+export type Product = { id: string; title: string; description: string }
+
+const product = model({
+  detail: query<Product | null, string>({
+    initialData: null,
+    staleTime: 30_000,
+    queryFn: async (id) => {
+      const response = await fetch(`/api/products/${encodeURIComponent(id)}`)
+      if (response.status === 404) return null
+      if (!response.ok) throw new Error('Could not load product')
+      return (await response.json()) as Product
+    },
+  }),
+})
+
+export const useProduct = create(product, { actions: [] })
+```
+
+## 2. Fetch on the server
+
+`getProduct` below is your server-side API or database function returning `Product | null`.
+
+```tsx
+// app/products/[id]/page.tsx
+import { notFound } from 'next/navigation'
+import { getProduct } from '@/api/products'
+import { ProductRoute } from './product-route'
+
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const initialProduct = await getProduct(id)
+  if (!initialProduct) notFound()
+
+  return <ProductRoute id={id} initialProduct={initialProduct} />
+}
+```
+
+## 3. Hydrate before the domain read
+
+```tsx
+// app/products/[id]/product-route.tsx
+'use client'
+
+import { useProduct, type Product } from '@/state/product'
+
+export function ProductRoute({ id, initialProduct }: { id: string; initialProduct: Product }) {
+  useProduct.hydrate({ detail: { arg: id, data: initialProduct } })
+  return <ProductDetail />
+}
+
+function ProductDetail() {
+  const product = useProduct((s) => s.detail.data)
+  if (!product) return null
+
+  return (
+    <article>
+      <h1>{product.title}</h1>
+      <p>{product.description}</p>
+    </article>
+  )
+}
+```
+
+Call `hydrate()` unconditionally, like a hook, before the normal read of that model. It returns
+`void`. The fresh entry is immediately successful, with `isLoading` and `isFetching` both false;
+passive readers do not issue a duplicate request.
+
+## Hydration contract
+
+```tsx
+// Argument queries require their declared arg.
+useProduct.hydrate({ detail: { arg: id, data: initialProduct } })
+
+// An argument-free Query<number> takes only data.
+useDashboard.hydrate({ count: { data: 42 } })
+
+// Optional seeds keep the call unconditional.
+useProduct.hydrate(seed ?? null)
+```
+
+Only query fields are accepted, and TypeScript infers the field names, arguments, and data. Partial
+entry maps are allowed. Plain state, realtime queries, and standalone `local()` cannot be hydrated.
+Infinite queries accept their data value; this API does not accept a separate cursor/history seed.
+
+Equivalent repeated seeds are no-ops. A new unread entry initializes before its first snapshot.
+Changes to an observed entry apply in the requesting render's layout commit, so an abandoned
+transition cannot replace the currently committed screen. Hydration also records freshness for
+later `.load()` or `.query()` calls; `.refetch()` still forces a request.
+
+## Choose who owns the request
+
+| Data owner                           | Pattern                                         |
+| ------------------------------------ | ----------------------------------------------- |
+| A mounted Client Component           | `.load(arg)` and render loading/error state     |
+| A Server Component                   | Await data, then `useDomain.hydrate(...)`       |
+| A user event or coordinated workflow | An action calling `.query(arg)` or `.refetch()` |
+| An IndexedDB-only fallback           | Standalone `local()` with `.restore(arg)`       |
+
+`.load()` does not start a request during SSR because its work begins after commit. A passive
+read after hydration displays the supplied server data. Adding `.load(arg)` makes that component
+an owner of subsequent client loading and freshness checks.
+
+[`local.query()`](/docs/api/local) and `local.infinite()` accept the same hydration interface. Their
+IndexedDB work and canonical entity reconciliation begin after commit. Server and browser
+providers have separate memory; the explicit seed is what connects their initial renders.
+
+## Suspense and older initialization patterns
+
+Use a Server Component's `Suspense` boundary to stream a fallback around an async loader when
+needed. Experimental selector `.suspend(arg)` executes the query during render and requires a
+query function that is safe in every rendering environment. A Next.js Server Function cannot be
+called from a Client Component's initial render; await it on the server and hydrate instead.
+
+Do not initialize state by calling an action in a render body. Deprecated [`silent()`](/docs/api/silent)
+does not make that mutation safe. Move resolved server query data to `hydrate()` and leave normal
+actions for events and imperative workflows.
