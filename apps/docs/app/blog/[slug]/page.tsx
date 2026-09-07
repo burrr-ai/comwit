@@ -24,10 +24,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <div>
-      <Link
-        href="/blog"
-        className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
-      >
+      <Link href="/blog" className="blog-back-link">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="14"
@@ -45,15 +42,15 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         Back to blog
       </Link>
 
-      <header className="mt-6 mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{post.title}</h1>
-        <div className="mt-2 flex items-center gap-3 text-xs text-muted">
-          <time>{post.date}</time>
+      <header className="blog-post-header">
+        <h1 className="blog-title">{post.title}</h1>
+        <div className="blog-post-meta">
+          <time dateTime={post.date}>{post.date}</time>
           {post.author && <span>by {post.author}</span>}
         </div>
       </header>
 
-      <article className="prose prose-neutral max-w-none text-foreground/80 prose-headings:text-foreground prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-lg prose-p:text-sm prose-p:leading-relaxed prose-hr:border-border prose-strong:text-foreground">
+      <article className="blog-prose prose prose-neutral max-w-none">
         <MDXRemote
           source={post.content}
           options={{

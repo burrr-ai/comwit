@@ -61,3 +61,13 @@ yarn workspace @comwit/state test tests/query-hydrate.test.tsx tests/query-selec
 ## Remaining limits
 
 The system reduced-motion preference is handled in the component and CSS; the test browser used its normal motion preference, so that operating-system setting was not toggled during this run. The explicit pause/resume control was exercised. The scene uses layered illustration, spring transforms, and canvas particles rather than a Spline scene or a rigged 3D character.
+
+## Blog, social preview, and wide-screen follow-up
+
+Verified on 2026-09-07 after the original redesign:
+
+- Blog list titles now use 21–25px type, summaries and article text use 16–17px, and article code uses 14px. All 13 production blog articles fit a 390px viewport without horizontal page overflow; long code scrolls within its block.
+- Relative publication times update after hydration and on window focus. Verified minute/hour/day changes in the production browser, plus 14 formatter checks covering boundaries, future timestamps, invalid input, and explicit timezones. All 13 server-rendered dates remain absolute, with exact dates preserved in `datetime` and tooltips.
+- At 1920px, the old sidebar started 240px from the viewport edge. It now starts at 0px at widths of 768, 1200, 1440, 1920, and 2560px. Article width stays capped at 780px; the sidebar remains immediately below the 73px sticky header while scrolling. Mobile filtering and Enter navigation still close the menu correctly.
+- Open Graph and Twitter both reference the new 1200 × 630 PNG card, rendered from the current landing illustration, brand mark, Manrope font, and headline. The old `/og.png` responds with a 308 redirect to the new card.
+- Production build: 35 prerendered routes, including the static social card; TypeScript, ESLint, Prettier, and `git diff --check` passed. The fresh production browser session reported no console messages or page errors.

@@ -46,10 +46,10 @@ export const metadata: Metadata = {
     locale: 'en_US',
     images: [
       {
-        url: '/og.png',
+        url: '/og/panda-garden',
         width: 1200,
         height: 630,
-        alt: "comwit — You don't need to read docs.",
+        alt: 'comwit — A little state. A lot of possibility. A panda coding in a purple garden.',
       },
     ],
   },
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     title: 'comwit — React state management for vibe coding',
     description:
       'React state management for you and your coding agent. One llms.txt. Then get back to making things.',
-    images: ['/og.png'],
+    images: ['/og/panda-garden'],
   },
   other: {
     llmstxt: 'https://library.comwit.io/llms.txt',

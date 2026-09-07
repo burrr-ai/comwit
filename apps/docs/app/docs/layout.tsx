@@ -27,14 +27,16 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
       </div>
       <div className="docs-shell">
         <DocsSidebar ungrouped={ungrouped} groups={groups} />
-        <main id="docs-content" className="docs-main">
-          <div>{children}</div>
-        </main>
-        <aside className="docs-toc">
-          <div>
-            <TableOfContents />
-          </div>
-        </aside>
+        <div className="docs-reading">
+          <main id="docs-content" className="docs-main">
+            <div>{children}</div>
+          </main>
+          <aside className="docs-toc">
+            <div>
+              <TableOfContents />
+            </div>
+          </aside>
+        </div>
       </div>
     </>
   )

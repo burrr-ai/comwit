@@ -455,10 +455,15 @@ h3,
   background: #292331;
 }
 .docs-shell {
-  max-width: 1440px;
-  margin: auto;
   display: flex;
   min-height: calc(100vh - 73px);
+}
+.docs-reading {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  max-width: 1160px;
+  margin-inline: auto;
 }
 .docs-sidebar {
   width: 280px;
@@ -687,10 +692,97 @@ h3,
   margin: auto;
   padding: 64px 30px 100px;
 }
-.blog-main > div > h1 {
-  font-size: 40px;
+.blog-title {
+  font-size: clamp(32px, 4vw, 42px);
   font-family: var(--font-manrope);
+  font-weight: 800;
   letter-spacing: -0.04em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.blog-description {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.75;
+}
+.blog-list {
+  margin-top: 44px;
+}
+.blog-list-item {
+  display: block;
+  padding-block: 30px;
+  border-bottom: 1px solid var(--border);
+}
+.blog-list-item:first-child {
+  padding-top: 0;
+}
+.blog-list-item time,
+.blog-post-meta {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.blog-list-item h2 {
+  margin-top: 9px;
+  font-size: clamp(21px, 2.4vw, 25px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.4;
+}
+.blog-list-item:hover h2 {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.blog-list-item p {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.75;
+}
+.blog-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.blog-back-link:hover {
+  color: var(--foreground);
+}
+.blog-post-header {
+  margin-block: 24px 40px;
+}
+.blog-post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 20px;
+}
+.blog-main .blog-prose,
+.blog-main .blog-prose p {
+  font-size: 17px;
+  line-height: 1.85;
+}
+.blog-main .blog-prose h2 {
+  font-size: 27px;
+  line-height: 1.4;
+}
+.blog-main .blog-prose h3 {
+  font-size: 21px;
+  line-height: 1.5;
+}
+.blog-main .blog-prose pre {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.blog-main .blog-prose table {
+  font-size: 15px;
+}
+.blog-main .blog-prose :not(pre) > code {
+  overflow-wrap: anywhere;
 }
 
 @media (min-width: 1600px) {
@@ -975,6 +1067,15 @@ h3,
   }
   .blog-main {
     padding: 35px 6% 65px;
+  }
+  .blog-list-item p,
+  .blog-description,
+  .blog-main .blog-prose,
+  .blog-main .blog-prose p {
+    font-size: 16px;
+  }
+  .blog-main .blog-prose h2 {
+    font-size: 24px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -33,6 +33,10 @@ Art direction: an original hand-drawn panda in an orange sweatshirt using a purp
 
 Typography: Manrope for display headings, Inter for reading and UI, Geist Mono for code. Fonts are served through `next/font`.
 
+The 1200 × 630 social card at `/og/panda-garden` reuses the landing illustration, panda mark, and headline. `app/og/panda-garden/route.tsx` renders it with `next/og` at build time; Sharp converts the existing WebP illustration for the renderer. The bundled Manrope fonts come from Google Fonts and are licensed under the adjacent `app/og/assets/OFL.txt`. Open Graph and Twitter metadata share this URL, and the old `/og.png` URL redirects to it.
+
+Blog lists show relative publication times in English, matching the site language, and refresh every minute or when the window regains focus. The exact date remains in the time element and its tooltip; static HTML also shows that date until hydration. Use ISO dates or timestamps with an explicit timezone in post frontmatter.
+
 ## Brand and navigation
 
 The header and footer use `app/brand.tsx` with `public/panda-mark.webp`. Matching PNG icons are provided at 32px and 192px, with a 180px Apple touch icon. These are resized derivatives of a new opaque ImageGen panda mark, designed for small sizes.
