@@ -7,7 +7,7 @@ order: 10
 
 # Utilities
 
-Standalone helpers exported from `'comwit'` for working with reactive proxies and inspecting state during development.
+Standalone helpers exported from `@comwit/state` for working with reactive proxies and inspecting state during development.
 
 ```ts
 import { snapshot, isProxy, initDevTools } from '@comwit/state'
@@ -19,7 +19,9 @@ import { snapshot, isProxy, initDevTools } from '@comwit/state'
 function snapshot<T extends object>(state: T): T
 ```
 
-Returns a non-extensible, deep plain-object copy of a comwit reactive proxy. The result is detached from the store — later mutations to the proxy do not affect it, and nested objects are recursively snapshotted and made non-extensible (via `Object.preventExtensions`, so existing properties stay writable but none can be added or removed).
+Returns a detached snapshot of a comwit reactive proxy. Later store mutations do not change it.
+Nested reactive objects are snapshotted recursively; properties are non-writable and objects are
+non-extensible. Treat the result as read-only and use ordinary actions to change state.
 
 `state` must be a proxy (a model proxy or a nested proxy slice). Passing a plain object throws `Error('Please use proxy object')`.
 

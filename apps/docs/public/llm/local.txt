@@ -122,8 +122,9 @@ persistence, and entity fanout run after commit. Standalone `local()` remains re
 call a mutating action during render, including one wrapped in deprecated `silent()`.
 
 ```tsx
-useProduct.hydrate({ detail: { arg: { id }, data: initialDetail } })
-const detail = useProduct((state) => state.detail.data)
+// `list` is the local.query() field declared above; `detail` is restore-only.
+useProduct.hydrate({ list: { arg: filter, data: initialList } })
+const list = useProduct((state) => state.list.data)
 ```
 
 ## Query-backed local resources

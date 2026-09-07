@@ -3,6 +3,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc'
 import { getAllDocs, getDocBySlug } from '@/lib/mdx'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeSlug from 'rehype-slug'
 
 export function generateStaticParams() {
   const docs = getAllDocs()
@@ -26,13 +27,13 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
   if (!doc) notFound()
 
   return (
-    <article className="prose prose-neutral max-w-none text-foreground/80 prose-headings:text-foreground prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-lg prose-p:text-sm prose-p:leading-relaxed prose-hr:border-border prose-strong:text-foreground">
+    <article className="prose max-w-none">
       <MDXRemote
         source={doc.content}
         options={{
           mdxOptions: {
             remarkPlugins: [remarkGfm],
-            rehypePlugins: [rehypeHighlight],
+            rehypePlugins: [rehypeSlug, rehypeHighlight],
           },
         }}
       />

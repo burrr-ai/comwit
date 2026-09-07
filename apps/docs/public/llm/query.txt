@@ -87,10 +87,12 @@ Creates a real-time resource descriptor that combines initial data fetching with
 ```ts
 import { model, query } from '@comwit/state'
 
+const roomId = 'general'
+
 export const chat = model<ChatState>({
   messages: query.realtime<Message[]>({
     initialData: [],
-    queryFn: (roomId) => api.chat.history(roomId),
+    queryFn: () => api.chat.history(roomId),
     subscribe: (callbacks) => {
       const ws = new WebSocket(`/ws/chat/${roomId}`)
       ws.onmessage = (e) => {
@@ -258,7 +260,8 @@ Use `.load(arg)` instead when the component must commit and render `isLoading` i
 
 ### .query(arg?, options?)
 
-Imperative action method. Triggers the fetch and must be called at least once before `.refetch()` or `.nextFetch()` will work.
+Imperative action method. Triggers the fetch. An entry activated by `.query()`, selector `.load()`,
+`.set()`, or `.hydrate()` can be refetched; `.nextFetch()` also requires `hasMore: true`.
 
 ```ts
 // No argument
@@ -281,7 +284,7 @@ await this.model.comments.query(postId, { staleTime: 60_000 })
 
 ### .refetch()
 
-Re-fetches using the last argument. No-op if `.query()` has never been called.
+Re-fetches using the active/last argument. No-op until an entry has been loaded, set, or hydrated.
 
 ```ts
 await this.model.posts.refetch()

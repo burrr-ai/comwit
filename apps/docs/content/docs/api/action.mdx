@@ -63,11 +63,27 @@ When a model has [`history: true`](/docs/api/history), each action method call i
 
 ## Class pattern
 
-Use a class inside the factory. This gives you:
+A class inside the factory gives you:
 
 - Private fields for model references (`this.model`, `this.user`)
 - [Decorator](/docs/decorators) support (`@OnError`, `@OnSuccess`, `@Debounce`, etc.)
 - Clean method signatures that match your `Actions` type
+
+Plain object methods are also supported when you do not need decorators:
+
+```ts
+const counterActions = action<CounterActions>(({ state }) => {
+  const counterState = state(counter)
+  return {
+    increment() {
+      counterState.count += 1
+    },
+  }
+})
+```
+
+Both forms expose bound methods through the hook. Mutate the proxy returned by `state(model)`;
+component selectors are for reading snapshots.
 
 ## Cross-domain state
 

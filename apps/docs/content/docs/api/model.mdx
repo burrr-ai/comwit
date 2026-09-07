@@ -7,7 +7,7 @@ order: 3
 
 # model()
 
-Creates a global reactive store. Each domain has one model.
+Defines a reactive model. Each provider owns its own state instance; each domain usually has one model.
 
 ```ts
 import { model } from '@comwit/state'
@@ -49,10 +49,11 @@ export const app = model<AppState>({
 
 - Fields using [`query()`](/docs/api/query) become keyed data resources; selectors use `.load()`
   for client fetching and generated domain hooks use `.hydrate()` for resolved server data
+- Fields using [`local()`](/docs/api/local) restore exact IndexedDB views and share canonical entities
 - Fields using [`persist()`](/docs/api/persist) are automatically synced to storage
 - Plain fields (strings, objects, arrays, null) are reactive local state
 - Models with `history: true` expose [`$history`](/docs/api/history) for undo and redo
-- Models initialize lazily — only when first accessed via a hook
+- Models initialize lazily — when first accessed through a hook or `state(model)` in an action
 - Each model instance is scoped to the nearest `ComwitProvider`
 
 ## Derived State

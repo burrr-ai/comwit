@@ -7,70 +7,56 @@ order: 5
 
 # create()
 
-Combines a model and its actions into a React hook.
+Combine a model and action factories into one domain hook.
 
 ```ts
 import { create } from '@comwit/state'
-```
-
-## Usage
-
-```ts
-import { create } from '@comwit/state'
-import type { PostState, PostActions } from './types'
 import { post } from './model'
 import { crudActions } from './actions/crud'
 import { loadActions } from './actions/load'
+import type { PostState, PostActions } from './types'
 
 export const usePost = create<PostState, PostActions>(post, {
   actions: [crudActions, loadActions],
 })
 ```
 
-## Selector pattern
+For a read-only domain, pass `{ actions: [] }`.
 
-The returned hook accepts an optional selector:
+## Select the state you render
 
 ```tsx
-// Select specific fields — only re-renders when these change
-const { posts, actions } = usePost((s) => ({
-  posts: s.posts,
+const { title, actions } = usePost((s) => ({
+  title: s.detail.data?.title,
   actions: s.actions,
 }))
-
-// No selector — returns everything (re-renders on any change)
-const state = usePost()
 ```
 
-## Deep equality
+Selectors compare results with deep equality. This example updates when the title changes; selecting
+`s.detail` instead would also observe its query status and other data. Calling `usePost()` without
+a selector subscribes to the whole domain.
 
-Selectors use deep equality comparison. The component only re-renders when the selected values actually change, not on every state mutation.
+## Load a query
 
-```tsx
-// This only re-renders when posts.data changes, not when
-// unrelated state like `current` changes
-const { posts } = usePost((s) => ({ posts: s.posts }))
-```
-
-## Reading query fields
-
-Call `.load(arg)` in the selector when the mounted component owns a non-suspending request. It
-returns loading state immediately and starts the query after commit:
+For a field typed `Query<Post[], { page: number }>`, pass its argument in the selector:
 
 ```tsx
 const posts = usePost((s) => s.posts.load({ page }))
 
 if (posts.isLoading) return <Skeleton />
-if (posts.isError) return <p>Error: {posts.error}</p>
+if (posts.isError && !posts.isSuccess) return <p>{posts.error}</p>
 return posts.data.map((post) => <Card key={post.id} post={post} />)
 ```
 
-Selecting `s.posts` without `.load(...)` only observes existing state; it does not fetch. Existing action-driven loading remains valid for commands and coordinated workflows.
+`.load(arg)` reports loading during render and starts the request after commit. Selecting `s.posts`
+without `.load(...)` only reads state. Use actions for imperative loading and coordinated workflows.
+See [query()](/docs/api/query) for cache keys, freshness, and experimental `.suspend(arg)`.
 
-For data fetched by a Server Component, call the generated hook's `hydrate()` method in a small
-client route adapter before reading the hook normally:
+## Hydrate server data
 
 ```tsx
+'use client'
+
 function PostRoute({ slug, initialPost }: Props) {
   usePost.hydrate({ detail: { arg: slug, data: initialPost } })
   return <PostDetail />
@@ -78,30 +64,36 @@ function PostRoute({ slug, initialPost }: Props) {
 
 function PostDetail() {
   const post = usePost((s) => s.detail.data)
-  if (!post) return <NotFound />
-  return <article>{post.title}</article>
+  return post ? <article>{post.title}</article> : null
 }
 ```
 
-`hydrate()` returns nothing. A new entry initializes before the following domain-hook read takes its
-first snapshot; an observed entry is replaced only after the requesting render commits. Call it
-unconditionally like a hook. `null` and `undefined` are safe no-ops.
+`hydrate(entries)` infers query field names, arguments, and data from the model. Call it
+unconditionally before the normal domain read. It returns `void` and accepts `null` or `undefined`
+as a no-op. New entries initialize before their first snapshot; changes to observed entries apply
+when the requesting render commits. See the complete [Next.js guide](/docs/guide/nextjs).
 
-Selector `.suspend(arg)` is experimental. It starts or reuses `queryFn` during render and accepts no
-Promise or initial-data override. Do not use it with a Next.js Server Function; run that function in
-a Server Component and use `hydrate()` instead.
-
-## Calling actions
-
-Actions are available on `s.actions`:
+## Call an action
 
 ```tsx
-const { actions } = usePost((s) => ({ actions: s.actions }))
+const actions = usePost((s) => s.actions)
 
-useEffect(() => {
-  actions.loadPosts()
-}, [])
+return <button onClick={() => actions.like(postId)}>Like</button>
 ```
 
-The effect pattern is backward compatible. Prefer selector `.load(...)` when the view owns client
-fetching and `hydrate(...)` when a Server Component owns the resolved query value.
+Actions are bound to the current provider. Keep writes inside actions and call them from events or
+imperative workflows. Do not initialize the store by calling an action during render.
+
+## Lower-level hooks
+
+`create()` combines the two hooks below and attaches the typed hydration method. You can use them
+separately when composing your own integration:
+
+```tsx
+import { useModel, useAction } from '@comwit/state'
+
+const title = useModel(post, (s) => s.detail.data?.title)
+const actions = useAction<PostActions>([crudActions, loadActions])
+```
+
+Both require `ComwitProvider`. `useModel()` selectors expose the same query `.load()` interface.

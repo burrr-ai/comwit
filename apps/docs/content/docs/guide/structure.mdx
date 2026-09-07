@@ -17,7 +17,7 @@ state/{domain}/
   ├── model.ts          # model() with initial state
   ├── actions/
   │   ├── crud.ts       # CRUD operations
-  │   ├── load.ts       # Data fetching via query()
+  │   ├── load.ts       # Optional coordinated or imperative fetching
   │   ├── init.ts       # Optional imperative initialization
   │   └── ...           # One file per concern
   └── index.ts          # create() hook + re-exports
@@ -27,7 +27,8 @@ state/{domain}/
 
 Always create files in this order: **types.ts → model.ts → actions/\*.ts → index.ts**
 
-Each file depends only on the ones before it. This is critical for LLMs — it means they can generate each file with full context from the previous ones.
+Start with the public contract, then its implementation. Components import the domain hook and
+types from `index.ts`; actions import model definitions directly.
 
 ## Rules
 
@@ -41,19 +42,22 @@ Each file depends only on the ones before it. This is critical for LLMs — it m
 The types file defines two things: the state shape and the actions interface.
 
 ```ts
-import { Query } from '@comwit/state'
+import type { Query } from '@comwit/state'
 
 export type Post = { id: string; title: string; body: string }
+export type PostComment = { id: string; postId: string; body: string }
 
 export type PostState = {
   posts: Query<Post[]> // keyed query data
-  comments: Query<Comment[], string> // second generic = queryFn arg type
+  comments: Query<PostComment[], string> // second generic = queryFn arg type
   current: Query<Post | null, string> // hydrate the resolved Server Component value
 }
 
 export type PostActions = {
   /** @description Imperatively fetch posts for coordinated workflows */
   loadPosts(): Promise<void>
+  /** @description Create a post for the signed-in user */
+  create(title: string): Promise<void>
   /** @description Toggle like. Optimistic update on list + current */
   like(postId: string): Promise<void>
 }
@@ -61,12 +65,30 @@ export type PostActions = {
 
 - `Query<Data>` for keyed query fields — provides `.data`, `.isLoading`, `.isError`, `.error`
 - `Query<Data, Arg>` — second generic is the `queryFn` parameter type
+- `Local<Data, Arg>` for an exact IndexedDB resource without a remote query function
 - Plain types for client-owned state
 
 For view-owned requests, call `s.posts.load(arg)` for non-suspending client loading. When a Server
 Component owns the resolved value, call `usePost.hydrate(...)` in a small client route adapter before
 the actual UI reads the domain hook. Keep a `loadPosts()` action when fetching is part of a command,
 multi-query sequence, preload, or user event.
+
+## Public entry point
+
+```ts
+// state/post/index.ts
+import { create } from '@comwit/state'
+import { post } from './model'
+import { postActions } from './actions/interact'
+import type { PostState, PostActions } from './types'
+
+export const usePost = create<PostState, PostActions>(post, { actions: [postActions] })
+export type { Post, PostState, PostActions } from './types'
+```
+
+Keep app-specific API calls under your `api/` layer. A client domain may call a browser-safe API
+adapter; server-only database code belongs behind a server boundary. Pass resolved server data
+through a [route adapter](/docs/guide/nextjs).
 
 ## Cross-domain access
 

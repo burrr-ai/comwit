@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# comwit documentation
 
-## Getting Started
+The Next.js documentation site for `@comwit/state`, served at [library.comwit.io](https://library.comwit.io).
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```sh
+# From the repository root
+yarn install --frozen-lockfile
+yarn workspace docs dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The dev and build lifecycle scripts compile the local library first so the landing page's counter runs the actual workspace implementation. If Turbopack encounters a local filesystem/watch error, use `yarn workspace docs dev --webpack`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+yarn workspace docs lint
+yarn workspace docs exec tsc --noEmit
+yarn workspace docs build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Content
 
-## Learn More
+- `content/docs/`: MDX guides and API reference. Frontmatter controls the sidebar grouping and order.
+- `content/blog/`: historical release notes and articles.
+- `public/llms.txt`: the compact starting contract for coding agents. Keep the core interface and examples here; link to `public/llm/` for deeper reference.
+- `lib/mdx.ts`: content discovery; headings receive stable IDs during MDX rendering for direct section links.
 
-To learn more about Next.js, take a look at the following resources:
+## Landing page
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`app/garden-scene.tsx` renders independent forest, panda, and particle layers. Spring motion follows the pointer; the counter uses a real comwit model/action/hook and nudges the panda. The motion toggle and system reduced-motion preference disable ambient movement. Animation work pauses when the hero leaves the viewport.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The two 1536 × 1024 WebP illustrations in `public/` were generated with the built-in ImageGen tool. `panda-garden.webp` is the original scene; its panda is cropped at display time using the registered contour in `app/globals.css`. `panda-garden-background.webp` is the same scene with the panda and laptop removed. Keep their framing aligned when replacing assets.
 
-## Deploy on Vercel
+Art direction: an original hand-drawn panda in an orange sweatshirt using a purple laptop on a branch, textured crayon/gouache, deep aubergine night garden, sage and lavender foliage, warm chalk stars, quiet space on the right. Inspired by the playful illustration and floating demo composition of the Zustand demo. No third-party illustration was copied.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Typography: Manrope for display headings, Inter for reading and UI, Geist Mono for code. Fonts are served through `next/font`.

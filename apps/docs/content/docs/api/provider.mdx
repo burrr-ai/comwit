@@ -1,0 +1,101 @@
+---
+title: 'ComwitProvider'
+group: 'API'
+slug: 'api/provider'
+order: 2.5
+---
+
+# ComwitProvider
+
+Wrap the client tree once. The provider owns the model instances and query cache; each model
+initializes when a hook or action first accesses it.
+
+```tsx
+'use client'
+
+import { ComwitProvider, keepPreviousData } from '@comwit/state'
+import { useRouter } from 'next/navigation'
+import type { ReactNode } from 'react'
+
+export function Providers({ children }: { children: ReactNode }) {
+  const router = useRouter()
+
+  return (
+    <ComwitProvider
+      context={{ router }}
+      defaultOptions={{
+        query: {
+          staleTime: 30_000,
+          gcTime: 5 * 60_000,
+          placeholderData: keepPreviousData,
+        },
+        persist: { debounceMs: 100 },
+        local: { database: 'my-app' },
+      }}
+    >
+      {children}
+    </ComwitProvider>
+  )
+}
+```
+
+Only `children` is required. `<ComwitProvider>{children}</ComwitProvider>` is a complete setup.
+
+| Prop                          | Purpose                                                                         |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| `context`                     | Shared values available to action factories, such as the router or auth helpers |
+| `defaultOptions.query`        | Global `staleTime`, `gcTime`, and `placeholderData`                             |
+| `defaultOptions.persist`      | Global persistence debounce interval                                            |
+| `defaultOptions.local`        | IndexedDB database, fallback scope, and storage error handler                   |
+| `defaultOptions.interceptors` | Interceptors applied to every action method                                     |
+
+Query defaults can be overridden on a query field or by an imperative `.query(arg, options)` call.
+Selector `.load(arg)` only takes the query argument.
+
+## Use shared context in actions
+
+```ts
+import { action } from '@comwit/state'
+
+type AppContext = { router: { push(href: string): void } }
+type NavigationActions = { openProducts(): void }
+
+export const navigationActions = action<NavigationActions, AppContext>(({ context }) => ({
+  openProducts() {
+    context.router.push('/products')
+  },
+}))
+```
+
+Context values update with provider renders; read them when the action runs when they may change
+over time.
+
+## Global interceptors
+
+```tsx
+import { ComwitProvider, Log, OnError } from '@comwit/state'
+;<ComwitProvider
+  defaultOptions={{
+    interceptors: [OnError((error) => reportError(error)), Log('info')],
+  }}
+>
+  {children}
+</ComwitProvider>
+```
+
+Execution order is provider → class → method → action body. See [Decorators](/docs/decorators)
+for retries, authorization, queues, and validation.
+
+## Isolation and local storage scopes
+
+Nested providers own independent state. A new provider starts a new in-memory registry. For
+provider-level user or tenant scopes, remount the provider when the scope changes:
+
+```tsx
+<ComwitProvider key={user.id} defaultOptions={{ local: { scope: `user:${user.id}` } }}>
+  {children}
+</ComwitProvider>
+```
+
+A collection can instead define its own static or model-derived scope, which takes precedence
+over the provider fallback. See [local() scope rules](/docs/api/local#provider-setup).

@@ -4,6 +4,36 @@ slug: 'llm-setup'
 order: 10
 ---
 
-# LLM Setup
+# One file for your agent
 
-Pass `https://library.comwit.io/llms.txt` to Claude Code and ask it to set up your project. That's it.
+Give Claude Code, Codex, Cursor, or your coding agent this prompt:
+
+```text
+Read https://library.comwit.io/llms.txt and use @comwit/state for this app's state.
+Follow its domain structure and examples when adding features.
+```
+
+[`llms.txt`](/llms.txt) covers installation, models, actions, queries, server hydration, and the
+boundaries between them. Detailed references are linked from the file for optional features.
+
+## Keep the convention in your project
+
+Add a short rule to the instruction file your agent reads, such as `AGENTS.md` or `CLAUDE.md`:
+
+```md
+## State
+
+Use @comwit/state. Before changing state code, read
+https://library.comwit.io/llms.txt and the domain's types.ts.
+Keep state in state/{domain}/ and expose it through the domain hook.
+```
+
+If your agent cannot open URLs, download the guide and point that rule at the local copy:
+
+```bash
+mkdir -p state
+curl -fsSL https://library.comwit.io/llms.txt -o state/.ai.md
+```
+
+Refresh a downloaded copy when upgrading the library. No generated configuration or special
+integration is required.

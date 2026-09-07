@@ -1,10 +1,15 @@
 import type { Metadata } from 'next'
-import { Inter, Geist_Mono } from 'next/font/google'
+import { Inter, Geist_Mono, Manrope } from 'next/font/google'
 import 'highlight.js/styles/github-dark.css'
 import './globals.css'
 
 const inter = Inter({
   variable: '--font-inter',
+  subsets: ['latin'],
+})
+
+const manrope = Manrope({
+  variable: '--font-manrope',
   subsets: ['latin'],
 })
 
@@ -16,7 +21,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'comwit — React state management for vibe coding',
   description:
-    'LLM-optimized React state management library built for vibe coding with Claude Code. Proxy reactivity, built-in data fetching, and minimal token overhead. Just pass llms.txt.',
+    'React state management for you and your coding agent. One llms.txt for models, actions, queries, and server hydration. Used by 1,000+ projects on comwit.io.',
   keywords: [
     'comwit',
     'react',
@@ -34,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'comwit — React state management for vibe coding',
     description:
-      'LLM-optimized React state management. Proxy reactivity, built-in data fetching, minimal token overhead. Just pass llms.txt to Claude Code.',
+      'React state management for you and your coding agent. One llms.txt. Then get back to making things.',
     siteName: 'comwit',
     url: 'https://library.comwit.io',
     type: 'website',
@@ -52,7 +57,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'comwit — React state management for vibe coding',
     description:
-      'LLM-optimized React state management. Proxy reactivity, built-in data fetching, minimal token overhead. Just pass llms.txt to Claude Code.',
+      'React state management for you and your coding agent. One llms.txt. Then get back to making things.',
     images: ['/og.png'],
   },
   other: {
@@ -71,7 +76,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${geistMono.variable} antialiased`}>{children}</body>
+      <body className={`${inter.variable} ${geistMono.variable} ${manrope.variable} antialiased`}>
+        {children}
+      </body>
     </html>
   )
 }
