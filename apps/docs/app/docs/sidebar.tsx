@@ -52,11 +52,9 @@ export function DocsSidebar({
       </details>
       <aside className="docs-sidebar">
         <div className="docs-sidebar-inner">
-          <p className="docs-sidebar-label">The field guide</p>
           {content}
           <a className="sidebar-agent" href="/llms.txt">
             <strong>llms.txt</strong>
-            <span>The core guide for your coding agent. One file to get going.</span>
           </a>
         </div>
       </aside>

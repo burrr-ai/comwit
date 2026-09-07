@@ -56,7 +56,7 @@ remain the right place for user events, imperative preloads, and coordinated wor
 
 The factory receives `{ state, context }`:
 
-- **state(model)** — returns a mutable proxy to a model's state. Call it for each model you need.
+- **state(model)** — returns a mutable proxy to a model's state. Capture it once for each model in the factory or a class field, then reuse that reference in methods.
 - **context** — the shared context from `ComwitProvider` (router, auth, etc.)
 
 When a model has [`history: true`](/docs/api/history), each action method call is recorded as one history transaction. Multiple state mutations inside the method are undone together via `state.$history.undo()`.
@@ -73,10 +73,10 @@ Plain object methods are also supported when you do not need decorators:
 
 ```ts
 const counterActions = action<CounterActions>(({ state }) => {
-  const counterState = state(counter)
+  const m = state(counter)
   return {
     increment() {
-      counterState.count += 1
+      m.count += 1
     },
   }
 })

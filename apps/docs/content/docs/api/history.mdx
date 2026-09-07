@@ -50,13 +50,15 @@ return (
 Each action method call is recorded as one history transaction.
 
 ```ts
-const todoActions = action(({ state }) => ({
-  add(title: string) {
-    const s = state(todo)
-    s.items.push({ id: crypto.randomUUID(), title, done: false })
-    s.selectedId = s.items.at(-1)!.id
-  },
-}))
+const todoActions = action(({ state }) => {
+  const s = state(todo)
+  return {
+    add(title: string) {
+      s.items.push({ id: crypto.randomUUID(), title, done: false })
+      s.selectedId = s.items.at(-1)!.id
+    },
+  }
+})
 ```
 
 The two mutations above are undone together by one call to `s.$history.undo()`.
@@ -101,14 +103,16 @@ const editor = model(
 Use `$history.ignore()` for state changes that should re-render but should not be undoable.
 
 ```ts
-const editorActions = action(({ state }) => ({
-  setDraft(value: string) {
-    const s = state(editor)
-    s.$history.ignore(() => {
-      s.draft = value
-    })
-  },
-}))
+const editorActions = action(({ state }) => {
+  const s = state(editor)
+  return {
+    setDraft(value: string) {
+      s.$history.ignore(() => {
+        s.draft = value
+      })
+    },
+  }
+})
 ```
 
 This is different from deprecated [`silent()`](/docs/api/silent). `silent()` suppresses subscriber
@@ -120,17 +124,19 @@ recording and is the correct API for history control.
 Action methods are already transactions. Use `$history.transaction()` only when you need to group nested or manual changes explicitly.
 
 ```ts
-const editorActions = action(({ state }) => ({
-  bulkRename(ids: string[], title: string) {
-    const s = state(editor)
-    s.$history.transaction('bulk rename', () => {
-      for (const id of ids) {
-        const block = s.blocks.find((x) => x.id === id)
-        if (block) block.title = title
-      }
-    })
-  },
-}))
+const editorActions = action(({ state }) => {
+  const s = state(editor)
+  return {
+    bulkRename(ids: string[], title: string) {
+      s.$history.transaction('bulk rename', () => {
+        for (const id of ids) {
+          const block = s.blocks.find((x) => x.id === id)
+          if (block) block.title = title
+        }
+      })
+    },
+  }
+})
 ```
 
 ## Redo Stack

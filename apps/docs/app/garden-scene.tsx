@@ -203,7 +203,7 @@ export function GardenScene({ children }: { children: React.ReactNode }) {
             response.stop()
           }}
         >
-          {reducedMotion ? 'Reduced motion' : paused ? 'Play the garden' : 'Pause the garden'}
+          {reducedMotion ? 'Reduced motion' : paused ? 'Play motion' : 'Pause motion'}
         </button>
       </section>
     </GardenContext.Provider>

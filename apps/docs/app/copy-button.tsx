@@ -6,10 +6,12 @@ export function CopyButton({
   text,
   children,
   className = '',
+  label,
 }: {
   text: string
   children: React.ReactNode
   className?: string
+  label?: string
 }) {
   const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle')
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -32,10 +34,16 @@ export function CopyButton({
   }
 
   return (
-    <button type="button" onClick={copy} className={className}>
-      {children}
-      <span className="copy-status" aria-live="polite">
-        {status === 'copied' ? 'Copied!' : status === 'error' ? 'Could not copy' : 'Copy'}
+    <button type="button" onClick={copy} className={className} aria-label={label}>
+      <span aria-hidden={status !== 'idle'}>
+        {status === 'copied' ? 'Copied!' : status === 'error' ? 'Try again' : children}
+      </span>
+      <span className="sr-only" role="status">
+        {status === 'copied'
+          ? 'Copied to clipboard'
+          : status === 'error'
+            ? 'Could not copy. Try again.'
+            : ''}
       </span>
     </button>
   )

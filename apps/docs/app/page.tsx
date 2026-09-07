@@ -11,24 +11,19 @@ hljs.registerLanguage('typescript', typescript)
 const examples = [
   {
     title: 'Model',
-    file: 'state/counter/model.ts',
-    code: `import { model } from '@comwit/state'\n\nexport type CounterState = {\n  count: number\n}\n\nexport const counter = model<CounterState>({\n  count: 1,\n})`,
-    note: 'Your state is just an object. Start there.',
-    href: '/docs/api/model',
+    code: `import { model } from '@comwit/state'\n\nexport const counter = model({ count: 1 })`,
   },
   {
     title: 'Actions',
-    file: 'state/counter/actions.ts',
-    code: `import { action } from '@comwit/state'\nimport { counter } from './model'\n\nexport const counterActions = action(({ state }) => ({\n  increment() {\n    state(counter).count += 1\n  },\n  reset() {\n    state(counter).count = 1\n  },\n}))`,
-    note: 'Give changes a name. Mutate state directly.',
-    href: '/docs/api/action',
+    code: `import { action } from '@comwit/state'\nimport { counter } from './model'\n\nexport const counterActions = action(({ state }) => {\n  const m = state(counter)\n\n  return {\n    increment() { m.count += 1 },\n    reset() { m.count = 1 },\n  }\n})`,
+  },
+  {
+    title: 'Class',
+    code: `import { action } from '@comwit/state'\nimport { counter } from './model'\n\nexport const counterActions = action(({ state }) => {\n  class Actions {\n    private m = state(counter)\n\n    increment() { this.m.count += 1 }\n    reset() { this.m.count = 1 }\n  }\n\n  return new Actions()\n})`,
   },
   {
     title: 'React',
-    file: 'state/counter/index.tsx',
-    code: `'use client'\n\nimport { create, ComwitProvider } from '@comwit/state'\nimport { counter, type CounterState } from './model'\nimport { counterActions } from './actions'\n\ntype Actions = { increment(): void; reset(): void }\nconst useCounter = create<CounterState, Actions>(\n  counter, { actions: [counterActions] }\n)\n\nfunction Counter() {\n  const { count, actions } = useCounter()\n  return <button onClick={actions.increment}>{count}</button>\n}\n\nexport default function App() {\n  return <ComwitProvider><Counter /></ComwitProvider>\n}`,
-    note: 'Read through a hook. React follows along.',
-    href: '/docs/api/create',
+    code: `'use client'\n\nimport { create, ComwitProvider } from '@comwit/state'\nimport { counter } from './model'\nimport { counterActions } from './actions'\n\ntype Actions = { increment(): void; reset(): void }\nconst useCounter = create<{ count: number }, Actions>(\n  counter, { actions: [counterActions] }\n)\n\nfunction Counter() {\n  const { count, actions } = useCounter()\n  return <button onClick={actions.increment}>{count}</button>\n}\n\nexport default function App() {\n  return <ComwitProvider><Counter /></ComwitProvider>\n}`,
   },
 ].map((example) => ({
   ...example,
@@ -45,7 +40,6 @@ export default function Home() {
         <SiteHeader home />
         <main id="main" className="hero-main">
           <div className="hero-copy">
-            <p className="eyebrow">REACT STATE MANAGEMENT, IN GOOD COMPANY</p>
             <h1>
               A little state.
               <br />A lot of <em>possibility.</em>
@@ -53,13 +47,13 @@ export default function Home() {
           </div>
           <div className="hero-right">
             <p className="hero-description">
-              Built for you and your coding agent.
+              React state for you and your agent.
               <br />
-              One <a href="/llms.txt">llms.txt</a>. Then get back to making things.
+              Just pass <a href="/llms.txt">llms.txt</a>.
             </p>
             <div className="hero-actions">
               <CopyButton text="https://library.comwit.io/llms.txt" className="button-lilac">
-                Give your agent llms.txt
+                Copy llms.txt
               </CopyButton>
               <Link href="/docs/guide/quickstart" className="hero-docs-link">
                 Get started
@@ -69,11 +63,9 @@ export default function Home() {
           </div>
         </main>
         <div className="hero-bottom">
-          <span>Move your cursor. Stay a little.</span>
           <CopyButton text="npm i @comwit/state" className="install-command">
             <code>npm i @comwit/state</code>
           </CopyButton>
-          <a href="#why-comwit">Meet comwit</a>
         </div>
       </GardenScene>
 
@@ -88,18 +80,12 @@ export default function Home() {
         </p>
         <p>
           <strong>1,000+</strong>
-          <span>projects use comwit</span>
-        </p>
-        <p>
-          Made for React.
-          <br />
-          Ready for your coding agent.
+          <span>projects</span>
         </p>
       </section>
 
       <section id="why-comwit" className="home-story">
         <div>
-          <p className="eyebrow">SMALL SURFACE. ROOM TO GROW.</p>
           <h2>
             Keep the idea.
             <br />
@@ -115,7 +101,6 @@ export default function Home() {
         </div>
         <div className="feature-list">
           <Link href="/docs/llm-setup">
-            <span>01</span>
             <div>
               <h3>One file. Your agent is up to speed.</h3>
               <p>
@@ -125,14 +110,12 @@ export default function Home() {
             </div>
           </Link>
           <Link href="/docs/api/query">
-            <span>02</span>
             <div>
               <h3>Client state. Server data. Together.</h3>
               <p>Reactive models, query loading, and server hydration in the same domain.</p>
             </div>
           </Link>
           <Link href="/docs/api/local">
-            <span>03</span>
             <div>
               <h3>A little memory goes a long way.</h3>
               <p>
@@ -145,14 +128,12 @@ export default function Home() {
 
       <section className="agent-strip">
         <div>
-          <p className="eyebrow">YOUR NEXT FEATURE STARTS HERE</p>
           <h2>Let your agent meet comwit.</h2>
         </div>
         <div>
           <CopyButton text="https://library.comwit.io/llms.txt" className="agent-url">
             <code>library.comwit.io/llms.txt</code>
           </CopyButton>
-          <a href="/llms.txt">Or read it yourself</a>
         </div>
       </section>
       <footer className="site-footer">
@@ -162,9 +143,6 @@ export default function Home() {
         <p>Open source. MIT licensed.</p>
         <a href="https://burrr.ai" target="_blank" rel="noreferrer">
           Supported by burrr.ai
-        </a>
-        <a href="https://github.com/meursyphus/comwit" target="_blank" rel="noreferrer">
-          Made in the open
         </a>
       </footer>
     </>

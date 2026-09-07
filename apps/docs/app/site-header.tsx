@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import packageInfo from '../../../packages/comwit/package.json'
 
 export function SiteHeader({ home = false }: { home?: boolean }) {
   return (
@@ -12,9 +11,6 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
         <Link href="/blog">Blog</Link>
         <a href="https://github.com/meursyphus/comwit" target="_blank" rel="noreferrer">
           GitHub
-        </a>
-        <a className="version-link" href="/blog/v2.3.0-release">
-          v{packageInfo.version}
         </a>
       </nav>
     </header>

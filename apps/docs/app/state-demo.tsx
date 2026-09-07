@@ -7,25 +7,25 @@ import { motion, useMotionValue, useTransform } from 'motion/react'
 import { useGarden } from './garden-scene'
 
 const counter = model({ count: 1 })
-const counterActions = action(({ state }) => ({
-  increment() {
-    state(counter).count += 1
-  },
-  reset() {
-    state(counter).count = 1
-  },
-}))
+const counterActions = action(({ state }) => {
+  const m = state(counter)
+  return {
+    increment() {
+      m.count += 1
+    },
+    reset() {
+      m.count = 1
+    },
+  }
+})
 const useCounter = create<{ count: number }, { increment(): void; reset(): void }>(counter, {
   actions: [counterActions],
 })
 
 export type DemoExample = {
   title: string
-  file: string
   code: string
   html: string
-  note: string
-  href: string
 }
 
 function Counter() {
@@ -33,7 +33,6 @@ function Counter() {
   const { count, actions } = useCounter((s) => ({ count: s.count, actions: s.actions }))
   return (
     <div className="live-counter">
-      <div className="counter-caption">a little state, alive</div>
       <output aria-live="polite" aria-label="Counter value">
         <motion.span
           key={count}
@@ -62,7 +61,7 @@ function Counter() {
 }
 
 export function StateDemo({ examples }: { examples: DemoExample[] }) {
-  const [active, setActive] = useState(0)
+  const [active, setActive] = useState(1)
   const garden = useGarden()
   const fallback = useMotionValue(0)
   const rotateY = useTransform(garden?.x ?? fallback, [-1, 1], [-2.4, 2.4])
@@ -81,40 +80,46 @@ export function StateDemo({ examples }: { examples: DemoExample[] }) {
       >
         <Counter />
         <div className="code-window">
-          <div className="code-window-heading">
-            <span>one domain. three small pieces.</span>
-            <span>LIVE EXAMPLE</span>
-          </div>
-          <div role="tablist" aria-label="Counter example" className="code-tabs">
-            {examples.map((item, index) => (
-              <button
-                type="button"
-                key={item.title}
-                role="tab"
-                id={`example-tab-${index}`}
-                ref={(element) => {
-                  tabRefs.current[index] = element
-                }}
-                aria-selected={active === index}
-                aria-controls="example-panel"
-                tabIndex={active === index ? 0 : -1}
-                onClick={() => setActive(index)}
-                onKeyDown={(event) => {
-                  let next = index
-                  if (event.key === 'ArrowRight') next = (index + 1) % examples.length
-                  else if (event.key === 'ArrowLeft')
-                    next = (index - 1 + examples.length) % examples.length
-                  else if (event.key === 'Home') next = 0
-                  else if (event.key === 'End') next = examples.length - 1
-                  else return
-                  event.preventDefault()
-                  setActive(next)
-                  tabRefs.current[next]?.focus()
-                }}
-              >
-                <span>0{index + 1}</span> {item.title}
-              </button>
-            ))}
+          <div className="code-toolbar">
+            <div role="tablist" aria-label="Counter example" className="code-tabs">
+              {examples.map((item, index) => (
+                <button
+                  type="button"
+                  key={item.title}
+                  role="tab"
+                  id={`example-tab-${index}`}
+                  ref={(element) => {
+                    tabRefs.current[index] = element
+                  }}
+                  aria-selected={active === index}
+                  aria-controls="example-panel"
+                  tabIndex={active === index ? 0 : -1}
+                  onClick={() => setActive(index)}
+                  onKeyDown={(event) => {
+                    let next = index
+                    if (event.key === 'ArrowRight') next = (index + 1) % examples.length
+                    else if (event.key === 'ArrowLeft')
+                      next = (index - 1 + examples.length) % examples.length
+                    else if (event.key === 'Home') next = 0
+                    else if (event.key === 'End') next = examples.length - 1
+                    else return
+                    event.preventDefault()
+                    setActive(next)
+                    tabRefs.current[next]?.focus()
+                  }}
+                >
+                  {item.title}
+                </button>
+              ))}
+            </div>
+            <CopyButton
+              key={example.title}
+              text={example.code}
+              className="code-copy"
+              label={`Copy ${example.title} example`}
+            >
+              Copy
+            </CopyButton>
           </div>
           <div
             id="example-panel"
@@ -122,19 +127,10 @@ export function StateDemo({ examples }: { examples: DemoExample[] }) {
             aria-labelledby={`example-tab-${active}`}
             tabIndex={0}
           >
-            <div className="code-filename">{example.file}</div>
             <pre>
               <code dangerouslySetInnerHTML={{ __html: example.html }} />
             </pre>
-            <div className="code-window-footer">
-              <span>TypeScript</span>
-              <CopyButton text={example.code}>Snippet</CopyButton>
-            </div>
           </div>
-        </div>
-        <div className="demo-note">
-          <span>{example.note}</span>
-          <a href={example.href}>Explore the API</a>
         </div>
       </motion.div>
     </ComwitProvider>
