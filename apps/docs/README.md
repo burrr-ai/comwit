@@ -32,3 +32,11 @@ The two 1536 × 1024 WebP illustrations in `public/` were generated with the bui
 Art direction: an original hand-drawn panda in an orange sweatshirt using a purple laptop on a branch, textured crayon/gouache, deep aubergine night garden, sage and lavender foliage, warm chalk stars, quiet space on the right. Inspired by the playful illustration and floating demo composition of the Zustand demo. No third-party illustration was copied.
 
 Typography: Manrope for display headings, Inter for reading and UI, Geist Mono for code. Fonts are served through `next/font`.
+
+## Brand and navigation
+
+The header and footer use `app/brand.tsx` with `public/panda-mark.webp`. Matching PNG icons are provided at 32px and 192px, with a 180px Apple touch icon. These are resized derivatives of a new opaque ImageGen panda mark, designed for small sizes.
+
+Logo prompt: a bold compact panda face on a deep aubergine square, warm cream face, asymmetric plum eye patches, a friendly wink, and a small apricot nose; simplified clean curves, no text or fine fur detail, inspired by the landing mascot. Generated with the built-in ImageGen tool.
+
+The documentation sidebar uses Phosphor icons and filters page titles, groups, and paths locally. Escape clears the filter; Enter opens the page when there is exactly one result. Filtering never changes the current article until a result is selected. The navigation list scrolls independently, keeping the search and llms.txt link available.

@@ -65,7 +65,11 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL('https://library.comwit.io'),
   icons: {
-    icon: '/logo.svg',
+    icon: [
+      { url: '/panda-icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/panda-icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: '/panda-apple-icon.png',
   },
 }
 

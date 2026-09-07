@@ -1,11 +1,10 @@
 import Link from 'next/link'
+import { Brand } from './brand'
 
 export function SiteHeader({ home = false }: { home?: boolean }) {
   return (
     <header className={`site-header ${home ? 'site-header-home' : ''}`}>
-      <Link href="/" className="wordmark" aria-label="comwit home">
-        comwit<span>.</span>
-      </Link>
+      <Brand />
       <nav aria-label="Main navigation">
         <Link href="/docs">Docs</Link>
         <Link href="/blog">Blog</Link>

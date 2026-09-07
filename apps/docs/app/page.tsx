@@ -5,6 +5,7 @@ import { SiteHeader } from './site-header'
 import { CopyButton } from './copy-button'
 import { StateDemo } from './state-demo'
 import { GardenScene } from './garden-scene'
+import { Brand } from './brand'
 
 hljs.registerLanguage('typescript', typescript)
 
@@ -137,9 +138,7 @@ export default function Home() {
         </div>
       </section>
       <footer className="site-footer">
-        <Link href="/" className="wordmark">
-          comwit<span>.</span>
-        </Link>
+        <Brand />
         <p>Open source. MIT licensed.</p>
         <a href="https://burrr.ai" target="_blank" rel="noreferrer">
           Supported by burrr.ai
