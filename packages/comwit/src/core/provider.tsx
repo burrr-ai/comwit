@@ -5,6 +5,7 @@ import type { StageMethodDecorator } from '../interceptors/utils'
 import { getDevTools, initDevTools } from './devtools'
 import type { LocalDefaults } from './local'
 import type { QueryBindingRegistry } from './query/types'
+import type { RouterAdapter } from './router'
 
 export type RegistryDefaults = {
   interceptors?: StageMethodDecorator[]
@@ -16,6 +17,8 @@ export type ComwitProviderProps = {
   children: React.ReactNode
   context?: Record<string, unknown>
   defaultOptions?: RegistryDefaults
+  /** Stable for this Provider's lifetime. Remount the Provider to replace it. */
+  router?: RouterAdapter
 }
 
 export type LifecycleState = {
@@ -30,6 +33,8 @@ export type StoreRegistry = {
   pluginStates: Map<string, unknown>
   pluginDefaults: Map<string, unknown>
   globalInterceptors?: StageMethodDecorator[]
+  router?: RouterAdapter
+  searchParamOwners: Map<symbol, { key: string; model: symbol; field: PropertyKey }>
 }
 
 // Lazily create the React Context the first time the provider or a hook is
@@ -51,7 +56,12 @@ export function useStoreRegistry(): StoreRegistry {
   return ctx
 }
 
-export function ComwitProvider({ children, defaultOptions, context = {} }: ComwitProviderProps) {
+export function ComwitProvider({
+  children,
+  defaultOptions,
+  context = {},
+  router,
+}: ComwitProviderProps) {
   const registryRef = useRef<
     StoreRegistry & {
       stores: Map<symbol, StoreEntry>
@@ -84,6 +94,8 @@ export function ComwitProvider({ children, defaultOptions, context = {} }: Comwi
       lifecycles: new Map(),
       pluginStates,
       pluginDefaults,
+      router,
+      searchParamOwners: new Map(),
       get<T extends object>(model: Model<T>): StoreEntry<T> {
         const existing = registryRef.current.stores.get(model.key)
         if (existing) return existing as StoreEntry<T>

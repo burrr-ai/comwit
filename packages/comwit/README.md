@@ -22,6 +22,34 @@ https://library.comwit.io/llms.txt
 
 Pass the URL to Claude Code. It handles the rest.
 
+## URL search parameters (beta)
+
+```tsx
+import { ComwitProvider, createBrowserRouterAdapter, useSearchParam } from '@comwit/state'
+
+// Keep the adapter stable in a client Provider: useState(() => createBrowserRouterAdapter()).
+;<ComwitProvider router={router}>{children}</ComwitProvider>
+
+// Mount once in the route boundary, keyed by project ID when the project changes.
+const thread = useSearchParam(threadModel, 'requestedThreadId', {
+  key: 'thread',
+  defaultValue: null,
+  history: 'push',
+})
+```
+
+The first commit reads the URL before enabling model write-back. Wait for `thread.ready`, retain a
+valid URL selection, and normalize a missing/invalid value with
+`thread.set(latestId, { history: 'replace', ifRevision: request.revision })`. Successful user
+selections use `push`; back/forward restores the model without an echo. Bind a separate requested
+field when the active field changes temporarily during asynchronous loading.
+
+The browser adapter observes native history changes and works with Next App Router's native
+History API integration without a Next dependency. Query parameters and hash are preserved.
+Custom adapters can implement `RouterAdapter` and be injected through the Provider.
+
+[Read the initialization, cleanup, async race, and adapter contracts](https://library.comwit.io/docs/api/router).
+
 ## Durable on-demand queries
 
 ```ts

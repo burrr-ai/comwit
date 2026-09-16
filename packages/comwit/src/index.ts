@@ -14,6 +14,8 @@ export {
   initDevTools,
   snapshot,
   isProxy,
+  createBrowserRouterAdapter,
+  useSearchParam,
 } from './core'
 export type {
   Query,
@@ -49,5 +51,12 @@ export type {
   LocalScopeResolver,
   LocalStandaloneOptions,
   SelectableLocalResource,
+  RouterAdapter,
+  RouterHistory,
+  RouterNavigateOptions,
+  SearchParamBinding,
+  SearchParamOptions,
+  SearchParamSetOptions,
+  SearchParamSnapshot,
 } from './core'
 export * from './interceptors'

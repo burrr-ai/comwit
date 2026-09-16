@@ -8,6 +8,16 @@ import {
 } from './model'
 import { action, ActionFactory, useAction } from './action'
 import { ComwitProvider, type RegistryDefaults } from './provider'
+export { createBrowserRouterAdapter, useSearchParam } from './router'
+export type {
+  RouterAdapter,
+  RouterHistory,
+  RouterNavigateOptions,
+  SearchParamBinding,
+  SearchParamOptions,
+  SearchParamSetOptions,
+  SearchParamSnapshot,
+} from './router'
 import { silent } from './silent'
 import { snapshot, isProxy, type Snapshotable } from './proxy'
 import {
