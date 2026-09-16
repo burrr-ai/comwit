@@ -21,6 +21,7 @@ export type SearchParamSnapshot<T> = {
 }
 
 export type SearchParamSetOptions = {
+  /** Overrides the binding's history mode for this write only. */
   history?: RouterHistory
   ifRevision?: number
 }
@@ -34,6 +35,7 @@ export type SearchParamBinding<T> = SearchParamSnapshot<T> & {
 export type SearchParamOptions<T> = {
   key: string
   defaultValue: T
+  /** Defaults to replace. Set push to add a browser history entry for each selection. */
   history?: RouterHistory
 } & ([T] extends [string | null]
   ? { parse?: (raw: string | null) => T; serialize?: (value: T) => string | null }
@@ -56,7 +58,7 @@ export function useSearchParam<T extends object, K extends keyof T>(
   const router = registry.router
   if (!router) throw new Error('useSearchParam() requires <ComwitProvider router={adapter}>')
   const store = registry.get(model)
-  const { key, defaultValue, history = 'push', parse, serialize } = options
+  const { key, defaultValue, history = 'replace', parse, serialize } = options
   const controller = useMemo(
     () =>
       createBinding(store, field, router, { key, defaultValue, history, parse, serialize }, () => {

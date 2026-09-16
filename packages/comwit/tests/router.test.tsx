@@ -13,6 +13,7 @@ import {
   useModel,
   useSearchParam,
   type RouterAdapter,
+  type RouterHistory,
   type RouterNavigateOptions,
   type SearchParamBinding,
 } from '../src'
@@ -51,10 +52,17 @@ function memoryRouter(initial: string | null) {
     get listeners() {
       return listeners.size
     },
+    get length() {
+      return entries.length
+    },
   }
 }
 
-function setup(router = memoryRouter('/chat?thread=url&other=keep#message'), strict = false) {
+function setup(
+  router = memoryRouter('/chat?thread=url&other=keep#message'),
+  strict = false,
+  history?: RouterHistory
+) {
   const domain = model({ thread: null as string | null, other: 0 })
   const actions = action(({ state }) => {
     const current = state(domain)
@@ -74,7 +82,7 @@ function setup(router = memoryRouter('/chat?thread=url&other=keep#message'), str
   )
   const hook = renderHook(
     () => ({
-      binding: useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null }),
+      binding: useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null, history }),
       state: useModel(domain, (s) => s.thread),
       actions: useAction([actions]),
     }),
@@ -107,8 +115,42 @@ describe('Provider search parameter binding', () => {
     expect(router.listeners).toBe(0)
   })
 
-  test('normalizes with replace, pushes selections, and restores back/forward without echoes', async () => {
-    const { result, router } = setup(memoryRouter('/chat?other=keep#message'))
+  test('defaults to replace for both model actions and set without adding history entries', async () => {
+    const { result, router } = setup()
+    act(() => result.current.actions.select('first'))
+    await flush()
+    act(() => result.current.actions.select('second'))
+    await flush()
+    act(() => result.current.binding.set('third'))
+    expect(router.navigate).toHaveBeenCalledTimes(3)
+    expect(router.navigate.mock.calls.map(([, options]) => options.history)).toEqual([
+      'replace',
+      'replace',
+      'replace',
+    ])
+    expect(router.length).toBe(1)
+    expect(router.getSnapshot()).toBe('/chat?thread=third&other=keep#message')
+  })
+
+  test('set can opt into push for one write without changing the replace default', async () => {
+    const { result, router } = setup()
+    act(() => result.current.binding.set('pushed', { history: 'push' }))
+    expect(router.navigate).toHaveBeenLastCalledWith('/chat?thread=pushed&other=keep#message', {
+      history: 'push',
+    })
+    act(() => result.current.binding.set('replaced'))
+    expect(router.navigate).toHaveBeenLastCalledWith('/chat?thread=replaced&other=keep#message', {
+      history: 'replace',
+    })
+    expect(router.length).toBe(2)
+    act(() => router.back())
+    expect(result.current.binding.value).toBe('url')
+    await flush()
+    expect(router.navigate).toHaveBeenCalledTimes(2)
+  })
+
+  test('explicit push bindings support replace overrides and back/forward without echoes', async () => {
+    const { result, router } = setup(memoryRouter('/chat?other=keep#message'), false, 'push')
     expect(result.current.binding.value).toBe(null)
     act(() => result.current.binding.set('latest', { history: 'replace' }))
     expect(router.navigate).toHaveBeenLastCalledWith('/chat?other=keep&thread=latest#message', {
@@ -377,6 +419,26 @@ describe('Provider search parameter binding', () => {
 })
 
 describe('native browser router adapter', () => {
+  test('default selections keep native history length and explicit push adds one entry', () => {
+    window.history.replaceState(null, '', '/chat?thread=initial&other=keep#message')
+    const router = createBrowserRouterAdapter()
+    const domain = model({ thread: null as string | null })
+    const { result } = renderHook(
+      () => useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null }),
+      { wrapper: ({ children }) => <ComwitProvider router={router}>{children}</ComwitProvider> }
+    )
+    const initialLength = window.history.length
+    act(() => result.current.set('one'))
+    act(() => result.current.set('two'))
+    expect(window.history.length).toBe(initialLength)
+    expect(router.getSnapshot()).toBe('/chat?thread=two&other=keep#message')
+    act(() => result.current.set('three', { history: 'push' }))
+    expect(window.history.length).toBe(initialLength + 1)
+    act(() => result.current.set('four'))
+    expect(window.history.length).toBe(initialLength + 1)
+    expect(router.getSnapshot()).toBe('/chat?thread=four&other=keep#message')
+  })
+
   test('observes native push/replace, back/forward events and hash changes, then restores methods', async () => {
     const originalPush = window.history.pushState
     const originalReplace = window.history.replaceState

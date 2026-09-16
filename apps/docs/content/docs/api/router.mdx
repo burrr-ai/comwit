@@ -9,7 +9,7 @@ order: 2.6
 
 `useSearchParam()` connects one model field to one URL query parameter. The Provider owns the
 binding; a `RouterAdapter` supplies navigation without coupling the model to Next.js or another
-framework. Available in `@comwit/state@2.4.0-beta.0`.
+framework. Available in `@comwit/state@2.4.0-beta.1`.
 
 ## Provider setup
 
@@ -52,7 +52,7 @@ function ThreadRoute() {
   const thread = useSearchParam(threadModel, 'requestedThreadId', {
     key: 'thread',
     defaultValue: null,
-    history: 'push',
+    history: 'replace', // default: switching threads does not add history entries
   })
 
   if (!thread.ready) return <div>Loading selection…</div>
@@ -69,7 +69,8 @@ applies `defaultValue`; it does not automatically rewrite the URL. Gate initiali
 selection work on `ready`. Do not call `set()` or mutate model state during render.
 
 After initialization, ordinary actions updating the bound model field write its value to the URL.
-Writes are coalesced in a microtask. An external navigation changing the owned parameter or
+Both actions and `set()` use `replace` by default, so selections do not add browser history entries.
+Writes from actions are coalesced in a microtask. An external navigation changing the owned parameter or
 pathname cancels obsolete pending writes. Unrelated query parameters, repeated query values, and
 the fragment are preserved. Back/forward applies the URL to the model without creating another
 history entry. Serialization may normalize query encoding, such as `%20` to `+`.
@@ -99,8 +100,8 @@ the revision or write history.
 For asynchronous thread switching, keep the requested selection separate from a transient
 `activeThreadId`. Loading may clear the active field, and a failed optimistic switch may restore it.
 Binding those temporary changes would create unwanted history entries. A successful user switch
-can update `requestedThreadId` through an action (default `push`) or call
-`thread.set(id, { history: 'push', ifRevision })`. Failed and superseded switches leave it alone.
+can update `requestedThreadId` through an action (default `replace`) or call
+`thread.set(id, { ifRevision })`. Failed and superseded switches leave it alone.
 The application's request tokens/cancellation must also protect the loaded thread data and active
 selection; the binding guards only its own field and URL.
 
@@ -122,9 +123,15 @@ registrations; adapters observing the same browser window still share that windo
 useSearchParam(model, field, {
   key: 'thread',
   defaultValue: null,
-  history: 'push', // default; or 'replace'
+  history: 'replace', // default; use 'push' to opt into browser history entries
 })
 ```
+
+Set `history: 'push'` on the binding when selections should become Back/Forward destinations.
+The binding option controls both ordinary model actions and `set()` calls. A `set()` option overrides
+that mode for one write only: `thread.set(id, { history: 'push' })` adds one history entry to a
+default `replace` binding, while `thread.set(id, { history: 'replace' })` can normalize a value in a
+`push` binding. Later writes continue using the binding's configured mode.
 
 | Result                                  | Meaning                                                                                                                 |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |

@@ -34,15 +34,17 @@ import { ComwitProvider, createBrowserRouterAdapter, useSearchParam } from '@com
 const thread = useSearchParam(threadModel, 'requestedThreadId', {
   key: 'thread',
   defaultValue: null,
-  history: 'push',
+  history: 'replace', // default; opt into 'push' to add history entries
 })
 ```
 
 The first commit reads the URL before enabling model write-back. Wait for `thread.ready`, retain a
 valid URL selection, and normalize a missing/invalid value with
-`thread.set(latestId, { history: 'replace', ifRevision: request.revision })`. Successful user
-selections use `push`; back/forward restores the model without an echo. Bind a separate requested
-field when the active field changes temporarily during asynchronous loading.
+`thread.set(latestId, { history: 'replace', ifRevision: request.revision })`. Model actions and
+`set()` replace the current history entry by default, so switching threads does not grow browser
+history. Opt into `history: 'push'` on the binding or override one write with
+`thread.set(id, { history: 'push' })`. Back/forward restores the model without an echo. Bind a
+separate requested field when the active field changes temporarily during asynchronous loading.
 
 The browser adapter observes native history changes and works with Next App Router's native
 History API integration without a Next dependency. Query parameters and hash are preserved.
