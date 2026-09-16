@@ -15,6 +15,9 @@ export {
   snapshot,
   isProxy,
   createBrowserRouterAdapter,
+  createRouterSnapshot,
+  searchParamBinding,
+  ComwitRouterProvider,
   useSearchParam,
 } from './core'
 export type {
@@ -52,6 +55,12 @@ export type {
   LocalStandaloneOptions,
   SelectableLocalResource,
   RouterAdapter,
+  RouterAdapterFactory,
+  RouterAdapterFactoryOptions,
+  BrowserRouterAdapterOptions,
+  RouterSnapshotInput,
+  SearchParamDefinition,
+  ComwitRouterProviderProps,
   RouterHistory,
   RouterNavigateOptions,
   SearchParamBinding,

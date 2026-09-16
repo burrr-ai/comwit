@@ -44,6 +44,10 @@ const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEff
 export type StoreEntry<T extends object = any> = {
   proxy: T
   getSnapshot(): T
+  /** Fixed bootstrap snapshot for SSR and selectively hydrated descendants. */
+  getServerSnapshot?(): T
+  /** Include an unobserved query hydration seed in the bootstrap snapshot. */
+  refreshServerSnapshot?(): void
   hasReadSnapshot(): boolean
   subscribe(listener: () => void): () => void
   history?: HistoryController
@@ -88,8 +92,15 @@ export function model<T extends object, D extends object = {}>(
     key: Symbol(),
     pluginBags,
     onObserve: options?.onObserve as Model<T & Readonly<D>>['onObserve'],
-    instance(): StoreEntry<T & Readonly<D>> {
-      const p = createProxy(cloneState())
+    instance(initialValues): StoreEntry<T & Readonly<D>> {
+      const initialState = cloneState()
+      for (const [field, value] of initialValues ?? []) {
+        if (!Object.prototype.hasOwnProperty.call(initialState, field)) {
+          throw new Error('Model initialization requires an own state field')
+        }
+        Reflect.set(initialState, field, structuredClone(value))
+      }
+      const p = createProxy(initialState)
       const historyOptions = normalizeHistoryOptions(options?.history)
       const history = historyOptions ? createHistoryController(p, historyOptions) : null
 
@@ -161,36 +172,52 @@ export function model<T extends object, D extends object = {}>(
         })
       }
 
+      const readSnapshot = () => {
+        if (!hasExtensions) return snapshot(p) as T & Readonly<D>
+
+        const base = snapshot(p)
+        const result: Record<string, unknown> = { ...(base as object) }
+
+        if (hasComputed) {
+          getComputedSnapshot(result, computedProxyRef!, computedBag!)
+        }
+
+        if (derivedGetters) {
+          for (const [key, getter] of Object.entries(derivedGetters)) {
+            result[key] = getter()
+          }
+        }
+
+        if (rules) {
+          result.$validation = computeValidation(p as Record<string, unknown>, rules)
+        }
+
+        if (history) {
+          result.$history = history.getApi()
+        }
+
+        return Object.freeze(result) as T & Readonly<D>
+      }
+      let serverSnapshot = initialValues ? readSnapshot() : undefined
+
       return {
         proxy: publicProxy as T & Readonly<D>,
         history: history ?? undefined,
         getSnapshot() {
           snapshotRead = true
-          if (!hasExtensions) return snapshot(p) as T & Readonly<D>
-
-          const base = snapshot(p)
-          const result: Record<string, unknown> = { ...(base as object) }
-
-          if (hasComputed) {
-            getComputedSnapshot(result, computedProxyRef!, computedBag!)
-          }
-
-          if (derivedGetters) {
-            for (const [key, getter] of Object.entries(derivedGetters)) {
-              result[key] = getter()
-            }
-          }
-
-          if (rules) {
-            result.$validation = computeValidation(p as Record<string, unknown>, rules)
-          }
-
-          if (history) {
-            result.$history = history.getApi()
-          }
-
-          return Object.freeze(result) as T & Readonly<D>
+          return readSnapshot()
         },
+        getServerSnapshot: initialValues
+          ? () => {
+              snapshotRead = true
+              return serverSnapshot!
+            }
+          : undefined,
+        refreshServerSnapshot: initialValues
+          ? () => {
+              serverSnapshot = readSnapshot()
+            }
+          : undefined,
         hasReadSnapshot() {
           return snapshotRead
         },
@@ -235,7 +262,8 @@ export type Model<T extends object> = {
   key: symbol
   pluginBags: Map<string, PluginBag>
   onObserve?: (state: T) => void | (() => void)
-  instance(): StoreEntry<T>
+  /** Initial values are copied before the proxy, history, and derived state are created. */
+  instance(initialValues?: ReadonlyMap<PropertyKey, unknown>): StoreEntry<T>
 }
 
 export function useModel<T extends object>(m: Model<T>): T
@@ -255,7 +283,7 @@ export function useModel<T extends object, R>(
     )
   }
 
-  const registry = useStoreRegistry()
+  const registry = useStoreRegistry().resolve(m)
   const store = registry.get(m)
   const queryBag = m.pluginBags.get(QUERY_PLUGIN_NAME) as ResourceDescriptorMap | undefined
   const queryRegistry = registry.pluginStates.get(QUERY_PLUGIN_NAME) as
@@ -303,27 +331,34 @@ export function useModel<T extends object, R>(
     [store, lifecycle, m, registry]
   )
 
-  const getSnapshot = useCallback(() => {
-    const raw = store.getSnapshot()
-    const loads: QuerySelectorLoad[] = []
-    const selectable =
-      queryBag?.size && queryRegistry
-        ? createQuerySelectorState(raw, queryController, queryBag, queryRegistry, loads)
-        : raw
-    queryLoadsRef.current = loads
-    const next = selectorRef.current
-      ? selectorRef.current(selectable as SelectableResourceState<T>)
-      : selectable
+  const readSelectedSnapshot = useCallback(
+    (server: boolean) => {
+      const raw =
+        server && store.getServerSnapshot ? store.getServerSnapshot() : store.getSnapshot()
+      const loads: QuerySelectorLoad[] = []
+      const selectable =
+        queryBag?.size && queryRegistry
+          ? createQuerySelectorState(raw, queryController, queryBag, queryRegistry, loads)
+          : raw
+      queryLoadsRef.current = loads
+      const next = selectorRef.current
+        ? selectorRef.current(selectable as SelectableResourceState<T>)
+        : selectable
 
-    if (prevRef.current !== null && isEqual(prevRef.current, next)) {
-      return prevRef.current as R
-    }
+      if (prevRef.current !== null && isEqual(prevRef.current, next)) {
+        return prevRef.current as R
+      }
 
-    prevRef.current = next
-    return next as R
-  }, [queryBag, queryController, queryRegistry, store])
+      prevRef.current = next
+      return next as R
+    },
+    [queryBag, queryController, queryRegistry, store]
+  )
 
-  const result = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+  const getSnapshot = useCallback(() => readSelectedSnapshot(false), [readSelectedSnapshot])
+  const getServerSnapshot = useCallback(() => readSelectedSnapshot(true), [readSelectedSnapshot])
+
+  const result = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
   const queryLoads = queryLoadsRef.current
   const selectorLoadKey = querySelectorLoadKey(queryLoads)
 
@@ -359,7 +394,7 @@ export function useHydrateModel<T extends object>(
   m: Model<T>,
   entries: QueryHydrationEntries<T> | null | undefined
 ): void {
-  const registry = useStoreRegistry()
+  const registry = useStoreRegistry().resolve(m)
   const queryBag = m.pluginBags.get(QUERY_PLUGIN_NAME) as ResourceDescriptorMap | undefined
   const queryRegistry = registry.pluginStates.get(QUERY_PLUGIN_NAME) as
     | QueryBindingRegistry
@@ -387,6 +422,7 @@ export function useHydrateModel<T extends object>(
       mayInitialize: !store.hasReadSnapshot(),
     }
     hydrateQueryResources({ ...hydration, phase: 'render' })
+    if (hydration.mayInitialize) store.refreshServerSnapshot?.()
   }
 
   useCommitEffect(() => {

@@ -52,6 +52,22 @@ Custom adapters can implement `RouterAdapter` and be injected through the Provid
 
 [Read the initialization, cleanup, async race, and adapter contracts](https://library.comwit.io/docs/api/router).
 
+For server-known selections, declare a `searchParamBinding()` and pass its model bindings and an
+`initialSnapshot` to a page-level `ComwitRouterProvider`. The model selector and `useSearchParam(binding)`
+then read the same URL value on the first server and hydration render. Only declared models receive a
+new scope; shared auth/session models and context keep their parent owners. At commit the latest URL
+is reconciled, and the initial snapshot is never replayed on later renders.
+
+Server Components can serialize their framework's search parameters without importing React:
+
+```ts
+import { createRouterSnapshot } from '@comwit/state/router-snapshot'
+
+const initialSnapshot = createRouterSnapshot({ pathname, searchParams: await searchParams })
+```
+
+This initializes selection state; message/query data loading remains the application's responsibility.
+
 ## Durable on-demand queries
 
 ```ts

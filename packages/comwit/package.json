@@ -1,6 +1,6 @@
 {
   "name": "@comwit/state",
-  "version": "2.4.0-beta.1",
+  "version": "2.4.0-beta.2",
   "private": false,
   "homepage": "https://library.comwit.io",
   "repository": {
@@ -41,6 +41,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/state.js",
       "require": "./dist/state.cjs"
+    },
+    "./router-snapshot": {
+      "types": "./dist/router-snapshot.d.ts",
+      "import": "./dist/router-snapshot.js",
+      "require": "./dist/router-snapshot.cjs"
     }
   },
   "files": [
@@ -54,7 +59,8 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.type-tests.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "yarn build && yarn test"
+    "test:exports": "node --conditions=react-server tests/router-snapshot.rsc.mjs",
+    "prepublishOnly": "yarn build && yarn test && yarn test:exports"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"

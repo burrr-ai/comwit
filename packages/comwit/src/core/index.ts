@@ -8,9 +8,21 @@ import {
 } from './model'
 import { action, ActionFactory, useAction } from './action'
 import { ComwitProvider, type RegistryDefaults } from './provider'
-export { createBrowserRouterAdapter, useSearchParam } from './router'
+export {
+  createBrowserRouterAdapter,
+  createRouterSnapshot,
+  searchParamBinding,
+  useSearchParam,
+} from './router'
+export { ComwitRouterProvider } from './router-provider'
+export type { ComwitRouterProviderProps } from './router-provider'
 export type {
   RouterAdapter,
+  RouterAdapterFactory,
+  RouterAdapterFactoryOptions,
+  BrowserRouterAdapterOptions,
+  RouterSnapshotInput,
+  SearchParamDefinition,
   RouterHistory,
   RouterNavigateOptions,
   SearchParamBinding,

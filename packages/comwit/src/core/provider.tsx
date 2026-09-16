@@ -5,7 +5,7 @@ import type { StageMethodDecorator } from '../interceptors/utils'
 import { getDevTools, initDevTools } from './devtools'
 import type { LocalDefaults } from './local'
 import type { QueryBindingRegistry } from './query/types'
-import type { RouterAdapter } from './router'
+import type { RouterAdapter, SearchParamDefinition } from './router'
 
 export type RegistryDefaults = {
   interceptors?: StageMethodDecorator[]
@@ -27,14 +27,20 @@ export type LifecycleState = {
 }
 
 export type StoreRegistry = {
+  resolve(model: Model<any>): StoreRegistry
   get<T extends object>(model: Model<T>): StoreEntry<T>
   getLifecycle(model: Model<any>): LifecycleState
   context?: Record<string, unknown>
   pluginStates: Map<string, unknown>
   pluginDefaults: Map<string, unknown>
   globalInterceptors?: StageMethodDecorator[]
+  defaultOptions?: RegistryDefaults
   router?: RouterAdapter
   searchParamOwners: Map<symbol, { key: string; model: symbol; field: PropertyKey }>
+  searchParamBootstrap?: {
+    snapshot: string | null
+    bindings: readonly SearchParamDefinition<any, any>[]
+  }
 }
 
 // Lazily create the React Context the first time the provider or a hook is
@@ -56,79 +62,113 @@ export function useStoreRegistry(): StoreRegistry {
   return ctx
 }
 
+export function StoreRegistryProvider({
+  registry,
+  children,
+}: {
+  registry: StoreRegistry
+  children: React.ReactNode
+}) {
+  const StateContext = getStateContext()
+  return <StateContext.Provider value={registry}>{children}</StateContext.Provider>
+}
+
+/** Construct a private scope. Unowned models retain their parent's store and plugin registries. */
+export function createStoreRegistry({
+  defaultOptions,
+  router,
+  parent,
+  initialValues,
+}: {
+  defaultOptions?: RegistryDefaults
+  router?: RouterAdapter
+  parent?: StoreRegistry
+  initialValues?: ReadonlyMap<symbol, ReadonlyMap<PropertyKey, unknown>>
+}): StoreRegistry {
+  const pluginStates = new Map<string, unknown>()
+  const pluginDefaults = parent?.pluginDefaults ?? new Map<string, unknown>()
+  const allDefaults = parent?.defaultOptions ?? defaultOptions
+  for (const plugin of getPlugins()) {
+    const defaults = (
+      parent ? parent.pluginDefaults.get(plugin.name) : defaultOptions?.[plugin.name]
+    ) as Record<string, unknown> | undefined
+    if (!parent) pluginDefaults.set(plugin.name, defaults)
+    pluginStates.set(plugin.name, plugin.createRegistryState(defaults, allDefaults))
+  }
+  if (process.env.NODE_ENV !== 'production') initDevTools()
+  const stores = new Map<symbol, StoreEntry>()
+  const lifecycles = new Map<symbol, LifecycleState>()
+  let ownInterceptors = defaultOptions?.interceptors
+  let ownDefaults = defaultOptions
+  const registry: StoreRegistry = {
+    context: parent?.context ?? {},
+    get globalInterceptors() {
+      return parent ? parent.globalInterceptors : ownInterceptors
+    },
+    set globalInterceptors(value) {
+      ownInterceptors = value
+    },
+    get defaultOptions() {
+      return parent ? parent.defaultOptions : ownDefaults
+    },
+    set defaultOptions(value) {
+      ownDefaults = value
+    },
+    pluginStates,
+    pluginDefaults,
+    router,
+    searchParamOwners: new Map(),
+    resolve(model) {
+      return parent && !initialValues?.has(model.key) ? parent.resolve(model) : registry
+    },
+    get<T extends object>(model: Model<T>): StoreEntry<T> {
+      const owner = registry.resolve(model)
+      if (owner !== registry) return owner.get(model)
+      const existing = stores.get(model.key)
+      if (existing) return existing as StoreEntry<T>
+      const entry = model.instance(initialValues?.get(model.key))
+      stores.set(model.key, entry)
+      // The global devtools registry is keyed only by model, not scope. A private
+      // render must not register an abandoned shadow of its parent's model.
+      if (process.env.NODE_ENV !== 'production' && !parent)
+        getDevTools()?.registerStore(model, entry)
+      return entry
+    },
+    getLifecycle(model) {
+      const owner = registry.resolve(model)
+      if (owner !== registry) return owner.getLifecycle(model)
+      const existing = lifecycles.get(model.key)
+      if (existing) return existing
+      const lifecycle = { subscriberCount: 0, cleanup: null }
+      lifecycles.set(model.key, lifecycle)
+      return lifecycle
+    },
+  }
+  const queryRegistry = pluginStates.get('query') as QueryBindingRegistry | undefined
+  if (queryRegistry) {
+    queryRegistry.getModelState = (source) => registry.get(source as Model<object>).proxy
+  }
+  return registry
+}
+
 export function ComwitProvider({
   children,
   defaultOptions,
   context = {},
   router,
 }: ComwitProviderProps) {
-  const registryRef = useRef<
-    StoreRegistry & {
-      stores: Map<symbol, StoreEntry>
-      lifecycles: Map<symbol, LifecycleState>
-      context: Record<string, unknown>
-    }
-  >(null!)
+  const registryRef = useRef<StoreRegistry>(null!)
 
   if (registryRef.current === null) {
-    const plugins = getPlugins()
-    const pluginStates = new Map<string, unknown>()
-    const pluginDefaults = new Map<string, unknown>()
-
-    for (const plugin of plugins) {
-      const defaults = defaultOptions?.[plugin.name] as Record<string, unknown> | undefined
-      pluginDefaults.set(plugin.name, defaults)
-      pluginStates.set(
-        plugin.name,
-        plugin.createRegistryState(defaults, defaultOptions as Record<string, unknown> | undefined)
-      )
-    }
-
-    if (process.env.NODE_ENV !== 'production') {
-      initDevTools()
-    }
-
-    registryRef.current = {
-      context: {},
-      stores: new Map(),
-      lifecycles: new Map(),
-      pluginStates,
-      pluginDefaults,
-      router,
-      searchParamOwners: new Map(),
-      get<T extends object>(model: Model<T>): StoreEntry<T> {
-        const existing = registryRef.current.stores.get(model.key)
-        if (existing) return existing as StoreEntry<T>
-
-        const entry = model.instance()
-        registryRef.current.stores.set(model.key, entry)
-
-        if (process.env.NODE_ENV !== 'production') {
-          getDevTools()?.registerStore(model, entry)
-        }
-
-        return entry as StoreEntry<T>
-      },
-      getLifecycle(model: Model<any>): LifecycleState {
-        const existing = registryRef.current.lifecycles.get(model.key)
-        if (existing) return existing
-        const state: LifecycleState = { subscriberCount: 0, cleanup: null }
-        registryRef.current.lifecycles.set(model.key, state)
-        return state
-      },
-    }
-
-    const queryRegistry = pluginStates.get('query') as QueryBindingRegistry | undefined
-    if (queryRegistry) {
-      queryRegistry.getModelState = (source) =>
-        registryRef.current.get(source as Model<object>).proxy
-    }
+    registryRef.current = createStoreRegistry({ defaultOptions, router })
   }
 
-  Object.keys(registryRef.current.context).forEach((key) => delete registryRef.current.context[key])
-  Object.assign(registryRef.current.context, context)
+  const sharedContext = registryRef.current.context!
+  Object.keys(sharedContext).forEach((key) => delete sharedContext[key])
+  Object.assign(sharedContext, context)
 
   registryRef.current.globalInterceptors = defaultOptions?.interceptors
+  registryRef.current.defaultOptions = defaultOptions
 
   // Update plugin defaults on each render
   const plugins = getPlugins()
@@ -137,6 +177,5 @@ export function ComwitProvider({
     registryRef.current.pluginDefaults.set(plugin.name, defaults)
   }
 
-  const StateContext = getStateContext()
-  return <StateContext.Provider value={registryRef.current}>{children}</StateContext.Provider>
+  return <StoreRegistryProvider registry={registryRef.current}>{children}</StoreRegistryProvider>
 }

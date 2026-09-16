@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
 import type { Model, StoreEntry } from './model'
 import { useStoreRegistry } from './provider'
+export { createRouterSnapshot } from './router-snapshot'
+export type { RouterSnapshotInput } from './router-snapshot'
 
 export type RouterHistory = 'push' | 'replace'
 export type RouterNavigateOptions = { history: RouterHistory }
@@ -9,9 +11,15 @@ export type RouterNavigateOptions = { history: RouterHistory }
 export type RouterAdapter = {
   /** A pathname, search and hash (or absolute URL); null while unavailable. */
   getSnapshot(): string | null
+  /** Stable serialized bootstrap URL; it must match on the server and first hydration render. */
+  getServerSnapshot?(): string | null
   subscribe(listener: () => void): () => void
   navigate(href: string, options: RouterNavigateOptions): void
 }
+
+export type RouterAdapterFactoryOptions = { initialSnapshot: string | null }
+export type RouterAdapterFactory = (options: RouterAdapterFactoryOptions) => RouterAdapter
+export type BrowserRouterAdapterOptions = Partial<RouterAdapterFactoryOptions> & { window?: Window }
 
 export type SearchParamSnapshot<T> = {
   ready: boolean
@@ -41,37 +49,99 @@ export type SearchParamOptions<T> = {
   ? { parse?: (raw: string | null) => T; serialize?: (value: T) => string | null }
   : { parse: (raw: string | null) => T; serialize: (value: T) => string | null })
 
+export type SearchParamDefinition<T extends object, K extends keyof T> = {
+  readonly model: Model<T>
+  readonly field: K
+  readonly options: SearchParamOptions<T[K]>
+}
+
+/** Declare a field before its store is constructed by ComwitRouterProvider. */
+export function searchParamBinding<T extends object, K extends keyof T>(
+  model: Model<T>,
+  field: K,
+  options: SearchParamOptions<T[K]>
+): SearchParamDefinition<T, K> {
+  return { model, field, options }
+}
+
 const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 const urlBase = 'https://comwit.invalid'
 const relativeURL = (url: URL) => `${url.pathname}${url.search}${url.hash}`
 
 /**
- * Mount once per bound model field/query key in a Provider. The initial render
- * is passive; URL hydration and subscriptions start only after commit.
+ * Mount once per bound model field/query key. A declarative router scope can
+ * bootstrap the first snapshot; live subscriptions still start only after commit.
  */
+export function useSearchParam<T extends object, K extends keyof T>(
+  definition: SearchParamDefinition<T, K>
+): SearchParamBinding<T[K]>
 export function useSearchParam<T extends object, K extends keyof T>(
   model: Model<T>,
   field: K,
   options: SearchParamOptions<T[K]>
+): SearchParamBinding<T[K]>
+export function useSearchParam<T extends object, K extends keyof T>(
+  modelOrDefinition: Model<T> | SearchParamDefinition<T, K>,
+  fieldArg?: K,
+  optionsArg?: SearchParamOptions<T[K]>
 ): SearchParamBinding<T[K]> {
-  const registry = useStoreRegistry()
+  const { model, field, options }: SearchParamDefinition<T, K> =
+    fieldArg === undefined
+      ? (modelOrDefinition as SearchParamDefinition<T, K>)
+      : { model: modelOrDefinition as Model<T>, field: fieldArg, options: optionsArg! }
+  const registry = useStoreRegistry().resolve(model)
   const router = registry.router
   if (!router) throw new Error('useSearchParam() requires <ComwitProvider router={adapter}>')
   const store = registry.get(model)
   const { key, defaultValue, history = 'replace', parse, serialize } = options
+  const bootstrap = registry.searchParamBootstrap
+  const definition = bootstrap?.bindings.find(
+    (entry) => entry.model.key === model.key && entry.field === field
+  )
+  if (
+    definition &&
+    (definition.options.key !== key ||
+      definition.options.defaultValue !== defaultValue ||
+      definition.options.parse !== parse ||
+      definition.options.serialize !== serialize)
+  ) {
+    throw new Error(
+      'useSearchParam() must use the codec and default declared in its router binding'
+    )
+  }
+  const initialSnapshot = definition ? bootstrap!.snapshot : null
   const controller = useMemo(
     () =>
-      createBinding(store, field, router, { key, defaultValue, history, parse, serialize }, () => {
-        for (const owner of registry.searchParamOwners.values()) {
-          if (owner.key === key || (owner.model === model.key && owner.field === field)) {
-            throw new Error(`Search parameter "${key}" already has a binding in this Provider`)
+      createBinding<T, K>(
+        store,
+        field,
+        router,
+        { key, defaultValue, history, parse, serialize },
+        initialSnapshot,
+        () => {
+          for (const owner of registry.searchParamOwners.values()) {
+            if (owner.key === key || (owner.model === model.key && owner.field === field)) {
+              throw new Error(`Search parameter "${key}" already has a binding in this Provider`)
+            }
           }
+          const owner = Symbol()
+          registry.searchParamOwners.set(owner, { key, model: model.key, field })
+          return () => registry.searchParamOwners.delete(owner)
         }
-        const owner = Symbol()
-        registry.searchParamOwners.set(owner, { key, model: model.key, field })
-        return () => registry.searchParamOwners.delete(owner)
-      }),
-    [registry, store, model.key, router, field, key, defaultValue, history, parse, serialize]
+      ),
+    [
+      registry,
+      store,
+      model.key,
+      router,
+      field,
+      key,
+      defaultValue,
+      history,
+      parse,
+      serialize,
+      initialSnapshot,
+    ]
   )
   const snapshot = useSyncExternalStore(
     controller.subscribe,
@@ -96,24 +166,29 @@ function createBinding<T extends object, K extends keyof T>(
     parse?: (raw: string | null) => T[K]
     serialize?: (value: T[K]) => string | null
   },
+  initialSnapshot: string | null,
   acquire: () => () => void
 ) {
   const parse = options.parse ?? ((raw: string | null) => (raw ?? options.defaultValue) as T[K])
   const serialize = options.serialize ?? ((value: T[K]) => value as string | null)
+  const initialURL = initialSnapshot === null ? null : new URL(initialSnapshot, urlBase)
   const serverSnapshot: SearchParamSnapshot<T[K]> = {
-    ready: false,
-    value: store.proxy[field],
+    ready: initialSnapshot !== null,
+    value: initialURL ? parse(initialURL.searchParams.get(options.key)) : store.proxy[field],
     revision: 0,
   }
-  let snapshot = serverSnapshot
+  let snapshot =
+    serialize(store.proxy[field]) === serialize(serverSnapshot.value)
+      ? serverSnapshot
+      : { ...serverSnapshot, value: store.proxy[field], revision: 1 }
   const listeners = new Set<() => void>()
   let active = false
   let applying = false
   let pending = false
   let generation = 0
-  let lastURL: string | null = null
-  let lastRaw: string | null = null
-  let lastPath: string | null = null
+  let lastURL = initialSnapshot
+  let lastRaw = initialURL?.searchParams.get(options.key) ?? null
+  let lastPath = initialURL?.pathname ?? null
   let lastValue = serialize(snapshot.value)
 
   const emit = (value: T[K], ready = snapshot.ready) => {
@@ -148,14 +223,18 @@ function createBinding<T extends object, K extends keyof T>(
     // changing this key or pathname cancel an obsolete local write.
     const keepPending = pending && snapshot.ready && raw === lastRaw && url.pathname === lastPath
     const value = keepPending ? store.proxy[field] : parse(raw)
+    const changed =
+      !snapshot.ready || url.pathname !== lastPath || serialize(value) !== serialize(snapshot.value)
     lastURL = href
     lastRaw = raw
     lastPath = url.pathname
     if (!keepPending) {
       pending = false
-      apply(value)
+      if (serialize(store.proxy[field]) !== serialize(value)) apply(value)
     }
-    emit(value, true)
+    // A bootstrap URL cannot include a browser-only hash. Unrelated URL details
+    // and acknowledgements of our own writes must not restart selection effects.
+    if (changed) emit(value, true)
   }
 
   const writeURL = (history: RouterHistory) => {
@@ -298,9 +377,16 @@ function subscribeHistory(target: Window, listener: () => void): () => void {
 }
 
 /** Native History API adapter, including Next App Router's history integration. */
-export function createBrowserRouterAdapter(target?: Window): RouterAdapter {
+export function createBrowserRouterAdapter(
+  options?: Window | BrowserRouterAdapterOptions
+): RouterAdapter {
+  const legacyWindow = options && 'location' in options ? options : undefined
+  const { window: target = legacyWindow, initialSnapshot = null } = legacyWindow
+    ? {}
+    : ((options as BrowserRouterAdapterOptions) ?? {})
   const getWindow = () => target ?? (typeof window === 'undefined' ? undefined : window)
   return {
+    getServerSnapshot: () => initialSnapshot,
     getSnapshot() {
       const current = getWindow()
       return current ? relativeURL(new URL(current.location.href)) : null

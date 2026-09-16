@@ -4,11 +4,34 @@ import {
   createBrowserRouterAdapter,
   type RouterAdapter,
   type SearchParamBinding,
+  ComwitRouterProvider,
+  createRouterSnapshot,
+  searchParamBinding,
+  type RouterAdapterFactory,
+  type ComwitRouterProviderProps,
 } from '../src'
+import { createRouterSnapshot as createServerSnapshot } from '../src/router-snapshot'
 
 const domain = model({ thread: null as string | null, page: 1 })
 
 function contracts() {
+  const definition = searchParamBinding(domain, 'thread', { key: 'thread', defaultValue: null })
+  const bootstrapped: SearchParamBinding<string | null> = useSearchParam(definition)
+  // @ts-expect-error the definition preserves the field's value type
+  bootstrapped.set(123)
+  const createAdapter: RouterAdapterFactory = createBrowserRouterAdapter
+  const bootstrapProps: ComwitRouterProviderProps = {
+    children: null,
+    initialSnapshot: createServerSnapshot({
+      pathname: '/chat',
+      searchParams: { thread: 'one', tags: ['a', 'b'] },
+    }),
+    bindings: [definition],
+    createAdapter,
+  }
+  void bootstrapProps
+  void ComwitRouterProvider
+  void createRouterSnapshot
   const binding: SearchParamBinding<string | null> = useSearchParam(domain, 'thread', {
     key: 'thread',
     defaultValue: null,
