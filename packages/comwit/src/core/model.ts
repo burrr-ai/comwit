@@ -48,6 +48,11 @@ export type StoreEntry<T extends object = any> = {
   getServerSnapshot?(): T
   /** Include an unobserved query hydration seed in the bootstrap snapshot. */
   refreshServerSnapshot?(): void
+  /** Register an immutable SSR view without changing the mounted client proxy. */
+  prepareSearchParam(
+    field: PropertyKey,
+    seed: { ready: boolean; value: unknown }
+  ): { ready: boolean; value: unknown }
   hasReadSnapshot(): boolean
   subscribe(listener: () => void): () => void
   history?: HistoryController
@@ -121,6 +126,8 @@ export function model<T extends object, D extends object = {}>(
 
       let computedProxyRef: object | null = null
       let snapshotRead = false
+      const serverFields = new Map<PropertyKey, { ready: boolean; value: unknown }>()
+      let readServerSnapshot!: () => T & Readonly<D>
       let publicProxy: unknown = p
       if (hasComputed) {
         computedProxyRef = createComputedProxy(p as object, computedBag!)
@@ -172,6 +179,20 @@ export function model<T extends object, D extends object = {}>(
         })
       }
 
+      const baseProxy = publicProxy as object
+      publicProxy = new Proxy(baseProxy, {
+        get(target, prop, receiver) {
+          if (
+            typeof window === 'undefined' &&
+            serverFields.size > 0 &&
+            (serverFields.get(prop)?.ready || (typeof prop === 'string' && derivedKeys?.has(prop)))
+          ) {
+            return Reflect.get(readServerSnapshot(), prop)
+          }
+          return Reflect.get(target, prop, receiver)
+        },
+      })
+
       const readSnapshot = () => {
         if (!hasExtensions) return snapshot(p) as T & Readonly<D>
 
@@ -199,6 +220,17 @@ export function model<T extends object, D extends object = {}>(
         return Object.freeze(result) as T & Readonly<D>
       }
       let serverSnapshot = initialValues ? readSnapshot() : undefined
+      let serverRaw: T | undefined
+      const buildServerSnapshot = () => {
+        serverRaw ??= snapshot(p) as T
+        const values = new Map<PropertyKey, unknown>(Object.entries(serverRaw))
+        for (const [field, seed] of serverFields) {
+          if (seed.ready) values.set(field, seed.value)
+        }
+        return m.instance(values).getSnapshot()
+      }
+      readServerSnapshot = () =>
+        (serverSnapshot ??= serverFields.size > 0 ? buildServerSnapshot() : readSnapshot())
 
       return {
         proxy: publicProxy as T & Readonly<D>,
@@ -207,17 +239,42 @@ export function model<T extends object, D extends object = {}>(
           snapshotRead = true
           return readSnapshot()
         },
-        getServerSnapshot: initialValues
-          ? () => {
-              snapshotRead = true
-              return serverSnapshot!
-            }
-          : undefined,
-        refreshServerSnapshot: initialValues
-          ? () => {
-              serverSnapshot = readSnapshot()
-            }
-          : undefined,
+        getServerSnapshot() {
+          const result =
+            serverFields.size > 0 || initialValues ? readServerSnapshot() : readSnapshot()
+          serverSnapshot ??= result
+          snapshotRead = true
+          return result
+        },
+        refreshServerSnapshot() {
+          serverRaw = snapshot(p) as T
+          serverSnapshot = serverFields.size > 0 ? buildServerSnapshot() : readSnapshot()
+        },
+        prepareSearchParam(field, seed) {
+          const existing = serverFields.get(field)
+          if (existing) return existing
+          if (
+            !Object.prototype.hasOwnProperty.call(initialState, field) ||
+            [...pluginBags.values()].some((bag) =>
+              [...bag.keys()].some(
+                (path) =>
+                  path === field ||
+                  path.startsWith(`${String(field)}.`) ||
+                  path.startsWith(`${String(field)}[`)
+              )
+            )
+          ) {
+            throw new Error('useSearchParam() requires a plain model field')
+          }
+          const baseline = readServerSnapshot()
+          const selected =
+            seed.ready && !snapshotRead
+              ? { ready: true, value: structuredClone(seed.value) }
+              : { ready: false, value: Reflect.get(baseline, field) }
+          serverFields.set(field, selected)
+          if (selected.ready) serverSnapshot = buildServerSnapshot()
+          return selected
+        },
         hasReadSnapshot() {
           return snapshotRead
         },
@@ -283,7 +340,7 @@ export function useModel<T extends object, R>(
     )
   }
 
-  const registry = useStoreRegistry().resolve(m)
+  const registry = useStoreRegistry()
   const store = registry.get(m)
   const queryBag = m.pluginBags.get(QUERY_PLUGIN_NAME) as ResourceDescriptorMap | undefined
   const queryRegistry = registry.pluginStates.get(QUERY_PLUGIN_NAME) as
@@ -394,7 +451,7 @@ export function useHydrateModel<T extends object>(
   m: Model<T>,
   entries: QueryHydrationEntries<T> | null | undefined
 ): void {
-  const registry = useStoreRegistry().resolve(m)
+  const registry = useStoreRegistry()
   const queryBag = m.pluginBags.get(QUERY_PLUGIN_NAME) as ResourceDescriptorMap | undefined
   const queryRegistry = registry.pluginStates.get(QUERY_PLUGIN_NAME) as
     | QueryBindingRegistry

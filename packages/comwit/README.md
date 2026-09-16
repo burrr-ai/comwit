@@ -24,49 +24,32 @@ Pass the URL to Claude Code. It handles the rest.
 
 ## URL search parameters (beta)
 
+Install `@comwit/state@beta` and keep the existing global Provider:
+
 ```tsx
-import { ComwitProvider, createBrowserRouterAdapter, useSearchParam } from '@comwit/state'
+;<ComwitProvider context={{ router }} getServerSearchParams={getServerSearchParams}>
+  {children}
+</ComwitProvider>
 
-// Keep the adapter stable in a client Provider: useState(() => createBrowserRouterAdapter()).
-;<ComwitProvider router={router}>{children}</ComwitProvider>
-
-// Mount once in the route boundary, keyed by project ID when the project changes.
-const thread = useSearchParam(threadModel, 'requestedThreadId', {
+const thread = useSearchParam(locationModel, 'requestedThreadId', {
   key: 'thread',
   defaultValue: null,
-  history: 'replace', // default; opt into 'push' to add history entries
+  // history defaults to replace
 })
 ```
 
-The first commit reads the URL before enabling model write-back. Wait for `thread.ready`, retain a
-valid URL selection, and normalize a missing/invalid value with
-`thread.set(latestId, { history: 'replace', ifRevision: request.revision })`. Model actions and
-`set()` replace the current history entry by default, so switching threads does not grow browser
-history. Opt into `history: 'push'` on the binding or override one write with
-`thread.set(id, { history: 'push' })`. Back/forward restores the model without an echo. Bind a
-separate requested field when the active field changes temporarily during asynchronous loading.
+`getServerSearchParams?: () => string | null` is optional and runs only during server
+initialization. The Provider internally transfers its result to hydration. With a string result,
+including `''`, the binding and following model selectors read the URL selection from the first
+server/hydration render. Without a getter, or when it returns `null`, those renders use the model
+default and the browser URL initializes state after commit. The browser never calls the getter.
 
-The browser adapter observes native history changes and works with Next App Router's native
-History API integration without a Next dependency. Query parameters and hash are preserved.
-Custom adapters can implement `RouterAdapter` and be injected through the Provider.
+Only search parameter bindings subscribe to native browser history. Ordinary model hooks are
+unchanged. Model actions and `set()` use `replace` by default; opt into `history: 'push'` on a binding
+or a single call. `ifRevision` guards stale async results, and unrelated queries/hash are preserved.
+Bind a separate requested field when the active session field changes temporarily during loading.
 
-[Read the initialization, cleanup, async race, and adapter contracts](https://library.comwit.io/docs/api/router).
-
-For server-known selections, declare a `searchParamBinding()` and pass its model bindings and an
-`initialSnapshot` to a page-level `ComwitRouterProvider`. The model selector and `useSearchParam(binding)`
-then read the same URL value on the first server and hydration render. Only declared models receive a
-new scope; shared auth/session models and context keep their parent owners. At commit the latest URL
-is reconciled, and the initial snapshot is never replayed on later renders.
-
-Server Components can serialize their framework's search parameters without importing React:
-
-```ts
-import { createRouterSnapshot } from '@comwit/state/router-snapshot'
-
-const initialSnapshot = createRouterSnapshot({ pathname, searchParams: await searchParams })
-```
-
-This initializes selection state; message/query data loading remains the application's responsibility.
+[Read the server getter, hydration, history, and async contracts](https://library.comwit.io/docs/api/router).
 
 ## Durable on-demand queries
 

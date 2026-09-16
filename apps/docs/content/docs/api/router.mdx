@@ -7,228 +7,156 @@ order: 2.6
 
 # URL search parameters
 
-`useSearchParam()` connects one model field to one URL query parameter. The Provider owns the
-binding; a `RouterAdapter` supplies navigation without coupling the model to Next.js or another
-framework. Available in `@comwit/state@2.4.0-beta.2`.
+`useSearchParam()` connects one model field to a URL query parameter. Use the existing global
+`ComwitProvider`; browser reads, writes, and history subscriptions are handled internally.
+Available in `@comwit/state@2.4.0-beta.3`.
 
-## Provider setup
+## Setup
 
 ```tsx
 'use client'
+import { ComwitProvider } from '@comwit/state'
 
-import { ComwitProvider, createBrowserRouterAdapter } from '@comwit/state'
-import { useState, type ReactNode } from 'react'
-
-export function Providers({ children }: { children: ReactNode }) {
-  const [router] = useState(() => createBrowserRouterAdapter())
-  return <ComwitProvider router={router}>{children}</ComwitProvider>
+export function Providers({ children, router }) {
+  return <ComwitProvider context={{ router }}>{children}</ComwitProvider>
 }
 ```
 
-The browser adapter uses native `pushState` and `replaceState`, observes external calls to those
-methods, and listens for back/forward and hash navigation. Subscriptions install only after a
-binding commits and are removed when its last observer unmounts. Notifications run outside
-React's commit phase.
-
-Next App Router supports this native history path and updates `usePathname()` and
-`useSearchParams()` with it. It is suitable for client UI state such as the selected thread or tab;
-it does not request a new Server Component payload. There is no Next import, peer dependency, or
-separate Next adapter. See [Next's native history documentation](https://nextjs.org/docs/app/getting-started/linking-and-navigating#native-history-api).
-
-Keep the adapter stable for the Provider's lifetime. To replace it, remount the Provider with a
-different React `key`.
-
-## Server URL values on the first render
-
-Use `ComwitRouterProvider` when the server page or framework loader knows the initial URL.
-It initializes the declared model fields before creating their proxies. The first server render
-and hydration render see the same value through `useSearchParam`, `useModel`, and action `state()`.
-It is a page-level scope inside the existing `ComwitProvider`: only the models in `bindings` get
-new instances. Other models, their query registries, shared context, and defaults keep their parent
-owners.
-
-Keep URL request state in a small model when session or authentication state is shared with UI
-outside the page boundary. Every field of a declared model belongs to the new scope; it does not
-copy or mutate an already mounted parent instance of that model.
-Create actions inside the router scope when they combine a scoped URL model with a shared session
-model; each `state(model)` call resolves that model's owner without losing the calling scope.
+Your existing `context.router` remains available to application actions. Only mounted search
+parameter bindings subscribe to browser navigation. Ordinary `useModel()` calls do not read the
+URL, install history listeners, or invoke framework hooks.
 
 ```tsx
-// thread-location.ts (used by client components)
-import { model, searchParamBinding } from '@comwit/state'
+import { model, useModel, useSearchParam } from '@comwit/state'
 
-export const threadLocation = model({ requestedThreadId: null as string | null })
-export const threadParam = searchParamBinding(threadLocation, 'requestedThreadId', {
-  key: 'thread',
-  defaultValue: null,
-  // history defaults to replace
-})
-export const threadBindings = [threadParam] as const
-```
+const locationModel = model({ requestedThreadId: null as string | null })
 
-```tsx
-// thread-url-scope.tsx
-'use client'
-import { ComwitRouterProvider, createBrowserRouterAdapter } from '@comwit/state'
-import { threadBindings } from './thread-location'
-
-export function ThreadURLScope({ initialSnapshot, children }) {
-  return (
-    <ComwitRouterProvider
-      initialSnapshot={initialSnapshot}
-      bindings={threadBindings}
-      createAdapter={createBrowserRouterAdapter}
-    >
-      {children}
-    </ComwitRouterProvider>
-  )
-}
-```
-
-For Next App Router, the server page awaits its search parameters and passes only a string across
-the server/client boundary. The root layout does not need search parameters or a new Suspense
-boundary. Import the serializer from the React-independent entry on the server:
-
-```tsx
-// app/projects/[projectId]/page.tsx (Server Component)
-import { createRouterSnapshot } from '@comwit/state/router-snapshot'
-import { ThreadURLScope } from './thread-url-scope'
-
-export default async function Page({ params, searchParams }) {
-  const { projectId } = await params
-  const initialSnapshot = createRouterSnapshot({
-    pathname: `/projects/${encodeURIComponent(projectId)}`,
-    searchParams: await searchParams,
+function ThreadPage() {
+  const thread = useSearchParam(locationModel, 'requestedThreadId', {
+    key: 'thread',
+    defaultValue: null,
+    // history defaults to 'replace'
   })
-  return (
-    <ThreadURLScope key={projectId} initialSnapshot={initialSnapshot}>
-      <ThreadPage projectId={projectId} />
-    </ThreadURLScope>
-  )
+  const selected = useModel(locationModel, (state) => state.requestedThreadId)
+
+  if (!thread.ready) return <div>Loading selection…</div>
+  return <button onClick={() => thread.set('thread-2')}>{selected}</button>
 }
 ```
 
-`createRouterSnapshot({ pathname, searchParams?, hash? })` accepts a search string,
-`URLSearchParams`, or a record of strings, string arrays, and undefined values. It preserves
-repeated parameters and has no React or Next dependency. `RouterSnapshotInput` is also exported
-from `@comwit/state/router-snapshot`. The root package exports the helper for client convenience;
-Server Components should use the independent subpath.
+Mount one binding per model field and query key in each Provider. Other components can read the
+model normally. Keep a small URL selection model when the active session field changes temporarily
+while data is loading. Place the binding before that model's first selector read; unrelated models
+can be read earlier. An action factory may capture the selection model's proxy before the binding:
+its identity is preserved.
 
-Inside the scope, selectors may read the URL value before mounting the live binding hook:
+## Optional server initialization
+
+Provide one synchronous request getter when the framework can read search parameters during SSR:
 
 ```tsx
-const requested = useModel(threadLocation, (state) => state.requestedThreadId)
-const thread = useSearchParam(threadParam)
-// Both values match the server snapshot on the first render; thread.ready is true.
+<ComwitProvider context={{ router }} getServerSearchParams={getServerSearchParams}>
+  {children}
+</ComwitProvider>
 ```
 
-`bindings` declares initialization and model ownership; mount one `useSearchParam()` hook per
-active binding to enable live synchronization. The existing three-argument hook also works with
-the same field, key, default, and codec. Initialization copies values before proxy/history/derived
-state creation, and an abandoned render cannot leak those values into a mounted parent store.
-Binding fields must be plain model fields, not query, computed, or persistence descriptors.
+```ts
+type GetServerSearchParams = () => string | null
+// Example results: '?thread=one', 'thread=one', '', or null when unavailable.
+```
 
-The snapshot, declarations, and adapter factory are consumed once per mounted scope. Later prop
-renders do not replay an old server URL or replace an active adapter. Use a React `key` when a new
-project should get a fresh scope. Shared session/auth models remain owned by the enclosing Provider.
+The application owns the framework-specific getter. The library calls it during the Provider's
+server initialization and never in the browser. The getter should be a pure synchronous read;
+React may retry an uncommitted server render. The result is retained for that Provider mount.
+An empty string is an available search with no parameters; `null` means unavailable. Supplying this
+getter does not itself make a prerendered route request-time rendered.
 
-At commit, the live adapter reconciles the latest browser URL before write-back starts. A server
-cannot see the browser's hash; a hash or unrelated query difference leaves the selection snapshot
-and revision unchanged. If the browser moved from thread A to B during hydration, the first render
-still matches server A, then the committed snapshot becomes B without writing A back to the URL.
-An effect that starts asynchronous work should check its render's revision before starting:
+| Getter result                    | Server and first hydration render    | After client commit                    |
+| -------------------------------- | ------------------------------------ | -------------------------------------- |
+| Getter absent or returns `null`  | Model default, `ready: false`        | Initialize from the latest browser URL |
+| Returns a string, including `''` | URL selection/default, `ready: true` | Reconcile with the latest browser URL  |
+
+When the binding runs before the model's first selector read, both `useSearchParam().value` and
+`useModel()` see the server selection in that render. Server-side action reads through an already
+captured proxy see the same selection. A model already observed before binding retains its existing
+server snapshot and initializes from the browser after commit.
+
+The Provider automatically carries its server search to hydration in an inert JSON element with a
+Provider-specific React ID. Script delimiters and Unicode separators are escaped. This is internal
+transport: the application supplies only the getter. Keep the Provider's getter prop present on both
+server and browser renders; the browser never calls it. As with other React IDs, independent SSR
+roots sharing a document should use matching, distinct React `identifierPrefix` options.
+
+The library maintains an immutable server snapshot and applies live browser values after commit.
+It does not mutate an observed client store during render; an abandoned binding cannot change its
+selected field or start subscriptions. Later Provider renders do not call the getter again or replay
+an old server search. A component that first mounts after hydration initializes from the current
+browser URL.
+
+If the server rendered thread A and the URL changes to B before hydration, the first hydration
+snapshot still matches A. Commit applies B and cancels obsolete write-back. Hash and unrelated query
+differences leave the selected value and revision unchanged. An effect that starts asynchronous
+work should check that its render is still current:
 
 ```tsx
 useEffect(() => {
   const current = thread.getSnapshot()
   if (!current.ready || current.revision !== thread.revision) return
-  // Start work for current.value, with the application's cancellation/project guards.
+  // Load current.value with the application's project/request cancellation guards.
 }, [thread.ready, thread.value, thread.revision, thread.getSnapshot])
 ```
 
-This bootstraps URL selection state. It does not fetch or server-render thread messages, query
-results, or streams. Keep the session loading UI until the application's data is ready.
+This initializes URL selection state. Message data, query results, and streams still follow the
+application's data-loading flow; keep their loading UI until those results are ready.
 
-## Bind a model field
+## History and navigation
+
+Actions changing the bound model field and `thread.set()` replace the current history entry by
+default. Switching threads therefore does not grow browser history. Opt into history entries for
+all selections with `history: 'push'` on the binding, or override one call:
 
 ```tsx
-import { model, useSearchParam } from '@comwit/state'
-
-export const threadModel = model({
-  requestedThreadId: null as string | null,
-  activeThreadId: null as string | null,
-})
-
-function ThreadRoute() {
-  const thread = useSearchParam(threadModel, 'requestedThreadId', {
-    key: 'thread',
-    defaultValue: null,
-    history: 'replace', // default: switching threads does not add history entries
-  })
-
-  if (!thread.ready) return <div>Loading selection…</div>
-  return <button onClick={() => thread.set('thread-2')}>Open thread 2</button>
-}
+thread.set('thread-2', { history: 'push' })
+thread.set('canonical-thread', { history: 'replace' })
 ```
 
-Mount one binding per field and query key in each Provider. Other components can read the model
-normally. Duplicate active bindings throw instead of competing over the URL.
+A per-call override does not change the binding's configured mode. A canonical no-op does not
+write history or increment the revision. Ordinary model writes are coalesced in a microtask;
+`set()` updates immediately after commit.
 
-Without a router bootstrap scope, the initial render and server HTML use a passive snapshot with
-`ready: false`. After commit, the
-binding applies the URL to the model **before enabling state-to-URL writes**. A missing parameter
-applies `defaultValue`; it does not automatically rewrite the URL. Gate initialization and
-selection work on `ready`. Do not call `set()` or mutate model state during render.
+The internal browser integration observes native `pushState`/`replaceState`, back/forward, and hash
+navigation. Incoming navigation updates the model without an echo. Writes preserve unrelated query
+parameters, repeated unrelated values, and the hash. Query encoding may normalize, such as `%20`
+to `+`. URL changes affecting the owned parameter or pathname cancel stale pending writes.
+Subscriptions and queued writes are cleaned up when the binding unmounts.
 
-After initialization, ordinary actions updating the bound model field write its value to the URL.
-Both actions and `set()` use `replace` by default, so selections do not add browser history entries.
-Writes from actions are coalesced in a microtask. An external navigation changing the owned parameter or
-pathname cancels obsolete pending writes. Unrelated query parameters, repeated query values, and
-the fragment are preserved. Back/forward applies the URL to the model without creating another
-history entry. Serialization may normalize query encoding, such as `%20` to `+`.
+Next App Router integrates the native History API with its location hooks. This is appropriate for
+client selection state; it does not request new Server Component data. The library has no Next
+imports or framework hook calls. See [Next's native history documentation](https://nextjs.org/docs/app/getting-started/linking-and-navigating#native-history-api).
 
-## Initial defaults, async results, and project changes
+## Async defaults and project changes
 
 ```tsx
 const request = thread.getSnapshot()
 const threads = await loadThreads(projectId)
-
-// The application also checks its project/request token before using this result.
+// Also verify the application's project/request token before using this result.
 const selected = threads.find((item) => item.id === request.value)?.id ?? threads[0]?.id ?? null
-
-thread.set(selected, {
-  history: 'replace',
-  ifRevision: request.revision,
-})
+thread.set(selected, { history: 'replace', ifRevision: request.revision })
 ```
 
-Sort the list in the application's preferred order before selecting its first item. A valid URL
-selection wins; a missing or invalid selection falls back to the newest thread. Use `replace` for
-this normalization so Back does not revisit an invalid URL. Each URL navigation or local selection
-changes `revision` when the selected value or pathname changes. Hash changes, unrelated queries,
-and acknowledgements of the same selection do not increment it. `ifRevision` returns `false` when a newer request has superseded the result,
-including a URL update the adapter has not notified yet. A canonical no-op `set()` does not change
-the revision or write history.
+A valid URL selection wins. Sort the list in the preferred order and use the first item to normalize
+a missing or invalid selection. `ifRevision` rejects obsolete results, including a browser URL update
+whose notification is still pending. Revision changes follow the selected value or pathname;
+unrelated query/hash changes and acknowledgements of the same selection do not increment it.
 
-For asynchronous thread switching, keep the requested selection separate from a transient
-`activeThreadId`. Loading may clear the active field, and a failed optimistic switch may restore it.
-Binding those temporary changes would create unwanted history entries. A successful user switch
-can update `requestedThreadId` through an action (default `replace`) or call
-`thread.set(id, { ifRevision })`. Failed and superseded switches leave it alone.
-The application's request tokens/cancellation must also protect the loaded thread data and active
-selection; the binding guards only its own field and URL.
+Use a separate requested-selection field if `activeThreadId` is cleared during loading or rolled
+back after a failure. Successful user choices can write the bound field; failed and superseded
+requests should leave it alone. Guard message/session updates by project and request token as well:
+the binding only guards its own field and URL.
 
-When the project changes, key the component containing the binding:
-
-```tsx
-<ThreadRoute key={projectId} />
-```
-
-The old binding cancels pending writes and its saved `set()` callbacks return `false`. The new
-binding reads the new URL before observing the existing model, even if the enclosing Provider and
-model are shared. Other Provider state can remain mounted. Also guard list/data responses by
-project ID and request token. Independent Providers own independent model state and binding
-registrations; adapters observing the same browser window still share that window's URL.
+Key the component containing the binding by project ID when its lifecycle should restart. Keep the
+single global Provider mounted. The old binding cancels pending writes and saved `set()` callbacks
+return `false`; the new binding reads the current browser URL before observing model writes.
 
 ## API
 
@@ -236,37 +164,30 @@ registrations; adapters observing the same browser window still share that windo
 useSearchParam(model, field, {
   key: 'thread',
   defaultValue: null,
-  history: 'replace', // default; use 'push' to opt into browser history entries
+  history: 'replace', // default; 'push' opts into history entries
 })
 ```
 
-Set `history: 'push'` on the binding when selections should become Back/Forward destinations.
-The binding option controls both ordinary model actions and `set()` calls. A `set()` option overrides
-that mode for one write only: `thread.set(id, { history: 'push' })` adds one history entry to a
-default `replace` binding, while `thread.set(id, { history: 'replace' })` can normalize a value in a
-`push` binding. Later writes continue using the binding's configured mode.
+| Result                                  | Meaning                                                                                                 |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `ready`                                 | A server snapshot or committed browser URL supplies a selection                                         |
+| `value`                                 | The selected model value for this snapshot                                                              |
+| `revision`                              | Version for guarding asynchronous work                                                                  |
+| `getSnapshot()`                         | Latest processed `{ ready, value, revision }` without subscribing                                       |
+| `set(value, { history?, ifRevision? })` | Returns `false` before commit, after cleanup, while the URL is unavailable, or for an obsolete revision |
 
-| Result                                  | Meaning                                                                                                                                            |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ready`                                 | A server bootstrap or committed live URL has supplied a selection snapshot                                                                         |
-| `value`                                 | The current bound model value                                                                                                                      |
-| `revision`                              | A version for guarding asynchronous work                                                                                                           |
-| `getSnapshot()`                         | Latest processed `{ ready, value, revision }` without subscribing                                                                                  |
-| `set(value, { history?, ifRevision? })` | Change the field and URL immediately; returns `false` before commit, while the live URL is unavailable, after cleanup, or for an obsolete revision |
+`set` and `getSnapshot` references stay stable for a binding's lifetime. The returned object changes
+only when its snapshot changes. Model/field/key/default/history/codec changes replace the binding;
+keep custom codec functions stable with module scope or `useCallback`. Do not call `set()` or mutate
+state during render.
 
-`set` and `getSnapshot` have stable references for a binding's lifetime. The returned object stays
-stable until its snapshot changes. Changes to the model, field, key, default, history option, or
-codec functions replace the binding, so keep custom codec functions stable with module scope or
-`useCallback`. Store `revision` for short-lived async work within that binding, not across mounts.
-
-Strings and nullable strings use the raw parameter value by default. Other types require pure
-`parse` and `serialize` functions. `parse` also handles a missing or malformed value; returning
-`null` from `serialize` removes the parameter. For example:
+Strings and nullable strings use the raw parameter by default. Other types require pure `parse`
+and `serialize` functions. The parser handles missing or malformed values; returning `null` from
+the serializer removes the parameter. The codec must produce the same value on server and client.
 
 ```tsx
 const parsePage = (raw: string | null) => (/^[1-9]\d*$/.test(raw ?? '') ? Number(raw) : 1)
 const serializePage = (value: number) => (value === 1 ? null : String(value))
-
 const page = useSearchParam(paginationModel, 'page', {
   key: 'page',
   defaultValue: 1,
@@ -274,34 +195,3 @@ const page = useSearchParam(paginationModel, 'page', {
   serialize: serializePage,
 })
 ```
-
-## Custom routers
-
-```ts
-import type { RouterAdapter } from '@comwit/state'
-
-const adapter: RouterAdapter = {
-  getSnapshot: () => locationStore.href, // pathname + search + hash, or null until ready
-  subscribe: (listener) => locationStore.subscribe(listener),
-  navigate(href, { history }) {
-    locationStore[history](href)
-  },
-}
-```
-
-`navigate` must synchronously expose the committed URL through `getSnapshot`. Subscribers must
-observe external navigation as well as the adapter's own writes and return a cleanup function.
-Notify outside React render and insertion effects. A pending asynchronous router method alone
-does not satisfy this contract; for Next query-only client state, use the supplied browser adapter.
-
-`RouterAdapter` may additionally implement `getServerSnapshot(): string | null`. A
-`RouterAdapterFactory` receives `{ initialSnapshot: string | null }` and returns an adapter.
-Pass it as `ComwitRouterProvider.createAdapter` to inject a framework implementation. The default
-factory is `createBrowserRouterAdapter`; its options accept `{ initialSnapshot?, window? }` while
-the earlier optional `Window` argument remains supported. Factories must be pure: install
-listeners only from `subscribe`, not while constructing the adapter during render.
-
-An explicit `ComwitRouterProvider.initialSnapshot` takes precedence, including explicit `null` to
-disable bootstrap. When omitted, the scope reads the adapter's `getServerSnapshot` once. The server
-and browser must receive the same serialized initial value. This optional method does not by itself
-initialize fields in a plain `ComwitProvider`; declare the model bindings in a router scope.

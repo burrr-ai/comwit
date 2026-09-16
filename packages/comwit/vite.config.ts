@@ -12,12 +12,9 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: {
-        state: resolve(__dirname, 'src/index.ts'),
-        'router-snapshot': resolve(__dirname, 'src/router-snapshot.ts'),
-      },
+      entry: resolve(__dirname, 'src/index.ts'),
       name: 'Mucha',
-      fileName: (format, entryName) => `${entryName}.${format === 'es' ? 'js' : 'cjs'}`,
+      fileName: 'state',
       formats: ['es', 'cjs'],
     },
     rollupOptions: {

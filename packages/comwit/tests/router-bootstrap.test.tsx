@@ -1,238 +1,399 @@
 // @vitest-environment happy-dom
-import React, { StrictMode, Suspense, startTransition, useEffect, useState } from 'react'
-import { act, cleanup, render, renderHook, screen } from '@testing-library/react'
-import { hydrateRoot } from 'react-dom/client'
+import React, { Suspense, startTransition, useEffect, useState } from 'react'
+import { act, cleanup, render, screen } from '@testing-library/react'
+import { hydrateRoot, type Root } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import { afterEach, expect, test, vi } from 'vitest'
 import {
   action,
   ComwitProvider,
-  ComwitRouterProvider,
-  create,
-  createBrowserRouterAdapter,
-  createRouterSnapshot,
   model,
-  query,
-  searchParamBinding,
   useAction,
   useModel,
   useSearchParam,
-  type RouterAdapter,
-  type RouterAdapterFactory,
   type SearchParamBinding,
 } from '../src'
 
-function memoryRouter(initial: string | null) {
-  let href = initial
-  const listeners = new Set<() => void>()
-  const adapter = {
-    getSnapshot: vi.fn(() => href),
-    subscribe: vi.fn((listener: () => void) => {
-      listeners.add(listener)
-      return () => listeners.delete(listener)
-    }),
-    navigate: vi.fn((next: string) => {
-      href = next
-      listeners.forEach((listener) => listener())
-    }),
-    external(next: string) {
-      href = next
-      listeners.forEach((listener) => listener())
-    },
-    get listeners() {
-      return listeners.size
-    },
+const roots: Root[] = []
+function serverRender(tree: React.ReactNode) {
+  const browser = window
+  vi.stubGlobal('window', undefined)
+  try {
+    return renderToString(tree)
+  } finally {
+    vi.stubGlobal('window', browser)
   }
-  return adapter
 }
-
-afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-})
-
-test('serializes framework search records, repeats, empty values and fragments without React', () => {
-  expect(
-    createRouterSnapshot({
-      pathname: '/project/a',
-      searchParams: { thread: 'a & b', tag: ['one', 'two'], empty: '', omitted: undefined },
-      hash: 'message',
-    })
-  ).toBe('/project/a?thread=a+%26+b&tag=one&tag=two&empty=#message')
-  expect(createRouterSnapshot({ pathname: '/a', searchParams: '?thread=one' })).toBe(
-    '/a?thread=one'
-  )
-  expect(
-    createRouterSnapshot({ pathname: '/a', searchParams: new URLSearchParams('tag=a&tag=b') })
-  ).toBe('/a?tag=a&tag=b')
-})
-
-test('first server render seeds selectors before the hook, action state, derived values and history', () => {
-  const location = model(
-    { thread: null as string | null },
-    {
-      history: true,
-      derive: (state) => ({ label: () => `thread:${state.thread}` }),
-    }
-  )
-  const definition = searchParamBinding(location, 'thread', { key: 'thread', defaultValue: null })
-  const router = memoryRouter(null)
-  const factory = vi.fn(({ initialSnapshot }: { initialSnapshot: string | null }) => ({
-    ...router,
-    getServerSnapshot: () => initialSnapshot,
-  }))
-  const reads = action(({ state }) => ({ read: () => state(location).thread }))
-  function View() {
-    const selected = useModel(location, (s) => s.thread)
-    const label = useModel(location, (s) => s.label)
-    const history = useModel(location, (s) => s.$history.canUndo)
-    const actions = useAction<{ read(): string | null }>([reads])
-    const binding = useSearchParam(definition)
-    expect([binding.ready, binding.value, selected, actions.read(), label, history]).toEqual([
-      true,
-      'server',
-      'server',
-      'server',
-      'thread:server',
-      false,
-    ])
-    expect(binding.set('render-write')).toBe(false)
-    return <span>{selected}</span>
-  }
-  const html = renderToString(
-    <ComwitProvider>
-      <ComwitRouterProvider
-        initialSnapshot="/chat?thread=server"
-        bindings={[definition]}
-        createAdapter={factory}
-      >
-        <View />
-      </ComwitRouterProvider>
-    </ComwitProvider>
-  )
-  expect(html).toBe('<span>server</span>')
-  expect(factory).toHaveBeenCalledWith({ initialSnapshot: '/chat?thread=server' })
-  expect(router.getSnapshot).not.toHaveBeenCalled()
-  expect(router.subscribe).not.toHaveBeenCalled()
-  expect(router.navigate).not.toHaveBeenCalled()
-})
-
-test('SSR requests use separate seeded instances of the same declared model', () => {
+function fixture(search?: string | null) {
   const location = model({ thread: null as string | null })
-  const binding = searchParamBinding(location, 'thread', { key: 'thread', defaultValue: null })
-  function View() {
-    return <span>{useModel(location, (s) => s.thread)}</span>
-  }
-  const tree = (value: string) => (
-    <ComwitProvider>
-      <ComwitRouterProvider initialSnapshot={`/chat?thread=${value}`} bindings={[binding]}>
-        <View />
-      </ComwitRouterProvider>
-    </ComwitProvider>
-  )
-  expect(renderToString(tree('one'))).toBe('<span>one</span>')
-  expect(renderToString(tree('two'))).toBe('<span>two</span>')
-  expect(location.instance().proxy.thread).toBe(null)
-})
-
-test('hydration matches server A before reconciling browser B and guards stale passive effects', async () => {
-  const location = model({ thread: null as string | null })
-  const definition = searchParamBinding(location, 'thread', { key: 'thread', defaultValue: null })
-  const router = memoryRouter('/chat?thread=server')
-  const captures: Array<[boolean, string | null, string | null, number]> = []
+  const main = model({ name: 'shared session' })
+  const nextRouter = { push: vi.fn() }
+  const getter =
+    search === undefined
+      ? undefined
+      : vi.fn(() => {
+          if (typeof window !== 'undefined') throw new Error('server getter called in browser')
+          return search
+        })
+  const reads: Array<{
+    ready: boolean
+    value: string | null
+    selected: string | null
+    revision: number
+  }> = []
   const loads: Array<string | null> = []
-  const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+  let binding!: SearchParamBinding<string | null>
+  let proxy!: { thread: string | null }
+  let actions!: { getProxy(): { thread: string | null }; read(): string | null }
+  const factory = action(({ state }) => {
+    const captured = state(location)
+    return { getProxy: () => captured, read: () => captured.thread }
+  })
   function View() {
-    const binding = useSearchParam(definition)
+    useModel(main, (s) => s.name)
+    actions = useAction([factory])
+    proxy = actions.getProxy()
+    const rendered = useSearchParam(location, 'thread', { key: 'thread', defaultValue: null })
+    binding = rendered
+    if (typeof window === 'undefined') expect(actions.read()).toBe(rendered.value)
     const selected = useModel(location, (s) => s.thread)
-    captures.push([binding.ready, binding.value, selected, binding.revision])
+    reads.push({ ready: binding.ready, value: binding.value, selected, revision: binding.revision })
     useEffect(() => {
-      const current = binding.getSnapshot()
-      if (!current.ready || current.revision !== binding.revision) return
+      const current = rendered.getSnapshot()
+      if (!current.ready || current.revision !== rendered.revision) return
       loads.push(current.value)
     }, [binding.ready, binding.value, binding.revision, binding.getSnapshot])
-    return <span>{selected}</span>
+    return (
+      <span data-selection="">
+        {String(binding.ready)}:{selected ?? 'none'}
+      </span>
+    )
   }
-  const tree = (
-    <ComwitProvider>
-      <ComwitRouterProvider
-        initialSnapshot="/chat?thread=server"
-        bindings={[definition]}
-        createAdapter={() => router}
+  return {
+    getter,
+    reads,
+    loads,
+    location,
+    nextRouter,
+    tree: (getServerSearchParams = getter) => (
+      <ComwitProvider
+        context={{ router: nextRouter }}
+        getServerSearchParams={getServerSearchParams}
       >
         <View />
-      </ComwitRouterProvider>
-    </ComwitProvider>
-  )
-  const container = document.createElement('div')
-  container.innerHTML = renderToString(tree)
-  document.body.append(container)
-  router.external('/chat?thread=browser&other=keep#message')
-  let root!: ReturnType<typeof hydrateRoot>
+      </ComwitProvider>
+    ),
+    get binding() {
+      return binding
+    },
+    get proxy() {
+      return proxy
+    },
+    get actions() {
+      return actions
+    },
+  }
+}
+async function hydrate(tree: React.ReactNode, container: Element) {
+  const errors: unknown[] = []
   await act(async () => {
-    root = hydrateRoot(container, tree)
+    roots.push(hydrateRoot(container, tree, { onRecoverableError: (error) => errors.push(error) }))
   })
-  expect(captures[0]).toEqual([true, 'server', 'server', 0])
-  expect(captures[1]).toEqual([true, 'server', 'server', 0])
-  expect(captures.at(-1)?.slice(0, 3)).toEqual([true, 'browser', 'browser'])
-  expect(container.textContent).toBe('browser')
-  expect(loads).toEqual(['browser'])
-  expect(router.navigate).not.toHaveBeenCalled()
-  expect(errors).not.toHaveBeenCalled()
-  act(() => root.unmount())
-  container.remove()
+  return errors
+}
+afterEach(() => {
+  roots.splice(0).forEach((root) => act(() => root.unmount()))
+  cleanup()
+  document.body.innerHTML = ''
+  vi.restoreAllMocks()
+  window.history.replaceState(null, '', '/')
 })
 
-test('same selection with extra query/hash keeps the bootstrap revision and loads once', async () => {
-  const location = model({ thread: null as string | null })
-  const definition = searchParamBinding(location, 'thread', { key: 'thread', defaultValue: null })
-  const router = memoryRouter('/chat?thread=one&other=keep#message')
-  const effects = vi.fn()
-  let latest!: SearchParamBinding<string | null>
+test('getter SSR seeds the hook, following model selector and an earlier action proxy without changing identity', () => {
+  const current = fixture('?thread=server')
+  const html = serverRender(current.tree())
+  expect(html.replaceAll('<!-- -->', '')).toContain('<span data-selection="">true:server</span>')
+  expect(current.reads).toEqual([{ ready: true, value: 'server', selected: 'server', revision: 0 }])
+  expect(current.getter).toHaveBeenCalledTimes(1)
+  // The same action facade remains usable; browser live state has not been seeded during render.
+  expect(current.actions.getProxy()).toBe(current.proxy)
+  expect(current.actions.read()).toBe(null)
+  expect(current.binding.set('during-render')).toBe(false)
+})
+
+for (const search of [undefined, null]) {
+  test(`getter ${search === null ? 'null' : 'absent'} keeps server/default hydration equal before reading the browser URL`, async () => {
+    const current = fixture(search)
+    const host = document.body.appendChild(document.createElement('div'))
+    host.innerHTML = serverRender(current.tree())
+    expect(host.querySelector('[data-selection]')?.textContent).toBe('false:none')
+    window.history.replaceState(null, '', '/chat?thread=browser&other=keep#message')
+    const errors = await hydrate(current.tree(), host)
+    expect(errors).toEqual([])
+    expect(current.reads[0]).toEqual({ ready: false, value: null, selected: null, revision: 0 })
+    expect(current.reads[1]).toEqual(current.reads[0])
+    expect(current.binding.value).toBe('browser')
+    expect(current.loads).toEqual(['browser'])
+    expect(current.getter?.mock.calls.length ?? 0).toBe(search === null ? 1 : 0)
+    expect(window.location.search).toBe('?thread=browser&other=keep')
+  })
+}
+
+test('an empty server search is available and hydrates as ready without rewriting the URL', async () => {
+  const current = fixture('')
+  const host = document.body.appendChild(document.createElement('div'))
+  host.innerHTML = serverRender(current.tree())
+  window.history.replaceState(null, '', '/chat#message')
+  const errors = await hydrate(current.tree(), host)
+  expect(errors).toEqual([])
+  expect(current.reads[0]).toEqual({ ready: true, value: null, selected: null, revision: 0 })
+  expect(current.reads[1]).toEqual(current.reads[0])
+  expect(current.binding.revision).toBe(0)
+  expect(current.loads).toEqual([null])
+  expect(window.location.href.endsWith('/chat#message')).toBe(true)
+})
+
+test('server A matches the first hydration snapshot, then browser B alone starts loading', async () => {
+  const current = fixture('?thread=server')
+  const host = document.body.appendChild(document.createElement('div'))
+  host.innerHTML = serverRender(current.tree())
+  window.history.replaceState(null, '', '/chat?thread=browser#message')
+  expect(await hydrate(current.tree(), host)).toEqual([])
+  expect(current.reads[1]).toEqual(current.reads[0])
+  expect(current.binding.value).toBe('browser')
+  expect(current.binding.revision).toBe(1)
+  expect(current.loads).toEqual(['browser'])
+  const proxy = current.proxy
+  const length = window.history.length
+  act(() => current.binding.set('selected'))
+  expect(current.proxy).toBe(proxy)
+  expect(current.actions.getProxy()).toBe(proxy)
+  expect(proxy.thread).toBe('selected')
+  expect(window.history.length).toBe(length)
+  expect(current.nextRouter.push).not.toHaveBeenCalled()
+  expect(current.getter).toHaveBeenCalledTimes(1)
+})
+
+test('matching selection with browser-only query/hash keeps revision zero and loads once', async () => {
+  const current = fixture('?thread=one')
+  const host = document.body.appendChild(document.createElement('div'))
+  host.innerHTML = serverRender(current.tree())
+  window.history.replaceState(null, '', '/chat?thread=one&other=keep#message')
+  expect(await hydrate(current.tree(), host)).toEqual([])
+  expect(current.binding.revision).toBe(0)
+  expect(current.loads).toEqual(['one'])
+  await act(async () => {
+    window.history.replaceState(null, '', '/chat?thread=one&other=changed#next')
+    await Promise.resolve()
+  })
+  expect(current.binding.revision).toBe(0)
+  expect(current.loads).toEqual(['one'])
+  act(() => current.binding.set('two'))
+  expect(window.location.search + window.location.hash).toBe('?thread=two&other=changed#next')
+})
+
+test('internal JSON transfer escapes script delimiters and Unicode and round-trips through hydration', async () => {
+  const dangerous = '</script><script>injected()</script>\u2028\u2029'
+  const search = `?thread=${dangerous}&other=<tag>`
+  const current = fixture(search)
+  const host = document.body.appendChild(document.createElement('div'))
+  host.innerHTML = serverRender(current.tree())
+  const scripts = host.querySelectorAll('script')
+  expect(scripts).toHaveLength(1)
+  expect(scripts[0].type).toBe('application/json')
+  expect(scripts[0].textContent).not.toContain('<')
+  expect(scripts[0].textContent).not.toContain('\u2028')
+  expect(scripts[0].textContent).not.toContain('\u2029')
+  expect(JSON.parse(scripts[0].textContent!)).toBe(search)
+  window.history.replaceState(
+    null,
+    '',
+    `/chat?${new URLSearchParams({ thread: dangerous, other: '<tag>' })}`
+  )
+  expect(await hydrate(current.tree(), host)).toEqual([])
+  expect(current.binding.value).toBe(dangerous)
+})
+
+test('later Provider renders never call the browser getter or replay old server values', async () => {
+  const current = fixture('?thread=one')
+  const host = document.body.appendChild(document.createElement('div'))
+  host.innerHTML = serverRender(current.tree())
+  window.history.replaceState(null, '', '/chat?thread=one')
+  await hydrate(current.tree(), host)
+  act(() => current.binding.set('chosen'))
+  const replacement = vi.fn(() => {
+    throw new Error('browser getter invoked')
+  })
+  await act(async () => roots[0].render(current.tree(replacement)))
+  expect(replacement).not.toHaveBeenCalled()
+  expect(current.binding.value).toBe('chosen')
+  expect(current.getter).toHaveBeenCalledTimes(1)
+})
+
+test('an abandoned client binding leaves an already observed model and captured action proxy untouched', () => {
+  window.history.replaceState(null, '', '/chat?thread=url')
+  const location = model({ thread: 'existing' as string | null })
+  const never = new Promise(() => {})
+  const originalHistory = window.history.replaceState
+  let show!: () => void
+  let captured!: { thread: string | null }
+  let attempted!: SearchParamBinding<string | null>
+  const actions = action(({ state }) => {
+    captured = state(location)
+    return {}
+  })
+  function Abandoned() {
+    attempted = useSearchParam(location, 'thread', { key: 'thread', defaultValue: null })
+    throw never
+  }
   function View() {
-    latest = useSearchParam(definition)
-    useEffect(() => {
-      effects(latest.value)
-    }, [latest.ready, latest.value, latest.revision])
-    return null
+    const [pending, setPending] = useState(false)
+    show = () => startTransition(() => setPending(true))
+    useAction([actions])
+    const selected = useModel(location, (s) => s.thread)
+    return (
+      <>
+        <span>{selected}</span>
+        <Suspense fallback="waiting">{pending && <Abandoned />}</Suspense>
+      </>
+    )
   }
   render(
     <ComwitProvider>
-      <ComwitRouterProvider
-        initialSnapshot="/chat?thread=one"
-        bindings={[definition]}
-        createAdapter={() => router}
-      >
-        <View />
-      </ComwitRouterProvider>
+      <View />
     </ComwitProvider>
   )
-  expect(latest.revision).toBe(0)
-  expect(effects).toHaveBeenCalledTimes(1)
-  const first = latest
-  act(() => router.external('/chat?thread=one&other=changed#next'))
-  expect(latest).toBe(first)
-  expect(effects).toHaveBeenCalledTimes(1)
-  act(() => latest.set('two'))
-  expect(router.navigate).toHaveBeenLastCalledWith('/chat?thread=two&other=changed#next', {
-    history: 'replace',
-  })
-  expect(latest.revision).toBe(1)
-  expect(effects).toHaveBeenCalledTimes(2)
+  const original = captured
+  act(() => show())
+  expect(captured).toBe(original)
+  expect(captured.thread).toBe('existing')
+  expect(screen.getByText('existing')).toBeTruthy()
+  expect(attempted.set('leaked')).toBe(false)
+  expect(window.history.replaceState).toBe(originalHistory)
 })
 
-test('a delayed hydration boundary reads the fixed model seed after an earlier sibling reconciles', async () => {
+test('a server model already read before binding stays consistent and defers URL initialization', () => {
+  const location = model({ thread: 'default' as string | null })
+  function View() {
+    const before = useModel(location, (s) => s.thread)
+    const binding = useSearchParam(location, 'thread', { key: 'thread', defaultValue: null })
+    const after = useModel(location, (s) => s.thread)
+    return (
+      <span>
+        {before}:{String(binding.ready)}:{after}
+      </span>
+    )
+  }
+  const html = serverRender(
+    <ComwitProvider getServerSearchParams={() => '?thread=url'}>
+      <View />
+    </ComwitProvider>
+  )
+  expect(html.replaceAll('<!-- -->', '')).toContain('<span>default:false:default</span>')
+})
+
+test('ordinary model hooks install no browser history subscriptions', () => {
+  const domain = model({ name: 'plain' })
+  const originalPush = window.history.pushState
+  const add = vi.spyOn(window, 'addEventListener')
+  function View() {
+    return <span>{useModel(domain, (s) => s.name)}</span>
+  }
+  const getter = vi.fn(() => {
+    throw new Error('browser getter invoked')
+  })
+  render(
+    <ComwitProvider getServerSearchParams={getter}>
+      <View />
+    </ComwitProvider>
+  )
+  expect(getter).not.toHaveBeenCalled()
+  expect(window.history.pushState).toBe(originalPush)
+  expect(add.mock.calls.filter(([type]) => type === 'popstate' || type === 'hashchange')).toEqual(
+    []
+  )
+})
+
+test('the automatic transfer element preserves existing model observers when siblings change', () => {
+  const observe = vi.fn(() => vi.fn())
+  const domain = model({ name: 'plain' }, { onObserve: observe })
+  const getter = () => null
+  function View() {
+    return <span>{useModel(domain, (s) => s.name)}</span>
+  }
+  const current = render(
+    <ComwitProvider getServerSearchParams={getter}>
+      <View />
+    </ComwitProvider>
+  )
+  const stop = observe.mock.results[0].value
+  current.rerender(
+    <ComwitProvider getServerSearchParams={getter}>
+      <View />
+      <View />
+    </ComwitProvider>
+  )
+  expect(observe).toHaveBeenCalledTimes(1)
+  expect(stop).not.toHaveBeenCalled()
+  current.rerender(
+    <ComwitProvider getServerSearchParams={getter}>
+      <View />
+    </ComwitProvider>
+  )
+  expect(observe).toHaveBeenCalledTimes(1)
+  expect(stop).not.toHaveBeenCalled()
+})
+
+test('Provider transfer IDs isolate the same model under multiple providers', async () => {
   const location = model({ thread: null as string | null })
-  const definition = searchParamBinding(location, 'thread', { key: 'thread', defaultValue: null })
-  const router = memoryRouter('/chat?thread=server')
-  const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const initial: Array<[string, string | null]> = []
+  function View({ name }: { name: string }) {
+    const binding = useSearchParam(location, 'thread', { key: 'thread', defaultValue: null })
+    initial.push([name, binding.value])
+    return (
+      <span>
+        {name}:{binding.value}
+      </span>
+    )
+  }
+  const first = vi.fn(() => '?thread=one')
+  const second = vi.fn(() => '?thread=two')
+  const tree = (
+    <>
+      <ComwitProvider getServerSearchParams={first}>
+        <View name="first" />
+      </ComwitProvider>
+      <ComwitProvider getServerSearchParams={second}>
+        <View name="second" />
+      </ComwitProvider>
+    </>
+  )
+  const host = document.body.appendChild(document.createElement('div'))
+  host.innerHTML = serverRender(tree)
+  const scripts = host.querySelectorAll('script')
+  expect(scripts).toHaveLength(2)
+  expect(scripts[0].id).not.toBe(scripts[1].id)
+  window.history.replaceState(null, '', '/chat?thread=live')
+  expect(await hydrate(tree, host)).toEqual([])
+  expect(initial.slice(0, 4)).toEqual([
+    ['first', 'one'],
+    ['second', 'two'],
+    ['first', 'one'],
+    ['second', 'two'],
+  ])
+  expect(first).toHaveBeenCalledTimes(1)
+  expect(second).toHaveBeenCalledTimes(1)
+})
+
+test('a delayed hydration child keeps its server model snapshot after a sibling reconciles', async () => {
+  const location = model({ thread: null as string | null })
   let blocked = false
   let release!: () => void
   const pending = new Promise<void>((resolve) => {
     release = resolve
   })
-  function Live() {
-    useSearchParam(definition)
+  function Binding() {
+    useSearchParam(location, 'thread', { key: 'thread', defaultValue: null })
     return null
   }
   function Delayed() {
@@ -241,264 +402,92 @@ test('a delayed hydration boundary reads the fixed model seed after an earlier s
     return <span>{selected}</span>
   }
   const tree = (
-    <ComwitProvider>
-      <ComwitRouterProvider
-        initialSnapshot="/chat?thread=server"
-        bindings={[definition]}
-        createAdapter={() => router}
-      >
-        <Live />
-        <Suspense fallback="waiting">
-          <Delayed />
-        </Suspense>
-      </ComwitRouterProvider>
+    <ComwitProvider getServerSearchParams={() => '?thread=server'}>
+      <Binding />
+      <Suspense fallback="waiting">
+        <Delayed />
+      </Suspense>
     </ComwitProvider>
   )
-  const container = document.createElement('div')
-  container.innerHTML = renderToString(tree)
-  document.body.append(container)
+  const host = document.body.appendChild(document.createElement('div'))
+  host.innerHTML = serverRender(tree)
+  window.history.replaceState(null, '', '/chat?thread=browser')
   blocked = true
-  router.external('/chat?thread=browser')
-  let root!: ReturnType<typeof hydrateRoot>
-  await act(async () => {
-    root = hydrateRoot(container, tree)
-  })
-  expect(container.textContent).toBe('server')
+  const errors = await hydrate(tree, host)
+  expect(host.querySelector('span')?.textContent).toBe('server')
   await act(async () => {
     blocked = false
     release()
     await pending
   })
-  expect(container.textContent).toBe('browser')
-  expect(errors).not.toHaveBeenCalled()
-  act(() => root.unmount())
-  container.remove()
+  expect(host.querySelector('span')?.textContent).toBe('browser')
+  expect(errors).toEqual([])
 })
 
-test('parent models, query registry, actions and changing context remain shared with a child URL scope', () => {
-  const location = model({ thread: 'parent' as string | null })
-  const user = model({ name: 'Alice' })
-  const session = model({ detail: query<string>({ initialData: 'empty', queryFn: vi.fn() }) })
-  const useSession = create(session, { actions: [] })
-  const definition = searchParamBinding(location, 'thread', { key: 'thread', defaultValue: null })
-  const router = memoryRouter('/chat?thread=scoped')
-  const mutate = action(({ state, context }) => ({
-    read: () => [state(location).thread, state(user).name, (context as any).token],
-    change() {
-      state(location).thread = 'selected'
-      state(user).name = 'Bob'
-      state(session).detail.set('shared-query')
-    },
-  }))
-  let actions!: { read(): unknown[]; change(): void }
-  function RootSeed() {
-    useSession.hydrate({ detail: { data: 'hydrated' } })
-    return null
+test('a binding first mounted after hydration loads once even when it matches the retained server search', async () => {
+  const location = model({ thread: null as string | null })
+  const loads: Array<string | null> = []
+  function Bound() {
+    const binding = useSearchParam(location, 'thread', { key: 'thread', defaultValue: null })
+    useEffect(() => {
+      const current = binding.getSnapshot()
+      if (current.ready && current.revision === binding.revision) loads.push(current.value)
+    }, [binding.ready, binding.value, binding.revision, binding.getSnapshot])
+    return <span>{binding.value}</span>
   }
-  function RootView() {
-    const thread = useModel(location, (s) => s.thread)
-    const name = useModel(user, (s) => s.name)
-    const detail = useModel(session, (s) => s.detail.data)
+  function View() {
+    const [show, setShow] = useState(false)
     return (
-      <div data-testid="parent">
-        {thread}:{name}:{detail}
-      </div>
+      <>
+        <button onClick={() => setShow(true)}>mount binding</button>
+        {show && <Bound />}
+      </>
     )
   }
-  function ChildView() {
-    useSearchParam(definition)
-    actions = useAction([mutate])
-    const detail = useModel(session, (s) => s.detail.data)
-    return <div data-testid="child-query">{detail}</div>
-  }
-  const tree = (token: string) => (
-    <ComwitProvider context={{ token }}>
-      <RootSeed />
-      <RootView />
-      <ComwitRouterProvider
-        initialSnapshot="/chat?thread=scoped"
-        bindings={[definition]}
-        createAdapter={() => router}
-      >
-        <ChildView />
-      </ComwitRouterProvider>
+  const tree = (
+    <ComwitProvider getServerSearchParams={() => '?thread=one'}>
+      <View />
     </ComwitProvider>
   )
-  const view = render(tree('first'))
-  expect(actions.read()).toEqual(['scoped', 'Alice', 'first'])
-  expect(screen.getByTestId('child-query').textContent).toBe('hydrated')
-  act(() => actions.change())
-  expect(screen.getByTestId('parent').textContent).toBe('parent:Bob:shared-query')
-  expect(screen.getByTestId('child-query').textContent).toBe('shared-query')
-  const original = actions
-  view.rerender(tree('updated'))
-  expect(actions).toBe(original)
-  expect(actions.read()).toEqual(['selected', 'Bob', 'updated'])
+  const host = document.body.appendChild(document.createElement('div'))
+  host.innerHTML = serverRender(tree)
+  window.history.replaceState(null, '', '/chat?thread=one')
+  expect(await hydrate(tree, host)).toEqual([])
+  act(() => host.querySelector('button')!.click())
+  expect(loads).toEqual(['one'])
 })
 
-test('rerenders do not replay old bootstrap values or replace the adapter, including Strict Mode', () => {
+test('an abandoned late binding cannot seed an unread action-captured proxy from retained server data', async () => {
   const location = model({ thread: null as string | null })
-  const definition = searchParamBinding(location, 'thread', { key: 'thread', defaultValue: null })
-  const router = memoryRouter('/chat?thread=one')
-  const createAdapter = vi.fn(() => router)
-  let latest!: SearchParamBinding<string | null>
-  function View() {
-    latest = useSearchParam(definition)
-    return <span>{useModel(location, (s) => s.thread)}</span>
-  }
-  const tree = (snapshot: string) => (
-    <StrictMode>
-      <ComwitProvider>
-        <ComwitRouterProvider
-          initialSnapshot={snapshot}
-          bindings={[definition]}
-          createAdapter={createAdapter}
-        >
-          <View />
-        </ComwitRouterProvider>
-      </ComwitProvider>
-    </StrictMode>
-  )
-  const view = render(tree('/chat?thread=one'))
-  act(() => latest.set('selected'))
-  const calls = createAdapter.mock.calls.length
-  view.rerender(tree('/chat?thread=obsolete'))
-  expect(latest.value).toBe('selected')
-  expect(screen.getByText('selected')).toBeTruthy()
-  expect(createAdapter).toHaveBeenCalledTimes(calls)
-  expect(router.listeners).toBe(1)
-  const previous = latest
-  view.unmount()
-  expect(router.listeners).toBe(0)
-  expect(previous.set('disposed')).toBe(false)
-})
-
-test('an abandoned initial boundary leaves an already mounted parent model unchanged', () => {
-  const location = model({ thread: 'parent' as string | null })
-  const definition = searchParamBinding(location, 'thread', { key: 'thread', defaultValue: null })
-  const router = memoryRouter('/chat?thread=live')
+  let captured!: { thread: string | null }
+  let stage!: () => void
   const never = new Promise(() => {})
-  const seen: unknown[] = []
-  function Parent() {
-    return <span>{useModel(location, (s) => s.thread)}</span>
-  }
+  const actions = action(({ state }) => {
+    captured = state(location)
+    return {}
+  })
   function Abandoned() {
-    const binding = useSearchParam(definition)
-    seen.push([binding.value, useModel(location, (s) => s.thread)])
+    useSearchParam(location, 'thread', { key: 'thread', defaultValue: null })
     throw never
   }
-  render(
-    <ComwitProvider>
-      <Parent />
-      <Suspense fallback="waiting">
-        <ComwitRouterProvider
-          initialSnapshot="/chat?thread=private"
-          bindings={[definition]}
-          createAdapter={() => router}
-        >
-          <Abandoned />
-        </ComwitRouterProvider>
-      </Suspense>
+  function View() {
+    useAction([actions])
+    const [pending, setPending] = useState(false)
+    stage = () => startTransition(() => setPending(true))
+    return <Suspense fallback="waiting">{pending ? <Abandoned /> : <span>idle</span>}</Suspense>
+  }
+  const tree = (
+    <ComwitProvider getServerSearchParams={() => '?thread=server'}>
+      <View />
     </ComwitProvider>
   )
-  expect(screen.getByText('parent')).toBeTruthy()
-  expect(seen[0]).toEqual(['private', 'private'])
-  expect(router.getSnapshot).not.toHaveBeenCalled()
-  expect(router.listeners).toBe(0)
-  expect(router.navigate).not.toHaveBeenCalled()
-})
-
-test('abandoned keyed transitions keep the committed scope and its selector snapshot', () => {
-  const location = model({ thread: null as string | null })
-  const definition = searchParamBinding(location, 'thread', { key: 'thread', defaultValue: null })
-  const router = memoryRouter('/chat?thread=one')
-  const never = new Promise(() => {})
-  let navigate!: (next: string) => void
-  function View({ route }: { route: string }) {
-    useSearchParam(definition)
-    const selected = useModel(location, (s) => s.thread)
-    if (route === 'pending') throw never
-    return <span data-testid="selection">{selected}</span>
-  }
-  function App() {
-    const [route, setRoute] = useState('one')
-    navigate = (next) => startTransition(() => setRoute(next))
-    return (
-      <ComwitProvider>
-        <Suspense fallback="pending">
-          <ComwitRouterProvider
-            key={route}
-            initialSnapshot={`/chat?thread=${route}`}
-            bindings={[definition]}
-            createAdapter={() => router}
-          >
-            <View route={route} />
-          </ComwitRouterProvider>
-        </Suspense>
-      </ComwitProvider>
-    )
-  }
-  render(<App />)
-  act(() => navigate('pending'))
-  expect(screen.getByTestId('selection').textContent).toBe('one')
-  act(() => navigate('one'))
-  expect(screen.getByTestId('selection').textContent).toBe('one')
-  expect(router.navigate).not.toHaveBeenCalled()
-  expect(router.listeners).toBe(1)
-})
-
-test('adapter getServerSnapshot can provide the seed and an explicit snapshot takes precedence', () => {
-  const location = model({ thread: null as string | null })
-  const definition = searchParamBinding(location, 'thread', { key: 'thread', defaultValue: null })
-  const createAdapter: RouterAdapterFactory = () => ({
-    ...memoryRouter(null),
-    getServerSnapshot: () => '/chat?thread=factory',
-  })
-  function View() {
-    return <span>{useSearchParam(definition).value}</span>
-  }
-  const tree = (initialSnapshot?: string | null) => (
-    <ComwitProvider>
-      <ComwitRouterProvider
-        initialSnapshot={initialSnapshot}
-        bindings={[definition]}
-        createAdapter={createAdapter}
-      >
-        <View />
-      </ComwitRouterProvider>
-    </ComwitProvider>
-  )
-  expect(renderToString(tree())).toBe('<span>factory</span>')
-  expect(renderToString(tree('/chat?thread=prop'))).toBe('<span>prop</span>')
-  expect(renderToString(tree(null))).toBe('<span></span>')
-})
-
-test('query hydration can still initialize an unobserved resource in an owned model', () => {
-  const domain = model({
-    thread: null as string | null,
-    detail: query<string>({ initialData: 'empty', queryFn: vi.fn() }),
-  })
-  const definition = searchParamBinding(domain, 'thread', { key: 'thread', defaultValue: null })
-  const useDomain = create(domain, { actions: [] })
-  function View() {
-    useDomain.hydrate({ detail: { data: 'seeded-data' } })
-    return <span>{useModel(domain, (s) => `${s.thread}:${s.detail.data}`)}</span>
-  }
-  expect(
-    renderToString(
-      <ComwitProvider>
-        <ComwitRouterProvider initialSnapshot="/chat?thread=one" bindings={[definition]}>
-          <View />
-        </ComwitRouterProvider>
-      </ComwitProvider>
-    )
-  ).toBe('<span>one:seeded-data</span>')
-})
-
-test('browser adapter factory retains a server snapshot without reading window for it', () => {
-  const adapter: RouterAdapter = createBrowserRouterAdapter({
-    initialSnapshot: '/chat?thread=seed',
-  })
-  expect(adapter.getServerSnapshot?.()).toBe('/chat?thread=seed')
-  expect(adapter.getSnapshot()).not.toBe('/chat?thread=seed')
+  const host = document.body.appendChild(document.createElement('div'))
+  host.innerHTML = serverRender(tree)
+  window.history.replaceState(null, '', '/chat?thread=browser')
+  expect(await hydrate(tree, host)).toEqual([])
+  const original = captured
+  act(() => stage())
+  expect(captured).toBe(original)
+  expect(captured.thread).toBe(null)
+  expect(host.textContent).toContain('idle')
 })

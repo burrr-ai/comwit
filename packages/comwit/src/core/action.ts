@@ -42,8 +42,7 @@ export function useAction<A, C extends object = Record<string, never>>(
       const existing = resourceStateRef.current.get(dep.key)
       if (existing) return existing as T
 
-      const owner = registry.resolve(dep)
-      const entry = owner.get(dep)
+      const entry = registry.get(dep)
       let proxy: object = entry.proxy
 
       // Apply plugin bindState in order
@@ -52,8 +51,8 @@ export function useAction<A, C extends object = Record<string, never>>(
         const bag = dep.pluginBags.get(plugin.name)
         if (!bag || bag.size === 0) continue
 
-        const registryState = owner.pluginStates.get(plugin.name)
-        const defaults = owner.pluginDefaults.get(plugin.name)
+        const registryState = registry.pluginStates.get(plugin.name)
+        const defaults = registry.pluginDefaults.get(plugin.name)
         proxy = plugin.bindState(
           proxy,
           bag,

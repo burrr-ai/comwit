@@ -6,17 +6,33 @@ import { renderToString } from 'react-dom/server'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   action,
-  ComwitProvider,
-  createBrowserRouterAdapter,
+  ComwitProvider as BaseProvider,
   model,
   useAction,
   useModel,
   useSearchParam,
+  type SearchParamBinding,
+} from '../src'
+import {
+  createBrowserRouterAdapter,
   type RouterAdapter,
   type RouterHistory,
   type RouterNavigateOptions,
-  type SearchParamBinding,
-} from '../src'
+} from '../src/core/router'
+import { useStoreRegistry } from '../src/core/provider'
+
+// Test-only transport injection exercises race cases without exposing an adapter API.
+function Transport({ router, children }: { router: RouterAdapter; children: React.ReactNode }) {
+  useStoreRegistry().router = router
+  return <>{children}</>
+}
+function TestProvider({ router, children }: { router: RouterAdapter; children: React.ReactNode }) {
+  return (
+    <BaseProvider>
+      <Transport router={router}>{children}</Transport>
+    </BaseProvider>
+  )
+}
 
 function memoryRouter(initial: string | null) {
   let href = initial
@@ -76,9 +92,9 @@ function setup(
     }
   })
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <ComwitProvider router={router}>
+    <TestProvider router={router}>
       {strict ? <StrictMode>{children}</StrictMode> : children}
-    </ComwitProvider>
+    </TestProvider>
   )
   const hook = renderHook(
     () => ({
@@ -281,9 +297,9 @@ describe('Provider search parameter binding', () => {
       return <span>{useModel(domain, (s) => s.thread)}</span>
     }
     const tree = (key: string) => (
-      <ComwitProvider router={router}>
+      <TestProvider router={router}>
         <Boundary key={key} />
-      </ComwitProvider>
+      </TestProvider>
     )
     const { rerender } = render(tree('a'))
     const previous = binding
@@ -307,12 +323,12 @@ describe('Provider search parameter binding', () => {
       return null
     }
     render(
-      <ComwitProvider router={firstRouter}>
+      <TestProvider router={firstRouter}>
         <Boundary index={0} />
-        <ComwitProvider router={secondRouter}>
+        <TestProvider router={secondRouter}>
           <Boundary index={1} />
-        </ComwitProvider>
-      </ComwitProvider>
+        </TestProvider>
+      </TestProvider>
     )
     act(() => values[0].set('changed'))
     expect(values[0].value).toBe('changed')
@@ -335,7 +351,7 @@ describe('Provider search parameter binding', () => {
         useSearchParam(domain, 'tab', { key: 'tab', defaultValue: null })
         return useAction([actions])
       },
-      { wrapper: ({ children }) => <ComwitProvider router={router}>{children}</ComwitProvider> }
+      { wrapper: ({ children }) => <TestProvider router={router}>{children}</TestProvider> }
     )
     act(() => result.current.both())
     await flush()
@@ -349,7 +365,7 @@ describe('Provider search parameter binding', () => {
     const router = memoryRouter('/list?page=invalid&filter=all')
     const { result } = renderHook(
       () => useSearchParam(domain, 'page', { key: 'page', defaultValue: 1, parse, serialize }),
-      { wrapper: ({ children }) => <ComwitProvider router={router}>{children}</ComwitProvider> }
+      { wrapper: ({ children }) => <TestProvider router={router}>{children}</TestProvider> }
     )
     expect(result.current.value).toBe(1)
     expect(router.navigate).not.toHaveBeenCalled()
@@ -371,12 +387,12 @@ describe('Provider search parameter binding', () => {
       return <span>{useModel(domain, (s) => s.thread)}</span>
     }
     render(
-      <ComwitProvider router={router}>
+      <TestProvider router={router}>
         <Observer />
         <Suspense fallback="waiting">
           <Abandoned />
         </Suspense>
-      </ComwitProvider>
+      </TestProvider>
     )
     await flush()
     expect(screen.getByText('default')).toBeTruthy()
@@ -395,9 +411,9 @@ describe('Provider search parameter binding', () => {
       return <span>{binding.ready ? binding.value : 'loading'}</span>
     }
     const tree = (
-      <ComwitProvider router={router}>
+      <TestProvider router={router}>
         <Boundary />
-      </ComwitProvider>
+      </TestProvider>
     )
     const container = document.createElement('div')
     container.innerHTML = renderToString(tree)
@@ -425,7 +441,7 @@ describe('native browser router adapter', () => {
     const domain = model({ thread: null as string | null })
     const { result } = renderHook(
       () => useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null }),
-      { wrapper: ({ children }) => <ComwitProvider router={router}>{children}</ComwitProvider> }
+      { wrapper: ({ children }) => <TestProvider router={router}>{children}</TestProvider> }
     )
     const initialLength = window.history.length
     act(() => result.current.set('one'))
