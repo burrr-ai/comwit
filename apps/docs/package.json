@@ -13,7 +13,7 @@
     "prebuild": "yarn workspace @comwit/state build"
   },
   "dependencies": {
-    "@comwit/state": "*",
+    "@comwit/state": "2.4.0-beta.0",
     "@phosphor-icons/react": "^2.1.10",
     "@tailwindcss/typography": "^0.5.19",
     "gray-matter": "^4.0.3",
