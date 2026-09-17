@@ -170,6 +170,13 @@
     "@babel/helper-string-parser" "^7.27.1"
     "@babel/helper-validator-identifier" "^7.28.5"
 
+"@comwit/state@^2.2.0":
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/@comwit/state/-/state-2.3.0.tgz#bd3ccabd6e19fb539b0193acbf9ccf442a2989ce"
+  integrity sha512-gihPU/XzfvO5iQpHlILWzUUud3usG41EplJAeCJj6Yqj7ci4Ktnx4J6N8JNSrkenJcQFpm6VPl/xGjYLwFZC7w==
+  dependencies:
+    es-toolkit "^1.44.0"
+
 "@emnapi/core@^1.4.3", "@emnapi/core@^1.7.1":
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/@emnapi/core/-/core-1.8.1.tgz#fd9efe721a616288345ffee17a1f26ac5dd01349"

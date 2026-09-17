@@ -1,5 +1,6 @@
 import { getPlugins } from './plugin'
-import { useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import type { SearchParamWritableState } from './router'
 import {
   getLazyInterceptorFactories,
   type LazyInterceptorFactory,
@@ -10,7 +11,10 @@ import { useStoreRegistry } from './provider'
 import type { BoundResourceState } from './query/types'
 import { runHistoryTransaction } from './history'
 
-export type State = <T extends object>(model: Model<T>) => BoundResourceState<T>
+const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
+export type State = <T extends object>(
+  model: Model<T>
+) => SearchParamWritableState<BoundResourceState<T>>
 
 export type ActionContext<TContext extends object = Record<string, never>> = {
   state: State
@@ -36,6 +40,19 @@ export function useAction<A, C extends object = Record<string, never>>(
   const registry = useStoreRegistry()
   const actionsRef = useRef<A | null>(null)
   const resourceStateRef = useRef<Map<symbol, object>>(new Map())
+  const usedModelsRef = useRef(new Map<symbol, Model<any>>())
+  const stopsRef = useRef(new Map<symbol, () => void>())
+  const committedRef = useRef(false)
+  useCommitEffect(() => {
+    committedRef.current = true
+    for (const [key, model] of usedModelsRef.current)
+      stopsRef.current.set(key, registry.observe(model))
+    return () => {
+      committedRef.current = false
+      for (const stop of stopsRef.current.values()) stop()
+      stopsRef.current.clear()
+    }
+  }, [registry])
 
   if (!actionsRef.current) {
     const state: State = (<T extends object>(dep: Model<T>) => {
@@ -43,6 +60,9 @@ export function useAction<A, C extends object = Record<string, never>>(
       if (existing) return existing as T
 
       const entry = registry.get(dep)
+      usedModelsRef.current.set(dep.key, dep)
+      if (committedRef.current && !stopsRef.current.has(dep.key))
+        stopsRef.current.set(dep.key, registry.observe(dep))
       let proxy: object = entry.proxy
 
       // Apply plugin bindState in order

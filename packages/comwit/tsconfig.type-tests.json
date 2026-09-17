@@ -6,5 +6,5 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "include": ["tests/query-hydrate.types.ts"]
+  "include": ["tests/query-hydrate.types.ts", "tests/router.types.ts"]
 }

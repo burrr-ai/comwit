@@ -1,0 +1,160 @@
+# comwit — Search Parameter Reference (beta)
+
+> Model field descriptors for URL query state. Available in @comwit/state@2.4.0-beta.4.
+
+## searchParam(options)
+
+Install `@comwit/state@beta`. Like `persist()`, declare a field inside `model()` and read/write
+its ordinary value. Normal `useModel()`, generated `create()` hooks, and actions manage the
+connection automatically. Do not add a URL connection hook or a second Provider.
+
+```ts
+import { action, create, model, searchParam } from '@comwit/state'
+
+type LocationState = {
+  threadId: string | null
+  page: number
+  archived: boolean | null
+}
+
+const location = model<LocationState>({
+  threadId: searchParam({ key: 'thread' }),
+  page: searchParam({ key: 'page', type: 'number', defaultValue: 1 }),
+  archived: searchParam({ key: 'archived', type: 'boolean' }),
+})
+
+const locationActions = action(({ state }) => {
+  const current = state(location)
+  return {
+    selectThread(id: string | null) {
+      current.threadId = id
+    },
+    nextPage() {
+      current.page += 1
+    },
+  }
+})
+
+const useLocation = create(location, { actions: [locationActions] })
+// In a component: useLocation((state) => state.threadId)
+```
+
+No special wrapper type is needed in the state interface. Without an explicit interface,
+the declarations infer the same primitive types. Nested fields and array positions are supported.
+Query keys must be unique among active fields in the same Provider.
+
+## Options
+
+| Option       | Type                                      | Description                                                                            |
+| ------------ | ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| key          | string                                    | Required query parameter name.                                                         |
+| type         | 'string' / 'number' / 'boolean'           | Built-in format. Default 'string'.                                                     |
+| defaultValue | T                                         | Optional fallback for missing or invalid input. Default null.                          |
+| history      | 'replace' / 'push'                        | Write mode. Default 'replace'.                                                         |
+| parse        | (raw: string) => T                        | Custom decoder for a present query value.                                              |
+| serialize    | (value: NonNullable<T>) => string or null | Custom encoder; null removes the parameter. Required with parse for structured values. |
+
+## Value priority and built-in formats
+
+- A valid parsed URL value wins over defaultValue, including 0, false, and the empty string.
+- Missing or invalid input uses defaultValue, or null if omitted.
+- Initial fallback values do not automatically write themselves into the URL.
+- Setting a nullable field to null removes its query parameter.
+- String is the default; present empty strings remain empty strings.
+- Number accepts finite decimal/scientific notation. Blank, NaN, Infinity, hex, and partial
+  numbers such as '12abc' use the fallback.
+- Boolean accepts true/false and 1/0, ignoring case and surrounding whitespace. It does not
+  use JavaScript truthiness: 'false' becomes false. Other values use the fallback.
+- A non-null default removes null from the inferred built-in field type.
+
+## Custom parsing
+
+Primitive fields can override parse and retain the default serializer:
+
+```ts
+const filters = model({
+  query: searchParam({ key: 'q', parse: (raw) => raw.trim().toLowerCase() }),
+  page: searchParam({ key: 'page', type: 'number', defaultValue: 1, parse: Number }),
+})
+```
+
+Custom structured values require both parse and serialize. Validate the structure inside parse:
+
+```ts
+const filters = model({
+  selection: searchParam<{ tag: string }>({
+    key: 'filter',
+    defaultValue: { tag: 'all' },
+    parse: (raw) => ({ tag: raw }),
+    serialize: (value) => value.tag,
+  }),
+})
+```
+
+Missing parameters bypass parse. Thrown errors use the fallback. Built-in formats still validate
+the parser's result type and reject non-finite numbers. Keep parsing/serialization deterministic.
+
+## Initialization and SSR
+
+Keep the existing global ComwitProvider. Its optional request integration is:
+
+```tsx
+<ComwitProvider getServerSearchParams={getServerSearchParams}>{children}</ComwitProvider>
+```
+
+getServerSearchParams?: () => string | null is synchronous and called only during server
+initialization. Return the request search string; '' means a known empty query and null means
+unavailable. The Provider transfers the result in escaped inert JSON for matching hydration.
+The application owns request access and the framework's request-time rendering configuration.
+
+- With a string result, the first server selector/action read and first hydration see parsed values.
+- Without the getter, or with null, SSR and first hydration see fallbacks with ready: false.
+- Client commit reconciles the latest browser URL before enabling write-back. A navigation during
+  hydration wins at commit while the first hydration snapshot still matches the server.
+- Consumers share one connection per model. The final consumer cleanup cancels subscriptions and
+  pending writes; Provider disposal releases all connections. Abandoned renders do not subscribe.
+- Normal action-only consumption is supported, including first access inside an event handler.
+
+## Synchronization and history
+
+Action assignments synchronize through native History API replace by default. Set history: 'push'
+only when a selection should add a browser history entry. Browser back/forward and external history
+changes update the model. Unrelated query values, repeated unrelated keys, and the hash survive;
+URL encoding can normalize (for example, %20 to +).
+
+Writes do not reload the document. Selected value changes rerender their subscribers normally.
+Same-value writes, URL acknowledgements, and unrelated query/hash edits do not create an echo loop.
+URL synchronization does not fetch application data or validate domain IDs.
+
+## Optional metadata and guarded writes
+
+Basic usage needs only model declarations, selectors, and action assignments. For async work,
+read metadata through the same selector or through action state:
+
+```ts
+const selection = useLocation((state) => searchParam.getSnapshot(state, 'threadId'))
+// { ready: boolean, value: string | null, revision: number }
+```
+
+ready distinguishes unavailable search data from a ready URL with a missing key. Metadata selectors
+update when readiness/revision changes even if the value remains null. Selector snapshots are readonly.
+
+Inside an action, capture the current snapshot before awaiting work and guard the result:
+
+```ts
+const request = searchParam.getSnapshot(current, 'threadId')
+if (!request.ready) return false
+const id = await resolveThread(request.value)
+return searchParam.set(current, 'threadId', id, { ifRevision: request.revision })
+```
+
+set(actionState, path, value, { history?, ifRevision? }) returns a boolean. It requires writable
+action state and returns false for inactive/unavailable state or a stale revision. A per-call history
+override affects only that write. Explicit set can canonicalize an invalid URL when its fallback
+is already selected; canonical no-ops do not write history. Use dot paths for nested fields.
+Reactivation advances the revision so results from an earlier lifecycle cannot overwrite selection.
+
+Also validate application project/request tokens. Thread existence, session loading, and fetched
+query data remain application responsibilities. These metadata helpers do not register bindings.
+
+API page: https://library.comwit.io/docs/api/router

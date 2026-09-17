@@ -41,13 +41,14 @@ export function Providers({ children }: { children: ReactNode }) {
 
 Only `children` is required. `<ComwitProvider>{children}</ComwitProvider>` is a complete setup.
 
-| Prop                          | Purpose                                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------- |
-| `context`                     | Shared values available to action factories, such as the router or auth helpers |
-| `defaultOptions.query`        | Global `staleTime`, `gcTime`, and `placeholderData`                             |
-| `defaultOptions.persist`      | Global persistence debounce interval                                            |
-| `defaultOptions.local`        | IndexedDB database, fallback scope, and storage error handler                   |
-| `defaultOptions.interceptors` | Interceptors applied to every action method                                     |
+| Prop                          | Purpose                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------- |
+| `context`                     | Shared values available to action factories, such as the router or auth helpers                   |
+| `getServerSearchParams`       | Optional `() => string \| null` server getter for [searchParam() fields (beta)](/docs/api/router) |
+| `defaultOptions.query`        | Global `staleTime`, `gcTime`, and `placeholderData`                                               |
+| `defaultOptions.persist`      | Global persistence debounce interval                                                              |
+| `defaultOptions.local`        | IndexedDB database, fallback scope, and storage error handler                                     |
+| `defaultOptions.interceptors` | Interceptors applied to every action method                                                       |
 
 Query defaults can be overridden on a query field or by an imperative `.query(arg, options)` call.
 Selector `.load(arg)` only takes the query argument.
