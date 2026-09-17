@@ -73,6 +73,20 @@ function contracts() {
   searchParam({ key: 'bad', type: 'number', defaultValue: 'text' })
   // @ts-expect-error number decoding must be selected explicitly
   searchParam<number>({ key: 'bad', defaultValue: 1 })
-  void [props, unavailable, asyncGetter, thread, metadata]
+  const normalized: string | null = searchParam({ key: 'q', parse: (raw) => raw.trim() })
+  const numeric: number = searchParam({
+    key: 'page',
+    type: 'number',
+    defaultValue: 1,
+    parse: (raw) => Number(raw),
+  })
+  const flag: boolean | null = searchParam({
+    key: 'flag',
+    type: 'boolean',
+    parse: (raw) => raw === 'yes',
+  })
+  // @ts-expect-error a custom parser must return the selected primitive type
+  searchParam({ key: 'bad', type: 'number', parse: (raw) => raw.trim() })
+  void [props, unavailable, asyncGetter, thread, metadata, normalized, numeric, flag]
 }
 void contracts

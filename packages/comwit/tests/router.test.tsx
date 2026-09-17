@@ -449,6 +449,44 @@ describe('primitive parsing and default priority', () => {
     expect(router.navigate).not.toHaveBeenCalled()
   })
 
+  test('custom primitive parsers override decoding and retain default serialization', async () => {
+    const domain = model({
+      text: searchParam({ key: 'text', parse: (raw) => raw.trim().toLowerCase() }),
+      page: searchParam({ key: 'page', type: 'number', defaultValue: 1, parse: Number }),
+      enabled: searchParam({
+        key: 'enabled',
+        type: 'boolean',
+        parse: (raw) => raw === 'yes' || raw === 'true',
+      }),
+    })
+    const factory = action(({ state }) => {
+      const current = state(domain)
+      return {
+        update() {
+          current.text = 'next'
+          current.page = 32
+          current.enabled = false
+        },
+      }
+    })
+    const router = memoryRouter('/list?text=URL%20&page=0x10&enabled=yes&keep=x#heading')
+    const { result } = renderHook(
+      () => ({
+        value: useModel(domain, (s) => [s.text, s.page, s.enabled]),
+        actions: useAction<ReturnType<typeof factory>>([factory]),
+      }),
+      { wrapper: wrapper(router) }
+    )
+    expect(result.current.value).toEqual(['url', 16, true])
+    expect(router.navigate).not.toHaveBeenCalled()
+    act(() => result.current.actions.update())
+    await flush()
+    expect(router.getSnapshot()).toBe('/list?text=next&page=32&enabled=false&keep=x#heading')
+    expect(router.length).toBe(1)
+    act(() => router.external('/list?page=NaN'))
+    expect(result.current.value).toEqual([null, 1, null])
+  })
+
   test('custom codecs use fallback on malformed input and can explicitly canonicalize it', () => {
     const domain = model({
       value: searchParam<{ tag: string }>({
