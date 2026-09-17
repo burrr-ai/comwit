@@ -46,9 +46,3 @@ Selector `.suspend(arg)` remains experimental for isomorphic query functions. Ne
 Functions cannot be called from a Client Component's initial render, and server and browser caches
 still require explicit hydration. The descriptor-level `suspense` option and render-time `silent()`
 hydration are deprecated. No Provider change is required; models remain lazy until accessed.
-
-## Branch workflow
-
-`latest` is the default development branch. Open feature and fix pull requests against `latest`.
-`main` receives reviewed updates from `latest` periodically through a separate pull request.
-Git branch names and npm dist-tags are independent; changing the default branch does not publish a package.
