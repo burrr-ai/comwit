@@ -3,14 +3,13 @@ import React from 'react'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { renderToString } from 'react-dom/server'
 import { expect, test } from 'vitest'
-import { ComwitProvider, model, useModel, useSearchParam } from '../src'
+import { ComwitProvider, model, useModel, searchParam } from '../src'
 
 test('without a getter, SSR has only passive default state', () => {
-  const domain = model({ thread: null as string | null })
+  const domain = model({ thread: searchParam({ key: 'thread' }) })
   function View() {
-    const binding = useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null })
+    const binding = useModel(domain, (s) => searchParam.getSnapshot(s, 'thread'))
     expect(binding.ready).toBe(false)
-    expect(binding.set('ignored')).toBe(false)
     return <span>{binding.value ?? 'loading'}</span>
   }
   expect(
@@ -24,9 +23,9 @@ test('without a getter, SSR has only passive default state', () => {
 
 test('concurrent server requests keep getter data and model views isolated', async () => {
   const requests = new AsyncLocalStorage<string>()
-  const domain = model({ thread: null as string | null })
+  const domain = model({ thread: searchParam({ key: 'thread' }) })
   function View() {
-    const binding = useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null })
+    const binding = useModel(domain, (s) => searchParam.getSnapshot(s, 'thread'))
     const selected = useModel(domain, (s) => s.thread)
     expect(binding.ready).toBe(true)
     expect(binding.value).toBe(selected)

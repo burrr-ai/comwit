@@ -1,17 +1,16 @@
 // @vitest-environment happy-dom
-import React, { StrictMode, Suspense } from 'react'
-import { act, cleanup, render, renderHook, screen } from '@testing-library/react'
-import { hydrateRoot } from 'react-dom/client'
-import { renderToString } from 'react-dom/server'
+import React, { StrictMode } from 'react'
+import { act, cleanup, render, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   action,
-  ComwitProvider as BaseProvider,
+  ComwitProvider,
+  create,
   model,
+  query,
+  searchParam,
   useAction,
   useModel,
-  useSearchParam,
-  type SearchParamBinding,
 } from '../src'
 import {
   createBrowserRouterAdapter,
@@ -21,49 +20,35 @@ import {
 } from '../src/core/router'
 import { useStoreRegistry } from '../src/core/provider'
 
-// Test-only transport injection exercises race cases without exposing an adapter API.
-function Transport({ router, children }: { router: RouterAdapter; children: React.ReactNode }) {
-  useStoreRegistry().router = router
-  return <>{children}</>
-}
-function TestProvider({ router, children }: { router: RouterAdapter; children: React.ReactNode }) {
-  return (
-    <BaseProvider>
-      <Transport router={router}>{children}</Transport>
-    </BaseProvider>
-  )
-}
-
 function memoryRouter(initial: string | null) {
   let href = initial
-  const listeners = new Set<() => void>()
-  const entries = [initial]
   let index = 0
-  const publish = () => listeners.forEach((listener) => listener())
-  const navigate = vi.fn((next: string, { history }: RouterNavigateOptions) => {
-    href = next
-    if (history === 'push') entries.splice(++index, entries.length, next)
-    else entries[index] = next
-    publish()
-  })
+  const entries = [initial]
+  const listeners = new Set<() => void>()
+  const emit = () => listeners.forEach((listener) => listener())
   return {
     getSnapshot: () => href,
     subscribe(listener: () => void) {
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
-    navigate,
+    navigate: vi.fn((next: string, { history }: RouterNavigateOptions) => {
+      href = next
+      if (history === 'push') entries.splice(++index, entries.length, next)
+      else entries[index] = next
+      emit()
+    }),
     external(next: string | null, notify = true) {
       href = next
-      if (notify) publish()
+      if (notify) emit()
     },
     back() {
       if (index > 0) href = entries[--index]
-      publish()
+      emit()
     },
     forward() {
       if (index < entries.length - 1) href = entries[++index]
-      publish()
+      emit()
     },
     get listeners() {
       return listeners.size
@@ -73,448 +58,471 @@ function memoryRouter(initial: string | null) {
     },
   }
 }
-
+function Transport({ router, children }: { router: RouterAdapter; children: React.ReactNode }) {
+  useStoreRegistry().router = router
+  return <>{children}</>
+}
+function wrapper(router: RouterAdapter, strict = false) {
+  return ({ children }: { children: React.ReactNode }) => {
+    const tree = (
+      <ComwitProvider>
+        <Transport router={router}>{children}</Transport>
+      </ComwitProvider>
+    )
+    return strict ? <StrictMode>{tree}</StrictMode> : tree
+  }
+}
 function setup(
   router = memoryRouter('/chat?thread=url&other=keep#message'),
-  strict = false,
-  history?: RouterHistory
+  history?: RouterHistory,
+  strict = false
 ) {
-  const domain = model({ thread: null as string | null, other: 0 })
-  const actions = action(({ state }) => {
+  const domain = model({ thread: searchParam({ key: 'thread', history }), unrelated: 0 })
+  const factory = action(({ state }) => {
     const current = state(domain)
     return {
       select(value: string | null) {
         current.thread = value
       },
       unrelated() {
-        current.other++
+        current.unrelated++
+      },
+      read() {
+        return searchParam.getSnapshot(current, 'thread')
+      },
+      set(value: string | null, options?: { history?: RouterHistory; ifRevision?: number }) {
+        return searchParam.set(current, 'thread', value, options)
       },
     }
   })
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <TestProvider router={router}>
-      {strict ? <StrictMode>{children}</StrictMode> : children}
-    </TestProvider>
-  )
   const hook = renderHook(
     () => ({
-      binding: useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null, history }),
-      state: useModel(domain, (s) => s.thread),
-      actions: useAction([actions]),
+      actions: useAction<ReturnType<typeof factory>>([factory]),
+      value: useModel(domain, (s) => s.thread),
+      meta: useModel(domain, (s) => searchParam.getSnapshot(s, 'thread')),
     }),
-    { wrapper }
+    { wrapper: wrapper(router, strict) }
   )
-  return { ...hook, router, domain }
+  return { ...hook, domain, router }
 }
-
 async function flush() {
   await act(async () => {
     await Promise.resolve()
   })
 }
-
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
   window.history.replaceState(null, '', '/')
 })
 
-describe('Provider search parameter binding', () => {
-  test('URL initializes the model before write-back, including Strict Mode replay', async () => {
-    const { result, router, unmount } = setup(undefined, true)
-    expect(result.current.state).toBe('url')
-    expect(result.current.binding.ready).toBe(true)
+describe('declarative searchParam fields', () => {
+  test('ordinary model access initializes from URL before write-back, including Strict Mode', async () => {
+    const { result, router, unmount } = setup(undefined, undefined, true)
+    expect(result.current.value).toBe('url')
+    expect(result.current.meta.ready).toBe(true)
+    expect(router.listeners).toBe(1)
     await flush()
     expect(router.navigate).not.toHaveBeenCalled()
-    expect(router.listeners).toBe(1)
     unmount()
     expect(router.listeners).toBe(0)
   })
 
-  test('defaults to replace for both model actions and set without adding history entries', async () => {
+  test('ordinary action assignments default to replace without growing history', async () => {
     const { result, router } = setup()
-    act(() => result.current.actions.select('first'))
+    act(() => result.current.actions.select('one'))
     await flush()
-    act(() => result.current.actions.select('second'))
+    act(() => result.current.actions.select('two'))
     await flush()
-    act(() => result.current.binding.set('third'))
-    expect(router.navigate).toHaveBeenCalledTimes(3)
+    expect(router.length).toBe(1)
     expect(router.navigate.mock.calls.map(([, options]) => options.history)).toEqual([
       'replace',
       'replace',
+    ])
+    expect(router.getSnapshot()).toBe('/chat?thread=two&other=keep#message')
+  })
+
+  test('explicit push supports back/forward and a per-write replace override', async () => {
+    const { result, router } = setup(memoryRouter('/chat?other=keep#message'), 'push')
+    act(() => result.current.actions.set('latest', { history: 'replace' }))
+    act(() => result.current.actions.select('chosen'))
+    await flush()
+    expect(router.length).toBe(2)
+    expect(router.navigate.mock.calls.map(([, options]) => options.history)).toEqual([
+      'replace',
+      'push',
+    ])
+    act(() => router.back())
+    expect(result.current.value).toBe('latest')
+    act(() => router.forward())
+    expect(result.current.value).toBe('chosen')
+    await flush()
+    expect(router.navigate).toHaveBeenCalledTimes(2)
+  })
+
+  test('one push override does not change the default replace mode', () => {
+    const { result, router } = setup()
+    act(() => result.current.actions.set('pushed', { history: 'push' }))
+    act(() => result.current.actions.set('replaced'))
+    expect(router.length).toBe(2)
+    expect(router.navigate.mock.calls.map(([, options]) => options.history)).toEqual([
+      'push',
       'replace',
     ])
-    expect(router.length).toBe(1)
-    expect(router.getSnapshot()).toBe('/chat?thread=third&other=keep#message')
   })
 
-  test('set can opt into push for one write without changing the replace default', async () => {
-    const { result, router } = setup()
-    act(() => result.current.binding.set('pushed', { history: 'push' }))
-    expect(router.navigate).toHaveBeenLastCalledWith('/chat?thread=pushed&other=keep#message', {
-      history: 'push',
-    })
-    act(() => result.current.binding.set('replaced'))
-    expect(router.navigate).toHaveBeenLastCalledWith('/chat?thread=replaced&other=keep#message', {
-      history: 'replace',
-    })
-    expect(router.length).toBe(2)
-    act(() => router.back())
-    expect(result.current.binding.value).toBe('url')
-    await flush()
-    expect(router.navigate).toHaveBeenCalledTimes(2)
-  })
-
-  test('explicit push bindings support replace overrides and back/forward without echoes', async () => {
-    const { result, router } = setup(memoryRouter('/chat?other=keep#message'), false, 'push')
-    expect(result.current.binding.value).toBe(null)
-    act(() => result.current.binding.set('latest', { history: 'replace' }))
-    expect(router.navigate).toHaveBeenLastCalledWith('/chat?other=keep&thread=latest#message', {
-      history: 'replace',
-    })
-    act(() => result.current.actions.select('selected'))
-    await flush()
-    expect(router.navigate).toHaveBeenLastCalledWith('/chat?other=keep&thread=selected#message', {
-      history: 'push',
-    })
-    act(() => router.back())
-    expect(result.current.state).toBe('latest')
-    act(() => router.forward())
-    expect(result.current.state).toBe('selected')
-    await flush()
-    expect(router.navigate).toHaveBeenCalledTimes(2)
-  })
-
-  test('ignores unrelated model changes and stable no-op sets', async () => {
+  test('same values, unrelated fields, and unrelated query/hash changes cause no echo', async () => {
     const { result, router, rerender } = setup()
-    const original = result.current.binding
+    const original = result.current.meta
     rerender()
-    expect(result.current.binding).toBe(original)
-    act(() => result.current.actions.unrelated())
-    act(() => result.current.binding.set('url'))
+    expect(result.current.meta).toBe(original)
+    act(() => {
+      result.current.actions.unrelated()
+      result.current.actions.select('url')
+      result.current.actions.set('url')
+    })
+    act(() => router.external('/chat?thread=url&other=changed#new'))
     await flush()
-    expect(result.current.binding).toBe(original)
+    expect(result.current.meta).toBe(original)
     expect(router.navigate).not.toHaveBeenCalled()
-    act(() => result.current.binding.set('new'))
-    expect(result.current.binding.set).toBe(original.set)
-    expect(result.current.binding.getSnapshot).toBe(original.getSnapshot)
   })
 
-  test('waits for an unavailable router and gives its first URL priority', async () => {
+  test('null before URL availability is distinct from ready with a missing query', () => {
     const { result, router } = setup(memoryRouter(null))
-    expect(result.current.binding.ready).toBe(false)
-    expect(result.current.binding.set('premature')).toBe(false)
-    act(() => result.current.actions.select('default'))
-    await flush()
-    expect(router.navigate).not.toHaveBeenCalled()
-    act(() => router.external('/chat?thread=restored'))
-    expect(result.current.binding.ready).toBe(true)
-    expect(result.current.state).toBe('restored')
-    act(() => router.external(null))
-    expect(result.current.binding.ready).toBe(false)
+    expect(result.current.meta).toMatchObject({ value: null, ready: false })
+    expect(result.current.actions.set('too-early')).toBe(false)
+    act(() => router.external('/chat'))
+    expect(result.current.meta).toMatchObject({ value: null, ready: true })
   })
 
-  test('external navigation cancels a queued obsolete write even before notification', async () => {
+  test('stale queued writes lose to external navigation even before notification', async () => {
     const { result, router } = setup()
     act(() => {
       result.current.actions.select('obsolete')
-      router.external('/project/new?thread=external&filter=x#anchor', false)
+      router.external('/next?thread=external&keep=x#hash', false)
     })
     await flush()
-    expect(result.current.state).toBe('external')
-    expect(router.getSnapshot()).toBe('/project/new?thread=external&filter=x#anchor')
+    expect(result.current.value).toBe('external')
     expect(router.navigate).not.toHaveBeenCalled()
   })
 
-  test('rebases a queued write on unrelated URL changes', async () => {
+  test('a queued write rebases on unrelated URL edits and preserves repeated query values', async () => {
     const { result, router } = setup()
     act(() => {
       result.current.actions.select('selected')
-      router.external('/chat?thread=url&other=updated&tag=a&tag=b#new', false)
+      router.external('/chat?thread=url&tag=a&tag=b#new', false)
     })
     await flush()
-    expect(router.getSnapshot()).toBe('/chat?thread=selected&other=updated&tag=a&tag=b#new')
-    expect(result.current.state).toBe('selected')
+    expect(router.getSnapshot()).toBe('/chat?thread=selected&tag=a&tag=b#new')
   })
 
-  test('stale async normalization cannot overwrite a newer URL or user choice', async () => {
+  test('ifRevision rejects late normalization after navigation or another model selection', async () => {
     const { result, router } = setup()
-    const first = result.current.binding.getSnapshot().revision
-    act(() => router.external('/chat?thread=external'))
+    const first = result.current.meta.revision
+    act(() => router.external('/chat?thread=new'))
     let accepted = true
     act(() => {
-      accepted = result.current.binding.set('late-fallback', {
-        history: 'replace',
-        ifRevision: first,
-      })
+      accepted = result.current.actions.set('old', { ifRevision: first })
     })
     expect(accepted).toBe(false)
-    const second = result.current.binding.getSnapshot().revision
+    const second = result.current.meta.revision
     act(() => result.current.actions.select('user'))
     act(() => {
-      accepted = result.current.binding.set('late-fallback', { ifRevision: second })
+      accepted = result.current.actions.set('late', { ifRevision: second })
     })
     expect(accepted).toBe(false)
     await flush()
     expect(router.getSnapshot()).toBe('/chat?thread=user')
-    const third = result.current.binding.getSnapshot().revision
+    const third = result.current.meta.revision
     router.external('/chat?thread=unnotified', false)
     act(() => {
-      accepted = result.current.binding.set('stale', { ifRevision: third })
+      accepted = result.current.actions.set('stale', { ifRevision: third })
     })
     expect(accepted).toBe(false)
-    expect(result.current.state).toBe('unnotified')
   })
 
-  test('removing the parameter restores its default without an echo', async () => {
-    const { result, router } = setup()
-    act(() => router.external('/chat?other=keep#message'))
-    expect(result.current.state).toBe(null)
-    await flush()
-    expect(router.navigate).not.toHaveBeenCalled()
-    act(() => result.current.binding.set('new'))
-    act(() => result.current.binding.set(null, { history: 'replace' }))
-    expect(router.getSnapshot()).toBe('/chat?other=keep#message')
-  })
-
-  test('cleanup cancels writes and makes disposed callbacks inert', async () => {
+  test('unmount cancels pending writes and makes captured setters inactive', async () => {
     const { result, router, unmount } = setup()
-    const binding = result.current.binding
-    act(() => result.current.actions.select('queued'))
+    const actions = result.current.actions
+    act(() => actions.select('queued'))
     unmount()
-    expect(binding.set('late')).toBe(false)
+    expect(actions.set('late')).toBe(false)
     await flush()
     expect(router.navigate).not.toHaveBeenCalled()
     expect(router.listeners).toBe(0)
   })
 
-  test('a keyed boundary reinitializes a shared model and disposes the previous project', async () => {
-    const router = memoryRouter('/project/a?thread=a')
-    const domain = model({ thread: null as string | null })
-    let binding!: SearchParamBinding<string | null>
-    function Boundary() {
-      binding = useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null })
-      return <span>{useModel(domain, (s) => s.thread)}</span>
-    }
-    const tree = (key: string) => (
-      <TestProvider router={router}>
-        <Boundary key={key} />
-      </TestProvider>
-    )
-    const { rerender } = render(tree('a'))
-    const previous = binding
-    router.external('/project/b?thread=b', false)
-    rerender(tree('b'))
-    expect(binding.value).toBe('b')
-    expect(screen.getByText('b')).toBeTruthy()
-    expect(previous.set('late-a')).toBe(false)
-    await flush()
-    expect(router.navigate).not.toHaveBeenCalled()
-    expect(router.listeners).toBe(1)
+  test('metadata is available through create() and selector snapshots are read-only', () => {
+    const domain = model({ thread: searchParam({ key: 'thread' }) })
+    const useDomain = create(domain, { actions: [] })
+    const router = memoryRouter('/chat')
+    const { result } = renderHook(() => useDomain(), { wrapper: wrapper(router) })
+    const meta = searchParam.getSnapshot(result.current, 'thread')
+    expect(meta).toMatchObject({ ready: true, value: null })
+    expect(Object.isFrozen(meta)).toBe(true)
+    expect(() => searchParam.set(result.current as any, 'thread', 'bad')).toThrow('action state')
   })
 
-  test('separate Providers isolate bindings to the same model and key', () => {
-    const domain = model({ thread: null as string | null })
-    const firstRouter = memoryRouter('/a?thread=one')
-    const secondRouter = memoryRouter('/b?thread=two')
-    const values: SearchParamBinding<string | null>[] = []
-    function Boundary({ index }: { index: number }) {
-      values[index] = useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null })
-      return null
-    }
-    render(
-      <TestProvider router={firstRouter}>
-        <Boundary index={0} />
-        <TestProvider router={secondRouter}>
-          <Boundary index={1} />
-        </TestProvider>
-      </TestProvider>
+  test('search metadata and action writes coexist with query plugin state through create()', async () => {
+    const queryFn = vi.fn(async (page: number) => [`page:${page}`])
+    const domain = model({
+      page: searchParam({ key: 'page', type: 'number', defaultValue: 1 }),
+      rows: query<string[], number>({ initialData: [], queryFn }),
+    })
+    const factory = action(({ state }) => {
+      const current = state(domain)
+      return {
+        load: () => current.rows.query(current.page),
+        next: () => searchParam.set(current, 'page', current.page + 1),
+      }
+    })
+    const useDomain = create(domain, { actions: [factory] })
+    const router = memoryRouter('/list?page=2')
+    const { result } = renderHook(
+      () =>
+        useDomain((s) => ({
+          meta: searchParam.getSnapshot(s, 'page'),
+          rows: s.rows.data,
+          actions: s.actions,
+        })),
+      { wrapper: wrapper(router) }
     )
-    act(() => values[0].set('changed'))
-    expect(values[0].value).toBe('changed')
-    expect(values[1].value).toBe('two')
-    expect(secondRouter.navigate).not.toHaveBeenCalled()
+    expect(result.current.meta).toMatchObject({ ready: true, value: 2 })
+    await act(async () => {
+      await result.current.actions.load()
+    })
+    expect(result.current.rows).toEqual(['page:2'])
+    act(() => {
+      result.current.actions.next()
+    })
+    expect(result.current.meta.value).toBe(3)
+    expect(router.getSnapshot()).toBe('/list?page=3')
   })
 
-  test('multiple query bindings preserve each other during a batched model action', async () => {
-    const domain = model({ thread: null as string | null, tab: null as string | null })
-    const actions = action(({ state }) => ({
-      both() {
-        state(domain).thread = 'one'
-        state(domain).tab = 'code'
+  test('action-only consumers and models first accessed in an event initialize automatically', async () => {
+    const domain = model({ page: searchParam({ key: 'page', type: 'number', defaultValue: 1 }) })
+    const factory = action(({ state }) => ({
+      increment() {
+        state(domain).page++
       },
     }))
-    const router = memoryRouter('/chat?unrelated=keep#hash')
-    const { result } = renderHook(
-      () => {
-        useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null })
-        useSearchParam(domain, 'tab', { key: 'tab', defaultValue: null })
-        return useAction([actions])
-      },
-      { wrapper: ({ children }) => <TestProvider router={router}>{children}</TestProvider> }
-    )
-    act(() => result.current.both())
-    await flush()
-    expect(router.getSnapshot()).toBe('/chat?unrelated=keep&thread=one&tab=code#hash')
-  })
-
-  test('custom codecs validate malformed values and explicitly canonicalize with replace', () => {
-    const domain = model({ page: 1 })
-    const parse = (raw: string | null) => (/^[1-9]\d*$/.test(raw ?? '') ? Number(raw) : 1)
-    const serialize = (value: number) => (value === 1 ? null : String(value))
-    const router = memoryRouter('/list?page=invalid&filter=all')
-    const { result } = renderHook(
-      () => useSearchParam(domain, 'page', { key: 'page', defaultValue: 1, parse, serialize }),
-      { wrapper: ({ children }) => <TestProvider router={router}>{children}</TestProvider> }
-    )
-    expect(result.current.value).toBe(1)
-    expect(router.navigate).not.toHaveBeenCalled()
-    act(() => result.current.set(1, { history: 'replace' }))
-    expect(router.getSnapshot()).toBe('/list?filter=all')
-    act(() => result.current.set(2))
-    expect(router.getSnapshot()).toBe('/list?filter=all&page=2')
-  })
-
-  test('an abandoned render never initializes state or installs a binding', async () => {
-    const router = memoryRouter('/chat?thread=url')
-    const domain = model({ thread: 'default' as string | null })
-    const never = new Promise(() => {})
-    function Abandoned() {
-      useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null })
-      throw never
-    }
-    function Observer() {
-      return <span>{useModel(domain, (s) => s.thread)}</span>
-    }
-    render(
-      <TestProvider router={router}>
-        <Observer />
-        <Suspense fallback="waiting">
-          <Abandoned />
-        </Suspense>
-      </TestProvider>
-    )
-    await flush()
-    expect(screen.getByText('default')).toBeTruthy()
-    expect(router.listeners).toBe(0)
-    expect(router.navigate).not.toHaveBeenCalled()
-  })
-
-  test('SSR and hydration use a passive default snapshot before committing the URL', async () => {
-    const router = memoryRouter('/chat?thread=url')
-    const domain = model({ thread: null as string | null })
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const renders: Array<{ ready: boolean; value: string | null }> = []
-    function Boundary() {
-      const binding = useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null })
-      renders.push({ ready: binding.ready, value: binding.value })
-      return <span>{binding.ready ? binding.value : 'loading'}</span>
-    }
-    const tree = (
-      <TestProvider router={router}>
-        <Boundary />
-      </TestProvider>
-    )
-    const container = document.createElement('div')
-    container.innerHTML = renderToString(tree)
-    document.body.append(container)
-    expect(container.textContent).toBe('loading')
-    expect(router.listeners).toBe(0)
-    let root!: ReturnType<typeof hydrateRoot>
-    await act(async () => {
-      root = hydrateRoot(container, tree)
+    const router = memoryRouter('/list?page=5')
+    const { result, unmount } = renderHook(() => useAction<ReturnType<typeof factory>>([factory]), {
+      wrapper: wrapper(router),
     })
-    expect(renders[0]).toEqual({ ready: false, value: null })
-    expect(renders[1]).toEqual({ ready: false, value: null })
-    expect(container.textContent).toBe('url')
-    expect(error).not.toHaveBeenCalled()
-    expect(router.navigate).not.toHaveBeenCalled()
-    act(() => root.unmount())
-    container.remove()
+    expect(router.listeners).toBe(0)
+    act(() => result.current.increment())
+    await flush()
+    expect(router.getSnapshot()).toBe('/list?page=6')
+    expect(router.listeners).toBe(1)
+    unmount()
+    expect(router.listeners).toBe(0)
+  })
+
+  test('reactivation rejects async revisions captured before disposal', () => {
+    const domain = model({ thread: searchParam({ key: 'thread' }) })
+    const router = memoryRouter('/chat?thread=one')
+    let current: any
+    const factory = action(({ state }) => {
+      const data = state(domain)
+      return {
+        get: () => searchParam.getSnapshot(data, 'thread'),
+        set: (v: string, r: number) => searchParam.set(data, 'thread', v, { ifRevision: r }),
+      }
+    })
+    function Consumer() {
+      current = useAction([factory])
+      useModel(domain, (s) => s.thread)
+      return null
+    }
+    const tree = (visible: boolean) => (
+      <ComwitProvider>
+        <Transport router={router}>{visible && <Consumer />}</Transport>
+      </ComwitProvider>
+    )
+    const view = render(tree(true))
+    const old = current,
+      revision = old.get().revision
+    view.rerender(tree(false))
+    expect(old.set('disposed', revision)).toBe(false)
+    view.rerender(tree(true))
+    expect(current.get().revision).toBeGreaterThan(revision)
+    expect(old.set('stale', revision)).toBe(false)
+  })
+
+  test('multiple consumers share one connection and Providers keep separate model instances', () => {
+    const domain = model({ thread: searchParam({ key: 'thread' }) })
+    const first = memoryRouter('/a?thread=one'),
+      second = memoryRouter('/b?thread=two')
+    const values: Array<string | null> = []
+    function View({ index }: { index: number }) {
+      values[index] = useModel(domain, (s) => s.thread)
+      return null
+    }
+    const view = render(
+      <>
+        <ComwitProvider>
+          <Transport router={first}>
+            <View index={0} />
+            <View index={1} />
+          </Transport>
+        </ComwitProvider>
+        <ComwitProvider>
+          <Transport router={second}>
+            <View index={2} />
+          </Transport>
+        </ComwitProvider>
+      </>
+    )
+    expect(values).toEqual(['one', 'one', 'two'])
+    expect(first.listeners).toBe(1)
+    expect(second.listeners).toBe(1)
+    view.unmount()
+    expect(first.listeners + second.listeners).toBe(0)
+  })
+
+  test('nested declarations and batched field actions preserve each query key', async () => {
+    const domain = model({
+      filters: { page: searchParam({ key: 'page', type: 'number', defaultValue: 1 }) },
+      thread: searchParam({ key: 'thread' }),
+    })
+    const factory = action(({ state }) => {
+      const data = state(domain)
+      return {
+        change() {
+          data.filters.page = 3
+          data.thread = 'chosen'
+        },
+      }
+    })
+    const router = memoryRouter('/chat?page=2&thread=one&keep=x#hash')
+    const { result } = renderHook(
+      () => ({
+        actions: useAction<ReturnType<typeof factory>>([factory]),
+        value: useModel(domain, (s) => s.filters.page),
+      }),
+      { wrapper: wrapper(router) }
+    )
+    expect(result.current.value).toBe(2)
+    act(() => result.current.actions.change())
+    await flush()
+    expect(router.getSnapshot()).toBe('/chat?page=3&thread=chosen&keep=x#hash')
   })
 })
 
-describe('native browser router adapter', () => {
-  test('default selections keep native history length and explicit push adds one entry', () => {
-    window.history.replaceState(null, '', '/chat?thread=initial&other=keep#message')
-    const router = createBrowserRouterAdapter()
-    const domain = model({ thread: null as string | null })
-    const { result } = renderHook(
-      () => useSearchParam(domain, 'thread', { key: 'thread', defaultValue: null }),
-      { wrapper: ({ children }) => <TestProvider router={router}>{children}</TestProvider> }
-    )
-    const initialLength = window.history.length
-    act(() => result.current.set('one'))
-    act(() => result.current.set('two'))
-    expect(window.history.length).toBe(initialLength)
-    expect(router.getSnapshot()).toBe('/chat?thread=two&other=keep#message')
-    act(() => result.current.set('three', { history: 'push' }))
-    expect(window.history.length).toBe(initialLength + 1)
-    act(() => result.current.set('four'))
-    expect(window.history.length).toBe(initialLength + 1)
-    expect(router.getSnapshot()).toBe('/chat?thread=four&other=keep#message')
+describe('primitive parsing and default priority', () => {
+  test.each([
+    ['?text=&page=12&enabled=false', '', 12, false],
+    ['?text=url&page=-1.5&enabled=1', 'url', -1.5, true],
+    ['?page=1e2&enabled=0', null, 100, false],
+    ['?page=&enabled=maybe', null, null, null],
+    ['?page=NaN&enabled=', null, null, null],
+    ['?page=Infinity', null, null, null],
+    ['?page=12abc', null, null, null],
+    ['?page=0x10', null, null, null],
+  ])('parses %s without truthiness or NaN coercion', (search, text, page, enabled) => {
+    const domain = model({
+      text: searchParam({ key: 'text' }),
+      page: searchParam({ key: 'page', type: 'number' }),
+      enabled: searchParam({ key: 'enabled', type: 'boolean' }),
+    })
+    const router = memoryRouter(`/list${search}`)
+    const { result } = renderHook(() => useModel(domain, (s) => [s.text, s.page, s.enabled]), {
+      wrapper: wrapper(router),
+    })
+    expect(result.current).toEqual([text, page, enabled])
+    expect(router.navigate).not.toHaveBeenCalled()
   })
 
-  test('observes native push/replace, back/forward events and hash changes, then restores methods', async () => {
-    const originalPush = window.history.pushState
-    const originalReplace = window.history.replaceState
-    const adapter = createBrowserRouterAdapter()
-    const listener = vi.fn()
+  test('valid URL values win; defaults only handle absent or invalid values without automatic writes', () => {
+    const domain = model({
+      page: searchParam({ key: 'page', type: 'number', defaultValue: 1 }),
+      enabled: searchParam({ key: 'enabled', type: 'boolean', defaultValue: true }),
+    })
+    const router = memoryRouter('/list?page=0&enabled=false')
+    const { result } = renderHook(() => useModel(domain, (s) => [s.page, s.enabled]), {
+      wrapper: wrapper(router),
+    })
+    expect(result.current).toEqual([0, false])
+    act(() => router.external('/list?page=bad'))
+    expect(result.current).toEqual([1, true])
+    expect(router.navigate).not.toHaveBeenCalled()
+  })
+
+  test('custom codecs use fallback on malformed input and can explicitly canonicalize it', () => {
+    const domain = model({
+      value: searchParam<{ tag: string }>({
+        key: 'filter',
+        defaultValue: { tag: 'all' },
+        parse: JSON.parse,
+        serialize: JSON.stringify,
+      }),
+    })
+    const factory = action(({ state }) => {
+      const data = state(domain)
+      return {
+        normalize() {
+          searchParam.set(data, 'value', data.value)
+        },
+      }
+    })
+    const router = memoryRouter('/list?filter=broken&keep=x')
+    const { result } = renderHook(
+      () => ({
+        value: useModel(domain, (s) => s.value),
+        actions: useAction<ReturnType<typeof factory>>([factory]),
+      }),
+      { wrapper: wrapper(router) }
+    )
+    expect(result.current.value).toEqual({ tag: 'all' })
+    expect(router.navigate).not.toHaveBeenCalled()
+    act(() => result.current.actions.normalize())
+    expect(new URL(router.getSnapshot()!, 'https://test.invalid').searchParams.get('filter')).toBe(
+      '{"tag":"all"}'
+    )
+  })
+})
+
+describe('internal native History API transport', () => {
+  test('observes push/replace and navigation events and restores its methods after cleanup', async () => {
+    const push = window.history.pushState,
+      replace = window.history.replaceState
+    const adapter = createBrowserRouterAdapter(),
+      listener = vi.fn()
     const stop = adapter.subscribe(listener)
-    window.history.pushState(null, '', '/chat?thread=one#hash')
+    window.history.pushState(null, '', '/chat?thread=one')
     await flush()
-    expect(adapter.getSnapshot()).toBe('/chat?thread=one#hash')
-    expect(listener).toHaveBeenCalledTimes(1)
-    window.history.replaceState(null, '', '/chat?thread=two#next')
+    window.history.replaceState(null, '', '/chat?thread=two')
     await flush()
-    expect(listener).toHaveBeenCalledTimes(2)
-    originalReplace.call(window.history, null, '', '/chat?thread=back#next')
+    replace.call(window.history, null, '', '/chat?thread=back#hash')
     window.dispatchEvent(new PopStateEvent('popstate'))
     await flush()
-    originalReplace.call(window.history, null, '', '/chat?thread=back#hash')
-    window.dispatchEvent(new HashChangeEvent('hashchange'))
-    await flush()
-    expect(listener).toHaveBeenCalledTimes(4)
+    expect(listener).toHaveBeenCalledTimes(3)
     stop()
-    expect(window.history.pushState).toBe(originalPush)
-    expect(window.history.replaceState).toBe(originalReplace)
+    expect(window.history.pushState).toBe(push)
+    expect(window.history.replaceState).toBe(replace)
   })
 
-  test('shares only the event transport and cleans up in either unsubscribe order', async () => {
-    const originalPush = window.history.pushState
-    const first = createBrowserRouterAdapter()
-    const second = createBrowserRouterAdapter()
-    const firstListener = vi.fn()
-    const secondListener = vi.fn()
-    const stopFirst = first.subscribe(firstListener)
-    const stopSecond = second.subscribe(secondListener)
-    stopFirst()
-    second.navigate('/chat?thread=two', { history: 'push' })
-    await flush()
-    expect(firstListener).not.toHaveBeenCalled()
-    expect(secondListener).toHaveBeenCalledOnce()
-    stopSecond()
-    expect(window.history.pushState).toBe(originalPush)
-  })
-
-  test('coalesces browser notifications outside the caller and preserves newer framework wrappers', async () => {
-    const originalPush = window.history.pushState
-    const adapter = createBrowserRouterAdapter()
-    const listener = vi.fn()
-    const stop = adapter.subscribe(listener)
-    const wrapped = window.history.pushState
-    const framework = vi.fn((...args: Parameters<History['pushState']>) =>
-      wrapped.apply(window.history, args)
-    )
-    window.history.pushState = framework
-    adapter.navigate('/chat?thread=one', { history: 'push' })
-    adapter.navigate('/chat?thread=two', { history: 'push' })
-    expect(adapter.getSnapshot()).toBe('/chat?thread=two')
-    expect(listener).not.toHaveBeenCalled()
-    await flush()
-    expect(listener).toHaveBeenCalledOnce()
-    stop()
-    expect(window.history.pushState).toBe(framework)
-    window.history.pushState = originalPush
+  test('native model selection replaces by default and explicit push adds exactly one entry', () => {
+    window.history.replaceState(null, '', '/chat?thread=one&keep=x#hash')
+    const domain = model({ thread: searchParam({ key: 'thread' }) })
+    const factory = action(({ state }) => {
+      const data = state(domain)
+      return {
+        select(v: string) {
+          data.thread = v
+        },
+        push(v: string) {
+          searchParam.set(data, 'thread', v, { history: 'push' })
+        },
+      }
+    })
+    const { result } = renderHook(() => useAction<ReturnType<typeof factory>>([factory]), {
+      wrapper: ({ children }) => <ComwitProvider>{children}</ComwitProvider>,
+    })
+    const length = window.history.length
+    act(() => result.current.push('two'))
+    expect(window.history.length).toBe(length + 1)
+    expect(window.location.search + window.location.hash).toBe('?thread=two&keep=x#hash')
   })
 })

@@ -1,11 +1,26 @@
-import React, { createContext, useContext, useId, useRef, type Context } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useId,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  type Context,
+} from 'react'
 import { getPlugins } from './plugin'
 import type { Model, StoreEntry } from './model'
 import type { StageMethodDecorator } from '../interceptors/utils'
 import { getDevTools, initDevTools } from './devtools'
 import type { LocalDefaults } from './local'
 import type { QueryBindingRegistry } from './query/types'
-import { createBrowserRouterAdapter, type RouterAdapter } from './router'
+import {
+  createBrowserRouterAdapter,
+  prepareSearchParamStore,
+  serverSearchParamValues,
+  type RouterAdapter,
+} from './router'
+
+const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 export type RegistryDefaults = {
   interceptors?: StageMethodDecorator[]
@@ -29,6 +44,8 @@ export type LifecycleState = {
 export type StoreRegistry = {
   get<T extends object>(model: Model<T>): StoreEntry<T>
   getLifecycle(model: Model<any>): LifecycleState
+  observe(model: Model<any>): () => void
+  dispose(): void
   context?: Record<string, unknown>
   pluginStates: Map<string, unknown>
   pluginDefaults: Map<string, unknown>
@@ -36,7 +53,7 @@ export type StoreRegistry = {
   /** Internal URL transport; ordinary model hooks do not subscribe to it. */
   router: RouterAdapter
   serverSearch: string | null
-  searchParamOwners: Map<symbol, { key: string; model: symbol; field: PropertyKey }>
+  searchParamOwners: Map<string, { model: symbol; path: string }>
 }
 
 let _StateContext: Context<StoreRegistry | null> | null = null
@@ -105,6 +122,8 @@ export function ComwitProvider({
     if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') initDevTools()
     const stores = new Map<symbol, StoreEntry>()
     const lifecycles = new Map<symbol, LifecycleState>()
+    const urlModels = new Map<symbol, { start(): () => void }>()
+    const urlObservers = new Map<symbol, { count: number; stop(): void }>()
     const registry: StoreRegistry = {
       context: {},
       pluginStates,
@@ -115,7 +134,17 @@ export function ComwitProvider({
       get<T extends object>(model: Model<T>): StoreEntry<T> {
         const existing = stores.get(model.key)
         if (existing) return existing as StoreEntry<T>
-        const entry = model.instance()
+        const initial =
+          typeof window === 'undefined' ? serverSearchParamValues(model, serverSearch) : undefined
+        const entry = model.instance(initial)
+        const url = prepareSearchParamStore(
+          model,
+          entry,
+          registry.router,
+          serverSearch,
+          registry.searchParamOwners
+        )
+        if (url) urlModels.set(model.key, url)
         stores.set(model.key, entry)
         if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined')
           getDevTools()?.registerStore(model, entry)
@@ -128,6 +157,29 @@ export function ComwitProvider({
         lifecycles.set(model.key, lifecycle)
         return lifecycle
       },
+      observe(model) {
+        registry.get(model)
+        const url = urlModels.get(model.key)
+        if (!url) return () => {}
+        let state = urlObservers.get(model.key)
+        if (!state) {
+          state = { count: 0, stop: url.start() }
+          urlObservers.set(model.key, state)
+        }
+        state.count++
+        const current = state
+        return () => {
+          if (urlObservers.get(model.key) !== current) return
+          if (--current.count === 0) {
+            urlObservers.delete(model.key)
+            current.stop()
+          }
+        }
+      },
+      dispose() {
+        for (const state of urlObservers.values()) state.stop()
+        urlObservers.clear()
+      },
     }
     const queryRegistry = pluginStates.get('query') as QueryBindingRegistry | undefined
     if (queryRegistry)
@@ -136,6 +188,7 @@ export function ComwitProvider({
   }
 
   const registry = registryRef.current
+  useCommitEffect(() => () => registry.dispose(), [registry])
   const sharedContext = registry.context!
   Object.keys(sharedContext).forEach((key) => delete sharedContext[key])
   Object.assign(sharedContext, context)

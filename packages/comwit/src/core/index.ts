@@ -8,14 +8,10 @@ import {
 } from './model'
 import { action, ActionFactory, useAction } from './action'
 import { ComwitProvider, type RegistryDefaults } from './provider'
-export { useSearchParam } from './router'
+export { searchParam } from './router'
+import { inheritSearchParamAccess, searchParamPlugin } from './router'
 export type { ComwitProviderProps } from './provider'
-export type {
-  SearchParamBinding,
-  SearchParamOptions,
-  SearchParamSetOptions,
-  SearchParamSnapshot,
-} from './router'
+export type { SearchParamOptions, SearchParamSetOptions, SearchParamSnapshot } from './router'
 import { silent } from './silent'
 import { snapshot, isProxy, type Snapshotable } from './proxy'
 import {
@@ -68,6 +64,7 @@ import {
 registerPlugin(queryPlugin)
 registerPlugin(persistPlugin)
 registerPlugin(computedPlugin)
+registerPlugin(searchParamPlugin)
 
 function create<S extends object, A>(
   m: Model<S>,
@@ -80,7 +77,7 @@ function create<S extends object, A>(
   function useStore<R>(selector?: (state: SelectableState & { actions: A }) => R) {
     const actions = useAction<A>(options.actions)
     const withActions = (state: SelectableState): SelectableState & { actions: A } =>
-      ({
+      inheritSearchParamAccess(state as object, {
         ...(state as object),
         actions,
       }) as SelectableState & { actions: A }

@@ -14,7 +14,7 @@ export {
   initDevTools,
   snapshot,
   isProxy,
-  useSearchParam,
+  searchParam,
 } from './core'
 export type {
   Query,
@@ -51,7 +51,6 @@ export type {
   LocalStandaloneOptions,
   SelectableLocalResource,
   ComwitProviderProps,
-  SearchParamBinding,
   SearchParamOptions,
   SearchParamSetOptions,
   SearchParamSnapshot,

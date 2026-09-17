@@ -10,6 +10,13 @@ import { createProxy, snapshot, subscribe } from './proxy'
 import { getPlugins, type PluginBag } from './plugin'
 import { useStoreRegistry } from './provider'
 import { isEqual } from '../utils'
+import {
+  canonicalPath,
+  getPathValue,
+  setPathValue,
+  sameSearchParamAccess,
+  SEARCH_PARAM_PLUGIN_NAME,
+} from './router'
 import { isSilent } from './silent'
 import { COMPUTED_PLUGIN_NAME, createComputedProxy, getComputedSnapshot } from './computed'
 import {
@@ -100,10 +107,11 @@ export function model<T extends object, D extends object = {}>(
     instance(initialValues): StoreEntry<T & Readonly<D>> {
       const initialState = cloneState()
       for (const [field, value] of initialValues ?? []) {
-        if (!Object.prototype.hasOwnProperty.call(initialState, field)) {
-          throw new Error('Model initialization requires an own state field')
-        }
-        Reflect.set(initialState, field, structuredClone(value))
+        if (Object.prototype.hasOwnProperty.call(initialState, field))
+          Reflect.set(initialState, field, structuredClone(value))
+        else if (typeof field === 'string')
+          setPathValue(initialState, field, structuredClone(value))
+        else throw new Error('Model initialization requires an own state field')
       }
       const p = createProxy(initialState)
       const historyOptions = normalizeHistoryOptions(options?.history)
@@ -179,20 +187,6 @@ export function model<T extends object, D extends object = {}>(
         })
       }
 
-      const baseProxy = publicProxy as object
-      publicProxy = new Proxy(baseProxy, {
-        get(target, prop, receiver) {
-          if (
-            typeof window === 'undefined' &&
-            serverFields.size > 0 &&
-            (serverFields.get(prop)?.ready || (typeof prop === 'string' && derivedKeys?.has(prop)))
-          ) {
-            return Reflect.get(readServerSnapshot(), prop)
-          }
-          return Reflect.get(target, prop, receiver)
-        },
-      })
-
       const readSnapshot = () => {
         if (!hasExtensions) return snapshot(p) as T & Readonly<D>
 
@@ -254,23 +248,23 @@ export function model<T extends object, D extends object = {}>(
           const existing = serverFields.get(field)
           if (existing) return existing
           if (
-            !Object.prototype.hasOwnProperty.call(initialState, field) ||
-            [...pluginBags.values()].some((bag) =>
-              [...bag.keys()].some(
-                (path) =>
-                  path === field ||
-                  path.startsWith(`${String(field)}.`) ||
-                  path.startsWith(`${String(field)}[`)
-              )
+            typeof field !== 'string' ||
+            [...pluginBags].some(
+              ([name, bag]) =>
+                name !== SEARCH_PARAM_PLUGIN_NAME &&
+                [...bag.keys()].some(
+                  (path) =>
+                    canonicalPath(path) === field || canonicalPath(path).startsWith(`${field}.`)
+                )
             )
           ) {
-            throw new Error('useSearchParam() requires a plain model field')
+            throw new Error('Invalid searchParam() model field')
           }
           const baseline = readServerSnapshot()
           const selected =
             seed.ready && !snapshotRead
               ? { ready: true, value: structuredClone(seed.value) }
-              : { ready: false, value: Reflect.get(baseline, field) }
+              : { ready: false, value: getPathValue(baseline, String(field)) }
           serverFields.set(field, selected)
           if (selected.ready) serverSnapshot = buildServerSnapshot()
           return selected
@@ -402,7 +396,11 @@ export function useModel<T extends object, R>(
         ? selectorRef.current(selectable as SelectableResourceState<T>)
         : selectable
 
-      if (prevRef.current !== null && isEqual(prevRef.current, next)) {
+      if (
+        prevRef.current !== null &&
+        isEqual(prevRef.current, next) &&
+        sameSearchParamAccess(prevRef.current, next)
+      ) {
         return prevRef.current as R
       }
 
@@ -416,6 +414,7 @@ export function useModel<T extends object, R>(
   const getServerSnapshot = useCallback(() => readSelectedSnapshot(true), [readSelectedSnapshot])
 
   const result = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  useCommitEffect(() => registry.observe(m), [registry, m])
   const queryLoads = queryLoadsRef.current
   const selectorLoadKey = querySelectorLoadKey(queryLoads)
 
