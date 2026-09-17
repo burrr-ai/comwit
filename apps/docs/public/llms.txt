@@ -215,6 +215,45 @@ pass a route identity to detail-resource operations.
 `local` is not an offline mutation queue or multi-device conflict resolver. Full storage,
 normalization, mapping, scope, and migration rules: https://library.comwit.io/llm/local.txt
 
+## URL state (beta)
+
+Requires `@comwit/state@2.4.0-beta.4` (`npm install @comwit/state@beta`). Like `persist()`,
+`searchParam()` declares a model field whose normal value is synchronized automatically:
+
+```ts
+import { action, model, searchParam } from '@comwit/state'
+
+const location = model({
+  threadId: searchParam({ key: 'thread' }), // string | null
+  page: searchParam({ key: 'page', type: 'number', defaultValue: 1 }), // number
+  archived: searchParam({ key: 'archived', type: 'boolean' }), // boolean | null
+  query: searchParam({ key: 'q', parse: (raw) => raw.trim() }),
+})
+
+const locationActions = action(({ state }) => {
+  const current = state(location)
+  return {
+    selectThread(id: string | null) {
+      current.threadId = id
+    },
+  }
+})
+```
+
+Read fields through ordinary `useModel()` or a generated domain hook. Normal action assignments
+write to the URL with `replace` by default; `history: 'push'` is opt-in. No separate connection hook.
+Valid parsed URL values win over optional `defaultValue`; missing/invalid values use that default
+or `null`. Initial defaults do not write the URL. Setting `null` removes the parameter. String is
+the default type; numbers must be finite and booleans parse true/false or 1/0. Custom structured
+formats require both `parse` and `serialize`; thrown parse errors use the fallback.
+
+For SSR, the existing Provider optionally accepts `getServerSearchParams?: () => string | null`.
+It reads request search data only on the server and transfers it to matching hydration internally.
+Without server search data, SSR/first hydration use fallbacks; client commit reads the browser URL.
+Back/forward updates state; selected value changes rerender normally, without a document reload.
+Keep domain validation and data fetching in application actions/queries. Async guards and full
+options: https://library.comwit.io/llm/search-param.txt
+
 ## Hook and proxy boundaries
 
 ```ts
@@ -245,6 +284,7 @@ await search(snapshot(this.m.filters))
 - Validation: model `rules`; read `$validation`.
 - History: `history: true | { limit }`; use `$history.undo()`, `redo()`, and `ignore(fn)`.
 - Persistence: `persist({ key, defaultValue, storage? })`.
+- URL state (beta): `searchParam({ key, type?, defaultValue?, parse?, serialize?, history? })`.
 - Decorators: `@OnError`, `@OnSuccess`, `@Authorized`, `@Debounce`, `@Throttle`, `@Retry`,
   `@Queue`, `@Log`, and `@Validate`.
 
@@ -265,6 +305,7 @@ await search(snapshot(this.m.filters))
 - https://library.comwit.io/llm/local.txt
 - https://library.comwit.io/llm/decorator.txt
 - https://library.comwit.io/llm/persist.txt
+- https://library.comwit.io/llm/search-param.txt
 - https://library.comwit.io/llm/history.txt
 - https://library.comwit.io/docs
 

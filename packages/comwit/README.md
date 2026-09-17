@@ -22,6 +22,37 @@ https://library.comwit.io/llms.txt
 
 Pass the URL to Claude Code. It handles the rest.
 
+## URL search parameters (beta)
+
+Install `@comwit/state@beta`. Declare URL-backed fields in the model, just like other model descriptors:
+
+```ts
+import { model, searchParam } from '@comwit/state'
+
+const location = model({
+  requestedThreadId: searchParam({ key: 'thread' }),
+  page: searchParam({ key: 'page', type: 'number', defaultValue: 1 }),
+  archived: searchParam({ key: 'archived', type: 'boolean' }),
+})
+```
+
+Read with ordinary `useModel()`/`create()` and assign fields through normal actions. Initialization,
+URL synchronization, subscriptions, and cleanup are automatic. `history` defaults to `replace`.
+A valid URL value wins; missing or invalid input uses optional `defaultValue`, otherwise `null`.
+String is the default type; built-in number and boolean codecs avoid `NaN` and truthiness coercion.
+
+Override decoding with `parse`, for example `searchParam({ key: 'q', parse: (raw) => raw.trim() })`.
+Structured formats accept a custom `parse` and `serialize` pair.
+
+The existing global Provider can optionally receive `getServerSearchParams?: () => string | null`.
+It is called only on the server, and its result is transferred to hydration internally. Without
+server search data, client commit initializes from the browser URL. No separate URL hook is needed.
+
+Advanced async guards can read `searchParam.getSnapshot(state, field)` through a normal selector or
+action and call `searchParam.set(actionState, field, value, { history?, ifRevision? })`.
+
+[Read the descriptor, parsing, SSR, history, and async contracts](https://library.comwit.io/docs/api/router).
+
 ## Durable on-demand queries
 
 ```ts
