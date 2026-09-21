@@ -476,3 +476,62 @@ initialize the same store by invoking a mutating action during render, even thro
 Experimental `.suspend(routeArg)` can still block rendering for an isomorphic `queryFn`. It cannot
 call a Next.js Server Function from a Client Component's initial render, and server/browser caches
 remain separate without explicit hydration.
+
+## Slow initial loading (beta)
+
+Declare `slowLoadingMs` on a query to read the library-owned `isSlowLoading` boolean. It does
+not delay the request, data, Promise, or existing `isLoading` / `isFetching` flags.
+
+```ts
+const projects = model({
+  list: local.query<Project[]>({
+    source: projectRows,
+    initialData: [],
+    queryFn: () => api.project.list(),
+    slowLoadingMs: 500,
+  }),
+})
+```
+
+```tsx
+const projects = useProjects((state) => state.list.load())
+if (projects.isLoading && !projects.isSuccess) {
+  return projects.isSlowLoading ? <ProjectsSkeleton /> : null
+}
+if (projects.isSuccess) return <ProjectsList items={projects.data} />
+if (projects.isError) return <LoadError error={projects.error} />
+return null
+```
+
+`isSlowLoading: false` does **not** mean the data is ready. A successful empty result is ready;
+inspect status rather than data truthiness. Success takes precedence over background errors for
+local queries. Layout space and whether to show a skeleton remain application decisions.
+
+- Supported declarations: `query()`, `query.infinite()`, `query.realtime()`, `local.query()`, and
+  `local.infinite()`. Every query has the same readonly boolean; omitting the option keeps it
+  false and allocates no loading timer. Standalone `local()`, `persist()`, model options,
+  provider defaults, and per-call query options do not accept this policy.
+- Accepts finite milliseconds from `0` through `2147483647`; other values throw `RangeError`.
+  `0` becomes true as soon as a browser query starts initial loading. At `500`, it stays false
+  before 500ms and becomes true if initial loading still continues when the timer runs.
+- The clock starts when the browser query enters initial loading. Selector `.load()` starts
+  work after commit; its earlier synthetic pending/SSR snapshot is false. Disabled/dependent
+  queries that do not start work have no clock. Server rendering starts no loading timers;
+  server seeds and first hydration snapshots remain false. Experimental `.suspend()` starts
+  no clock for its uncommitted, render-staged request.
+- IndexedDB restoration and a cache miss's subsequent fetch share one interval. Restored or
+  remotely successful data clears the flag immediately, even if durable write-through is still
+  finishing. Usable stale data and background revalidation never become slow initial loading.
+  `isLoading: false`, success, or error ends the interval. Stream chunks can mark usable data
+  with `isLoading: false` / `isSuccess: true` without waiting for the stream to finish.
+- Changing serialized arguments or activating a different local scope resets the interval.
+  Overlapping requests for the same key and internal retry/backoff keep a continuous interval;
+  a settled error followed by a new query starts a new one. Stale requests cannot clear a newer
+  interval. No request key, retry counter, or timer is needed in the component.
+- Consumers of the same provider/query share the flag. The last model observer leaving pauses
+  timer notifications; reobserving the still-pending query resumes using its elapsed time.
+  An imperative-only query owns its clock until settlement or provider teardown. These rules
+  affect only the additional boolean, not request cancellation or cache retention.
+- The flag is reset for cache reads and excluded from IndexedDB persistence. There is no minimum
+  display duration: completion clears it immediately. Timer scheduling is a lower bound, not a
+  guarantee of a paint at an exact millisecond.

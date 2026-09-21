@@ -59,14 +59,17 @@ export type ResourceBaseState<TData> = {
   error: string | null
 }
 
-export type ResourceSingleState<TData> = ResourceBaseState<TData>
+export type ResourceSingleState<TData> = ResourceBaseState<TData> & {
+  /** Whether this query's initial loading interval reached its declared threshold. */
+  readonly isSlowLoading: boolean
+}
 
-export type ResourceInfiniteState<TData> = ResourceBaseState<TData> & {
+export type ResourceInfiniteState<TData> = ResourceSingleState<TData> & {
   cursor: string | null
   hasMore: boolean
 }
 
-export type ResourceRealtimeState<TData> = ResourceBaseState<TData> & {
+export type ResourceRealtimeState<TData> = ResourceSingleState<TData> & {
   connectionStatus: ConnectionStatus
   isConnected: boolean
 }
@@ -98,8 +101,8 @@ export type QueryRealtime<TData, TArg = void> = RealtimeResourceDescriptor<TData
 
 export type SingleResourceLoadResult<TData> = TData | ResourceResult<TData>
 export type InfiniteResourceLoadResult<TData> =
-  | ResourceInfiniteState<TData>
-  | ({ data: TData } & Partial<Omit<ResourceInfiniteState<TData>, 'data'>>)
+  | Omit<ResourceInfiniteState<TData>, 'isSlowLoading'>
+  | ({ data: TData } & Partial<Omit<ResourceInfiniteState<TData>, 'data' | 'isSlowLoading'>>)
 
 export type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TResult> = {
   [RESOURCE_BRAND]: true
@@ -107,6 +110,8 @@ export type BaseResourceDescriptor<TState extends ResourceDataLike, TArg, TResul
   /** @deprecated Use the selector-level `.suspend(arg)` method instead. */
   suspense?: boolean
   streamBatchInterval?: number
+  /** Declaration-only initial loading threshold. Never a provider or call override. */
+  slowLoadingMs?: number
   initialState: TState
   options: Omit<
     ResourceQueryOptions<TState extends ResourceBaseState<infer TData> ? TData : never, unknown>,
@@ -362,7 +367,12 @@ export type DependentQueryOptions<TData> = {
   refetchInterval?: number | false | ((data: TData, error?: Error) => number | false)
 }
 
-export type SingleResourceBuilderOptions<TData, TArg = void> = {
+type SlowLoadingOptions = {
+  /** Initial loading threshold in milliseconds (0..2147483647). Omit to disable. */
+  slowLoadingMs?: number
+}
+
+export type SingleResourceBuilderOptions<TData, TArg = void> = SlowLoadingOptions & {
   initialData: TData
   /** @deprecated Use the selector-level `.suspend(arg)` method instead. */
   suspense?: boolean
@@ -374,7 +384,7 @@ export type SingleResourceBuilderOptions<TData, TArg = void> = {
 } & Omit<ResourceQueryOptions<TData, TArg>, 'force'> &
   DependentQueryOptions<TData>
 
-export type InfiniteResourceBuilderOptions<TData, TArg = void> = {
+export type InfiniteResourceBuilderOptions<TData, TArg = void> = SlowLoadingOptions & {
   initialData: TData
   /** @deprecated Use the selector-level `.suspend(arg)` method instead. */
   suspense?: boolean
@@ -386,7 +396,7 @@ export type InfiniteResourceBuilderOptions<TData, TArg = void> = {
 } & Omit<ResourceQueryOptions<TData, TArg>, 'force'> &
   DependentQueryOptions<TData>
 
-export type RealtimeResourceBuilderOptions<TData, TArg = void> = {
+export type RealtimeResourceBuilderOptions<TData, TArg = void> = SlowLoadingOptions & {
   initialData: TData
   queryFn: (
     arg: TArg,
@@ -457,6 +467,8 @@ export type QueryBindingRegistry = {
    * belong to a model when its observer count transitions to 0.
    */
   runtimesByModel: Map<symbol, Set<ResourceRuntimeState>>
+  /** Models whose last React observer has left. Imperative-only runtimes own their clocks. */
+  unobservedModels: Set<symbol>
   /** Provider defaults passed opaquely to resource lifecycle adapters. */
   providerDefaults?: Record<string, unknown>
   /** Provider-scoped services shared by lifecycle adapters. */
@@ -470,6 +482,7 @@ export type ResourceRuntimeState = {
   lastArg?: unknown
   activeKey?: QueryCacheKey
   fetchId: number
+  slowLoading?: import('./slow-loading').SlowLoadingClock
   cacheEntries: Map<QueryCacheKey, QueryCacheEntry>
   subscriptionCleanup?: () => void
   refetchIntervalId?: ReturnType<typeof setInterval>
