@@ -212,6 +212,7 @@ describe('model()', () => {
     expect(store.getSnapshot().items).toEqual({
       data: [],
       isLoading: false,
+      isSlowLoading: false,
       isFetching: false,
       isSuccess: false,
       isError: false,

@@ -1,3 +1,4 @@
+import { validateSlowLoadingMs } from './slow-loading'
 import {
   RESOURCE_BRAND,
   type AnyResourceDescriptor,
@@ -17,9 +18,11 @@ import {
 export function createSingleDescriptor<TData, TArg = void>(
   opts: SingleResourceBuilderOptions<TData, TArg>
 ): SingleResourceDescriptor<TData, TArg> {
+  validateSlowLoadingMs(opts.slowLoadingMs)
   const initialState: ResourceSingleState<TData> = {
     data: opts.initialData,
     isLoading: false,
+    isSlowLoading: false,
     isFetching: false,
     isSuccess: false,
     isError: false,
@@ -30,6 +33,7 @@ export function createSingleDescriptor<TData, TArg = void>(
     initialData: _initialData,
     suspense,
     streamBatchInterval,
+    slowLoadingMs,
     queryFn,
     enabled,
     dependsOn,
@@ -42,6 +46,7 @@ export function createSingleDescriptor<TData, TArg = void>(
     kind: 'single',
     suspense: suspense ?? false,
     streamBatchInterval,
+    slowLoadingMs,
     [RESOURCE_BRAND]: true,
     initialState,
     options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
@@ -55,11 +60,13 @@ export function createSingleDescriptor<TData, TArg = void>(
 export function createInfiniteDescriptor<TData, TArg = void>(
   opts: InfiniteResourceBuilderOptions<TData, TArg>
 ): InfiniteResourceDescriptor<TData, TArg> {
+  validateSlowLoadingMs(opts.slowLoadingMs)
   const initialState: ResourceInfiniteState<TData> = {
     data: opts.initialData,
     cursor: null,
     hasMore: false,
     isLoading: false,
+    isSlowLoading: false,
     isFetching: false,
     isSuccess: false,
     isError: false,
@@ -70,6 +77,7 @@ export function createInfiniteDescriptor<TData, TArg = void>(
     initialData: _initialData,
     suspense,
     streamBatchInterval,
+    slowLoadingMs,
     queryFn,
     enabled,
     dependsOn,
@@ -82,6 +90,7 @@ export function createInfiniteDescriptor<TData, TArg = void>(
     kind: 'infinite',
     suspense: suspense ?? false,
     streamBatchInterval,
+    slowLoadingMs,
     [RESOURCE_BRAND]: true,
     initialState,
     options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,
@@ -95,9 +104,11 @@ export function createInfiniteDescriptor<TData, TArg = void>(
 export function createRealtimeDescriptor<TData, TArg = void>(
   opts: RealtimeResourceBuilderOptions<TData, TArg>
 ): RealtimeResourceDescriptor<TData, TArg> {
+  validateSlowLoadingMs(opts.slowLoadingMs)
   const initialState: ResourceRealtimeState<TData> = {
     data: opts.initialData,
     isLoading: false,
+    isSlowLoading: false,
     isFetching: false,
     isSuccess: false,
     isError: false,
@@ -105,10 +116,11 @@ export function createRealtimeDescriptor<TData, TArg = void>(
     connectionStatus: 'disconnected',
     isConnected: false,
   }
-  const { initialData: _initialData, queryFn, subscribe, ...optionValues } = opts
+  const { initialData: _initialData, queryFn, subscribe, slowLoadingMs, ...optionValues } = opts
   return {
     ...initialState,
     kind: 'realtime',
+    slowLoadingMs,
     [RESOURCE_BRAND]: true,
     initialState,
     options: optionValues as Omit<ResourceQueryOptions<TData, unknown>, 'force'>,

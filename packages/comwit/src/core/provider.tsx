@@ -12,7 +12,7 @@ import type { Model, StoreEntry } from './model'
 import type { StageMethodDecorator } from '../interceptors/utils'
 import { getDevTools, initDevTools } from './devtools'
 import type { LocalDefaults } from './local'
-import type { QueryBindingRegistry } from './query/types'
+import type { QueryBindingRegistry, QueryDefaultOptions } from './query/types'
 import {
   createBrowserRouterAdapter,
   prepareSearchParamStore,
@@ -23,6 +23,7 @@ import {
 const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 export type RegistryDefaults = {
+  query?: QueryDefaultOptions
   interceptors?: StageMethodDecorator[]
   local?: LocalDefaults
   [pluginName: string]: unknown
@@ -179,6 +180,10 @@ export function ComwitProvider({
       dispose() {
         for (const state of urlObservers.values()) state.stop()
         urlObservers.clear()
+        const queries = pluginStates.get('query') as QueryBindingRegistry | undefined
+        for (const runtimes of queries?.runtimesByModel.values() ?? []) {
+          for (const runtime of runtimes) runtime.slowLoading?.pause()
+        }
       },
     }
     const queryRegistry = pluginStates.get('query') as QueryBindingRegistry | undefined
@@ -188,7 +193,16 @@ export function ComwitProvider({
   }
 
   const registry = registryRef.current
-  useCommitEffect(() => () => registry.dispose(), [registry])
+  useCommitEffect(() => {
+    // Strict Mode may reactivate the same provider, including action-only queries.
+    const queries = registry.pluginStates.get('query') as QueryBindingRegistry | undefined
+    for (const [key, runtimes] of queries?.runtimesByModel ?? []) {
+      if (!queries?.unobservedModels.has(key)) {
+        for (const runtime of runtimes) runtime.slowLoading?.resume()
+      }
+    }
+    return () => registry.dispose()
+  }, [registry])
   const sharedContext = registry.context!
   Object.keys(sharedContext).forEach((key) => delete sharedContext[key])
   Object.assign(sharedContext, context)

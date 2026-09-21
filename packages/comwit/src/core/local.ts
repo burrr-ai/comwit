@@ -181,9 +181,13 @@ export type BoundLocalResource<TData, TArg = void> = ResourceBaseState<TData> &
 export type SelectableLocalResource<TData, TArg = void> = ResourceBaseState<TData> &
   LocalRestoreController<ResourceBaseState<TData>, TArg>
 
-export type Local<TData, TArg = void> = SingleResourceDescriptor<TData, TArg> &
+export type Local<TData, TArg = void> = Omit<
+  SingleResourceDescriptor<TData, TArg>,
+  'isSlowLoading' | 'slowLoadingMs' | 'initialState'
+> &
   ResourceTypeOverride<BoundLocalResource<TData, TArg>, SelectableLocalResource<TData, TArg>> & {
     selectorMethod: 'restore'
+    initialState: ResourceBaseState<TData>
   }
 
 export type LocalStandaloneOptions<
@@ -326,8 +330,11 @@ function createStandaloneLocal<TData, TArg = void, TEntity extends LocalEntity =
     initialData,
     staleTime: Number.POSITIVE_INFINITY,
     queryFn: () => initialData,
-  }) as Local<TData, TArg>
+  })
 
+  // Standalone local resources have no query loading policy.
+  Reflect.deleteProperty(descriptor, 'isSlowLoading')
+  Reflect.deleteProperty(descriptor.initialState, 'isSlowLoading')
   descriptor.selectorMethod = 'restore'
   Object.defineProperty(descriptor, RESOURCE_TYPE_OVERRIDE, {
     value: { bound: undefined, selectable: undefined },
@@ -338,7 +345,7 @@ function createStandaloneLocal<TData, TArg = void, TEntity extends LocalEntity =
   const metadata = getLocalResourceMetadata(attached)!
   metadata.standalone = true
   metadata.initialData = initialData
-  return attached
+  return attached as unknown as Local<TData, TArg>
 }
 
 function createLocalQuery<TData, TArg = void, TEntity extends LocalEntity = any, TMeta = any>(
@@ -373,7 +380,7 @@ function createLocalInfinite<TData, TArg = void, TEntity extends LocalEntity = a
   )
 }
 
-function createLocal(...args: unknown[]): LocalResourceDescriptor {
+function createLocal(...args: unknown[]) {
   if (args.length === 1) {
     return createStandaloneLocal(
       args[0] as LocalStandaloneOptions<unknown, unknown, LocalEntity, unknown>
@@ -713,6 +720,7 @@ function normalizeState(
 
   const stateMeta: Record<string, unknown> = { ...plain }
   delete stateMeta.data
+  delete stateMeta.isSlowLoading
   delete stateMeta.isLoading
   delete stateMeta.isFetching
   delete stateMeta.isSuccess
@@ -1290,6 +1298,7 @@ export class LocalResourceBinding {
     this.activeScope = scope
 
     if (!changed) return
+    this.runtime.slowLoading?.reset()
     this.runtime.fetchId++
     this.runtime.cacheEntries.clear()
     if (resetOnChange) {
