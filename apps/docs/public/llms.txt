@@ -215,9 +215,9 @@ pass a route identity to detail-resource operations.
 `local` is not an offline mutation queue or multi-device conflict resolver. Full storage,
 normalization, mapping, scope, and migration rules: https://library.comwit.io/llm/local.txt
 
-## URL state (beta)
+## URL state
 
-Requires `@comwit/state@2.4.0-beta.4` (`npm install @comwit/state@beta`). Like `persist()`,
+Available in `@comwit/state@2.4.0`. Like `persist()`,
 `searchParam()` declares a model field whose normal value is synchronized automatically:
 
 ```ts
@@ -284,7 +284,7 @@ await search(snapshot(this.m.filters))
 - Validation: model `rules`; read `$validation`.
 - History: `history: true | { limit }`; use `$history.undo()`, `redo()`, and `ignore(fn)`.
 - Persistence: `persist({ key, defaultValue, storage? })`.
-- URL state (beta): `searchParam({ key, type?, defaultValue?, parse?, serialize?, history? })`.
+- URL state: `searchParam({ key, type?, defaultValue?, parse?, serialize?, history? })`.
 - Decorators: `@OnError`, `@OnSuccess`, `@Authorized`, `@Debounce`, `@Throttle`, `@Retry`,
   `@Queue`, `@Log`, and `@Validate`.
 

@@ -121,26 +121,26 @@ on both server and client. Next.js Server Functions must use the server-fetch-an
 The descriptor-level `suspense` option and `silent()` are deprecated; do not hydrate through a
 mutating action during render.
 
-### Slow initial loading (beta)
+### Slow initial loading
 
 Set `slowLoadingMs: 500` on `query()` or `local.query()` and read `isSlowLoading` through the usual
 query state. Existing loading flags, requests, cache freshness, and data delivery keep their timing.
 The new flag stays false for fast completion and usable cached data, becomes true for a continuing
 initial load, and clears immediately on success/error. No component, effect, or request key is needed.
-See the [query guide](https://library.comwit.io/docs/api/query#slow-initial-loading-beta) for rendering,
+See the [query guide](https://library.comwit.io/docs/api/query#slow-initial-loading) for rendering,
 SSR, retries, cleanup, and the supported query variants. This is a query declaration option, not a
 model/provider default or a standalone `local()` option.
 
-### URL state (beta)
+### URL state
 
 `searchParam()` declares typed URL-backed fields directly in a model. Read them through the same
 domain hook and update them through actions.
 
 ```bash
-npm install @comwit/state@beta
+npm install @comwit/state@2.4.0
 ```
 
-See the [URL state reference](https://github.com/meursyphus/comwit/blob/latest/apps/docs/content/docs/api/router.mdx) for parsing, defaults,
+See the [URL state reference](https://library.comwit.io/docs/api/router) for parsing, defaults,
 browser history, and server rendering.
 
 ## Documentation
