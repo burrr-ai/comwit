@@ -477,7 +477,7 @@ Experimental `.suspend(routeArg)` can still block rendering for an isomorphic `q
 call a Next.js Server Function from a Client Component's initial render, and server/browser caches
 remain separate without explicit hydration.
 
-## Slow initial loading (beta)
+## Slow initial loading
 
 Declare `slowLoadingMs` on a query to read the library-owned `isSlowLoading` boolean. It does
 not delay the request, data, Promise, or existing `isLoading` / `isFetching` flags.
