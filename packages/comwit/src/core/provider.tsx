@@ -1,12 +1,29 @@
-import React, { createContext, useContext, useRef, type Context } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useId,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  type Context,
+} from 'react'
 import { getPlugins } from './plugin'
 import type { Model, StoreEntry } from './model'
 import type { StageMethodDecorator } from '../interceptors/utils'
 import { getDevTools, initDevTools } from './devtools'
 import type { LocalDefaults } from './local'
-import type { QueryBindingRegistry } from './query/types'
+import type { QueryBindingRegistry, QueryDefaultOptions } from './query/types'
+import {
+  createBrowserRouterAdapter,
+  prepareSearchParamStore,
+  serverSearchParamValues,
+  type RouterAdapter,
+} from './router'
+
+const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 export type RegistryDefaults = {
+  query?: QueryDefaultOptions
   interceptors?: StageMethodDecorator[]
   local?: LocalDefaults
   [pluginName: string]: unknown
@@ -16,6 +33,8 @@ export type ComwitProviderProps = {
   children: React.ReactNode
   context?: Record<string, unknown>
   defaultOptions?: RegistryDefaults
+  /** Read once during server rendering. Return null when request search is unavailable. Never called in the browser. */
+  getServerSearchParams?: () => string | null
 }
 
 export type LifecycleState = {
@@ -26,22 +45,21 @@ export type LifecycleState = {
 export type StoreRegistry = {
   get<T extends object>(model: Model<T>): StoreEntry<T>
   getLifecycle(model: Model<any>): LifecycleState
+  observe(model: Model<any>): () => void
+  dispose(): void
   context?: Record<string, unknown>
   pluginStates: Map<string, unknown>
   pluginDefaults: Map<string, unknown>
   globalInterceptors?: StageMethodDecorator[]
+  /** Internal URL transport; ordinary model hooks do not subscribe to it. */
+  router: RouterAdapter
+  serverSearch: string | null
+  searchParamOwners: Map<string, { model: symbol; path: string }>
 }
 
-// Lazily create the React Context the first time the provider or a hook is
-// invoked. Calling createContext() at module top-level would crash the
-// moment this module is evaluated under React Server Components (the
-// RSC-vendored React build does not export createContext), even when only
-// the proxy utilities (snapshot/isProxy) are needed at the import site.
 let _StateContext: Context<StoreRegistry | null> | null = null
 function getStateContext(): Context<StoreRegistry | null> {
-  if (_StateContext === null) {
-    _StateContext = createContext<StoreRegistry | null>(null)
-  }
+  if (_StateContext === null) _StateContext = createContext<StoreRegistry | null>(null)
   return _StateContext
 }
 
@@ -51,80 +69,163 @@ export function useStoreRegistry(): StoreRegistry {
   return ctx
 }
 
-export function ComwitProvider({ children, defaultOptions, context = {} }: ComwitProviderProps) {
-  const registryRef = useRef<
-    StoreRegistry & {
-      stores: Map<symbol, StoreEntry>
-      lifecycles: Map<symbol, LifecycleState>
-      context: Record<string, unknown>
-    }
-  >(null!)
+function readServerSearch(id: string): string | null {
+  const element = document.getElementById(id)
+  if (
+    !element ||
+    element.tagName.toLowerCase() !== 'script' ||
+    !element.hasAttribute('data-comwit-search')
+  )
+    return null
+  try {
+    const value: unknown = JSON.parse(element.textContent ?? 'null')
+    return typeof value === 'string' ? value : null
+  } catch {
+    return null
+  }
+}
+
+function serializeServerSearch(search: string | null): string {
+  return JSON.stringify(search)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
+}
+
+export function ComwitProvider({
+  children,
+  defaultOptions,
+  context = {},
+  getServerSearchParams,
+}: ComwitProviderProps) {
+  const id = `comwit-search-${useId()}`
+  const registryRef = useRef<StoreRegistry>(null!)
+  const transfer = useRef(Boolean(getServerSearchParams))
 
   if (registryRef.current === null) {
-    const plugins = getPlugins()
+    const serverSearch =
+      typeof window === 'undefined'
+        ? (getServerSearchParams?.() ?? null)
+        : transfer.current
+          ? readServerSearch(id)
+          : null
+    if (serverSearch !== null && typeof serverSearch !== 'string') {
+      throw new TypeError('getServerSearchParams() must synchronously return a string or null')
+    }
     const pluginStates = new Map<string, unknown>()
     const pluginDefaults = new Map<string, unknown>()
-
-    for (const plugin of plugins) {
+    for (const plugin of getPlugins()) {
       const defaults = defaultOptions?.[plugin.name] as Record<string, unknown> | undefined
       pluginDefaults.set(plugin.name, defaults)
-      pluginStates.set(
-        plugin.name,
-        plugin.createRegistryState(defaults, defaultOptions as Record<string, unknown> | undefined)
-      )
+      pluginStates.set(plugin.name, plugin.createRegistryState(defaults, defaultOptions))
     }
-
-    if (process.env.NODE_ENV !== 'production') {
-      initDevTools()
-    }
-
-    registryRef.current = {
+    // Server requests must not retain their model instances in a global debug registry.
+    if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') initDevTools()
+    const stores = new Map<symbol, StoreEntry>()
+    const lifecycles = new Map<symbol, LifecycleState>()
+    const urlModels = new Map<symbol, { start(): () => void }>()
+    const urlObservers = new Map<symbol, { count: number; stop(): void }>()
+    const registry: StoreRegistry = {
       context: {},
-      stores: new Map(),
-      lifecycles: new Map(),
       pluginStates,
       pluginDefaults,
+      serverSearch,
+      router: createBrowserRouterAdapter(),
+      searchParamOwners: new Map(),
       get<T extends object>(model: Model<T>): StoreEntry<T> {
-        const existing = registryRef.current.stores.get(model.key)
+        const existing = stores.get(model.key)
         if (existing) return existing as StoreEntry<T>
-
-        const entry = model.instance()
-        registryRef.current.stores.set(model.key, entry)
-
-        if (process.env.NODE_ENV !== 'production') {
+        const initial =
+          typeof window === 'undefined' ? serverSearchParamValues(model, serverSearch) : undefined
+        const entry = model.instance(initial)
+        const url = prepareSearchParamStore(
+          model,
+          entry,
+          registry.router,
+          serverSearch,
+          registry.searchParamOwners
+        )
+        if (url) urlModels.set(model.key, url)
+        stores.set(model.key, entry)
+        if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined')
           getDevTools()?.registerStore(model, entry)
-        }
-
-        return entry as StoreEntry<T>
+        return entry
       },
-      getLifecycle(model: Model<any>): LifecycleState {
-        const existing = registryRef.current.lifecycles.get(model.key)
+      getLifecycle(model) {
+        const existing = lifecycles.get(model.key)
         if (existing) return existing
-        const state: LifecycleState = { subscriberCount: 0, cleanup: null }
-        registryRef.current.lifecycles.set(model.key, state)
-        return state
+        const lifecycle = { subscriberCount: 0, cleanup: null }
+        lifecycles.set(model.key, lifecycle)
+        return lifecycle
+      },
+      observe(model) {
+        registry.get(model)
+        const url = urlModels.get(model.key)
+        if (!url) return () => {}
+        let state = urlObservers.get(model.key)
+        if (!state) {
+          state = { count: 0, stop: url.start() }
+          urlObservers.set(model.key, state)
+        }
+        state.count++
+        const current = state
+        return () => {
+          if (urlObservers.get(model.key) !== current) return
+          if (--current.count === 0) {
+            urlObservers.delete(model.key)
+            current.stop()
+          }
+        }
+      },
+      dispose() {
+        for (const state of urlObservers.values()) state.stop()
+        urlObservers.clear()
+        const queries = pluginStates.get('query') as QueryBindingRegistry | undefined
+        for (const runtimes of queries?.runtimesByModel.values() ?? []) {
+          for (const runtime of runtimes) runtime.slowLoading?.pause()
+        }
       },
     }
-
     const queryRegistry = pluginStates.get('query') as QueryBindingRegistry | undefined
-    if (queryRegistry) {
-      queryRegistry.getModelState = (source) =>
-        registryRef.current.get(source as Model<object>).proxy
+    if (queryRegistry)
+      queryRegistry.getModelState = (source) => registry.get(source as Model<object>).proxy
+    registryRef.current = registry
+  }
+
+  const registry = registryRef.current
+  useCommitEffect(() => {
+    // Strict Mode may reactivate the same provider, including action-only queries.
+    const queries = registry.pluginStates.get('query') as QueryBindingRegistry | undefined
+    for (const [key, runtimes] of queries?.runtimesByModel ?? []) {
+      if (!queries?.unobservedModels.has(key)) {
+        for (const runtime of runtimes) runtime.slowLoading?.resume()
+      }
     }
+    return () => registry.dispose()
+  }, [registry])
+  const sharedContext = registry.context!
+  Object.keys(sharedContext).forEach((key) => delete sharedContext[key])
+  Object.assign(sharedContext, context)
+  registry.globalInterceptors = defaultOptions?.interceptors
+  for (const plugin of getPlugins()) {
+    registry.pluginDefaults.set(plugin.name, defaultOptions?.[plugin.name])
   }
-
-  Object.keys(registryRef.current.context).forEach((key) => delete registryRef.current.context[key])
-  Object.assign(registryRef.current.context, context)
-
-  registryRef.current.globalInterceptors = defaultOptions?.interceptors
-
-  // Update plugin defaults on each render
-  const plugins = getPlugins()
-  for (const plugin of plugins) {
-    const defaults = defaultOptions?.[plugin.name] as Record<string, unknown> | undefined
-    registryRef.current.pluginDefaults.set(plugin.name, defaults)
-  }
-
   const StateContext = getStateContext()
-  return <StateContext.Provider value={registryRef.current}>{children}</StateContext.Provider>
+  return (
+    <StateContext.Provider value={registry}>
+      {transfer.current ? (
+        <>
+          <script
+            id={id}
+            type="application/json"
+            data-comwit-search=""
+            dangerouslySetInnerHTML={{ __html: serializeServerSearch(registry.serverSearch) }}
+          />
+          <React.Fragment key="models">{children}</React.Fragment>
+        </>
+      ) : (
+        children
+      )}
+    </StateContext.Provider>
+  )
 }

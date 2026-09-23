@@ -1,0 +1,109 @@
+---
+title: 'comwit v2.4.0 — URL state and slow initial loading'
+date: '2026-09-23'
+description: 'v2.4.0 promotes typed searchParam() model fields and declarative slow-loading query state from beta to the stable @comwit/state release.'
+author: 'Codex'
+---
+
+v2.4.0 brings the 2.4 beta features to the stable `@comwit/state` channel. You can declare
+URL-backed fields in a model and distinguish a query that is still in its initial loading phase
+after a chosen threshold. Existing query request and data timing are unchanged.
+
+## URL state in ordinary models
+
+`searchParam()` declares a query-string field in `model()`. The value is a normal typed model
+field: read it with `useModel()` or a `create()` domain hook, and assign it in an action. The
+Provider manages the browser connection for observed URL models; no separate URL hook is needed.
+
+```tsx
+import { action, model, searchParam, useModel } from '@comwit/state'
+
+const location = model({
+  threadId: searchParam({ key: 'thread' }), // string | null
+  page: searchParam({ key: 'page', type: 'number', defaultValue: 1 }), // number
+  archived: searchParam({ key: 'archived', type: 'boolean' }), // boolean | null
+})
+
+const selectionActions = action(({ state }) => ({
+  select(id: string | null) {
+    state(location).threadId = id
+  },
+}))
+
+function PageNumber() {
+  const page = useModel(location, (state) => state.page)
+  return <span>{page}</span>
+}
+```
+
+Valid URL values take priority over defaults. Missing or invalid values use `defaultValue`, or
+`null` when it is omitted. Empty strings remain valid strings; numbers must be finite and
+booleans accept `true`/`false` or `1`/`0`. Custom `parse` and `serialize` functions support
+other formats. A model write uses browser history `replace` by default; use `history: 'push'`
+when the change should create a back-button entry. Unrelated query parameters and the hash are
+preserved.
+
+For server rendering, the optional `ComwitProvider` prop
+`getServerSearchParams?: () => string | null` provides the request URL before the first model
+read and carries that value into hydration. Without it, the first server and hydration snapshots
+use defaults; the client reconciles the current URL after commit. Advanced flows can read
+`searchParam.getSnapshot(state, field)` for `ready`, `value`, and `revision`, then use a guarded
+`searchParam.set()` in an action to avoid applying an obsolete asynchronous result. These helpers
+do not load route data or validate a route identity; the application still owns those jobs.
+
+See the [URL state reference](/docs/api/router) for parsing, server initialization, history, and
+guarded writes. This feature came from [PR #88](https://github.com/burrr-ai/comwit/pull/88).
+
+## A query flag for slow initial loading
+
+Set `slowLoadingMs` on a query declaration and read its `isSlowLoading` flag through the usual
+query state. The flag starts false and becomes true only if initial loading continues through
+the threshold. It clears on success, error, or usable cached data.
+
+```tsx
+import { model, query, useModel } from '@comwit/state'
+
+const projects = model({
+  list: query<Project[]>({
+    initialData: [],
+    queryFn: fetchProjects,
+    slowLoadingMs: 500,
+  }),
+})
+
+function Projects() {
+  const result = useModel(projects, (state) => state.list.load())
+  if (result.isLoading && !result.isSuccess) {
+    return result.isSlowLoading ? <ProjectsSkeleton /> : null
+  }
+  if (result.isSuccess) return <ProjectsList items={result.data} />
+  if (result.isError) return <LoadError error={result.error} />
+  return null
+}
+```
+
+The option works with `query()`, `query.infinite()`, `query.realtime()`, `local.query()`, and
+`local.infinite()`. It accepts finite milliseconds from `0` to `2147483647`; omission keeps
+the flag false without a timer. It does not delay the request, Promise, data, `isLoading`, or
+`isFetching`. Fresh local restoration and background revalidation do not show slow initial
+loading. An argument or local-scope change starts a new interval, while retries for the same
+request keep the existing interval. Server rendering starts no loading timer.
+
+`isSlowLoading: false` does not imply that data is ready: check `isSuccess` or other status
+flags. The UI still decides whether to reserve space or show a skeleton. See the
+[query reference](/docs/api/query#slow-initial-loading) and
+[PR #90](https://github.com/burrr-ai/comwit/pull/90).
+
+## Upgrade
+
+```bash
+yarn add @comwit/state@2.4.0
+```
+
+There is no required API migration from 2.3.0. The 2.4 beta declarations and their types are
+unchanged when moving to 2.4.0. The deprecated `comwit` compatibility package remains a
+separate package; install `@comwit/state` for the current API.
+
+The stable package is published under npm's `latest` tag. The
+[package README](https://github.com/burrr-ai/comwit/tree/latest/packages/comwit) and
+[LLM references](https://library.comwit.io/llms.txt) now describe the stable APIs.

@@ -247,6 +247,14 @@ feed: local.infinite<ProductListItem[], ProductFilter>({
 
 `query.realtime()` is not supported by the experimental `.suspend()` path.
 
+## Slow initial loading
+
+Set `slowLoadingMs: 500` in `local.query()` or `local.infinite()` to read `isSlowLoading` through
+normal query selectors. IndexedDB restoration and a cache miss's remote fetch share one initial
+loading interval. An exact durable hit clears the flag immediately; stale background revalidation
+keeps it false. The flag is not persisted. Standalone `local()` does not accept the option.
+See the [query timing and rendering contract](/docs/api/query#slow-initial-loading).
+
 ## Provider setup
 
 Configure the shared database and optional fallback scope. A collection `scope` takes precedence.

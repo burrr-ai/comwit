@@ -1,6 +1,7 @@
 import { snapshot } from '../proxy'
 import { isEqual } from '../../utils'
 import { DEFAULT_GC_TIME } from './registry'
+import { createSlowLoadingClock } from './slow-loading'
 import {
   RESOURCE_LIFECYCLE,
   RESOURCE_HYDRATE,
@@ -65,6 +66,8 @@ export function mergeResult(state: ResourceDataLike, result: unknown, appendData
 
   if (isRecord(result)) {
     const hasData = 'data' in result
+    // Query results cannot supply this library-owned derived flag.
+    const { isSlowLoading: _slowLoading, ...patch } = result
 
     if (
       appendData &&
@@ -73,7 +76,7 @@ export function mergeResult(state: ResourceDataLike, result: unknown, appendData
       Array.isArray((result as { data?: unknown }).data)
     ) {
       const next: ResourceDataLike = {
-        ...result,
+        ...patch,
         data: [...state.data, ...(result as { data: unknown[] }).data],
       }
       Object.assign(state, next)
@@ -81,7 +84,7 @@ export function mergeResult(state: ResourceDataLike, result: unknown, appendData
     }
 
     if (hasData) {
-      Object.assign(state, result)
+      Object.assign(state, patch)
       return
     }
 
@@ -203,12 +206,14 @@ function applyCachedState(target: ResourceDataLike, cached: QueryCacheEntry) {
   // snapshot() is intentionally frozen. Clone it before placing it back into
   // the mutable proxy or nested optimistic edits would hit read-only objects.
   Object.assign(target, structuredClone(cached.state))
+  if ('isSlowLoading' in target) target.isSlowLoading = false
   target.isLoading = false
   target.isFetching = false
 }
 
 function updateCachedState(entry: QueryCacheEntry, source: ResourceDataLike) {
-  entry.state = snapshot(source) as ResourceDataLike
+  const cached = snapshot(source) as ResourceDataLike
+  entry.state = cached.isSlowLoading ? Object.freeze({ ...cached, isSlowLoading: false }) : cached
 }
 
 function deepFreezePlain<T>(value: T, seen = new WeakSet<object>()): T {
@@ -234,15 +239,18 @@ function immutableResourceState(source: ResourceDataLike): ResourceDataLike {
  * timers are left in place.
  */
 export function scheduleModelGc(registry: QueryBindingRegistry, modelKey: symbol) {
+  registry.unobservedModels.add(modelKey)
   const runtimes = registry.runtimesByModel.get(modelKey)
   if (!runtimes) return
   for (const runtime of runtimes) {
+    runtime.slowLoading?.pause()
     for (const [key] of runtime.cacheEntries) {
       if (runtime.gcTimers.has(key)) continue
       const timer = setTimeout(() => {
         runtime.gcTimers.delete(key)
         runtime.cacheEntries.delete(key)
         if (runtime.activeKey === key) {
+          runtime.slowLoading?.reset()
           runtime.activeKey = undefined
           runtime.lastArg = undefined
         }
@@ -258,9 +266,11 @@ export function scheduleModelGc(registry: QueryBindingRegistry, modelKey: symbol
  * (subscriber count transitions from 0 to 1).
  */
 export function cancelModelGc(registry: QueryBindingRegistry, modelKey: symbol) {
+  registry.unobservedModels.delete(modelKey)
   const runtimes = registry.runtimesByModel.get(modelKey)
   if (!runtimes) return
   for (const runtime of runtimes) {
+    runtime.slowLoading?.resume()
     for (const timer of runtime.gcTimers.values()) {
       clearTimeout(timer)
     }
@@ -330,6 +340,13 @@ export function createResourceAccessor(
     ...(descriptor.options as QueryDefaultOptions),
   })
   registry.boundResourceRuntime.set(state, runtime)
+  if (descriptor.slowLoadingMs !== undefined && !runtime.slowLoading) {
+    runtime.slowLoading = createSlowLoadingClock(
+      state,
+      descriptor.slowLoadingMs,
+      modelKey === undefined || !registry.unobservedModels.has(modelKey)
+    )
+  }
 
   const lifecycleBindings = (descriptor[RESOURCE_LIFECYCLE] ?? [])
     .map((factory) => factory.bind({ state, descriptor, path, runtime, registry }))
@@ -357,6 +374,7 @@ export function createResourceAccessor(
       : undefined
 
     runInternal(() => mergeResult(state, result, appendData))
+    runtime.slowLoading?.sync()
 
     if (!previousState) return
     lifecycleBindings.forEach((binding, index) =>
@@ -485,6 +503,7 @@ export function createResourceAccessor(
 
     const queryArg = isRefetch ? activeEntryBefore?.arg : hasArg ? arg : runtime.lastArg
     const queryKey = serializeResourceArg(descriptor, queryArg)
+    if (runtime.activeKey !== queryKey) runtime.slowLoading?.reset()
     runtime.lastArg = queryArg
     runtime.activeKey = queryKey
     activateLifecycle(queryKey, queryArg)
@@ -525,6 +544,7 @@ export function createResourceAccessor(
       state.error = null
       state.isLoading = !state.isSuccess
       state.isFetching = true
+      runtime.slowLoading?.sync()
 
       let hydrated
       for (const binding of lifecycleBindings) {
@@ -535,6 +555,7 @@ export function createResourceAccessor(
       entry.resourceHydrated = true
 
       if (hydrated) {
+        runtime.slowLoading?.reset()
         runInternal(() => {
           state.data = hydrated.data
           Object.assign(state, hydrated.state)
@@ -564,11 +585,13 @@ export function createResourceAccessor(
       now - entry.lastFetchedAt >= staleTime
 
     if (!shouldFetch && entry.hasQueried) {
+      runtime.slowLoading?.reset()
       runInternal(() => applyCachedState(state, entry))
       return entry.lastResult
     }
 
     if (entry.hasQueried) {
+      runtime.slowLoading?.reset()
       runInternal(() => applyCachedState(state, entry))
     }
 
@@ -619,6 +642,7 @@ export function createResourceAccessor(
       state.isLoading = !state.isSuccess
     }
     state.isFetching = true
+    runtime.slowLoading?.sync()
 
     // Track suspense promise for initial loads (not refetches)
     if (descriptor.suspense && state.isLoading && !isRefetch) {
@@ -704,6 +728,7 @@ export function createResourceAccessor(
           }
         }
 
+        runtime.slowLoading?.reset()
         state.isSuccess = true
         entry.lastFetchedAt = Date.now()
         entry.lastResult = lastYield
@@ -721,6 +746,7 @@ export function createResourceAccessor(
         applyRemoteResult(result, mode === 'append', requestTokens)
       }
 
+      runtime.slowLoading?.reset()
       state.isSuccess = true
       entry.hasQueried = true
       entry.lastFetchedAt = Date.now()
@@ -751,6 +777,7 @@ export function createResourceAccessor(
       if (runtime.fetchId !== currentFetchId) {
         throw error
       }
+      runtime.slowLoading?.reset()
       state.isError = true
       state.isSuccess =
         entry.hasQueried && lifecycleBindings.some((binding) => binding.preserveSuccessOnError)
@@ -771,6 +798,7 @@ export function createResourceAccessor(
       throw error
     } finally {
       if (runtime.fetchId === currentFetchId) {
+        runtime.slowLoading?.reset()
         state.isLoading = false
         state.isFetching = false
 
@@ -959,6 +987,7 @@ export function createResourceAccessor(
       return executeQuery(queryArg, undefined, hasArg, 'replace', false)
     }
 
+    runtime.slowLoading?.reset()
     runtime.fetchId++
     runtime.lastArg = queryArg
     runtime.activeKey = key
@@ -1063,6 +1092,7 @@ export function createResourceAccessor(
         realtimeState.isConnected = status === 'connected'
       },
       onError: (error: unknown) => {
+        runtime.slowLoading?.reset()
         state.isError = true
         state.error = normalizeError(error)
       },
@@ -1093,6 +1123,7 @@ export function createResourceAccessor(
 
     // A server initializer must win over an IndexedDB restore or request that
     // started before it. Advancing fetchId invalidates either pending result.
+    runtime.slowLoading?.reset()
     runtime.fetchId++
     runtime.lastArg = setArg
     runtime.activeKey = key
@@ -1108,6 +1139,7 @@ export function createResourceAccessor(
     const stateKeys = new Set([
       'data',
       'isLoading',
+      'isSlowLoading',
       'isFetching',
       'isSuccess',
       'isError',
@@ -1122,7 +1154,8 @@ export function createResourceAccessor(
       nextKeys.every((key) => stateKeys.has(key))
 
     if (isStatePatch) {
-      Object.assign(state, next)
+      const { isSlowLoading: _slowLoading, ...patch } = next as ResourceDataLike
+      Object.assign(state, patch)
     } else {
       state.data = next
     }
@@ -1212,6 +1245,7 @@ export function createResourceAccessor(
       entry.cursorHistory = [(nextState as ResourceInfiniteState<unknown>).cursor]
     }
 
+    runtime.slowLoading?.reset()
     runtime.fetchId++
     runtime.lastArg = queryArg
     runtime.activeKey = key

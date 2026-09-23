@@ -16,6 +16,7 @@ export function createQueryBindingRegistry(
     selectorLoads: new WeakMap(),
     suspense: new Map(),
     runtimesByModel: new Map(),
+    unobservedModels: new Set(),
     providerDefaults,
     services: new Map(),
   }

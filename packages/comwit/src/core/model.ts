@@ -10,6 +10,13 @@ import { createProxy, snapshot, subscribe } from './proxy'
 import { getPlugins, type PluginBag } from './plugin'
 import { useStoreRegistry } from './provider'
 import { isEqual } from '../utils'
+import {
+  canonicalPath,
+  getPathValue,
+  setPathValue,
+  sameSearchParamAccess,
+  SEARCH_PARAM_PLUGIN_NAME,
+} from './router'
 import { isSilent } from './silent'
 import { COMPUTED_PLUGIN_NAME, createComputedProxy, getComputedSnapshot } from './computed'
 import {
@@ -44,6 +51,15 @@ const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEff
 export type StoreEntry<T extends object = any> = {
   proxy: T
   getSnapshot(): T
+  /** Fixed bootstrap snapshot for SSR and selectively hydrated descendants. */
+  getServerSnapshot?(): T
+  /** Include an unobserved query hydration seed in the bootstrap snapshot. */
+  refreshServerSnapshot?(): void
+  /** Register an immutable SSR view without changing the mounted client proxy. */
+  prepareSearchParam(
+    field: PropertyKey,
+    seed: { ready: boolean; value: unknown }
+  ): { ready: boolean; value: unknown }
   hasReadSnapshot(): boolean
   subscribe(listener: () => void): () => void
   history?: HistoryController
@@ -88,8 +104,16 @@ export function model<T extends object, D extends object = {}>(
     key: Symbol(),
     pluginBags,
     onObserve: options?.onObserve as Model<T & Readonly<D>>['onObserve'],
-    instance(): StoreEntry<T & Readonly<D>> {
-      const p = createProxy(cloneState())
+    instance(initialValues): StoreEntry<T & Readonly<D>> {
+      const initialState = cloneState()
+      for (const [field, value] of initialValues ?? []) {
+        if (Object.prototype.hasOwnProperty.call(initialState, field))
+          Reflect.set(initialState, field, structuredClone(value))
+        else if (typeof field === 'string')
+          setPathValue(initialState, field, structuredClone(value))
+        else throw new Error('Model initialization requires an own state field')
+      }
+      const p = createProxy(initialState)
       const historyOptions = normalizeHistoryOptions(options?.history)
       const history = historyOptions ? createHistoryController(p, historyOptions) : null
 
@@ -110,6 +134,8 @@ export function model<T extends object, D extends object = {}>(
 
       let computedProxyRef: object | null = null
       let snapshotRead = false
+      const serverFields = new Map<PropertyKey, { ready: boolean; value: unknown }>()
+      let readServerSnapshot!: () => T & Readonly<D>
       let publicProxy: unknown = p
       if (hasComputed) {
         computedProxyRef = createComputedProxy(p as object, computedBag!)
@@ -161,35 +187,87 @@ export function model<T extends object, D extends object = {}>(
         })
       }
 
+      const readSnapshot = () => {
+        if (!hasExtensions) return snapshot(p) as T & Readonly<D>
+
+        const base = snapshot(p)
+        const result: Record<string, unknown> = { ...(base as object) }
+
+        if (hasComputed) {
+          getComputedSnapshot(result, computedProxyRef!, computedBag!)
+        }
+
+        if (derivedGetters) {
+          for (const [key, getter] of Object.entries(derivedGetters)) {
+            result[key] = getter()
+          }
+        }
+
+        if (rules) {
+          result.$validation = computeValidation(p as Record<string, unknown>, rules)
+        }
+
+        if (history) {
+          result.$history = history.getApi()
+        }
+
+        return Object.freeze(result) as T & Readonly<D>
+      }
+      let serverSnapshot = initialValues ? readSnapshot() : undefined
+      let serverRaw: T | undefined
+      const buildServerSnapshot = () => {
+        serverRaw ??= snapshot(p) as T
+        const values = new Map<PropertyKey, unknown>(Object.entries(serverRaw))
+        for (const [field, seed] of serverFields) {
+          if (seed.ready) values.set(field, seed.value)
+        }
+        return m.instance(values).getSnapshot()
+      }
+      readServerSnapshot = () =>
+        (serverSnapshot ??= serverFields.size > 0 ? buildServerSnapshot() : readSnapshot())
+
       return {
         proxy: publicProxy as T & Readonly<D>,
         history: history ?? undefined,
         getSnapshot() {
           snapshotRead = true
-          if (!hasExtensions) return snapshot(p) as T & Readonly<D>
-
-          const base = snapshot(p)
-          const result: Record<string, unknown> = { ...(base as object) }
-
-          if (hasComputed) {
-            getComputedSnapshot(result, computedProxyRef!, computedBag!)
+          return readSnapshot()
+        },
+        getServerSnapshot() {
+          const result =
+            serverFields.size > 0 || initialValues ? readServerSnapshot() : readSnapshot()
+          serverSnapshot ??= result
+          snapshotRead = true
+          return result
+        },
+        refreshServerSnapshot() {
+          serverRaw = snapshot(p) as T
+          serverSnapshot = serverFields.size > 0 ? buildServerSnapshot() : readSnapshot()
+        },
+        prepareSearchParam(field, seed) {
+          const existing = serverFields.get(field)
+          if (existing) return existing
+          if (
+            typeof field !== 'string' ||
+            [...pluginBags].some(
+              ([name, bag]) =>
+                name !== SEARCH_PARAM_PLUGIN_NAME &&
+                [...bag.keys()].some(
+                  (path) =>
+                    canonicalPath(path) === field || canonicalPath(path).startsWith(`${field}.`)
+                )
+            )
+          ) {
+            throw new Error('Invalid searchParam() model field')
           }
-
-          if (derivedGetters) {
-            for (const [key, getter] of Object.entries(derivedGetters)) {
-              result[key] = getter()
-            }
-          }
-
-          if (rules) {
-            result.$validation = computeValidation(p as Record<string, unknown>, rules)
-          }
-
-          if (history) {
-            result.$history = history.getApi()
-          }
-
-          return Object.freeze(result) as T & Readonly<D>
+          const baseline = readServerSnapshot()
+          const selected =
+            seed.ready && !snapshotRead
+              ? { ready: true, value: structuredClone(seed.value) }
+              : { ready: false, value: getPathValue(baseline, String(field)) }
+          serverFields.set(field, selected)
+          if (selected.ready) serverSnapshot = buildServerSnapshot()
+          return selected
         },
         hasReadSnapshot() {
           return snapshotRead
@@ -235,7 +313,8 @@ export type Model<T extends object> = {
   key: symbol
   pluginBags: Map<string, PluginBag>
   onObserve?: (state: T) => void | (() => void)
-  instance(): StoreEntry<T>
+  /** Initial values are copied before the proxy, history, and derived state are created. */
+  instance(initialValues?: ReadonlyMap<PropertyKey, unknown>): StoreEntry<T>
 }
 
 export function useModel<T extends object>(m: Model<T>): T
@@ -303,27 +382,39 @@ export function useModel<T extends object, R>(
     [store, lifecycle, m, registry]
   )
 
-  const getSnapshot = useCallback(() => {
-    const raw = store.getSnapshot()
-    const loads: QuerySelectorLoad[] = []
-    const selectable =
-      queryBag?.size && queryRegistry
-        ? createQuerySelectorState(raw, queryController, queryBag, queryRegistry, loads)
-        : raw
-    queryLoadsRef.current = loads
-    const next = selectorRef.current
-      ? selectorRef.current(selectable as SelectableResourceState<T>)
-      : selectable
+  const readSelectedSnapshot = useCallback(
+    (server: boolean) => {
+      const raw =
+        server && store.getServerSnapshot ? store.getServerSnapshot() : store.getSnapshot()
+      const loads: QuerySelectorLoad[] = []
+      const selectable =
+        queryBag?.size && queryRegistry
+          ? createQuerySelectorState(raw, queryController, queryBag, queryRegistry, loads)
+          : raw
+      queryLoadsRef.current = loads
+      const next = selectorRef.current
+        ? selectorRef.current(selectable as SelectableResourceState<T>)
+        : selectable
 
-    if (prevRef.current !== null && isEqual(prevRef.current, next)) {
-      return prevRef.current as R
-    }
+      if (
+        prevRef.current !== null &&
+        isEqual(prevRef.current, next) &&
+        sameSearchParamAccess(prevRef.current, next)
+      ) {
+        return prevRef.current as R
+      }
 
-    prevRef.current = next
-    return next as R
-  }, [queryBag, queryController, queryRegistry, store])
+      prevRef.current = next
+      return next as R
+    },
+    [queryBag, queryController, queryRegistry, store]
+  )
 
-  const result = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+  const getSnapshot = useCallback(() => readSelectedSnapshot(false), [readSelectedSnapshot])
+  const getServerSnapshot = useCallback(() => readSelectedSnapshot(true), [readSelectedSnapshot])
+
+  const result = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  useCommitEffect(() => registry.observe(m), [registry, m])
   const queryLoads = queryLoadsRef.current
   const selectorLoadKey = querySelectorLoadKey(queryLoads)
 
@@ -387,6 +478,7 @@ export function useHydrateModel<T extends object>(
       mayInitialize: !store.hasReadSnapshot(),
     }
     hydrateQueryResources({ ...hydration, phase: 'render' })
+    if (hydration.mayInitialize) store.refreshServerSnapshot?.()
   }
 
   useCommitEffect(() => {

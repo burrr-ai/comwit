@@ -14,6 +14,7 @@ export {
   initDevTools,
   snapshot,
   isProxy,
+  searchParam,
 } from './core'
 export type {
   Query,
@@ -49,5 +50,9 @@ export type {
   LocalScopeResolver,
   LocalStandaloneOptions,
   SelectableLocalResource,
+  ComwitProviderProps,
+  SearchParamOptions,
+  SearchParamSetOptions,
+  SearchParamSnapshot,
 } from './core'
 export * from './interceptors'
