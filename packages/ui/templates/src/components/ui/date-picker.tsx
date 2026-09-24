@@ -2,12 +2,21 @@
 
 import * as React from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useCalendarPanel, parseYMD, formatYMD } from '@comwit/ui'
+import { useCalendarPanel, parseYMD } from '@comwit/ui'
 import { Popover, PopoverContent, PopoverTrigger } from './popover'
-import { useMobile } from '../../hooks'
+import { useMobile } from '../../hooks/use-mobile'
 import { popup } from '../../lib/popup'
-import { focusField } from '../../lib/interaction'
+import { focusField, disabledStyle } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+
+type DatePickerLabels = {
+  /** 모바일 바텀시트 제목 */
+  title?: string
+  clear?: string
+  today?: string
+  previousMonth?: string
+  nextMonth?: string
+}
 
 type DatePickerProps = {
   id?: string
@@ -16,43 +25,61 @@ type DatePickerProps = {
   placeholder?: string
   min?: string // YYYY-MM-DD
   max?: string // YYYY-MM-DD
+  /** 표시 로케일(Intl). 'ko-KR' 이면 "2026. 9. 24." · "2026년 9월" · 일월화… */
+  locale?: string
+  labels?: DatePickerLabels
   className?: string
   disabled?: boolean
 }
 
-const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
-
-function formatDisplay(date: Date): string {
-  return `${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}.`
+const DEFAULT_LABELS: Required<DatePickerLabels> = {
+  title: 'Select date',
+  clear: 'Clear',
+  today: 'Today',
+  previousMonth: 'Previous month',
+  nextMonth: 'Next month',
 }
 
 const TRIGGER_CLASS = cn(
-  'flex h-10 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 text-left text-sm transition-[border-color,box-shadow]',
-  'hover:border-input-hover',
+  'flex h-9 w-full items-center justify-between gap-2 rounded-control border border-input bg-transparent px-3 text-left text-body-sm transition-[border-color,box-shadow,background-color] hover:bg-accent',
   focusField,
-  'disabled:cursor-not-allowed disabled:text-disabled-foreground disabled:[&_svg]:text-disabled-foreground'
+  disabledStyle,
+  'disabled:cursor-not-allowed'
 )
 
+/**
+ * 날짜 선택 — 데스크톱은 유리 팝오버, 모바일은 아래에서 올라오는 바텀시트(popup.sheet).
+ * 같은 CalendarPanel 을 두 표면이 공유한다. 그리드·선택/비활성 판정은 @comwit/ui 가 소유한다.
+ */
 export function DatePicker({
   id,
   value,
   onChange,
-  placeholder = '날짜 선택',
+  placeholder = 'Select date',
   min,
   max,
+  locale = 'en-US',
+  labels,
   className,
   disabled,
 }: DatePickerProps) {
   const { isMobile, detected } = useMobile()
   const [open, setOpen] = React.useState(false)
   const selected = React.useMemo(() => parseYMD(value), [value])
+  const text = { ...DEFAULT_LABELS, ...labels }
+  const display = React.useMemo(
+    () => new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }),
+    [locale]
+  )
 
   const triggerInner = (
     <>
-      <span className={cn('min-w-0 truncate', selected ? 'text-foreground' : 'text-placeholder')}>
-        {selected ? formatDisplay(selected) : placeholder}
+      <span
+        className={cn('min-w-0 truncate', selected ? 'text-foreground' : 'text-subtle-foreground')}
+      >
+        {selected ? display.format(selected) : placeholder}
       </span>
-      <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
     </>
   )
 
@@ -61,8 +88,17 @@ export function DatePicker({
     const openSheet = async () => {
       if (disabled) return
       const picked = await popup.sheet<string>(
-        ({ resolve }) => <CalendarPanel value={value} min={min} max={max} onSelect={resolve} />,
-        { title: '날짜 선택' }
+        ({ resolve }) => (
+          <CalendarPanel
+            value={value}
+            min={min}
+            max={max}
+            locale={locale}
+            labels={text}
+            onSelect={resolve}
+          />
+        ),
+        { title: text.title }
       )
       if (picked !== undefined) onChange(picked)
     }
@@ -87,15 +123,13 @@ export function DatePicker({
           {triggerInner}
         </button>
       </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        sideOffset={8}
-        className="w-picker rounded-lg border border-border bg-popover p-4 shadow-lg"
-      >
+      <PopoverContent align="start" sideOffset={8} className="w-picker p-4">
         <CalendarPanel
           value={value}
           min={min}
           max={max}
+          locale={locale}
+          labels={text}
           onSelect={(ymd) => {
             onChange(ymd)
             setOpen(false)
@@ -106,22 +140,26 @@ export function DatePicker({
   )
 }
 
+const NAV_CLASS =
+  'flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-accent'
+
 /**
  * 달력 본문(월 네비 + 그리드 + 지우기/오늘). Popover(데스크톱)·바텀시트(모바일) 공유.
- * onSelect(ymd): 날짜 선택 시 'YYYY-MM-DD', '지우기' 시 빈 문자열을 통지한다.
- *
- * 달력 로직(그리드 빌드·선택/비활성 판정·뷰-월 네비·오늘 계산)은 @comwit/ui 의
- * useCalendarPanel 헤드리스 훅이 소유한다. 여기는 그 모델을 클래스·라벨로 그릴 뿐이다.
+ * onSelect(ymd): 날짜 선택 시 'YYYY-MM-DD', 지우기 시 빈 문자열을 통지한다.
  */
 function CalendarPanel({
   value,
   min,
   max,
+  locale,
+  labels,
   onSelect,
 }: {
   value?: string
   min?: string
   max?: string
+  locale: string
+  labels: Required<DatePickerLabels>
   onSelect: (ymd: string) => void
 }) {
   const { year, month, days, goPrevMonth, goNextMonth, selectDate, today } = useCalendarPanel({
@@ -129,6 +167,15 @@ function CalendarPanel({
     min,
     max,
   })
+
+  const { caption, weekdays } = React.useMemo(() => {
+    const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' })
+    return {
+      caption: new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' }),
+      // 2023-01-01 은 일요일 — 일요일 시작 7일을 로케일 약칭으로 뽑는다.
+      weekdays: Array.from({ length: 7 }, (_, i) => weekday.format(new Date(2023, 0, 1 + i))),
+    }
+  }, [locale])
 
   const select = (d: Date) => {
     const ymd = selectDate(d)
@@ -141,30 +188,32 @@ function CalendarPanel({
         <button
           type="button"
           onClick={goPrevMonth}
-          className="flex h-8 w-8 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-muted"
-          aria-label="이전 달"
+          data-glass-item
+          className={NAV_CLASS}
+          aria-label={labels.previousMonth}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="size-4" />
         </button>
-        <div className="text-sm font-semibold text-foreground">
-          {year}년 {month}월
+        <div className="text-body-sm font-semibold text-foreground" aria-live="polite">
+          {caption.format(new Date(year, month - 1, 1))}
         </div>
         <button
           type="button"
           onClick={goNextMonth}
-          className="flex h-8 w-8 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-muted"
-          aria-label="다음 달"
+          data-glass-item
+          className={NAV_CLASS}
+          aria-label={labels.nextMonth}
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="size-4" />
         </button>
       </div>
 
       <div className="grid grid-cols-7 gap-y-1">
-        {WEEKDAY_LABELS.map((label, i) => (
+        {weekdays.map((label, i) => (
           <div
-            key={label}
+            key={i}
             className={cn(
-              'flex h-8 items-center justify-center text-xs font-medium',
+              'flex h-8 items-center justify-center text-caption font-medium',
               i === 0 && 'text-destructive',
               i === 6 && 'text-primary',
               i !== 0 && i !== 6 && 'text-muted-foreground'
@@ -179,17 +228,21 @@ function CalendarPanel({
             type="button"
             onClick={() => select(d.date)}
             disabled={d.isDisabled}
+            aria-pressed={d.isSelected}
+            aria-current={d.isToday ? 'date' : undefined}
+            data-glass-item={d.isSelected ? undefined : ''}
             className={cn(
-              'mx-auto flex h-9 w-9 items-center justify-center rounded-pill text-sm transition-colors',
-              !d.isSelected && !d.isDisabled && 'hover:bg-muted',
+              'mx-auto flex size-9 items-center justify-center rounded-pill text-body-sm transition-colors duration-fast',
+              !d.isSelected && !d.isDisabled && 'hover:bg-accent',
               d.isSelected &&
-                'bg-primary font-semibold text-primary-foreground hover:bg-primary/90',
+                'bg-primary font-semibold text-primary-foreground hover:bg-primary-strong',
               !d.isSelected && d.isToday && 'ring-1 ring-inset ring-ring',
               !d.isSelected && d.inMonth && d.weekday === 0 && 'text-destructive',
               !d.isSelected && d.inMonth && d.weekday === 6 && 'text-primary',
               !d.isSelected && d.inMonth && d.weekday !== 0 && d.weekday !== 6 && 'text-foreground',
-              !d.isSelected && !d.inMonth && 'text-muted-foreground',
-              d.isDisabled && 'cursor-not-allowed text-disabled-foreground hover:bg-transparent'
+              !d.isSelected && !d.inMonth && 'text-subtle-foreground',
+              d.isDisabled &&
+                'cursor-not-allowed text-disabled-foreground opacity-disabled-content hover:bg-transparent'
             )}
           >
             {d.day}
@@ -197,20 +250,20 @@ function CalendarPanel({
         ))}
       </div>
 
-      <div className="mt-3 flex items-center justify-between border-t border-muted pt-3">
+      <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
         <button
           type="button"
           onClick={() => onSelect('')}
-          className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="text-caption font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground"
         >
-          지우기
+          {labels.clear}
         </button>
         <button
           type="button"
           onClick={() => select(today)}
-          className="text-xs font-medium text-primary transition-colors hover:text-primary/80"
+          className="text-caption font-medium text-primary transition-colors duration-fast hover:text-primary-strong"
         >
-          오늘
+          {labels.today}
         </button>
       </div>
     </div>

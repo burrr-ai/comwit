@@ -3,47 +3,116 @@ export const specs = [
     title: 'Toast',
     slug: 'sonner',
     covers: ['sonner'],
-    // Toaster 는 preview.tsx 전역 데코레이터로 이미 마운트됨 — 여기선 버튼으로 toast() 만 트리거한다.
+    // The Toaster is already mounted globally (Storybook preview decorator / docs providers),
+    // so these stories only call toast() from a button.
     imports: [{ from: '@comwit/ui-templates/button', names: ['Button'] }],
     extraImports: [`import { toast } from 'sonner'`],
     stories: [
       {
-        name: 'Types',
-        description: 'default · success · error · warning · info 토스트 트리거',
-        render: `<div className="flex flex-wrap items-center gap-3">
-  <Button variant="outline" onClick={() => toast('저장되었습니다')}>기본</Button>
-  <Button variant="outline" onClick={() => toast.success('성공적으로 처리되었습니다')}>성공</Button>
-  <Button variant="outline" onClick={() => toast.error('오류가 발생했습니다')}>오류</Button>
-  <Button variant="outline" onClick={() => toast.warning('주의가 필요합니다')}>경고</Button>
-  <Button variant="outline" onClick={() => toast.info('새로운 알림이 있습니다')}>정보</Button>
-</div>`,
-      },
-      {
-        name: 'WithDescription',
-        description: '제목 + 설명(description)',
+        name: 'Default',
+        gallery: true,
+        description: 'A glass toast with a status icon, title and supporting description.',
         render: `<Button
-  variant="outline"
   onClick={() =>
-    toast.success('파일이 업로드되었습니다', {
-      description: '문서.pdf · 2.4MB · 방금 전',
+    toast.success('Changes saved', {
+      description: 'Your workspace settings were updated just now.',
     })
   }
 >
-  설명 있는 토스트
+  Save changes
 </Button>`,
       },
       {
+        name: 'Types',
+        description: 'toast · success · error · warning · info · loading.',
+        render: `<div className="flex flex-wrap items-center justify-center gap-3">
+  <Button variant="outline" onClick={() => toast('Draft saved to your library')}>
+    Default
+  </Button>
+  <Button variant="outline" onClick={() => toast.success('Payment received')}>
+    Success
+  </Button>
+  <Button
+    variant="outline"
+    onClick={() =>
+      toast.error("Couldn't upload file", { description: 'Files must be smaller than 25 MB.' })
+    }
+  >
+    Error
+  </Button>
+  <Button
+    variant="outline"
+    onClick={() =>
+      toast.warning('Storage almost full', { description: "You've used 92% of your 10 GB plan." })
+    }
+  >
+    Warning
+  </Button>
+  <Button variant="outline" onClick={() => toast.info('A new version is available')}>
+    Info
+  </Button>
+  <Button
+    variant="outline"
+    onClick={() => {
+      const id = toast.loading('Exporting report…')
+      setTimeout(() => toast.success('Report exported', { id }), 2000)
+    }}
+  >
+    Loading
+  </Button>
+</div>`,
+      },
+      {
+        name: 'PromiseToast',
+        description: 'toast.promise moves one toast through loading → success / error.',
+        render: `<div className="flex flex-wrap items-center justify-center gap-3">
+  <Button
+    variant="outline"
+    onClick={() =>
+      toast.promise(
+        new Promise<{ name: string }>((resolve) =>
+          setTimeout(() => resolve({ name: 'Q3 launch' }), 1800)
+        ),
+        {
+          loading: 'Publishing project…',
+          success: (project) => project.name + ' is live',
+          error: "Couldn't publish project",
+        }
+      )
+    }
+  >
+    Publish project
+  </Button>
+  <Button
+    variant="outline"
+    onClick={() =>
+      toast.promise(
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Network error')), 1800)),
+        {
+          loading: 'Syncing calendar…',
+          success: 'Calendar synced',
+          error: "Couldn't sync calendar. Check your connection and try again.",
+        }
+      )
+    }
+  >
+    Sync (fails)
+  </Button>
+</div>`,
+      },
+      {
         name: 'WithAction',
-        description: '실행 취소 액션 버튼이 있는 토스트',
+        description: 'An action button, e.g. undo after a destructive change.',
         render: `<Button
   variant="outline"
   onClick={() =>
-    toast('항목이 삭제되었습니다', {
-      action: { label: '실행 취소', onClick: () => toast.success('복원되었습니다') },
+    toast('Conversation archived', {
+      description: 'You can find it later in Archive.',
+      action: { label: 'Undo', onClick: () => toast.success('Conversation restored') },
     })
   }
 >
-  액션 있는 토스트
+  Archive conversation
 </Button>`,
       },
     ],

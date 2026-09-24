@@ -4,9 +4,9 @@ import * as React from 'react'
 import { Clock } from 'lucide-react'
 import { useTimePanel } from '@comwit/ui'
 import { Popover, PopoverContent, PopoverTrigger } from './popover'
-import { useMobile } from '../../hooks'
+import { useMobile } from '../../hooks/use-mobile'
 import { popup } from '../../lib/popup'
-import { focusField } from '../../lib/interaction'
+import { focusField, disabledStyle } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
 
 type TimePickerProps = {
@@ -16,46 +16,61 @@ type TimePickerProps = {
   placeholder?: string
   /** 슬롯 간격(분). 기본 30분. */
   stepMinutes?: number
+  /** 표시 로케일(Intl). 'ko-KR' 이면 "오후 6:30". */
+  locale?: string
+  /** 모바일 바텀시트 제목 */
+  title?: string
   className?: string
   disabled?: boolean
 }
 
-/** 'HH:mm' → '오전 9시' / '오후 6시 30분' */
-function formatDisplay(value: string): string {
-  const [hh, mm] = value.split(':').map(Number)
-  if (Number.isNaN(hh) || Number.isNaN(mm)) return ''
-  const period = hh < 12 ? '오전' : '오후'
-  const h12 = hh % 12 === 0 ? 12 : hh % 12
-  const base = `${period} ${h12}시`
-  return mm === 0 ? base : `${base} ${mm}분`
-}
-
 const TRIGGER_CLASS = cn(
-  'flex h-10 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 text-left text-sm transition-[border-color,box-shadow]',
-  'hover:border-input-hover',
+  'flex h-9 w-full items-center justify-between gap-2 rounded-control border border-input bg-transparent px-3 text-left text-body-sm transition-[border-color,box-shadow,background-color] hover:bg-accent',
   focusField,
-  'disabled:cursor-not-allowed disabled:text-disabled-foreground disabled:[&_svg]:text-disabled-foreground'
+  disabledStyle,
+  'disabled:cursor-not-allowed'
 )
 
+function useTimeFormat(locale: string) {
+  return React.useMemo(() => {
+    const format = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' })
+    /** 'HH:mm' → '6:30 PM' (로케일 표기) */
+    return (value: string) => {
+      const [hh, mm] = value.split(':').map(Number)
+      if (Number.isNaN(hh) || Number.isNaN(mm)) return ''
+      return format.format(new Date(2000, 0, 1, hh, mm))
+    }
+  }, [locale])
+}
+
+/**
+ * 시간 선택 — 데스크톱은 유리 팝오버 슬롯 목록, 모바일은 바텀시트.
+ * 슬롯 구성·레거시 값 끼워넣기·선택 슬롯 스크롤은 @comwit/ui useTimePanel 이 소유한다.
+ */
 export function TimePicker({
   id,
   value,
   onChange,
-  placeholder = '시간 선택',
+  placeholder = 'Select time',
   stepMinutes = 30,
+  locale = 'en-US',
+  title = 'Select time',
   className,
   disabled,
 }: TimePickerProps) {
   const { isMobile, detected } = useMobile()
   const [open, setOpen] = React.useState(false)
-  const display = value ? formatDisplay(value) : ''
+  const formatTime = useTimeFormat(locale)
+  const display = value ? formatTime(value) : ''
 
   const triggerInner = (
     <>
-      <span className={cn('min-w-0 truncate', display ? 'text-foreground' : 'text-placeholder')}>
+      <span
+        className={cn('min-w-0 truncate', display ? 'text-foreground' : 'text-subtle-foreground')}
+      >
         {display || placeholder}
       </span>
-      <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <Clock className="size-4 shrink-0 text-muted-foreground" />
     </>
   )
 
@@ -66,10 +81,15 @@ export function TimePicker({
       const picked = await popup.sheet<string>(
         ({ resolve }) => (
           <div className="max-h-[52vh] overflow-y-auto">
-            <TimePanel value={value} stepMinutes={stepMinutes} onSelect={resolve} />
+            <TimePanel
+              value={value}
+              stepMinutes={stepMinutes}
+              formatTime={formatTime}
+              onSelect={resolve}
+            />
           </div>
         ),
-        { title: '시간 선택' }
+        { title }
       )
       if (picked !== undefined) onChange(picked)
     }
@@ -97,11 +117,12 @@ export function TimePicker({
       <PopoverContent
         align="start"
         sideOffset={8}
-        className="max-h-[280px] w-[var(--radix-popover-trigger-width)] min-w-[180px] overflow-y-auto rounded-lg border border-border bg-popover p-1.5 shadow-lg"
+        className="max-h-[280px] w-(--radix-popover-trigger-width) min-w-[180px] overflow-y-auto p-1.5"
       >
         <TimePanel
           value={value}
           stepMinutes={stepMinutes}
+          formatTime={formatTime}
           onSelect={(v) => {
             onChange(v)
             setOpen(false)
@@ -112,36 +133,40 @@ export function TimePicker({
   )
 }
 
-/** 시간 슬롯 목록(30분 간격 등). Popover·바텀시트 공유. */
 function TimePanel({
   value,
   stepMinutes,
+  formatTime,
   onSelect,
 }: {
   value?: string
   stepMinutes: number
+  formatTime: (value: string) => string
   onSelect: (value: string) => void
 }) {
   const { slots, isSelected, selectedRef } = useTimePanel({ value, stepMinutes })
 
   return (
-    <>
+    <div role="listbox" className="grid gap-0.5">
       {slots.map((slot) => (
         <button
           key={slot}
+          role="option"
+          aria-selected={isSelected(slot)}
+          data-glass-item={isSelected(slot) ? undefined : ''}
           ref={isSelected(slot) ? selectedRef : undefined}
           type="button"
           onClick={() => onSelect(slot)}
           className={cn(
-            'flex w-full items-center rounded-xl px-4 py-2 text-left text-sm transition-colors',
+            'flex w-full items-center rounded-lg px-3 py-2 text-left text-body-sm transition-colors duration-fast',
             isSelected(slot)
               ? 'bg-primary font-semibold text-primary-foreground'
-              : 'text-foreground hover:bg-muted'
+              : 'text-foreground hover:bg-accent'
           )}
         >
-          {formatDisplay(slot)}
+          {formatTime(slot)}
         </button>
       ))}
-    </>
+    </div>
   )
 }

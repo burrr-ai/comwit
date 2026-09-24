@@ -27,66 +27,77 @@ export const specs = [
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `import { User, Settings, LogOut, Mail, MessageSquare, Plus, Trash2 } from 'lucide-react'`,
+      `import { ArrowUpDown, Copy, CreditCard, LogOut, Mail, MessageSquare, MoreHorizontal, Pencil, Settings, Share2, SlidersHorizontal, Trash2, User } from 'lucide-react'`,
     ],
     stories: [
       {
         name: 'Default',
-        description: 'label · group · item(shortcut) · separator · destructive',
+        gallery: true,
+        description:
+          'An account menu on refractive glass: label, grouped items with shortcuts, and a destructive item.',
         render: `<DropdownMenu>
   <DropdownMenuTrigger asChild>
-    <Button variant="outline">메뉴 열기</Button>
+    <Button variant="outline">
+      <User />
+      My account
+    </Button>
   </DropdownMenuTrigger>
   <DropdownMenuContent className="w-56">
-    <DropdownMenuLabel>내 계정</DropdownMenuLabel>
+    <DropdownMenuLabel>jordan@acme.com</DropdownMenuLabel>
     <DropdownMenuSeparator />
     <DropdownMenuGroup>
       <DropdownMenuItem>
         <User />
-        프로필
+        Profile
         <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
       </DropdownMenuItem>
       <DropdownMenuItem>
+        <CreditCard />
+        Billing
+        <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
+      </DropdownMenuItem>
+      <DropdownMenuItem>
         <Settings />
-        설정
-        <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+        Settings
+        <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
       </DropdownMenuItem>
     </DropdownMenuGroup>
     <DropdownMenuSeparator />
     <DropdownMenuItem variant="destructive">
       <LogOut />
-      로그아웃
+      Log out
     </DropdownMenuItem>
   </DropdownMenuContent>
 </DropdownMenu>`,
       },
       {
         name: 'CheckboxItems',
-        description: 'DropdownMenuCheckboxItem 을 useState 로 제어',
-        renderFn: `const [showStatus, setShowStatus] = React.useState(true)
-const [showActivity, setShowActivity] = React.useState(false)
+        description: 'DropdownMenuCheckboxItem toggles independent options.',
+        renderFn: `const [columns, setColumns] = React.useState({ owner: true, status: true, updated: false })
+const toggle = (key: keyof typeof columns) => (checked: boolean) =>
+  setColumns((prev) => ({ ...prev, [key]: checked }))
 return (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
-      <Button variant="outline">보기 옵션</Button>
+      <Button variant="outline">
+        <SlidersHorizontal />
+        Columns
+      </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent className="w-56">
-      <DropdownMenuLabel>패널 표시</DropdownMenuLabel>
+    <DropdownMenuContent className="w-52">
+      <DropdownMenuLabel>Visible columns</DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <DropdownMenuCheckboxItem
-        checked={showStatus}
-        onCheckedChange={(v) => setShowStatus(Boolean(v))}
-      >
-        상태 표시줄
-      </DropdownMenuCheckboxItem>
-      <DropdownMenuCheckboxItem
-        checked={showActivity}
-        onCheckedChange={(v) => setShowActivity(Boolean(v))}
-      >
-        활동 표시줄
-      </DropdownMenuCheckboxItem>
       <DropdownMenuCheckboxItem checked disabled>
-        알림 표시줄
+        Name
+      </DropdownMenuCheckboxItem>
+      <DropdownMenuCheckboxItem checked={columns.owner} onCheckedChange={toggle('owner')}>
+        Owner
+      </DropdownMenuCheckboxItem>
+      <DropdownMenuCheckboxItem checked={columns.status} onCheckedChange={toggle('status')}>
+        Status
+      </DropdownMenuCheckboxItem>
+      <DropdownMenuCheckboxItem checked={columns.updated} onCheckedChange={toggle('updated')}>
+        Last updated
       </DropdownMenuCheckboxItem>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -94,20 +105,24 @@ return (
       },
       {
         name: 'RadioGroup',
-        description: 'DropdownMenuRadioGroup 으로 단일 선택',
-        renderFn: `const [position, setPosition] = React.useState('top')
+        description: 'DropdownMenuRadioGroup picks exactly one option.',
+        renderFn: `const [sort, setSort] = React.useState('newest')
+const labels: Record<string, string> = { newest: 'Newest first', oldest: 'Oldest first', name: 'Name (A–Z)' }
 return (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
-      <Button variant="outline">위치 선택</Button>
+      <Button variant="outline">
+        <ArrowUpDown />
+        {labels[sort]}
+      </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent className="w-56">
-      <DropdownMenuLabel>패널 위치</DropdownMenuLabel>
+    <DropdownMenuContent className="w-52">
+      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <DropdownMenuRadioGroup value={position} onValueChange={setPosition}>
-        <DropdownMenuRadioItem value="top">위</DropdownMenuRadioItem>
-        <DropdownMenuRadioItem value="bottom">아래</DropdownMenuRadioItem>
-        <DropdownMenuRadioItem value="right">오른쪽</DropdownMenuRadioItem>
+      <DropdownMenuRadioGroup value={sort} onValueChange={setSort}>
+        <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
+        <DropdownMenuRadioItem value="oldest">Oldest first</DropdownMenuRadioItem>
+        <DropdownMenuRadioItem value="name">Name (A–Z)</DropdownMenuRadioItem>
       </DropdownMenuRadioGroup>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -115,35 +130,43 @@ return (
       },
       {
         name: 'Submenu',
-        description: 'DropdownMenuSub 로 중첩 메뉴 구성',
+        description:
+          'DropdownMenuSub nests a second-level menu, here from an icon-only row action.',
         render: `<DropdownMenu>
   <DropdownMenuTrigger asChild>
-    <Button variant="outline">더 보기</Button>
+    <Button variant="ghost" size="icon" aria-label="More actions">
+      <MoreHorizontal />
+    </Button>
   </DropdownMenuTrigger>
-  <DropdownMenuContent className="w-56">
+  <DropdownMenuContent className="w-52" align="end">
     <DropdownMenuItem>
-      <Plus />
-      새 파일
+      <Pencil />
+      Rename
+    </DropdownMenuItem>
+    <DropdownMenuItem>
+      <Copy />
+      Duplicate
     </DropdownMenuItem>
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger>공유</DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
+      <DropdownMenuSubTrigger>
+        <Share2 className="mr-2 size-4 text-muted-foreground" />
+        Share
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="w-44">
         <DropdownMenuItem>
           <Mail />
-          이메일
+          Email link
         </DropdownMenuItem>
         <DropdownMenuItem>
           <MessageSquare />
-          메시지
+          Send to Slack
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem>더 보기...</DropdownMenuItem>
       </DropdownMenuSubContent>
     </DropdownMenuSub>
     <DropdownMenuSeparator />
     <DropdownMenuItem variant="destructive">
       <Trash2 />
-      삭제
+      Delete
     </DropdownMenuItem>
   </DropdownMenuContent>
 </DropdownMenu>`,

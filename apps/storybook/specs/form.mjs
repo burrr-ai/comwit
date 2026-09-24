@@ -18,125 +18,127 @@ export const specs = [
       },
       { from: '@comwit/ui-templates/input', names: ['Input'] },
       { from: '@comwit/ui-templates/button', names: ['Button'] },
+      {
+        from: '@comwit/ui-templates/select',
+        names: ['Select', 'SelectTrigger', 'SelectValue', 'SelectContent', 'SelectItem'],
+      },
+      { from: '@comwit/ui-templates/switch', names: ['Switch'] },
     ],
     extraImports: [`import * as React from 'react'`, `import { useForm } from 'react-hook-form'`],
     stories: [
       {
         name: 'Default',
-        description: 'react-hook-form 기반 — FormField 렌더 프롭으로 필드를 연결',
-        renderFn: `const form = useForm({ defaultValues: { username: '' } })
+        gallery: true,
+        description:
+          'FormField connects a react-hook-form field to its label, control and messages',
+        renderFn: `const form = useForm({ defaultValues: { workspace: 'Acme Design' } })
 return (
   <Form {...form}>
-    <form className="w-80 space-y-6">
+    <form className="grid w-full max-w-sm gap-4" onSubmit={form.handleSubmit(() => {})}>
       <FormField
         control={form.control}
-        name="username"
+        name="workspace"
+        rules={{ required: 'Enter a workspace name.' }}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>사용자 이름</FormLabel>
+            <FormLabel>Workspace name</FormLabel>
             <FormControl>
-              <Input placeholder="이름을 입력하세요" {...field} />
+              <Input placeholder="Acme Design" {...field} />
             </FormControl>
-            <FormDescription>공개 프로필에 표시되는 이름입니다.</FormDescription>
+            <FormDescription>Shown in invites and on the sidebar.</FormDescription>
             <FormMessage />
           </FormItem>
         )}
       />
+      <Button type="submit" className="w-fit">Save changes</Button>
     </form>
   </Form>
 )`,
       },
       {
-        name: 'MultipleFields',
-        description: '여러 FormField · Description · 제출 버튼',
-        renderFn: `const form = useForm({ defaultValues: { username: '', email: '' } })
-return (
-  <Form {...form}>
-    <form className="w-80 space-y-6" onSubmit={form.handleSubmit(() => {})}>
-      <FormField
-        control={form.control}
-        name="username"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>이름</FormLabel>
-            <FormControl>
-              <Input placeholder="홍길동" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="email"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>이메일</FormLabel>
-            <FormControl>
-              <Input type="email" placeholder="you@example.com" {...field} />
-            </FormControl>
-            <FormDescription>알림을 받을 이메일 주소입니다.</FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <Button type="submit">저장</Button>
-    </form>
-  </Form>
-)`,
-      },
-      {
-        name: 'WithValidation',
-        description: '제출 버튼을 누르면 유효성 검사 오류(FormMessage)가 표시됩니다.',
+        name: 'Validation',
+        description:
+          'Submit to see rule messages in FormMessage; a valid submit shows a confirmation',
         renderFn: `const form = useForm({ defaultValues: { email: '' } })
+const [invited, setInvited] = React.useState<string | null>(null)
 return (
   <Form {...form}>
-    <form className="w-80 space-y-6" onSubmit={form.handleSubmit(() => {})}>
+    <form
+      className="grid w-full max-w-sm gap-4"
+      onSubmit={form.handleSubmit((values) => setInvited(values.email))}
+    >
       <FormField
         control={form.control}
         name="email"
         rules={{
-          required: '이메일을 입력해주세요.',
-          minLength: { value: 5, message: '5자 이상 입력해주세요.' },
+          required: 'Enter an email address.',
+          pattern: { value: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/, message: 'Enter a valid email address.' },
         }}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>이메일</FormLabel>
+            <FormLabel>Invite a teammate</FormLabel>
             <FormControl>
-              <Input placeholder="you@example.com" {...field} />
+              <Input type="email" placeholder="teammate@company.com" {...field} />
             </FormControl>
-            <FormDescription>필수 입력 항목입니다.</FormDescription>
+            <FormDescription>They will get an email with a link to join.</FormDescription>
             <FormMessage />
           </FormItem>
         )}
       />
-      <Button type="submit">제출</Button>
+      <Button type="submit" className="w-fit">Send invite</Button>
+      {invited ? (
+        <p className="text-caption text-muted-foreground">Invite sent to {invited}.</p>
+      ) : null}
     </form>
   </Form>
 )`,
       },
       {
-        name: 'Disabled',
-        description: '비활성 필드 · 비활성 제출 버튼',
-        renderFn: `const form = useForm({ defaultValues: { username: '차은우' } })
+        name: 'OtherControls',
+        description: 'FormControl also wraps a SelectTrigger or a Switch',
+        renderFn: `const form = useForm({ defaultValues: { role: 'editor', notify: true } })
 return (
   <Form {...form}>
-    <form className="w-80 space-y-6">
+    <form className="grid w-full max-w-sm gap-6" onSubmit={form.handleSubmit(() => {})}>
       <FormField
         control={form.control}
-        name="username"
+        name="role"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>사용자 이름</FormLabel>
-            <FormControl>
-              <Input disabled {...field} />
-            </FormControl>
-            <FormDescription>이 필드는 수정할 수 없습니다.</FormDescription>
+            <FormLabel>Default role</FormLabel>
+            <Select value={field.value} onValueChange={field.onChange}>
+              <FormControl>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose a role" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="viewer">Viewer</SelectItem>
+                <SelectItem value="editor">Editor</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormDescription>Applied to everyone who joins with an invite link.</FormDescription>
             <FormMessage />
           </FormItem>
         )}
       />
-      <Button type="submit" disabled>저장</Button>
+      <FormField
+        control={form.control}
+        name="notify"
+        render={({ field }) => (
+          <FormItem className="flex items-center justify-between gap-6">
+            <div className="grid gap-1">
+              <FormLabel>Notify admins</FormLabel>
+              <FormDescription>Email admins when someone joins.</FormDescription>
+            </div>
+            <FormControl>
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <Button type="submit" className="w-fit">Save settings</Button>
     </form>
   </Form>
 )`,

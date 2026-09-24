@@ -89,7 +89,8 @@ function readConfig(cwd) {
 
 // ── import 경로 재작성 ───────────────────────────────────────────────────
 // 템플릿 소스의 상대 import 를 소비 프로젝트의 alias 로 바꾼다.
-//   ../../lib/X → @/lib/X · ../../hooks → @/hooks/use-mobile · ./X(형제 ui) → @/components/ui/X
+//   ../../lib/X → @/lib/X · ../../hooks/X → @/hooks/X (bare ../../hooks → use-mobile)
+//   ./X(형제 ui) → @/components/ui/X
 function rewriteImports(content, cfg) {
   const { importAlias: A, aliases } = cfg
   return content.replace(/(from\s+|import\s+)(["'])([^"']+)\2/g, (m, kw, q, spec) => {
@@ -98,12 +99,11 @@ function rewriteImports(content, cfg) {
       mapped = `${A}${aliases.lib}/${spec.slice('../../lib/'.length)}`
     else if (spec.startsWith('../lib/'))
       mapped = `${A}${aliases.lib}/${spec.slice('../lib/'.length)}`
-    else if (
-      spec === '../../hooks' ||
-      spec.startsWith('../../hooks/') ||
-      spec === '../hooks' ||
-      spec.startsWith('../hooks/')
-    )
+    else if (spec.startsWith('../../hooks/'))
+      mapped = `${A}${aliases.hooks}/${spec.slice('../../hooks/'.length)}`
+    else if (spec.startsWith('../hooks/'))
+      mapped = `${A}${aliases.hooks}/${spec.slice('../hooks/'.length)}`
+    else if (spec === '../../hooks' || spec === '../hooks')
       mapped = `${A}${aliases.hooks}/use-mobile`
     else if (spec.startsWith('../components/ui/'))
       mapped = `${A}${aliases.ui}/${spec.slice('../components/ui/'.length)}`

@@ -100,18 +100,20 @@ ${stories}
 rmSync(outDir, { recursive: true, force: true })
 mkdirSync(outDir, { recursive: true })
 
+// docsOnly 스펙 = 토큰만 입힌 컴포넌트(separator·label …). docs 예시는 내지만 스토리는 만들지 않는다.
 const covered = new Set()
+let written = 0
 for (const spec of specs) {
+  for (const c of spec.covers ?? [spec.slug ?? spec.title.toLowerCase()]) covered.add(c)
+  if (spec.docsOnly) continue
   const file = join(outDir, `${spec.slug ?? spec.title.toLowerCase()}.stories.tsx`)
   writeFileSync(file, buildFile(spec))
-  for (const c of spec.covers ?? [spec.slug ?? spec.title.toLowerCase()]) covered.add(c)
+  written += 1
 }
 
 // 커버리지 감사 — 스펙이 빠뜨린 템플릿 컴포넌트를 알린다(조용한 누락 방지).
 const missing = templateFiles.filter((f) => !covered.has(f))
-console.log(
-  `stories: ${specs.length} spec(s) → ${specs.length} generated file(s) in src/generated/`
-)
+console.log(`stories: ${specs.length} spec(s) → ${written} generated file(s) in src/generated/`)
 if (missing.length) {
   console.log(`⚠ 스펙이 덮지 않은 템플릿 컴포넌트 ${missing.length}개: ${missing.join(', ')}`)
 } else {

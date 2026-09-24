@@ -56,6 +56,14 @@ interface DataTableProps<TData, TValue> {
   emptyMessage?: string
   /** 테이블 상단 영역 — 필터, 검색, 버튼 등 자유 배치 */
   toolbar?: React.ReactNode
+  /** 표시 문구 — 기본은 영어. 로케일에 맞춰 덮는다. */
+  labels?: {
+    refreshing?: string
+    /** 하단 범위 요약 — 기본 "1–10 of 128" */
+    range?: (start: number, end: number, total: number) => string
+    previous?: string
+    next?: string
+  }
 }
 
 function DataTable<TData, TValue>({
@@ -63,8 +71,9 @@ function DataTable<TData, TValue>({
   data: queryData,
   onPageChange,
   onRowClick,
-  emptyMessage = '아직 표시할 항목이 없어요.',
+  emptyMessage = 'Nothing to show yet.',
   toolbar,
+  labels,
 }: DataTableProps<TData, TValue>) {
   const { data: pageable, isLoading, isFetching, isSuccess, isError } = queryData
   const { items, total, totalPages, limit } = pageable
@@ -98,13 +107,22 @@ function DataTable<TData, TValue>({
   // 첫 fetch 완료 전(isSuccess=false)에도 스켈레톤 — lazy 쿼리 빈상태 깜빡임 방지.
   const showSkeleton = isLoading || (!isSuccess && !isError)
 
+  const text = {
+    refreshing: 'Updating',
+    range: (start: number, end: number, all: number) =>
+      all > 0 ? `${start}–${end} of ${all.toLocaleString()}` : '0 items',
+    previous: 'Previous page',
+    next: 'Next page',
+    ...labels,
+  }
+
   const goToPage = (next: number) => {
     setPage(next)
     onPageChange(next)
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+    <div className="overflow-hidden rounded-card border border-border bg-card shadow-card">
       {/* 툴바 — 필터, 검색, 버튼 등 자유 배치 */}
       {toolbar && <div className="border-b border-border px-4 py-3">{toolbar}</div>}
 
@@ -113,8 +131,8 @@ function DataTable<TData, TValue>({
         {/* 백그라운드 재조회 — 전체 딤 대신 우상단 스피너만. 첫 로딩 스켈레톤 중엔 숨김. */}
         {isFetching && !showSkeleton && (
           <div className="pointer-events-none absolute right-3 top-2.5 z-sticky inline-flex items-center gap-1.5 rounded-pill border border-border bg-surface-glass px-2.5 py-1 text-caption font-medium text-primary shadow-card backdrop-blur">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            갱신 중
+            <Loader2 className="size-3.5 animate-spin" />
+            {text.refreshing}
           </div>
         )}
         <Table>
@@ -190,19 +208,18 @@ function DataTable<TData, TValue>({
       {/* 페이지네이션 */}
       <div className="flex items-center justify-between border-t border-border px-4 py-3">
         <p className="text-caption tabular-nums text-muted-foreground">
-          {total > 0
-            ? `전체 ${total.toLocaleString('ko-KR')}건 중 ${rangeStart}–${rangeEnd}`
-            : '0건'}
+          {text.range(rangeStart, rangeEnd, total)}
         </p>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-lg"
+            className="size-8"
+            aria-label={text.previous}
             onClick={() => goToPage(page - 1)}
             disabled={!canPrev}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="size-4" />
           </Button>
           <span className="min-w-[3.5rem] text-center text-caption tabular-nums text-muted-foreground">
             {page} / {totalPages || 1}
@@ -210,11 +227,12 @@ function DataTable<TData, TValue>({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-lg"
+            className="size-8"
+            aria-label={text.next}
             onClick={() => goToPage(page + 1)}
             disabled={!canNext}
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="size-4" />
           </Button>
         </div>
       </div>

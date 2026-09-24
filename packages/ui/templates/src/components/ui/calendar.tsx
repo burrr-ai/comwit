@@ -18,12 +18,12 @@ function CalendarDayButton({ day: _day, modifiers, className, ...props }: DayBut
     <button
       className={cn(
         className, // = classNames.day_button
-        modifiers.today && !modifiers.selected && 'bg-accent text-accent-foreground',
+        modifiers.today && !modifiers.selected && 'ring-1 ring-inset ring-ring',
         modifiers.selected &&
           !modifiers.range_middle &&
-          'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
-        modifiers.range_middle && 'bg-transparent text-accent-foreground hover:bg-transparent',
-        modifiers.outside && 'text-muted-foreground'
+          'bg-primary font-semibold text-primary-foreground hover:bg-primary-strong hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
+        modifiers.range_middle && 'bg-transparent text-foreground hover:bg-transparent',
+        modifiers.outside && 'text-subtle-foreground'
       )}
       {...props}
     />
@@ -38,29 +38,28 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
       classNames={{
         months: 'flex flex-col sm:flex-row gap-2',
         month: 'flex flex-col gap-4',
-        month_caption: 'flex justify-center pt-1 relative items-center w-full',
-        caption_label: 'text-sm font-medium',
+        month_caption: 'flex justify-center pt-1 relative items-center w-full h-8',
+        caption_label: 'text-body-sm font-semibold text-foreground',
         nav: 'flex items-center gap-1',
-        button_previous: cn(
-          buttonVariants({ variant: 'outline' }),
-          'size-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute left-1 top-1'
-        ),
-        button_next: cn(
-          buttonVariants({ variant: 'outline' }),
-          'size-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute right-1 top-1'
-        ),
+        button_previous:
+          'absolute left-1 top-1 z-raised flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-accent',
+        button_next:
+          'absolute right-1 top-1 z-raised flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-accent',
         month_grid: 'w-full border-collapse space-y-1',
         weekdays: 'flex',
-        weekday: 'text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]',
-        week: 'flex w-full mt-2',
-        day: 'relative p-0 text-center text-sm focus-within:relative focus-within:z-sticky',
-        day_button: cn(buttonVariants({ variant: 'ghost' }), 'size-8 p-0 font-normal rounded-md'),
-        range_start: 'day-range-start rounded-l-md bg-selected',
-        range_end: 'day-range-end rounded-r-md bg-selected',
+        weekday: 'text-muted-foreground w-9 text-caption font-medium',
+        week: 'flex w-full mt-1',
+        day: 'relative p-0 text-center text-body-sm focus-within:relative focus-within:z-sticky',
+        day_button: cn(
+          buttonVariants({ variant: 'ghost' }),
+          'size-9 p-0 text-body-sm font-normal rounded-pill'
+        ),
+        range_start: 'day-range-start rounded-l-pill bg-selected',
+        range_end: 'day-range-end rounded-r-pill bg-selected',
         selected: '',
         today: '',
-        outside: 'day-outside text-muted-foreground',
-        disabled: 'text-disabled-foreground',
+        outside: 'day-outside text-subtle-foreground',
+        disabled: 'text-disabled-foreground opacity-disabled-content',
         range_middle: 'bg-selected',
         hidden: 'invisible',
         ...classNames,

@@ -1,0 +1,266 @@
+/* Comwit UI docs shell. Everything visible inside it uses the library's own tokens
+   (bg-background, text-soft-foreground, rounded-card …) — the docs dogfood the defaults.
+   Only layout that utilities can't express lives here. */
+
+/* UI 섹션에선 body 자체가 라이브러리 기본값을 따른다 — 시트·다이얼로그·토스트는 body 로 포털되므로
+   래퍼에만 서체를 주면 포털 속 컴포넌트가 사이트 서체(Inter)로 뜬다. base 레이어라 컴포넌트 유틸이 이긴다.
+   제목의 사이트 서체(Manrope)도 걷되, 라이브러리가 --display-font 를 거는 [data-slot] 제목은 건드리지 않는다. */
+@layer base {
+  body:has(.ui-product, .ui-scope) {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+  body:has(.ui-product, .ui-scope) :is(h1, h2, h3, h4, h5, h6):not([data-slot]) {
+    font-family: inherit;
+  }
+}
+
+.ui-product {
+  min-height: 100svh;
+  background: var(--background);
+  color: var(--foreground);
+}
+.ui-product .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  font-family: var(--font-inter), sans-serif; /* 공유 사이트 헤더는 State 쪽과 같은 모습 */
+}
+
+.ui-shell {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  max-width: 1480px;
+  margin-inline: auto;
+}
+.ui-sidebar {
+  position: sticky;
+  top: 88px;
+  height: calc(100svh - 88px);
+  border-right: 1px solid var(--border);
+}
+.ui-main {
+  min-width: 0;
+  padding: 48px clamp(20px, 4vw, 64px) 120px;
+}
+
+/* Anchored items clear the sticky site header. */
+.ui-product [data-gallery-item],
+.ui-product [data-gallery-group] {
+  scroll-margin-top: 112px;
+}
+
+@media (max-width: 900px) {
+  .ui-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ui-sidebar {
+    display: none;
+  }
+  .ui-main {
+    padding-top: 24px;
+  }
+  .ui-product [data-gallery-item],
+  .ui-product [data-gallery-group] {
+    scroll-margin-top: 136px;
+  }
+}
+
+/* ── Phone frame — a transformed box, so position:fixed children (floating back button)
+   stay inside the device instead of escaping to the viewport. ── */
+.phone {
+  position: relative;
+  width: 300px;
+  height: 612px;
+  padding: 10px;
+  border-radius: 48px;
+  background: #0a0a0a;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 30px 60px -24px rgba(11, 46, 107, 0.35),
+    0 12px 24px -12px rgba(16, 24, 40, 0.25);
+  transform: translateZ(0);
+  flex-shrink: 0;
+}
+.phone-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 38px;
+  background: var(--background);
+  isolation: isolate;
+}
+.phone-status {
+  position: relative;
+  z-index: 50;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 6px 26px 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  background: var(--background);
+}
+.phone-island {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 84px;
+  height: 24px;
+  border-radius: 9999px;
+  background: #0a0a0a;
+  transform: translateX(-50%);
+}
+.phone-home {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  z-index: 60;
+  width: 104px;
+  height: 4px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+/* The scroller inside the phone hides its scrollbar like a real device. */
+.phone-screen [data-slot='pull-to-refresh'] > div:last-child {
+  scrollbar-width: none;
+}
+.phone-screen [data-slot='pull-to-refresh'] > div:last-child::-webkit-scrollbar {
+  display: none;
+}
+
+/* Photo stand-ins with enough detail for glass to refract. */
+.ui-photo {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 80% at 20% 25%, var(--p1) 0%, transparent 60%),
+    radial-gradient(55% 70% at 85% 35%, var(--p2) 0%, transparent 62%),
+    radial-gradient(70% 70% at 50% 110%, var(--p3) 0%, transparent 60%),
+    linear-gradient(160deg, var(--p4), var(--p5));
+}
+.ui-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.14) 0 2px,
+    transparent 2px 18px
+  );
+  mix-blend-mode: soft-light;
+}
+.ui-photo[data-tone='sunset'] {
+  --p1: #ffd29d;
+  --p2: #ff7a9a;
+  --p3: #7b61ff;
+  --p4: #ff9a62;
+  --p5: #4f6bff;
+}
+.ui-photo[data-tone='sea'] {
+  --p1: #b8f3ff;
+  --p2: #4fd1c5;
+  --p3: #2563eb;
+  --p4: #7dd3fc;
+  --p5: #1e40af;
+}
+.ui-photo[data-tone='forest'] {
+  --p1: #e6ffb8;
+  --p2: #4ade80;
+  --p3: #0f766e;
+  --p4: #a3e635;
+  --p5: #115e59;
+}
+.ui-photo[data-tone='dusk'] {
+  --p1: #fbcfe8;
+  --p2: #a78bfa;
+  --p3: #1e1b4b;
+  --p4: #f0abfc;
+  --p5: #312e81;
+}
+
+/* Code blocks share one dark surface; highlight.js colors ride on top. */
+.ui-code {
+  background: #0f1216;
+  color: #e6e8eb;
+}
+.ui-code .hljs {
+  background: transparent;
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-product * {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Narrow screens: a sticky bar opens the same navigation in a sheet. */
+.ui-mobile-bar {
+  display: none;
+}
+@media (max-width: 900px) {
+  .ui-mobile-bar {
+    position: sticky;
+    top: 72px; /* 좁은 화면의 사이트 헤더 높이 */
+    z-index: 30;
+    display: flex;
+    margin: -24px calc(-1 * clamp(20px, 4vw, 64px)) 24px;
+    padding: 10px clamp(20px, 4vw, 64px);
+    background: color-mix(in srgb, var(--background) 88%, transparent);
+    backdrop-filter: blur(12px) saturate(160%);
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+/* Guides (MDX) read in the library's type scale. */
+.ui-guide {
+  max-width: 720px;
+  color: var(--soft-foreground);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.ui-guide :is(h1, h2, h3) {
+  color: var(--foreground);
+  font-family: inherit;
+  letter-spacing: -0.024em;
+}
+.ui-guide h1 {
+  font-size: 32px;
+  line-height: 1.14;
+}
+.ui-guide :is(code):not(pre code) {
+  border-radius: 6px;
+  background: var(--muted);
+  padding: 0.12em 0.4em;
+  color: var(--foreground);
+  font-size: 0.88em;
+}
+.ui-guide :is(code):not(pre code)::before,
+.ui-guide :is(code):not(pre code)::after {
+  content: none;
+}
+.ui-guide pre {
+  border-radius: calc(var(--radius) * var(--radius-scale));
+  background: #0f1216;
+}
+.ui-guide a {
+  color: var(--primary);
+  text-underline-offset: 3px;
+}
+
+.theme-editor-frame {
+  width: 100%;
+  height: min(860px, 82svh);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--card-radius) * var(--radius-scale));
+  background: var(--background);
+}

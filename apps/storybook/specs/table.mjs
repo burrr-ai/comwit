@@ -17,71 +17,76 @@ export const specs = [
           'TableCaption',
         ],
       },
+      { from: '@comwit/ui-templates/badge', names: ['Badge'] },
     ],
     stories: [
       {
-        name: 'Default',
-        description: '헤더 + 3개 행으로 구성된 기본 테이블',
-        render: `<Table>
-  <TableHeader>
-    <TableRow>
-      <TableHead>이름</TableHead>
-      <TableHead>이메일</TableHead>
-      <TableHead>상태</TableHead>
-    </TableRow>
-  </TableHeader>
-  <TableBody>
-    <TableRow>
-      <TableCell>김철수</TableCell>
-      <TableCell>chulsoo@burrr.ai</TableCell>
-      <TableCell>활성</TableCell>
-    </TableRow>
-    <TableRow>
-      <TableCell>이영희</TableCell>
-      <TableCell>younghee@burrr.ai</TableCell>
-      <TableCell>대기</TableCell>
-    </TableRow>
-    <TableRow>
-      <TableCell>박민수</TableCell>
-      <TableCell>minsoo@burrr.ai</TableCell>
-      <TableCell>비활성</TableCell>
-    </TableRow>
-  </TableBody>
-</Table>`,
+        name: 'Members',
+        gallery: true,
+        description: 'Muted header row, hover highlight and status badges.',
+        render: `<div className="w-full max-w-lg">
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Name</TableHead>
+        <TableHead>Role</TableHead>
+        <TableHead className="text-right">Status</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {([
+        { name: 'Ava Chen', email: 'ava@acme.dev', role: 'Owner', status: 'Active' },
+        { name: 'Liam Patel', email: 'liam@acme.dev', role: 'Admin', status: 'Active' },
+        { name: 'Sofia Rossi', email: 'sofia@acme.dev', role: 'Editor', status: 'Invited' },
+      ] as const).map((member) => (
+        <TableRow key={member.email}>
+          <TableCell>
+            <p className="font-semibold text-foreground">{member.name}</p>
+            <p className="text-caption text-soft-foreground">{member.email}</p>
+          </TableCell>
+          <TableCell>{member.role}</TableCell>
+          <TableCell className="text-right">
+            <Badge variant={member.status === 'Active' ? 'success' : 'warning'}>{member.status}</Badge>
+          </TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+</div>`,
       },
       {
-        name: 'WithCaptionAndFooter',
-        description: 'TableCaption · TableFooter · 선택된 행(data-state)',
+        name: 'Invoices',
+        description: 'TableCaption, TableFooter and a selected row (data-state="selected").',
         render: `<Table>
-  <TableCaption>2026년 상반기 결제 내역</TableCaption>
+  <TableCaption>Invoices for the first half of 2026</TableCaption>
   <TableHeader>
     <TableRow>
-      <TableHead>항목</TableHead>
-      <TableHead>방식</TableHead>
-      <TableHead className="text-right">금액</TableHead>
+      <TableHead>Invoice</TableHead>
+      <TableHead>Method</TableHead>
+      <TableHead className="text-right">Amount</TableHead>
     </TableRow>
   </TableHeader>
   <TableBody>
     <TableRow data-state="selected">
-      <TableCell>인보이스 001</TableCell>
-      <TableCell>카드</TableCell>
-      <TableCell className="text-right">120,000원</TableCell>
+      <TableCell>INV-001</TableCell>
+      <TableCell>Credit card</TableCell>
+      <TableCell className="text-right tabular-nums">$250.00</TableCell>
     </TableRow>
     <TableRow>
-      <TableCell>인보이스 002</TableCell>
-      <TableCell>계좌이체</TableCell>
-      <TableCell className="text-right">85,000원</TableCell>
+      <TableCell>INV-002</TableCell>
+      <TableCell>Bank transfer</TableCell>
+      <TableCell className="text-right tabular-nums">$150.00</TableCell>
     </TableRow>
     <TableRow>
-      <TableCell>인보이스 003</TableCell>
-      <TableCell>카드</TableCell>
-      <TableCell className="text-right">45,000원</TableCell>
+      <TableCell>INV-003</TableCell>
+      <TableCell>PayPal</TableCell>
+      <TableCell className="text-right tabular-nums">$350.00</TableCell>
     </TableRow>
   </TableBody>
   <TableFooter>
     <TableRow>
-      <TableCell colSpan={2}>합계</TableCell>
-      <TableCell className="text-right">250,000원</TableCell>
+      <TableCell colSpan={2}>Total</TableCell>
+      <TableCell className="text-right tabular-nums">$750.00</TableCell>
     </TableRow>
   </TableFooter>
 </Table>`,

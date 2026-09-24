@@ -3,56 +3,64 @@ export const specs = [
     title: 'Autocomplete',
     slug: 'autocomplete',
     covers: ['autocomplete'],
-    // compound(React Aria) 컴포넌트 — meta.component 는 생략(타이핑 이슈 회피).
+    // Compound (React Aria) component — meta.component is omitted to avoid typing issues.
     imports: [
       { from: '@comwit/ui-templates/autocomplete', names: ['Autocomplete', 'AutocompleteItem'] },
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `const FRUITS: [string, string][] = [
-  ['apple', '사과'],
-  ['banana', '바나나'],
-  ['orange', '오렌지'],
-  ['grape', '포도'],
-  ['strawberry', '딸기'],
-  ['watermelon', '수박'],
-  ['peach', '복숭아'],
-  ['mango', '망고'],
+      `const COUNTRIES: [string, string][] = [
+  ['au', 'Australia'],
+  ['br', 'Brazil'],
+  ['ca', 'Canada'],
+  ['fr', 'France'],
+  ['de', 'Germany'],
+  ['in', 'India'],
+  ['jp', 'Japan'],
+  ['kr', 'South Korea'],
+  ['gb', 'United Kingdom'],
+  ['us', 'United States'],
 ]`,
     ],
     stories: [
       {
         name: 'Default',
-        description: '라벨 + 플레이스홀더 · 과일 목록에서 검색/선택(비제어)',
-        render: `<div className="w-72">
+        gallery: true,
+        description: 'Type to filter the list, then pick with the mouse or keyboard',
+        render: `<div className="w-full max-w-xs">
+  <Autocomplete label="Country" placeholder="Search countries">
+    {COUNTRIES.map(([key, name]) => (
+      <AutocompleteItem key={key}>{name}</AutocompleteItem>
+    ))}
+  </Autocomplete>
+</div>`,
+      },
+      {
+        name: 'EmptyText',
+        description: 'emptyText is shown when nothing matches the query',
+        render: `<div className="w-full max-w-xs">
   <Autocomplete
-    label="과일"
-    placeholder="과일 검색"
-    onSelectionChange={(key) => console.log(key)}
+    label="Country"
+    placeholder="Try typing Atlantis"
+    emptyText="No countries match your search"
   >
-    {FRUITS.map(([key, name]) => (
+    {COUNTRIES.map(([key, name]) => (
       <AutocompleteItem key={key}>{name}</AutocompleteItem>
     ))}
   </Autocomplete>
 </div>`,
       },
       {
-        name: 'DefaultSelected',
-        description: 'defaultSelectedKey 로 초기 선택값 지정(비제어)',
-        render: `<div className="w-72">
-  <Autocomplete label="과일" placeholder="과일 검색" defaultSelectedKey="banana">
-    {FRUITS.map(([key, name]) => (
+        name: 'States',
+        description: 'isInvalid and isDisabled',
+        render: `<div className="grid w-full max-w-xs gap-4">
+  <Autocomplete label="Shipping country" placeholder="Search countries" isInvalid>
+    {COUNTRIES.map(([key, name]) => (
       <AutocompleteItem key={key}>{name}</AutocompleteItem>
     ))}
   </Autocomplete>
-</div>`,
-      },
-      {
-        name: 'Disabled',
-        description: 'isDisabled — 전체 필드 비활성',
-        render: `<div className="w-72">
-  <Autocomplete label="과일" placeholder="과일 검색" isDisabled defaultSelectedKey="apple">
-    {FRUITS.map(([key, name]) => (
+  <Autocomplete label="Billing country" isDisabled defaultSelectedKey="us">
+    {COUNTRIES.map(([key, name]) => (
       <AutocompleteItem key={key}>{name}</AutocompleteItem>
     ))}
   </Autocomplete>
@@ -60,21 +68,21 @@ export const specs = [
       },
       {
         name: 'Controlled',
-        description: 'selectedKey + onSelectionChange 로 제어',
-        renderFn: `const [selected, setSelected] = React.useState<string | number | null>('apple')
+        description: 'selectedKey and onSelectionChange',
+        renderFn: `const [country, setCountry] = React.useState<string | number | null>('jp')
 return (
-  <div className="w-72 space-y-2">
+  <div className="grid w-full max-w-xs gap-2">
     <Autocomplete
-      label="과일"
-      placeholder="과일 검색"
-      selectedKey={selected}
-      onSelectionChange={(key) => setSelected(key)}
+      label="Country"
+      placeholder="Search countries"
+      selectedKey={country}
+      onSelectionChange={setCountry}
     >
-      {FRUITS.map(([key, name]) => (
+      {COUNTRIES.map(([key, name]) => (
         <AutocompleteItem key={key}>{name}</AutocompleteItem>
       ))}
     </Autocomplete>
-    <p className="text-caption text-muted-foreground">선택된 키: {String(selected ?? '없음')}</p>
+    <p className="text-caption text-muted-foreground">Selected key: {String(country ?? 'none')}</p>
   </div>
 )`,
       },

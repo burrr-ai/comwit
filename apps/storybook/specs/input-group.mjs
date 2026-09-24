@@ -11,53 +11,58 @@ export const specs = [
     extraImports: [`import { Search } from 'lucide-react'`],
     stories: [
       {
-        name: 'SearchPrefix',
-        description: '검색 아이콘 prefix',
-        render: `<InputGroup className="w-72">
-  <InputAddon><Search /></InputAddon>
-  <Input placeholder="검색" />
-</InputGroup>`,
+        name: 'Addons',
+        gallery: true,
+        description: 'Icon and text addons share one focus ring with the input',
+        render: `<div className="grid w-full max-w-xs gap-3">
+  <InputGroup>
+    <InputAddon><Search /></InputAddon>
+    <Input placeholder="Search projects" aria-label="Search projects" />
+  </InputGroup>
+  <InputGroup>
+    <InputAddon className="pr-0">comwit.io/</InputAddon>
+    <Input defaultValue="acme-design" aria-label="Workspace URL" />
+  </InputGroup>
+</div>`,
       },
       {
-        name: 'UnitPrefixSuffix',
-        description: '단위 prefix(₩) · suffix(.00)',
-        render: `<div className="space-y-4">
-  <InputGroup className="w-72">
-    <InputAddon>₩</InputAddon>
-    <Input type="text" inputMode="numeric" placeholder="0" />
+        name: 'Units',
+        description: 'Prefix and suffix units around a numeric value',
+        render: `<div className="grid w-full max-w-xs gap-3">
+  <InputGroup>
+    <InputAddon>$</InputAddon>
+    <Input inputMode="decimal" placeholder="0.00" aria-label="Monthly budget" />
+    <InputAddon>USD</InputAddon>
   </InputGroup>
-  <InputGroup className="w-72">
-    <InputAddon>₩</InputAddon>
-    <Input type="text" inputMode="numeric" placeholder="0" />
-    <InputAddon>.00</InputAddon>
+  <InputGroup>
+    <Input inputMode="numeric" defaultValue="25" aria-label="Seats" />
+    <InputAddon>seats</InputAddon>
   </InputGroup>
 </div>`,
       },
       {
         name: 'TrailingButton',
-        description: '뒤에 붙는 버튼',
-        render: `<InputGroup className="w-80 pr-1">
-  <Input placeholder="이메일 주소" />
+        description: 'A compact button inside the group',
+        render: `<InputGroup className="w-full max-w-sm pr-1">
+  <Input type="email" placeholder="teammate@company.com" aria-label="Invite by email" />
   <InputAddon className="px-0">
-    <Button size="sm">확인</Button>
+    <Button size="sm">Invite</Button>
   </InputAddon>
 </InputGroup>`,
       },
       {
-        name: 'Disabled',
-        description: 'input:disabled 시 그룹 전체 흐려짐',
-        render: `<InputGroup className="w-72">
-  <InputAddon><Search /></InputAddon>
-  <Input placeholder="검색" disabled />
-</InputGroup>`,
-      },
-      {
-        name: 'Invalid',
-        description: 'aria-invalid 시 destructive 보더',
-        render: `<InputGroup className="w-72">
-  <InputAddon>₩</InputAddon>
-  <Input type="text" inputMode="numeric" placeholder="0" aria-invalid defaultValue="-1000" />
-</InputGroup>`,
+        name: 'States',
+        description: 'The group follows the inner input: aria-invalid and disabled',
+        render: `<div className="grid w-full max-w-xs gap-3">
+  <InputGroup>
+    <InputAddon>$</InputAddon>
+    <Input inputMode="decimal" defaultValue="-40" aria-invalid aria-label="Refund amount" />
+  </InputGroup>
+  <InputGroup>
+    <InputAddon><Search /></InputAddon>
+    <Input placeholder="Search is unavailable" disabled aria-label="Search" />
+  </InputGroup>
+</div>`,
       },
     ],
   },

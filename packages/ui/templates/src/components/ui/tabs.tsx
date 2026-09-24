@@ -1,8 +1,7 @@
-'use client'
-
 import * as React from 'react'
 import { Tabs as TabsPrimitive } from '@comwit/ui'
 
+import { focusRing, pressable } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
 
 function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
@@ -20,7 +19,7 @@ function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimi
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        'bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]',
+        'inline-flex h-9 w-fit items-center justify-center rounded-control bg-muted p-1 text-muted-foreground',
         className
       )}
       {...props}
@@ -32,8 +31,11 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
+      // 활성 탭은 흰 필+shadow-card 세그먼트(토스톤). 브랜드 언더라인보다 컨테이너 안 필터 UI에 맞음.
       className={cn(
-        "data-[state=active]:bg-background dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-focus focus-visible:outline-1 disabled:pointer-events-none disabled:text-disabled-foreground data-[state=active]:shadow-raised [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-body-sm font-semibold whitespace-nowrap text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-card disabled:pointer-events-none disabled:opacity-disabled [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        focusRing,
+        pressable,
         className
       )}
       {...props}

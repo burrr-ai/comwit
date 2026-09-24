@@ -10,56 +10,41 @@ export const specs = [
     ],
     stories: [
       {
-        name: 'Variants',
-        description: '4가지 variant (outlined · filled · standard · stacked)',
-        render: `<div className="grid max-w-sm gap-8">
-  {(['outlined', 'filled', 'standard', 'stacked'] as const).map((variant) => (
-    <TextField key={variant} variant={variant} label="이름" description={variant}>
-      <Input placeholder="홍길동" />
-    </TextField>
-  ))}
+        name: 'Default',
+        gallery: true,
+        description: 'Label, helper text and error wired to the control',
+        render: `<div className="grid w-full max-w-xs gap-4">
+  <TextField label="Display name" helperText="Shown on comments and mentions.">
+    <Input defaultValue="Jordan Lee" />
+  </TextField>
+  <TextField label="Work email" required error="Use your company email address.">
+    <Input type="email" defaultValue="jordan@gmail.com" />
+  </TextField>
 </div>`,
       },
       {
-        name: 'WithValue',
-        description: '값이 있으면 라벨이 떠오른 상태(플로팅)',
-        render: `<div className="grid max-w-sm gap-8">
-  {(['outlined', 'filled', 'standard', 'stacked'] as const).map((variant) => (
-    <TextField key={variant} variant={variant} label="이메일">
-      <Input type="email" defaultValue="hong@comwit.ai" />
-    </TextField>
-  ))}
-</div>`,
-      },
-      {
-        name: 'Required',
-        description: 'required 표시(*) + description',
-        render: `<TextField label="이름" required description="실명을 입력하세요" className="max-w-sm">
-  <Input placeholder="홍길동" />
-</TextField>`,
-      },
-      {
-        name: 'Error',
-        description: 'error 지정 시 invalid 상태 + 에러 메시지',
-        render: `<div className="grid max-w-sm gap-8">
-  {(['outlined', 'filled', 'standard', 'stacked'] as const).map((variant) => (
-    <TextField key={variant} variant={variant} label="이메일" error="올바른 이메일이 아닙니다">
-      <Input type="email" defaultValue="hong@" />
-    </TextField>
-  ))}
+        name: 'Invalid',
+        description: 'error replaces the helper text; invalid marks the field without a message',
+        render: `<div className="grid w-full max-w-xs gap-4">
+  <TextField label="Password" helperText="At least 12 characters." error="Password is too short.">
+    <Input type="password" defaultValue="hunter2" />
+  </TextField>
+  <TextField label="Invite code" invalid helperText="Codes are case sensitive.">
+    <Input defaultValue="WELCOME-2024" />
+  </TextField>
 </div>`,
       },
       {
         name: 'Disabled',
-        render: `<TextField label="이름" disabled description="수정할 수 없습니다" className="max-w-sm">
-  <Input defaultValue="홍길동" />
+        render: `<TextField label="Workspace ID" disabled helperText="Assigned when the workspace is created." className="max-w-xs">
+  <Input defaultValue="ws_8f2k1c" />
 </TextField>`,
       },
       {
         name: 'WithTextarea',
-        description: 'Input 대신 Textarea 를 컨트롤로 사용',
-        render: `<TextField label="자기소개" description="500자 이내" className="max-w-sm">
-  <Textarea placeholder="자유롭게 작성해 주세요" />
+        description: 'Any Input or Textarea works as the control',
+        render: `<TextField label="Project description" required helperText="Up to 280 characters." className="max-w-sm">
+  <Textarea placeholder="What is this project about?" />
 </TextField>`,
       },
     ],
