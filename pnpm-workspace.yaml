@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/state/*
+  - packages/ui/*
+
+allowBuilds:
+  esbuild: true
+  sharp: true
+  '@tailwindcss/oxide': true
+  unrs-resolver: true

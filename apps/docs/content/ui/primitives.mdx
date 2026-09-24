@@ -1,0 +1,39 @@
+---
+title: Headless primitives
+---
+
+# Headless primitives
+
+Use `@comwit/ui` directly when you want to own all styling and composition.
+
+```bash
+npm install @comwit/ui
+```
+
+```tsx
+'use client'
+
+import { Dialog } from '@comwit/ui'
+
+export function Example() {
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger>Open settings</Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content className="dialog-content">
+          <Dialog.Title>Settings</Dialog.Title>
+          <Dialog.Description>Update your workspace preferences.</Dialog.Description>
+          <Dialog.Close>Close</Dialog.Close>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
+```
+
+Supply your own CSS for the overlay and content. The primitive supplies state, focus handling, keyboard behavior, and accessibility attributes.
+
+Compound components use namespaces such as `Dialog.Root`, `Select.Trigger`, and `Tabs.Content`. Basic controls such as `Button`, `Input`, and `Textarea` are flat exports.
+
+For ready-to-customize styles, use the [CLI installation flow](/ui/docs/installation). The [component examples](/ui/components) show the styled layer.

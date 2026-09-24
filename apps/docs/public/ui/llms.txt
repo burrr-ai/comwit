@@ -1,0 +1,42 @@
+# Comwit UI — implementation guide
+
+Comwit UI provides headless behavior (@comwit/ui) and editable component source installed into a React project by the comwit-ui CLI. It is independent of Comwit State.
+
+## Install
+
+Requires React 18 or 19. The styled templates use Tailwind CSS v4.
+
+npx comwit-ui@latest init
+npx comwit-ui@latest add button dialog input
+
+Run these in the consumer project. init creates comwit.json, wires comwit-tokens.css, and installs base dependencies. add copies component sources and their registry dependencies, then installs needed npm dependencies. The default locations are components/ui, lib, and hooks; comwit.json controls aliases and the CSS path.
+
+Import installed components from the consumer's configured alias, for example:
+
+'use client'
+import { Button } from '@/components/ui/button'
+
+Do not import @comwit/ui-templates in a CLI consumer app. It is the source package used to build the registry and previews. @comwit/ui remains a runtime dependency for behavior.
+
+## Ownership
+
+Edit copied component files directly. Existing files are skipped; --overwrite replaces local edits, so review first. Use --dry for a preview or --no-install when managing dependencies separately.
+
+Keep behavior and accessibility in @comwit/ui; component source composes primitive parts and applies styles. Use the shipped semantic tokens (bg-primary, text-primary-foreground, border-border, rounded-md), not scattered hardcoded colors. Override CSS variables after the token import. Dark mode uses the .dark class. Consumers own their theme; there is no required named-theme preset.
+
+## Composition
+
+Primitives use namespace exports such as Dialog.Root / Trigger / Portal / Overlay / Content / Title / Description / Close. Button, Input and Textarea are flat exports. Preserve labels, focus behavior and keyboard interactions when modifying a component. Use the actual component docs and source for supported props; do not assume every shadcn or Radix API is interchangeable.
+
+For direct unstyled use, install @comwit/ui and import primitives from that package. For styled UI, prefer the CLI installation flow above.
+
+For imperative popup helpers mount OverlayProvider from overlay-kit once. For toast notifications install the sonner template and mount its Toaster once. Basic controls do not require these providers.
+
+## References
+
+- Installation: https://library.comwit.io/ui/docs/installation
+- Headless primitives: https://library.comwit.io/ui/docs/primitives
+- Components: https://library.comwit.io/ui/components
+- Examples: https://library.comwit.io/ui/examples
+- Tokens and theming: https://library.comwit.io/ui/theming
+- State (separate library): https://library.comwit.io/state/llms.txt

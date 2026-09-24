@@ -1,0 +1,622 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* 다크는 클래스 단일 스위치. `light-dark()` 를 쓰지 않는 이유:
+   그건 색만 커버하고 `dark:` 변형(미디어 기반)과 신호가 갈려 반쪽 다크가 난다.
+   `.dark` 하나가 (1) 토큰 값 (2) dark: 변형 (3) color-scheme 를 동시에 문다. */
+@custom-variant dark (&:is(.dark *));
+
+/* ════════════════════════════════════════════════════════════════
+   comwit-ui 디자인 토큰 (SSOT)
+
+   3계층:
+     L0 노브   — 뉴트럴 램프 12단 + 고수준 다이얼(radius-scale·border-width·elevation·duration…)
+     L1 시맨틱 — 역할 토큰. 대부분 램프의 alias.
+     L2 유틸   — @theme inline 이 L1 을 Tailwind 유틸명으로 승격.
+
+   커스터마이즈 = L0 만 덮는다. 컴포넌트는 리터럴을 절대 쓰지 않고 유틸만 소비하므로 JSX 0 수정.
+   **프리셋 테마는 싣지 않는다.** 다양성은 노브에서 나오고, 의견은 소비처가 갖는다.
+   raw hex·bg-gray-* 금지. 램프(--n-*)는 private — 컴포넌트에서 직접 참조 금지.
+   ──────────────────────────────────────────────────────────────── */
+
+/* ── L0: 램프(라이트) + 노브 ─────────────────────────────────── */
+:root {
+  color-scheme: light;
+
+  /* Radix 12-step 규약. 3=컴포넌트 면 · 5=active · 8=hover 보더 · 9=솔리드 · 11/12=텍스트.
+     소비처가 톤을 통째로 갈아끼울 땐 원칙적으로 이 12값만 바꾼다. */
+  --n-1: #ffffff;
+  --n-2: #f5f5f7;
+  --n-3: #ececef;
+  --n-4: #e8e8ed;
+  --n-5: #e3e3e8;
+  --n-6: #e0e0e0;
+  --n-7: #d2d2d7;
+  --n-8: #c7c7cc;
+  --n-9: #86868b;
+  --n-10: #6e6e73;
+  --n-11: #515154;
+  --n-12: #1d1d1f;
+
+  /* 컴윗 기본 잉크·브랜드 — 템플릿을 설치하면 이 톤에서 시작하고, 소비처는 L0 값만 덮는다. */
+  --ink: #0a0a0a;
+  --ink-soft: #505050;
+  --ink-muted: #767676;
+  --ink-subtle: #9ca3af;
+  --ink-disabled: #999999;
+  --brand: #3182f6;
+  --brand-foreground: #ffffff;
+  --brand-strong: #1b64da;
+  --brand-ink: #0b2e6b;
+  --brand-surface: #eff5ff;
+  --canvas: #ffffff;
+  --surface-subtle: #f4f5f7;
+  --fill: #e9ebef;
+  --line: #e8e8e5;
+  --line-strong: #d8dade;
+
+  /* 형태 노브 */
+  --radius-scale: 1; /* 곱셈 사다리 승수. 0 = 완전 직각, 2.6 = 과장된 라운드 */
+  --pill-radius: 9999px; /* 알약(칩·캘린더셀). 각지게 하려면 4px 같은 값으로.
+                                 ※ @theme inline 은 var() 없는 값을 리터럴로 굳혀버리므로
+                                    소비처가 덮을 수 있으려면 이렇게 한 겹 노브를 둬야 한다. */
+  --text-scale: 1; /* 타입 스케일 승수. 행간은 무단위 비율이라 같이 따라온다 */
+  --tracking-scale: 1; /* 자간 승수. 0 = 애플식 타이트 자간을 끈다 */
+  --border-width: 1px; /* bare/방향 보더 두께 (아래 @layer utilities 가 배선) */
+  --border-width-strong: 2px; /* 강조 보더 두께 */
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  --spacing: 0.25rem; /* p-/m-/gap- 시드. 낮추면 전역 밀도↑ */
+
+  /* 타이포 노브 — Tailwind 네임스페이스(--font-weight-* / --font-display)는 L2 가 매핑 */
+  --display-font: var(--font-sans);
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* 모션 노브 */
+  --duration-instant: 75ms;
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+  --press-scale: 0.98; /* 눌림 스케일. 1 = 눌림 없음 */
+  --press-scale-thumb: 1.1; /* 스위치 썸은 눌리면 오히려 커진다(머티리얼 관용). 1 = 없음 */
+  --ripple-opacity: 0.35;
+
+  /* 상태 노브 — 즉흥 알파(bg-primary/8 등) 대신 이름 있는 값 */
+  --state-hover: 0.05; /* hover 오버레이 불투명도 */
+  --state-selected: 0.08; /* 선택 오버레이 불투명도 */
+  --state-disabled: 0.5; /* 비활성 컨테이너 */
+  --state-disabled-content: 0.38; /* 비활성 아이콘/텍스트 */
+
+  /* 레이어링 SSOT — 오버레이 5종이 서로 물리지 않게 */
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-dropdown: 1000;
+  --z-overlay: 1100;
+  --z-modal: 1200;
+  --z-toast: 1300;
+
+  /* 치수 정합 */
+  --menu-min-width: 8rem;
+  --picker-width: 320px;
+
+  /* Elevation(라이트) — 다크는 .dark 에서 재저작(검정 그림자는 어두운 면에서 안 보인다) */
+  --elevation-0: none;
+  --elevation-1: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --elevation-2: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 8px rgba(16, 24, 40, 0.06);
+  --elevation-3: 0 2px 4px rgba(16, 24, 40, 0.06), 0 10px 28px rgba(16, 24, 40, 0.08);
+  --elevation-4: 0 4px 12px rgba(16, 24, 40, 0.1), 0 16px 40px rgba(16, 24, 40, 0.12);
+  --elevation-5: 0 8px 24px rgba(16, 24, 40, 0.12), 0 24px 64px rgba(16, 24, 40, 0.16);
+  /* 소형 요소(스위치 썸·활성 탭) 전용. 컨테이너 사다리와 분리해야
+     하드 오프셋 그림자(8px 같은) 를 줬을 때 20px 썸이 깨지지 않는다. */
+  --elevation-raised: 0 1px 2px rgba(16, 24, 40, 0.1), 0 1px 3px rgba(16, 24, 40, 0.08);
+
+  /* status 솔리드/틴트 — 브랜드 무관 고정. 리브랜딩에도 안 바뀐다. */
+  --success: #30a46c; /* Radix green9 */
+  --success-foreground: #ffffff;
+  --success-surface: #e6f6eb;
+  --success-surface-foreground: #1c7549;
+  --success-border: #8eceaa;
+  --warning: #f76b15;
+  --warning-foreground: #431407; /* 흰색은 2.97:1 미달 → 다크 잉크 */
+  --warning-surface: #ffefd6;
+  --warning-surface-foreground: #b54500;
+  --warning-border: #f5ae73;
+  --destructive: #e5484d;
+  --destructive-foreground: #ffffff;
+  --destructive-surface: #feebec;
+  --destructive-surface-foreground: #c62a2f;
+  --destructive-border: #f4a9aa;
+  --info: #0090ff;
+  --info-foreground: #ffffff;
+  --info-surface: #e6f4fe;
+  --info-surface-foreground: #0b68ba;
+  --info-border: #8ec8f6;
+}
+
+/* ── L0: 램프(다크) ──────────────────────────────────────────── */
+.dark {
+  color-scheme: dark;
+
+  --n-1: #161618;
+  --n-2: #1e1f22;
+  --n-3: #26272b;
+  --n-4: #2f3035;
+  --n-5: #3a3b41;
+  --n-6: #45464d;
+  --n-7: #55565e;
+  --n-8: #6a6b74;
+  --n-9: #8b8c94;
+  --n-10: #a1a2ab;
+  --n-11: #b6b7c0;
+  --n-12: #f4f4f7;
+
+  --ink: var(--n-12);
+  --ink-soft: var(--n-11);
+  --ink-muted: var(--n-10);
+  --ink-subtle: var(--n-9);
+  --ink-disabled: var(--n-8);
+  --brand-ink: #b9d4ff;
+  --brand-surface: #0c273f;
+  --canvas: var(--n-1);
+  --surface-subtle: var(--n-3);
+  --fill: var(--n-4);
+  --line: var(--n-6);
+  --line-strong: var(--n-8);
+
+  /* 다크 elevation — 검정 드롭섀도만으론 근검정 배경에서 depth 가 0이 된다.
+     강한 그림자 + 흰 inset 하이라이트(위 모서리 광원)로 윤곽을 만든다. */
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --elevation-2:
+    0 2px 8px rgba(0, 0, 0, 0.7), 0 1px 2px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --elevation-3:
+    0 10px 28px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --elevation-4:
+    0 16px 40px rgba(0, 0, 0, 0.75), 0 4px 12px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --elevation-5:
+    0 24px 64px rgba(0, 0, 0, 0.8), 0 8px 24px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --elevation-raised: 0 1px 3px rgba(0, 0, 0, 0.6);
+
+  /* status(다크) — **솔리드(step9)와 그 전경은 라이트와 동일하게 둔다.**
+     Radix 규약상 step9 는 라이트/다크에서 같은 색이다. 다크에서 솔리드를 밝히면
+     그 위 흰 전경 대비가 오히려 떨어진다(#ff6369+#fff = 2.90:1 < #e5484d+#fff = 3.91:1).
+     다크에서 재저작이 필요한 건 어두운 면 위에 얹히는 surface / 그 위 텍스트 / 보더뿐이다. */
+  --success-surface: #10261b;
+  --success-surface-foreground: #63d69b;
+  --success-border: #3f9169;
+  --warning-surface: #2a1804;
+  --warning-surface-foreground: #ffb066;
+  --warning-border: #ad6c33;
+  --destructive-surface: #2a1416;
+  --destructive-surface-foreground: #ff9ea0;
+  --destructive-border: #b85557;
+  --info-surface: #0c273f;
+  --info-surface-foreground: #7cc0ff;
+  --info-border: #4278b0;
+}
+
+/* ── L1: 시맨틱 alias ────────────────────────────────────────────
+   셀렉터에 .dark 를 함께 나열하는 게 핵심이다.
+   CSS 커스텀 프로퍼티는 "선언한 요소"에서 var() 가 치환되므로, 자식이 램프만 덮으면
+   :root 에서 이미 계산돼버린 alias 는 따라오지 않는다. 램프를 덮는 스코프마다 alias 도 다시 선언한다.
+
+   커스터마이즈는 소비처가 한다 — 라이브러리는 테마를 싣지 않는다.
+     전역:   styles.css import **뒤에** :root { --primary: …; --radius-scale: 0 }  (같은 특이성, 나중 선언이 이김)
+     스코프: 임의의 셀렉터에서 **시맨틱/노브**를 덮는다. var() 가 사용처에서 치환되므로 그대로 먹는다.
+             단 램프(--n-*)를 스코프에서 덮으려면 그 셀렉터에서 아래 alias 를 직접 다시 선언해야 한다. */
+:root,
+.dark {
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--canvas);
+  --card-foreground: var(--ink);
+  --popover: var(--canvas);
+  --popover-foreground: var(--ink);
+
+  /* 컴윗 브랜드 기본값. 소비처는 --brand 계열만 덮어 전체 리브랜딩한다. */
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --primary-strong: var(--brand-strong);
+  --primary-ink: var(--brand-ink);
+  --primary-surface: var(--brand-surface);
+
+  --secondary: var(--surface-subtle);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-subtle);
+  --soft-foreground: var(--ink-soft); /* 회색 본문·긴 설명 */
+  --muted-foreground: var(--ink-muted); /* 보조 정보·메타데이터 */
+  --subtle-foreground: var(--ink-subtle); /* 3차 정보·플레이스홀더 */
+  --disabled-foreground: var(--ink-disabled); /* 비활성 텍스트·아이콘 */
+  --accent: var(--fill); /* hover 채움 면. 브랜드색 아님(shadcn 관례) */
+  --accent-foreground: var(--ink);
+
+  /* Radix step5 = active/selected. hover(n-4)보다 한 스텝 더 눌러 "선택됨"을 분리한다.
+     예전엔 selected 도 bg-accent 라 hover 와 픽셀이 완전히 같았다.
+     라이트에선 n-4↔n-5 가 1.05:1 로 미묘하다(램프가 그 구간에서 압축돼 있다).
+     카드 대비로는 1.28:1 이라 "선택됨" 자체는 읽힌다. */
+  --selected: var(--n-5);
+
+  /* 로딩 플레이스홀더 전용면. muted/secondary 를 재사용하면 다크에서 카드와 같은 색이 된다. */
+  --skeleton: var(--n-3);
+
+  --placeholder: var(--subtle-foreground);
+  --switch-thumb: #ffffff; /* 스위치 노브 — 다크에서도 항상 밝아야 트랙 대비 유지 */
+
+  --border: var(--line); /* 기본 보더/디바이더 */
+  --border-strong: var(--line-strong); /* 강조 보더 */
+  --input: var(--line-strong); /* 입력 외곽 — 폼 어포던스 위해 hairline 보다 한 톤 강하게 */
+  --input-hover: var(--n-8); /* 입력 hover (구 border-ring/60 = 포커스색 오용) */
+  --ring: var(--brand); /* 포커스 링 — 지배적 액션과 같은 브랜드 신호 */
+
+  --overlay: rgba(0, 0, 0, 0.5); /* 모달 스크림 (구 raw bg-black/50) */
+  --surface-glass: rgba(255, 255, 255, 0.72); /* backdrop-blur 칩 (구 bg-card/90) */
+
+  /* 외부 소비자가 shadow-[var(--shadow-card)] 로 참조할 수 있게 변수도 노출.
+     리포 내부는 전부 shadow-card / shadow-card-hover 유틸을 쓴다(@theme inline 참조). */
+  --shadow-card: var(--elevation-2);
+  --shadow-card-hover: var(--elevation-3);
+}
+
+/* 다크 전용 시맨틱 보정 — alias 기본값 위에 덮는다.
+   ※ 반드시 alias 규칙보다 **뒤**에 있어야 한다. html.dark 는 `.dark` 와 `:root` 에 동시에 매치되고
+     둘 다 특이성 (0,1,0) 이라, alias 규칙이 뒤에 오면 앞선 .dark 오버라이드를 되돌려버린다. */
+.dark {
+  --card: var(--n-2); /* 배경 위로 톤 상승 = 다크의 depth 는 그림자가 아니라 톤이다 */
+  --popover: var(--n-3); /* 카드 위로 한 톤 더 */
+
+  /* 라이트에선 card 가 흰색(n-1)이라 muted/secondary 를 n-2 로 둬도 떠 보인다.
+     다크에선 card 가 n-2 라 그대로 두면 **대비 1.00:1 로 사라진다.**
+     테이블 헤더·푸터·탭 리스트·스켈레톤·행 press 가 전부 카드 안에 놓인다. 한 스텝 올린다. */
+  --muted: var(--n-3);
+  --secondary: var(--n-3);
+  --skeleton: var(--n-4);
+
+  /* 선 색은 다크에서 두 스텝 밝게 — n7 은 배경 대비 2.48:1 로 WCAG 1.4.11(3:1) 미달.
+     ring 을 input 보다 더 밝게 둬야 포커스 시 보더색이 실제로 달라 보인다. */
+  --input: var(--n-9); /* 배경 5.40 · 카드 4.93 · 팝오버 4.46 */
+  --input-hover: var(--n-10);
+  --switch-thumb: #f4f4f7;
+  --overlay: rgba(0, 0, 0, 0.72);
+  --surface-glass: rgba(30, 31, 34, 0.72);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   L2 — @theme inline: 토큰을 유틸리티로 승격. 유틸명 = 토큰명.
+   inline 이라 var() 인디렉션이 유지되고, .dark 나 소비처의 오버라이드 값이 라이브로 흐른다.
+   ──────────────────────────────────────────────────────────────── */
+@theme inline {
+  --font-sans:
+    var(--font-pretendard, 'Pretendard'), var(--font-noto-sans-kr, 'Noto Sans KR'), system-ui,
+    sans-serif;
+  --font-mono: var(--font-noto-sans-mono, 'Noto Sans Mono'), ui-monospace, monospace;
+  --font-display: var(--display-font); /* font-display 유틸 + 제목 슬롯 자동 배선(아래 base) */
+
+  /* 웨이트 노브 → font-normal/medium/semibold/bold 가 노브를 탄다.
+     ※ 이름은 반드시 Tailwind 네임스페이스(--font-weight-normal). --font-weight-regular 로 두면
+        font-normal 이 아니라 font-regular 라는 엉뚱한 유틸이 생긴다. */
+  --font-weight-normal: var(--weight-normal);
+  --font-weight-medium: var(--weight-medium);
+  --font-weight-semibold: var(--weight-semibold);
+  --font-weight-bold: var(--weight-bold);
+
+  /* 색 → bg-* / text-* / border-* / ring-*. 반전은 bg-foreground text-background. */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-surface: var(--primary-surface);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-soft-foreground: var(--soft-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-disabled-foreground: var(--disabled-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-selected: var(--selected);
+  --color-skeleton: var(--skeleton);
+  --color-placeholder: var(--placeholder);
+  --color-switch-thumb: var(--switch-thumb);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-input-hover: var(--input-hover);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+  --color-surface-glass: var(--surface-glass);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-surface: var(--success-surface);
+  --color-success-surface-foreground: var(--success-surface-foreground);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-surface-foreground: var(--warning-surface-foreground);
+  --color-warning-border: var(--warning-border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-surface: var(--destructive-surface);
+  --color-destructive-surface-foreground: var(--destructive-surface-foreground);
+  --color-destructive-border: var(--destructive-border);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-surface: var(--info-surface);
+  --color-info-surface-foreground: var(--info-surface-foreground);
+  --color-info-border: var(--info-border);
+
+  /* 그림자 → shadow-*. 빌트인을 덮어써서 컴포넌트 편집 0으로 elevation 이 리테마된다. */
+  --shadow-xs: var(--elevation-1);
+  --shadow-sm: var(--elevation-2);
+  --shadow-md: var(--elevation-3);
+  --shadow-lg: var(--elevation-4);
+  --shadow-xl: var(--elevation-5);
+  --shadow-raised: var(--elevation-raised);
+  /* 의미로 부르는 별칭 → shadow-card / shadow-card-hover 유틸 */
+  --shadow-card: var(--elevation-2);
+  --shadow-card-hover: var(--elevation-3);
+
+  /* ── 목적형 타입 스케일 — 컴윗 기본 밀도(본문 15 · 라벨 14 · 캡션 12).
+     크기+행간+자간(+제목 굵기)을 묶고 text-scale/tracking-scale 노브를 유지한다. */
+  --text-display-xl: calc(40px * var(--text-scale));
+  --text-display-xl--line-height: 1.1;
+  --text-display-xl--font-weight: var(--weight-bold);
+  --text-display-xl--letter-spacing: calc(-0.032em * var(--tracking-scale));
+
+  --text-display-lg: calc(32px * var(--text-scale));
+  --text-display-lg--line-height: 1.14;
+  --text-display-lg--font-weight: var(--weight-bold);
+  --text-display-lg--letter-spacing: calc(-0.03em * var(--tracking-scale));
+
+  --text-display-md: calc(28px * var(--text-scale));
+  --text-display-md--line-height: 1.18;
+  --text-display-md--font-weight: var(--weight-bold);
+  --text-display-md--letter-spacing: calc(-0.028em * var(--tracking-scale));
+
+  --text-display-sm: calc(22px * var(--text-scale));
+  --text-display-sm--line-height: 1.27;
+  --text-display-sm--font-weight: var(--weight-bold);
+  --text-display-sm--letter-spacing: calc(-0.024em * var(--tracking-scale));
+
+  --text-title-lg: calc(18px * var(--text-scale));
+  --text-title-lg--line-height: 1.33;
+  --text-title-lg--font-weight: var(--weight-semibold);
+  --text-title-lg--letter-spacing: calc(-0.022em * var(--tracking-scale));
+
+  --text-title-md: calc(16px * var(--text-scale));
+  --text-title-md--line-height: 1.38;
+  --text-title-md--font-weight: var(--weight-semibold);
+  --text-title-md--letter-spacing: calc(-0.02em * var(--tracking-scale));
+
+  --text-title-sm: calc(14px * var(--text-scale));
+  --text-title-sm--line-height: 1.43;
+  --text-title-sm--font-weight: var(--weight-semibold);
+  --text-title-sm--letter-spacing: calc(-0.016em * var(--tracking-scale));
+
+  --text-body: calc(15px * var(--text-scale));
+  --text-body--line-height: 1.6;
+  --text-body--letter-spacing: calc(-0.012em * var(--tracking-scale));
+
+  --text-body-sm: calc(13px * var(--text-scale));
+  --text-body-sm--line-height: 1.6;
+  --text-body-sm--letter-spacing: calc(-0.008em * var(--tracking-scale));
+
+  --text-label: calc(14px * var(--text-scale));
+  --text-label--line-height: 1.29;
+  --text-label--letter-spacing: calc(-0.014em * var(--tracking-scale));
+
+  --text-caption: calc(12px * var(--text-scale));
+  --text-caption--line-height: 1.33;
+  --text-caption--letter-spacing: calc(-0.006em * var(--tracking-scale));
+
+  --text-micro: calc(11px * var(--text-scale));
+  --text-micro--line-height: 1.27;
+  --text-micro--letter-spacing: calc(0.01em * var(--tracking-scale));
+
+  /* Radius 곱셈 사다리 — 기존 값과 정확히 일치(scale=1). --radius-scale 만이 성격을 바꾼다.
+     rounded-pill = 소비처가 각지게 만들 수 있는 알약(칩·캘린더셀)
+     rounded-full = 항상 원(아바타·라디오·리플 도트). 노브 대상 아님 — 시맨틱 보존. */
+  --radius-none: 0px;
+  --radius-xs: calc(4px * var(--radius-scale));
+  --radius-sm: calc(6px * var(--radius-scale));
+  --radius-md: calc(8px * var(--radius-scale));
+  --radius-lg: calc(10px * var(--radius-scale));
+  --radius-xl: calc(14px * var(--radius-scale));
+  --radius-2xl: calc(16px * var(--radius-scale));
+  --radius-3xl: calc(
+    24px * var(--radius-scale)
+  ); /* 바텀시트. 빌트인은 1.5rem 리터럴이라 노브를 배신한다 */
+  --radius-pill: var(--pill-radius); /* 노브 경유 = 소비처가 각지게 만들 수 있다 */
+  --radius-full: 9999px; /* 리터럴 = 어떤 테마도 못 바꾼다. 의도된 고정. */
+}
+
+@theme {
+  /* 이징 — 빌트인 ease-out/ease-in-out 은 하이재킹하지 않는다(대칭성 배신 방지). */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 1.4, 0.4, 1); /* 오버슈트 — 라디오 도트 등 명시적으로만 */
+
+  /* 리플 — 일반 transition duration 과 수명이 달라 500ms 로 독립시킨다.
+     ease/opacity 는 테마 노브를 따르고, forwards 로 종료 후 opacity 0 을 유지한다(잔상 방지). */
+  --animate-ripple: ripple 500ms var(--ease-standard) forwards;
+  @keyframes ripple {
+    from {
+      transform: scale(0);
+      opacity: var(--ripple-opacity);
+    }
+    to {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+}
+
+/* ── bare/방향 보더 두께를 노브에 묶는다.
+   @utility 로는 안 된다 — 빌트인과 이름이 겹치면 커스텀 유틸이 조용히 버려진다(실측 확인).
+   같은 utilities 레이어에 "뒤에" 같은 특이성으로 authored 규칙을 두면 이긴다.
+   variant 가 붙은 두께(field:border-2 등)는 이 방식으로 못 덮으므로 컴포넌트에서
+   border-[length:var(--border-width-strong)] 형태로 명시한다. ── */
+@layer utilities {
+  .border {
+    border-width: var(--border-width);
+  }
+  .border-t {
+    border-top-width: var(--border-width);
+  }
+  .border-r {
+    border-right-width: var(--border-width);
+  }
+  .border-b {
+    border-bottom-width: var(--border-width);
+  }
+  .border-l {
+    border-left-width: var(--border-width);
+  }
+  .border-2 {
+    border-width: var(--border-width-strong);
+  }
+  .border-b-2 {
+    border-bottom-width: var(--border-width-strong);
+  }
+}
+
+/* ── 모션 — duration-[var(--duration-base)] 대신 읽히는 이름.
+   빌트인 duration-* 은 숫자/임의값만 매칭하므로 이름 충돌이 없다. ── */
+@utility duration-instant {
+  transition-duration: var(--duration-instant);
+}
+@utility duration-fast {
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  transition-duration: var(--duration-base);
+}
+@utility duration-slow {
+  transition-duration: var(--duration-slow);
+}
+@utility duration-slower {
+  transition-duration: var(--duration-slower);
+}
+
+/* ── 레이어링 — z-50 난립 대신 이름 있는 사다리 ── */
+@utility z-raised {
+  z-index: var(--z-raised);
+}
+@utility z-sticky {
+  z-index: var(--z-sticky);
+}
+@utility z-dropdown {
+  z-index: var(--z-dropdown);
+}
+@utility z-overlay {
+  z-index: var(--z-overlay);
+}
+@utility z-modal {
+  z-index: var(--z-modal);
+}
+@utility z-toast {
+  z-index: var(--z-toast);
+}
+
+/* ── 노브를 부르는 이름 있는 유틸.
+   컴포넌트에 opacity-[var(--state-disabled)] 같은 arbitrary 를 흩뿌리지 않기 위한 것.
+   (variant 가 붙는 두께 border-[length:…] 처럼 @utility 로 못 감싸는 건 그대로 둔다) ── */
+@utility opacity-disabled {
+  opacity: var(--state-disabled);
+}
+@utility opacity-disabled-content {
+  opacity: var(--state-disabled-content);
+}
+@utility scale-press {
+  scale: var(--press-scale);
+}
+@utility scale-press-thumb {
+  scale: var(--press-scale-thumb);
+}
+@utility min-w-menu {
+  min-width: var(--menu-min-width);
+}
+@utility w-picker {
+  width: var(--picker-width);
+}
+@utility max-w-picker {
+  max-width: var(--picker-width);
+}
+
+/* 포커스 링 폭/오프셋 — Tailwind 가 ring-* 에 쓰는 합성 변수를 그대로 조립한다.
+   빌트인 `ring-[length:var(--focus-ring-width)]` 이 뱉는 선언과 바이트 단위로 동일함을 확인했다.
+   var() 폴백은 @property 등록이 없는 경우에도 box-shadow 가 무효화되지 않게 하는 안전장치. */
+@utility ring-focus {
+  --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0
+    calc(var(--focus-ring-width) + var(--tw-ring-offset-width, 0px))
+    var(--tw-ring-color, currentcolor);
+  box-shadow:
+    var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow, 0 0 #0000);
+}
+@utility ring-offset-focus {
+  --tw-ring-offset-width: var(--focus-ring-offset);
+  --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--focus-ring-offset)
+    var(--tw-ring-offset-color);
+}
+
+/* ── 상태 오버레이(M3 state layer) — currentColor 를 노브 불투명도로 합성.
+   체크박스/라디오 헤일로가 checked 시 primary 를 자동으로 따라간다. ── */
+@utility state-hover-layer {
+  background-color: color-mix(in oklab, currentColor calc(var(--state-hover) * 100%), transparent);
+}
+@utility state-selected-layer {
+  background-color: color-mix(
+    in oklab,
+    currentColor calc(var(--state-selected) * 100%),
+    transparent
+  );
+}
+
+@layer base {
+  /* 색 없는 `border` 유틸의 기본색을 hairline 토큰으로.
+     (Tailwind v4 기본 보더색은 currentColor = 텍스트색(거의 검정)이라, 이 규칙이 없으면
+      `border` 만 준 오버레이 content 등에 "날것" 검정 테두리가 나온다.) */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  /* 제목 슬롯이 디스플레이 폰트를 상속 — 소비처가 --display-font 만 바꾸면
+     dialog/sheet/card/alert 제목이 컴포넌트 편집 0으로 세리프/그로테스크가 된다. */
+  [data-slot='dialog-title'],
+  [data-slot='sheet-title'],
+  [data-slot='card-title'],
+  [data-slot='alert-title'] {
+    font-family: var(--display-font);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--background);
+    color: var(--foreground);
+  }
+}
+
+@layer components {
+}

@@ -1,8 +1,12 @@
 node_modules
 .DS_Store
-/dist
-/.next
-/pnpm-lock.yaml
-/yarn-error.log
+dist
+.next
+*.tsbuildinfo
+.pnpm-store
+storybook-static
 /.worktree
 /.claude
+apps/storybook/src/generated/
+packages/ui/cli/registry/
+apps/docs/app/ui/_generated/

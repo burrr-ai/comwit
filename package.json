@@ -2,15 +2,15 @@
   "name": "comwit-monorepo",
   "private": true,
   "version": "1.0.0",
-  "packageManager": "yarn@1.22.22",
-  "description": "Monorepo for comwit — React state management for vibe coding",
+  "packageManager": "pnpm@11.3.0",
+  "description": "State and UI libraries behind comwit.io templates.",
   "homepage": "https://library.comwit.io",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/meursyphus/comwit.git"
+    "url": "git+https://github.com/burrr-ai/comwit.git"
   },
   "bugs": {
-    "url": "https://github.com/meursyphus/comwit/issues"
+    "url": "https://github.com/burrr-ai/comwit/issues"
   },
   "license": "MIT",
   "author": "meursyphus",
@@ -21,23 +21,25 @@
     "claude-code",
     "llm"
   ],
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
     "prepare": "husky",
+    "dev": "pnpm dev:docs",
+    "dev:docs": "pnpm --filter docs dev",
+    "docs": "pnpm dev:docs",
+    "dev:state": "pnpm --filter @comwit/state dev",
+    "dev:ui": "pnpm --filter @comwit/ui dev",
+    "dev:playground": "pnpm --filter state-playground dev --port 3001",
+    "dev:ui-catalog": "pnpm --filter ui-dev dev",
+    "storybook": "pnpm --filter storybook dev",
+    "stories": "pnpm --filter storybook stories",
+    "registry": "pnpm --filter comwit-ui build:registry",
+    "build:packages": "pnpm --filter @comwit/state build && pnpm --filter @comwit/ui build && pnpm registry",
+    "build": "pnpm --filter docs build",
+    "test": "pnpm --filter @comwit/state test && node --test scripts/workspace.test.mjs",
+    "typecheck": "pnpm build:packages && pnpm --filter docs gen && pnpm stories && pnpm -r --if-present typecheck",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "format:staged": "lint-staged",
-    "dev:docs": "yarn workspace docs dev",
-    "dev:playground": "yarn workspace playground dev --port 3001",
-    "docs": "yarn workspace docs dev",
-    "playground": "yarn workspace playground dev --port 3001",
-    "dev:lib": "yarn workspace comwit dev",
-    "test": "yarn workspace comwit test",
-    "build": "yarn workspaces run build",
-    "dev": "yarn workspaces run dev"
+    "format:staged": "lint-staged"
   },
   "lint-staged": {
     "*.{js,cjs,mjs,jsx,ts,tsx,json,yaml,yml,md,mdx,css,scss,html}": [
@@ -48,5 +50,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.5.0",
     "prettier": "^3.5.3"
+  },
+  "engines": {
+    "node": ">=22.16.0"
   }
 }
