@@ -20,6 +20,7 @@ import {
   Redo,
 } from 'lucide-react'
 
+import { focusWithinField } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
 import { Button } from './button'
 import { Separator } from './separator'
@@ -30,6 +31,11 @@ export interface EditorProps {
   placeholder?: string
   className?: string
   editable?: boolean
+  /** 편집 영역 id — <Label htmlFor> 와 잇는다 */
+  id?: string
+  'aria-label'?: string
+  'aria-labelledby'?: string
+  'aria-invalid'?: boolean
 }
 
 function ToolbarButton({
@@ -179,16 +185,37 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
   )
 }
 
-function Editor({ value = '', onChange, placeholder, className, editable = true }: EditorProps) {
-  const editor = useRichTextEditor({ value, onChange, placeholder, editable })
+function Editor({
+  value = '',
+  onChange,
+  placeholder,
+  className,
+  editable = true,
+  id,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
+  'aria-invalid': ariaInvalid,
+}: EditorProps) {
+  const attributes = Object.fromEntries(
+    Object.entries({
+      id,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledBy,
+      'aria-invalid': ariaInvalid ? 'true' : undefined,
+    }).filter((entry): entry is [string, string] => entry[1] !== undefined)
+  )
+  const editor = useRichTextEditor({ value, onChange, placeholder, editable, attributes })
 
   if (!editor) return null
 
   return (
     <div
+      data-slot="editor"
+      data-invalid={ariaInvalid || undefined}
       className={cn(
-        'border-input rounded-md border bg-transparent shadow-xs',
-        'focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-focus',
+        'border-input rounded-control border bg-transparent transition-[border-color,box-shadow]',
+        focusWithinField,
+        'data-[invalid=true]:border-destructive',
         className
       )}
     >

@@ -11,20 +11,55 @@ export const specs = [
     ],
     stories: [
       {
-        name: 'Single',
-        description: 'type="single" collapsible · 2개 항목',
-        render: `<Accordion type="single" collapsible className="w-full max-w-md">
-  <AccordionItem value="item-1">
-    <AccordionTrigger>배송은 얼마나 걸리나요?</AccordionTrigger>
-    <AccordionContent>
-      주문 후 영업일 기준 2~3일 이내에 발송되며, 지역에 따라 배송 기간이 달라질 수 있습니다.
-    </AccordionContent>
+        name: 'Faq',
+        gallery: true,
+        description:
+          'type="single" collapsible — one answer open at a time, and it can be closed again.',
+        render: `<Accordion type="single" collapsible defaultValue="trial" className="w-full max-w-md">
+  <AccordionItem value="trial">
+    <AccordionTrigger>Is there a free trial?</AccordionTrigger>
+    <AccordionContent>Yes. Every workspace starts with 14 days of Pro, no card required.</AccordionContent>
   </AccordionItem>
-  <AccordionItem value="item-2">
-    <AccordionTrigger>교환 및 환불이 가능한가요?</AccordionTrigger>
-    <AccordionContent>
-      상품 수령 후 7일 이내에 교환 및 환불을 신청하실 수 있습니다. 단, 사용 흔적이 있는 경우 제한될 수 있습니다.
-    </AccordionContent>
+  <AccordionItem value="seats">
+    <AccordionTrigger>Can I change my plan later?</AccordionTrigger>
+    <AccordionContent>Upgrade or downgrade at any time. We prorate the difference on your next invoice.</AccordionContent>
+  </AccordionItem>
+  <AccordionItem value="export">
+    <AccordionTrigger>How do I export my data?</AccordionTrigger>
+    <AccordionContent>Go to Settings, then Data, and download a CSV or JSON archive of your workspace.</AccordionContent>
+  </AccordionItem>
+</Accordion>`,
+      },
+      {
+        name: 'Multiple',
+        description:
+          'type="multiple" lets several sections stay open. defaultValue takes an array.',
+        render: `<Accordion type="multiple" defaultValue={['shipping', 'returns']} className="w-full max-w-md">
+  <AccordionItem value="shipping">
+    <AccordionTrigger>Shipping</AccordionTrigger>
+    <AccordionContent>Orders ship within 2 business days. Tracking is emailed once the parcel leaves our warehouse.</AccordionContent>
+  </AccordionItem>
+  <AccordionItem value="returns">
+    <AccordionTrigger>Returns</AccordionTrigger>
+    <AccordionContent>Return unused items within 30 days for a full refund.</AccordionContent>
+  </AccordionItem>
+  <AccordionItem value="warranty">
+    <AccordionTrigger>Warranty</AccordionTrigger>
+    <AccordionContent>Hardware is covered for one year against manufacturing defects.</AccordionContent>
+  </AccordionItem>
+</Accordion>`,
+      },
+      {
+        name: 'DisabledItem',
+        description: 'A disabled AccordionItem stays visible but cannot be opened.',
+        render: `<Accordion type="single" collapsible className="w-full max-w-md">
+  <AccordionItem value="profile">
+    <AccordionTrigger>Profile</AccordionTrigger>
+    <AccordionContent>Update your name, photo and time zone.</AccordionContent>
+  </AccordionItem>
+  <AccordionItem value="sso" disabled>
+    <AccordionTrigger>Single sign-on (Enterprise only)</AccordionTrigger>
+    <AccordionContent>Connect Okta, Google Workspace or Azure AD.</AccordionContent>
   </AccordionItem>
 </Accordion>`,
       },

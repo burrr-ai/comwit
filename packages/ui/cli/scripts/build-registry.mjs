@@ -39,10 +39,9 @@ for (const file of readdirSync(uiDir).filter((f) => f.endsWith('.tsx'))) {
   for (const s of parseImports(content)) {
     if (s.startsWith('./'))
       registryDeps.add(s.slice(2)) // 형제 ui 컴포넌트
-    else if (s.startsWith('../../lib/popup')) registryDeps.add('popup')
-    else if (s.startsWith('../../lib/utils')) registryDeps.add('utils')
-    else if (s.startsWith('../../lib/interaction')) registryDeps.add('interaction')
-    else if (s.startsWith('../../hooks')) registryDeps.add('use-mobile')
+    else if (s.startsWith('../../lib/')) registryDeps.add(basename(s))
+    else if (s.startsWith('../../hooks/')) registryDeps.add(basename(s))
+    else if (s === '../../hooks') registryDeps.add('use-mobile')
     else if (s.startsWith('.')) continue
     else {
       const p = pkgName(s)
@@ -65,6 +64,8 @@ function fileItem(name, relPath, type) {
   const registryDeps = new Set()
   for (const s of parseImports(content)) {
     if (s.startsWith('../components/ui/')) registryDeps.add(s.split('/').pop())
+    else if (s.startsWith('./'))
+      registryDeps.add(basename(s)) // 같은 폴더의 lib/hook
     else if (s.startsWith('.')) continue
     else {
       const p = pkgName(s)
@@ -79,10 +80,18 @@ function fileItem(name, relPath, type) {
     files: [{ path: relPath, content }],
   }
 }
-items.push(fileItem('utils', 'lib/utils.ts', 'lib'))
-items.push(fileItem('popup', 'lib/popup.tsx', 'lib'))
-items.push(fileItem('interaction', 'lib/interaction.ts', 'lib'))
-items.push(fileItem('use-mobile', 'hooks/use-mobile.ts', 'hook'))
+// lib/* 와 hooks/* 는 파일 하나 = 아이템 하나 (hooks/index.ts 배럴은 패키지 전용이라 제외)
+for (const [dir, type] of [
+  ['lib', 'lib'],
+  ['hooks', 'hook'],
+]) {
+  for (const file of readdirSync(join(tplSrc, dir))
+    .filter((f) => /\.tsx?$/.test(f))
+    .sort()) {
+    if (file.startsWith('index.')) continue
+    items.push(fileItem(file.replace(/\.tsx?$/, ''), `${dir}/${file}`, type))
+  }
+}
 
 // 3) theme — 토큰 계약. globals.css(SSOT) 에서 :root 이후(토큰 + @theme + base)를 그대로 CSS 파일로 싣는다.
 //    `comwit-ui init` 이 이 파일을 프로젝트에 쓰고 globals.css 에서 @import 하도록 배선한다.

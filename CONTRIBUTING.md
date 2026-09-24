@@ -13,11 +13,11 @@ Use the existing tests and add regression coverage when behavior changes. The wo
 
 ## Documentation
 
-`apps/docs` is the only public documentation app. State MDX lives in `content/state`; UI editorial material and analysis live in `content/ui`. The site has shared navigation and separate product routes.
+`apps/docs` is the only public documentation app. State MDX lives in `content/state`; UI guides and the gallery layout (`content/ui/gallery.mjs`: groups, order and one-line summaries) live in `content/ui`. The site has shared navigation and separate product routes.
 
 State agent guidance lives in `public/state/llms.txt` and `public/state/llm/`. UI agent guidance lives in `public/ui/llms.txt`. Update the relevant guide when its public API or installation contract changes.
 
-UI examples are generated from `apps/storybook/specs/*.mjs`. The registry comes from the actual template files. Run `pnpm --filter docs gen` after changing specs or template source. Do not hand-edit `app/ui/_generated` or `packages/ui/cli/registry`.
+UI examples are generated from `apps/storybook/specs/*.mjs`; the story marked `gallery: true` is the one shown on the gallery card, and `docsOnly: true` specs produce docs examples without a Storybook story. The registry comes from the actual template files. Every template component must appear once in `gallery.mjs`; the generator warns about gaps. Run `pnpm --filter docs gen` after changing specs or template source. Do not hand-edit `app/ui/_generated` or `packages/ui/cli/registry`.
 
 The theme editor runs inside an iframe so CSS changes and portaled components cannot change the outer documentation shell. Site tokens use the `--site-` prefix to avoid colliding with library tokens.
 

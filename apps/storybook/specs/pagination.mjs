@@ -20,8 +20,63 @@ export const specs = [
     extraImports: [`import * as React from 'react'`],
     stories: [
       {
-        name: 'Default',
-        description: '이전·다음 · 페이지 번호 · 생략(...) · 현재 페이지 강조',
+        name: 'Interactive',
+        gallery: true,
+        description:
+          'Composable links you lay out yourself. Here the current page is kept in React.useState.',
+        renderFn: `const total = 10
+const [page, setPage] = React.useState(4)
+const around = [page - 1, page, page + 1].filter((n) => n > 1 && n < total)
+const go = (next: number) => (event: React.MouseEvent) => {
+  event.preventDefault()
+  setPage(Math.min(total, Math.max(1, next)))
+}
+return (
+  <Pagination>
+    <PaginationContent>
+      <PaginationItem>
+        <PaginationPrevious
+          href="#"
+          onClick={go(page - 1)}
+          disabled={page === 1}
+        />
+      </PaginationItem>
+      <PaginationItem>
+        <PaginationLink href="#" isActive={page === 1} onClick={go(1)}>1</PaginationLink>
+      </PaginationItem>
+      {around[0] > 2 && (
+        <PaginationItem>
+          <PaginationEllipsis />
+        </PaginationItem>
+      )}
+      {around.map((n) => (
+        <PaginationItem key={n}>
+          <PaginationLink href="#" isActive={n === page} onClick={go(n)}>{n}</PaginationLink>
+        </PaginationItem>
+      ))}
+      {around[around.length - 1] < total - 1 && (
+        <PaginationItem>
+          <PaginationEllipsis />
+        </PaginationItem>
+      )}
+      <PaginationItem>
+        <PaginationLink href="#" isActive={page === total} onClick={go(total)}>{total}</PaginationLink>
+      </PaginationItem>
+      <PaginationItem>
+        <PaginationNext
+          href="#"
+          onClick={go(page + 1)}
+          disabled={page === total}
+        />
+      </PaginationItem>
+    </PaginationContent>
+  </Pagination>
+)`,
+      },
+      {
+        name: 'Links',
+        description:
+          'Static markup for server-rendered lists: point each href at its page. isActive marks the current one.',
         render: `<Pagination>
   <PaginationContent>
     <PaginationItem>
@@ -46,77 +101,32 @@ export const specs = [
 </Pagination>`,
       },
       {
-        name: 'Truncated',
-        description: '양쪽 생략(...) · 가운데 페이지 그룹',
-        render: `<Pagination>
-  <PaginationContent>
-    <PaginationItem>
-      <PaginationPrevious href="#" />
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationLink href="#">1</PaginationLink>
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationEllipsis />
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationLink href="#">6</PaginationLink>
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationLink href="#" isActive>7</PaginationLink>
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationLink href="#">8</PaginationLink>
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationEllipsis />
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationLink href="#">20</PaginationLink>
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationNext href="#" />
-    </PaginationItem>
-  </PaginationContent>
-</Pagination>`,
-      },
-      {
-        name: 'Interactive',
-        description: 'useState로 현재 페이지 제어 · 이전/다음/번호 클릭',
-        renderFn: `const pages = [1, 2, 3, 4, 5]
+        name: 'PreviousNext',
+        description:
+          'Only previous and next, with the position in between. Good for feeds and mobile.',
+        renderFn: `const total = 12
 const [page, setPage] = React.useState(3)
 return (
   <Pagination>
-    <PaginationContent>
+    <PaginationContent className="gap-3">
       <PaginationItem>
         <PaginationPrevious
           href="#"
-          onClick={(e) => {
-            e.preventDefault()
+          onClick={(event) => {
+            event.preventDefault()
             setPage((p) => Math.max(1, p - 1))
           }}
         />
       </PaginationItem>
-      {pages.map((n) => (
-        <PaginationItem key={n}>
-          <PaginationLink
-            href="#"
-            isActive={n === page}
-            onClick={(e) => {
-              e.preventDefault()
-              setPage(n)
-            }}
-          >
-            {n}
-          </PaginationLink>
-        </PaginationItem>
-      ))}
+      <PaginationItem className="text-body-sm tabular-nums text-soft-foreground">
+        Page {page} of {total}
+      </PaginationItem>
       <PaginationItem>
         <PaginationNext
           href="#"
-          onClick={(e) => {
-            e.preventDefault()
-            setPage((p) => Math.min(pages.length, p + 1))
+          onClick={(event) => {
+            event.preventDefault()
+            setPage((p) => Math.min(total, p + 1))
           }}
         />
       </PaginationItem>

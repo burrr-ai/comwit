@@ -30,6 +30,8 @@ type AutocompleteProps = Omit<RootPrimitiveProps, 'collection' | 'children'> & {
   triggerClassName?: string
   contentClassName?: string
   itemClassName?: string
+  /** 필터 결과가 없을 때 문구 */
+  emptyText?: React.ReactNode
   /** 컬렉션 마커 — <AutocompleteItem key="…"> (프리미티브 Root 의 collection 으로 전달) */
   children?: RootPrimitiveProps['collection']
 }
@@ -43,6 +45,7 @@ function Autocomplete({
   triggerClassName,
   contentClassName,
   itemClassName,
+  emptyText = 'No results',
   placeholder,
   children,
   ...props
@@ -55,26 +58,28 @@ function Autocomplete({
       {...props}
     >
       {label != null ? (
-        <AutocompletePrimitive.Label className={cn('text-label text-foreground', labelClassName)}>
+        <AutocompletePrimitive.Label
+          className={cn('text-label font-semibold text-foreground', labelClassName)}
+        >
           {label}
         </AutocompletePrimitive.Label>
       ) : null}
 
       <AutocompletePrimitive.Control
         className={cn(
-          // input 톤: h-10 border border-input rounded-md bg-transparent + 포커스는 컨테이너가 표시
-          'relative flex h-10 w-full items-center rounded-md border border-input bg-transparent transition-[border-color,box-shadow]',
+          // input 톤: h-9 border border-input rounded-control + 포커스는 컨테이너가 표시
+          'relative flex h-9 w-full items-center rounded-control border border-input bg-transparent transition-[border-color,box-shadow]',
           focusWithinField,
           // input(aria-invalid) 이 있으면 컨트롤을 destructive 로
-          'has-[input[aria-invalid=true]]:border-destructive has-[input[aria-invalid=true]]:ring-focus has-[input[aria-invalid=true]]:ring-destructive/20',
-          'has-[input:disabled]:cursor-not-allowed has-[input:disabled]:text-disabled-foreground',
+          'has-[input[aria-invalid=true]]:border-destructive has-[input[aria-invalid=true]]:ring-field has-[input[aria-invalid=true]]:ring-destructive/20',
+          'has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-disabled',
           controlClassName
         )}
       >
         <AutocompletePrimitive.Input
           placeholder={placeholder}
           className={cn(
-            'h-full min-w-0 flex-1 bg-transparent px-3 text-base outline-none placeholder:text-placeholder selection:bg-primary selection:text-primary-foreground disabled:cursor-not-allowed disabled:text-disabled-foreground md:text-sm',
+            'h-full min-w-0 flex-1 bg-transparent px-3 text-body-sm outline-none placeholder:text-subtle-foreground selection:bg-primary selection:text-primary-foreground disabled:cursor-not-allowed',
             inputClassName
           )}
         />
@@ -91,21 +96,23 @@ function Autocomplete({
       <AutocompletePrimitive.Content
         itemIndicator={<CheckIcon className="size-4" />}
         emptyState={
-          <div className="px-2 py-6 text-center text-sm text-muted-foreground">결과 없음</div>
+          <div className="px-2 py-6 text-center text-body-sm text-muted-foreground">
+            {emptyText}
+          </div>
         }
         className={cn(
           // select content 톤 + 트리거 폭 매칭(--cw-autocomplete-anchor-width). 보더는 전역 hairline, elevation 은 토큰.
-          'z-dropdown w-[var(--cw-autocomplete-anchor-width)] min-w-menu origin-top overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-card-hover',
+          'z-dropdown w-[var(--cw-autocomplete-anchor-width)] min-w-menu origin-top overflow-x-hidden overflow-y-auto rounded-card border border-border bg-popover p-2 text-popover-foreground shadow-card-hover',
           'animate-in fade-in-0 zoom-in-95',
           contentClassName
         )}
         itemClassName={cn(
           // select item 톤
-          'relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none',
+          'relative flex w-full cursor-pointer items-center gap-2 rounded-control py-2.5 pr-9 pl-3.5 text-body-sm font-medium outline-hidden select-none',
           'data-[focused]:bg-accent data-[focused]:text-accent-foreground',
-          'data-[disabled]:pointer-events-none data-[disabled]:text-disabled-foreground',
+          'data-[disabled]:pointer-events-none data-[disabled]:opacity-disabled',
           // 선택 표식(체크) — 우측 절대배치
-          '[&_[data-slot=autocomplete-item-indicator]]:absolute [&_[data-slot=autocomplete-item-indicator]]:right-2 [&_[data-slot=autocomplete-item-indicator]]:flex [&_[data-slot=autocomplete-item-indicator]]:size-3.5 [&_[data-slot=autocomplete-item-indicator]]:items-center [&_[data-slot=autocomplete-item-indicator]]:justify-center',
+          '[&_[data-slot=autocomplete-item-indicator]]:absolute [&_[data-slot=autocomplete-item-indicator]]:right-3 [&_[data-slot=autocomplete-item-indicator]]:text-primary [&_[data-slot=autocomplete-item-indicator]]:flex [&_[data-slot=autocomplete-item-indicator]]:size-3.5 [&_[data-slot=autocomplete-item-indicator]]:items-center [&_[data-slot=autocomplete-item-indicator]]:justify-center',
           "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
           itemClassName
         )}

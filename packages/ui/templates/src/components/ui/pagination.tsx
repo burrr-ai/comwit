@@ -32,20 +32,33 @@ function PaginationItem({ ...props }: React.ComponentProps<'li'>) {
 
 type PaginationLinkProps = {
   isActive?: boolean
+  /** 첫/끝 페이지의 이전/다음처럼 갈 곳이 없을 때 — 포커스·클릭에서 빠진다 */
+  disabled?: boolean
 } & Pick<React.ComponentProps<typeof Button>, 'size'> &
   React.ComponentProps<'a'>
 
-function PaginationLink({ className, isActive, size = 'icon', ...props }: PaginationLinkProps) {
+function PaginationLink({
+  className,
+  isActive,
+  disabled,
+  size = 'icon',
+  tabIndex,
+  ...props
+}: PaginationLinkProps) {
   return (
     <a
       aria-current={isActive ? 'page' : undefined}
+      aria-disabled={disabled || undefined}
+      tabIndex={disabled ? -1 : tabIndex}
       data-slot="pagination-link"
       data-active={isActive}
       className={cn(
+        // 현재 페이지는 Pager 와 같은 솔리드 알약
         buttonVariants({
-          variant: isActive ? 'outline' : 'ghost',
+          variant: isActive ? 'default' : 'ghost',
           size,
         }),
+        'tabular-nums aria-disabled:pointer-events-none aria-disabled:opacity-disabled',
         className
       )}
       {...props}
@@ -56,17 +69,18 @@ function PaginationLink({ className, isActive, size = 'icon', ...props }: Pagina
 function PaginationPrevious({
   className,
   size,
+  label = 'Previous',
   ...props
-}: React.ComponentProps<typeof PaginationLink>) {
+}: React.ComponentProps<typeof PaginationLink> & { label?: string }) {
   return (
     <PaginationLink
-      aria-label="Go to previous page"
+      aria-label={label}
       size={size || 'default'}
       className={cn('gap-1 px-2.5 sm:pl-2.5', className)}
       {...props}
     >
       <ChevronLeftIcon />
-      <span className="hidden sm:block">Previous</span>
+      <span className="hidden sm:block">{label}</span>
     </PaginationLink>
   )
 }
@@ -74,16 +88,17 @@ function PaginationPrevious({
 function PaginationNext({
   className,
   size,
+  label = 'Next',
   ...props
-}: React.ComponentProps<typeof PaginationLink>) {
+}: React.ComponentProps<typeof PaginationLink> & { label?: string }) {
   return (
     <PaginationLink
-      aria-label="Go to next page"
+      aria-label={label}
       size={size || 'default'}
       className={cn('gap-1 px-2.5 sm:pr-2.5', className)}
       {...props}
     >
-      <span className="hidden sm:block">Next</span>
+      <span className="hidden sm:block">{label}</span>
       <ChevronRightIcon />
     </PaginationLink>
   )

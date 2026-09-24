@@ -1,9 +1,13 @@
+// Image avatars use inline data URIs because the static Storybook build blocks external URLs.
+const photo = (initials, bg) =>
+  `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%23${bg}'/><text x='40' y='50' font-size='28' font-weight='600' fill='%23ffffff' text-anchor='middle' font-family='sans-serif'>${initials}</text></svg>`
+
 export const specs = [
   {
     title: 'Avatar',
     slug: 'avatar',
     covers: ['avatar'],
-    // 컴포넌드(Avatar/AvatarImage/AvatarFallback) → meta.component 생략
+    // Compound component (Avatar / AvatarImage / AvatarFallback), so meta.component is omitted.
     imports: [
       {
         from: '@comwit/ui-templates/avatar',
@@ -12,53 +16,56 @@ export const specs = [
     ],
     stories: [
       {
-        name: 'WithImage',
-        description:
-          '이미지 로드 시 AvatarImage, 실패 시 AvatarFallback 노출 (SB 정적 빌드에서 외부 URL 차단 → 자체 data URI 사용)',
-        render: `<div className="flex items-center gap-4">
-  <Avatar>
-    <AvatarImage
-      src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%234f46e5'/><text x='20' y='26' font-size='16' fill='%23ffffff' text-anchor='middle' font-family='sans-serif'>CW</text></svg>"
-      alt="사용자 프로필"
-    />
-    <AvatarFallback>CW</AvatarFallback>
-  </Avatar>
-  <span className="text-sm text-muted-foreground">이미지 있음</span>
+        name: 'Team',
+        gallery: true,
+        description: 'A profile row and an overlapping group with an overflow count.',
+        render: `<div className="flex flex-col items-center gap-6">
+  <div className="flex items-center gap-3">
+    <Avatar className="size-12">
+      <AvatarImage src="${photo('AC', '3b5bdb')}" alt="Ava Chen" />
+      <AvatarFallback>AC</AvatarFallback>
+    </Avatar>
+    <div>
+      <p className="text-body font-semibold text-foreground">Ava Chen</p>
+      <p className="text-body-sm text-soft-foreground">Product designer · Online</p>
+    </div>
+  </div>
+  <div className="flex items-center gap-3">
+    <div className="flex -space-x-2">
+      {['LP', 'SR', 'NK', 'MJ'].map((initials) => (
+        <Avatar key={initials} className="size-9 ring-2 ring-background">
+          <AvatarFallback>{initials}</AvatarFallback>
+        </Avatar>
+      ))}
+      <Avatar className="size-9 ring-2 ring-background">
+        <AvatarFallback className="bg-primary-surface text-primary">+3</AvatarFallback>
+      </Avatar>
+    </div>
+    <span className="text-body-sm text-soft-foreground">7 people are editing</span>
+  </div>
 </div>`,
       },
       {
-        name: 'Fallback',
-        description: '이미지 없이 이니셜만 표시',
+        name: 'ImageAndFallback',
+        description:
+          'AvatarImage renders once it loads; AvatarFallback shows the initials until then or if it fails.',
         render: `<div className="flex items-center gap-4">
-  <Avatar>
-    <AvatarFallback>CW</AvatarFallback>
+  <Avatar className="size-10">
+    <AvatarImage src="${photo('LP', '2f9e44')}" alt="Liam Patel" />
+    <AvatarFallback>LP</AvatarFallback>
   </Avatar>
-  <Avatar>
-    <AvatarFallback>홍</AvatarFallback>
-  </Avatar>
-  <Avatar>
-    <AvatarFallback>AI</AvatarFallback>
+  <Avatar className="size-10">
+    <AvatarFallback>SR</AvatarFallback>
   </Avatar>
 </div>`,
       },
       {
         name: 'Sizes',
-        description: 'size 프롭 없음 → className 유틸(size-*)로 크기 조절 (기본 size-8)',
+        description: 'There is no size prop. Set the size with a size-* utility (default size-8).',
         render: `<div className="flex items-center gap-4">
-  {(['size-6', 'size-8', 'size-10', 'size-12'] as const).map((s) => (
-    <Avatar key={s} className={s}>
-      <AvatarFallback>CW</AvatarFallback>
-    </Avatar>
-  ))}
-</div>`,
-      },
-      {
-        name: 'Group',
-        description: '겹쳐 쌓은 아바타 그룹',
-        render: `<div className="flex -space-x-2">
-  {(['CW', '홍', 'AI', '문'] as const).map((label) => (
-    <Avatar key={label} className="ring-2 ring-background">
-      <AvatarFallback>{label}</AvatarFallback>
+  {(['size-6', 'size-8', 'size-10', 'size-12', 'size-16'] as const).map((size) => (
+    <Avatar key={size} className={size}>
+      <AvatarFallback>NK</AvatarFallback>
     </Avatar>
   ))}
 </div>`,

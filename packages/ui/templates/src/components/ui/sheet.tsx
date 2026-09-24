@@ -43,9 +43,11 @@ function SheetContent({
   className,
   children,
   side = 'right',
+  showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left'
+  showCloseButton?: boolean
 }) {
   return (
     <SheetPortal>
@@ -53,29 +55,33 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-modal flex flex-col gap-4 shadow-lg transition ease-standard data-[state=closed]:duration-slow data-[state=open]:duration-slower',
+          'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-modal flex flex-col gap-4 shadow-card-hover transition ease-standard data-[state=closed]:duration-slow data-[state=open]:duration-slower',
           side === 'right' &&
             'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l border-border sm:max-w-sm',
           side === 'left' &&
             'data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left inset-y-0 left-0 h-full w-3/4 border-r border-border sm:max-w-sm',
           side === 'top' &&
-            'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b border-border',
+            'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto rounded-b-sheet border-b border-border',
+          // 바텀시트: 아래에서 올라오므로 윗모서리만 rounded-sheet
           side === 'bottom' &&
-            'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t border-border',
+            'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto rounded-t-sheet border-t border-border',
           className
         )}
         {...props}
       >
         {children}
-        <SheetPrimitive.Close
-          className={cn(
-            focusRing,
-            'absolute top-4 right-4 rounded-md p-1 opacity-60 transition hover:bg-accent hover:opacity-100 disabled:pointer-events-none'
-          )}
-        >
-          <XIcon className="size-4" />
-          <span className="sr-only">닫기</span>
-        </SheetPrimitive.Close>
+        {showCloseButton && (
+          <SheetPrimitive.Close
+            data-slot="sheet-close"
+            className={cn(
+              focusRing,
+              'absolute top-4 right-4 rounded-control p-1 opacity-60 transition-opacity hover:opacity-100 disabled:pointer-events-none'
+            )}
+          >
+            <XIcon className="size-4" />
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+        )}
       </SheetPrimitive.Content>
     </SheetPortal>
   )

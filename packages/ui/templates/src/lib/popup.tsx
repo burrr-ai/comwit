@@ -26,6 +26,8 @@ interface ConfirmOptions {
   description: string
   confirmText?: string
   cancelText?: string
+  /** 되돌릴 수 없는 작업 — 확인 버튼을 destructive 로 */
+  destructive?: boolean
 }
 
 interface AlertOptions {
@@ -76,7 +78,7 @@ function PopupShell({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
                 transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="bg-popover text-popover-foreground pointer-events-auto grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-xl border border-border p-6 shadow-lg sm:max-w-lg"
+                className="bg-popover text-popover-foreground pointer-events-auto grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-card border border-border p-6 shadow-card-hover sm:max-w-lg"
               >
                 {children}
               </motion.div>
@@ -89,10 +91,11 @@ function PopupShell({
 }
 
 function confirm({
-  title = '확인',
+  title = 'Are you sure?',
   description,
-  confirmText = '확인',
-  cancelText = '취소',
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  destructive = false,
 }: ConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
     overlay.open(({ isOpen, close, unmount }) => (
@@ -119,6 +122,7 @@ function confirm({
             {cancelText}
           </Button>
           <Button
+            variant={destructive ? 'destructive' : 'default'}
             onClick={() => {
               resolve(true)
               close()
@@ -132,7 +136,7 @@ function confirm({
   })
 }
 
-function alert({ title = '알림', description, confirmText = '확인' }: AlertOptions): Promise<void> {
+function alert({ title = 'Notice', description, confirmText = 'OK' }: AlertOptions): Promise<void> {
   return new Promise((resolve) => {
     overlay.open(({ isOpen, close, unmount }) => (
       <PopupShell

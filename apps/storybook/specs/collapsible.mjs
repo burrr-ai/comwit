@@ -8,69 +8,75 @@ export const specs = [
         from: '@comwit/ui-templates/collapsible',
         names: ['Collapsible', 'CollapsibleTrigger', 'CollapsibleContent'],
       },
+      { from: '@comwit/ui-templates/button', names: ['Button'] },
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `import { ChevronsUpDown } from 'lucide-react'`,
+      `import { ChevronDown, ChevronsUpDown, Lock } from 'lucide-react'`,
     ],
     stories: [
       {
-        name: 'Default',
-        description: '기본 접힘 상태(비제어) — 트리거를 눌러 내용을 펼친다',
-        render: `<Collapsible className="w-80 space-y-2">
-  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border px-4 py-2 text-body font-medium hover:bg-muted">
-    자주 묻는 질문
-    <ChevronsUpDown className="size-4 text-muted-foreground" />
-  </CollapsibleTrigger>
-  <CollapsibleContent className="space-y-1 rounded-md border px-4 py-2 text-body text-muted-foreground">
-    <p>배송은 영업일 기준 2~3일 소요됩니다.</p>
-    <p>주말 및 공휴일은 배송이 되지 않습니다.</p>
-  </CollapsibleContent>
-</Collapsible>`,
-      },
-      {
-        name: 'DefaultOpen',
-        description: 'defaultOpen 으로 펼쳐진 상태에서 시작',
-        render: `<Collapsible defaultOpen className="w-80 space-y-2">
-  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border px-4 py-2 text-body font-medium hover:bg-muted">
-    상세 정보
-    <ChevronsUpDown className="size-4 text-muted-foreground" />
-  </CollapsibleTrigger>
-  <CollapsibleContent className="rounded-md border px-4 py-2 text-body text-muted-foreground">
-    처음부터 펼쳐진 채로 표시됩니다.
+        name: 'Repositories',
+        gallery: true,
+        description: 'The first row stays visible; the trigger reveals the rest.',
+        render: `<Collapsible className="grid w-80 gap-2">
+  <div className="flex items-center justify-between gap-4 pl-1">
+    <p className="text-body-sm font-semibold text-foreground">Morgan starred 3 repositories</p>
+    <CollapsibleTrigger asChild>
+      <Button variant="ghost" size="icon" className="size-8" aria-label="Toggle repositories">
+        <ChevronsUpDown />
+      </Button>
+    </CollapsibleTrigger>
+  </div>
+  <div className="rounded-control border border-border px-4 py-2.5 font-mono text-body-sm text-foreground">
+    comwit/state
+  </div>
+  <CollapsibleContent className="grid gap-2">
+    <div className="rounded-control border border-border px-4 py-2.5 font-mono text-body-sm text-foreground">
+      comwit/ui
+    </div>
+    <div className="rounded-control border border-border px-4 py-2.5 font-mono text-body-sm text-foreground">
+      comwit/templates
+    </div>
   </CollapsibleContent>
 </Collapsible>`,
       },
       {
         name: 'Controlled',
-        description: 'React.useState 로 open 상태 제어 · 외부 상태 표시',
+        description: 'Control open with React.useState so the trigger label can follow the state.',
         renderFn: `const [open, setOpen] = React.useState(false)
-    return (
-      <div className="w-80 space-y-3">
-        <p className="text-caption text-muted-foreground">현재 상태: {open ? '펼침' : '접힘'}</p>
-        <Collapsible open={open} onOpenChange={setOpen} className="space-y-2">
-          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border px-4 py-2 text-body font-medium hover:bg-muted">
-            알림 설정
-            <ChevronsUpDown className="size-4 text-muted-foreground" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-1 rounded-md border px-4 py-2 text-body text-muted-foreground">
-            <p>이메일 알림</p>
-            <p>푸시 알림</p>
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
-    )`,
+return (
+  <Collapsible open={open} onOpenChange={setOpen} className="grid w-80 gap-3">
+    <div className="grid gap-1 text-body-sm">
+      <p className="font-semibold text-foreground">Webhook endpoint</p>
+      <p className="font-mono text-soft-foreground">https://api.acme.dev/hooks/orders</p>
+    </div>
+    <CollapsibleContent className="grid gap-1 rounded-control bg-muted px-4 py-3 text-body-sm text-soft-foreground">
+      <p>Retries: 5 with exponential backoff</p>
+      <p>Timeout: 10 seconds</p>
+      <p>Signing secret: rotated 12 days ago</p>
+    </CollapsibleContent>
+    <CollapsibleTrigger asChild>
+      <Button variant="link" size="sm" className="w-fit px-0">
+        {open ? 'Hide advanced options' : 'Show advanced options'}
+        <ChevronDown className={open ? 'rotate-180' : undefined} />
+      </Button>
+    </CollapsibleTrigger>
+  </Collapsible>
+)`,
       },
       {
         name: 'Disabled',
-        description: 'disabled — 트리거를 눌러도 열리지 않음',
-        render: `<Collapsible disabled className="w-80 space-y-2">
-  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border px-4 py-2 text-body font-medium disabled:cursor-not-allowed disabled:opacity-50">
-    비활성화됨
-    <ChevronsUpDown className="size-4 text-muted-foreground" />
+        description: 'disabled keeps the section closed and disables the trigger.',
+        render: `<Collapsible disabled className="grid w-80 gap-2">
+  <CollapsibleTrigger asChild>
+    <Button variant="outline" className="justify-between">
+      Billing history
+      <Lock />
+    </Button>
   </CollapsibleTrigger>
-  <CollapsibleContent className="rounded-md border px-4 py-2 text-body text-muted-foreground">
-    열 수 없는 내용입니다.
+  <CollapsibleContent className="rounded-control border border-border px-4 py-2.5 text-body-sm text-soft-foreground">
+    Available on the Pro plan.
   </CollapsibleContent>
 </Collapsible>`,
       },

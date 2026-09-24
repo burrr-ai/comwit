@@ -4,17 +4,23 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '../../lib/utils'
 
+// 뱃지 = 정보 라벨. 인터랙션 없이 상태 5토큰을 옅은 surface 로 노출한다.
 const badgeVariants = cva(
-  'inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-focus aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden',
+  cn(
+    'inline-flex w-fit shrink-0 items-center justify-center gap-1 whitespace-nowrap',
+    'rounded-pill border border-transparent px-2 py-0.5 text-micro font-semibold',
+    '[&>svg]:pointer-events-none [&>svg]:size-3 [&>svg]:shrink-0'
+  ),
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90',
-        secondary:
-          'border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90',
-        destructive:
-          'border-transparent bg-destructive text-destructive-foreground [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
-        outline: 'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
+        default: 'bg-primary text-primary-foreground',
+        secondary: 'bg-secondary text-secondary-foreground',
+        outline: 'border-border text-foreground',
+        success: 'bg-success-surface text-success-surface-foreground',
+        warning: 'bg-warning-surface text-warning-surface-foreground',
+        destructive: 'bg-destructive-surface text-destructive-surface-foreground',
+        info: 'bg-info-surface text-info-surface-foreground',
       },
     },
     defaultVariants: {

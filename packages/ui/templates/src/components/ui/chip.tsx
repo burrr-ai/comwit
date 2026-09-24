@@ -8,21 +8,22 @@ import { useRipple } from '@comwit/ui'
 import { disabledStyle, focusRing, pressable, rippleItemClassName } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
 
+// 칩 = 필터·태그·선택. tone×variant 색은 compoundVariants 에서, 인터랙션은 아래 훅에서.
 const chipVariants = cva(
   cn(
-    'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-pill select-none shrink-0',
+    'inline-flex shrink-0 select-none items-center justify-center gap-1 whitespace-nowrap rounded-pill font-semibold',
     '[&_svg]:pointer-events-none [&_svg]:shrink-0'
   ),
   {
     variants: {
       variant: {
-        filled: '',
-        tonal: '',
+        solid: '',
+        soft: '',
         outline: 'border bg-transparent',
       },
       tone: {
         neutral: '',
-        primary: '',
+        brand: '',
         success: '',
         warning: '',
         destructive: '',
@@ -31,42 +32,43 @@ const chipVariants = cva(
       size: {
         sm: 'h-6 px-2.5 text-caption',
         md: 'h-8 px-3 text-body-sm',
+        lg: 'h-9 px-4 text-body-sm',
       },
     },
     compoundVariants: [
-      // filled — 진한 면 + 흰 글자 (neutral 은 먹색 면)
-      { variant: 'filled', tone: 'neutral', class: 'bg-foreground text-background' },
-      { variant: 'filled', tone: 'primary', class: 'bg-primary text-primary-foreground' },
-      { variant: 'filled', tone: 'success', class: 'bg-success text-success-foreground' },
-      { variant: 'filled', tone: 'warning', class: 'bg-warning text-warning-foreground' },
+      // solid — 진한 면 + 대비 글자 (neutral 은 먹색)
+      { variant: 'solid', tone: 'neutral', class: 'bg-foreground text-background' },
+      { variant: 'solid', tone: 'brand', class: 'bg-primary text-primary-foreground' },
+      { variant: 'solid', tone: 'success', class: 'bg-success text-success-foreground' },
+      { variant: 'solid', tone: 'warning', class: 'bg-warning text-warning-foreground' },
       {
-        variant: 'filled',
+        variant: 'solid',
         tone: 'destructive',
         class: 'bg-destructive text-destructive-foreground',
       },
-      { variant: 'filled', tone: 'info', class: 'bg-info text-info-foreground' },
-      // tonal — 옅은 면 + tone 글자
-      { variant: 'tonal', tone: 'neutral', class: 'bg-muted text-foreground' },
-      { variant: 'tonal', tone: 'primary', class: 'bg-primary/10 text-primary' },
+      { variant: 'solid', tone: 'info', class: 'bg-info text-info-foreground' },
+      // soft — 옅은 surface 면 + 계열 글자
+      { variant: 'soft', tone: 'neutral', class: 'bg-secondary text-secondary-foreground' },
+      { variant: 'soft', tone: 'brand', class: 'bg-primary-surface text-primary' },
       {
-        variant: 'tonal',
+        variant: 'soft',
         tone: 'success',
         class: 'bg-success-surface text-success-surface-foreground',
       },
       {
-        variant: 'tonal',
+        variant: 'soft',
         tone: 'warning',
         class: 'bg-warning-surface text-warning-surface-foreground',
       },
       {
-        variant: 'tonal',
+        variant: 'soft',
         tone: 'destructive',
         class: 'bg-destructive-surface text-destructive-surface-foreground',
       },
-      { variant: 'tonal', tone: 'info', class: 'bg-info-surface text-info-surface-foreground' },
-      // outline — 옅은 보더 + tone 글자
+      { variant: 'soft', tone: 'info', class: 'bg-info-surface text-info-surface-foreground' },
+      // outline — 계열 보더 + 계열 글자
       { variant: 'outline', tone: 'neutral', class: 'border-border text-foreground' },
-      { variant: 'outline', tone: 'primary', class: 'border-primary/40 text-primary' },
+      { variant: 'outline', tone: 'brand', class: 'border-primary/40 text-primary' },
       {
         variant: 'outline',
         tone: 'success',
@@ -89,30 +91,34 @@ const chipVariants = cva(
       },
     ],
     defaultVariants: {
-      variant: 'tonal',
+      variant: 'soft',
       tone: 'neutral',
       size: 'md',
     },
   }
 )
 
-/** selected 상태 강조 — data-selected 로 tone/variant 색을 덮는다. */
-const selectedStyle =
-  'data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground data-[selected=true]:border-transparent'
+// selected — data-selected 로 tone/variant 색을 브랜드로 덮는다.
+const selectedStyle = cn(
+  'data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground',
+  'data-[selected=true]:border-transparent'
+)
 
-/** 클릭 가능한 칩의 인터랙션 룩 — 리플 호스트 + 눌림 + 포커스 링. */
+// 클릭 가능한 칩 — 리플 호스트 + 눌림 + 포커스 링.
 const clickableStyle = cn(
-  'relative overflow-hidden cursor-pointer',
+  'relative cursor-pointer overflow-hidden',
   focusRing,
   pressable,
   disabledStyle
 )
 
 interface ChipProps extends React.HTMLAttributes<HTMLElement>, VariantProps<typeof chipVariants> {
-  /** 선택 상태 — aria-pressed + data-selected 로 강조된다. */
+  // 선택 상태 — aria-pressed + data-selected 로 강조된다.
   selected?: boolean
-  /** 삭제 콜백 — 있으면 우측에 X 삭제 버튼이 붙는다. */
+  // 삭제 콜백 — 있으면 우측에 X 삭제 버튼이 붙는다.
   onDelete?: () => void
+  // 삭제 버튼의 접근성 이름.
+  deleteLabel?: string
   disabled?: boolean
 }
 
@@ -124,6 +130,7 @@ function Chip({
   selected,
   onClick,
   onDelete,
+  deleteLabel = 'Remove',
   disabled,
   onPointerDown,
   children,
@@ -136,6 +143,8 @@ function Chip({
     chipVariants({ variant, tone, size }),
     clickable && clickableStyle,
     selectedStyle,
+    // 삭제 가능한 칩은 바깥이 <div> 라 disabled: 변형이 안 먹는다 — aria-disabled 로 같은 표현을 준다.
+    'aria-disabled:pointer-events-none aria-disabled:opacity-disabled',
     className
   )
 
@@ -161,16 +170,32 @@ function Chip({
   )
 
   if (onDelete) {
+    // 클릭도 되는 삭제 칩 — 바깥 <div> 가 버튼 역할을 하도록 role·포커스·Enter/Space 를 준다.
+    const interactive = clickable && !disabled
     return (
-      <div {...sharedProps} aria-disabled={disabled || undefined} {...props}>
+      <div
+        {...sharedProps}
+        role={clickable ? 'button' : undefined}
+        tabIndex={interactive ? 0 : undefined}
+        aria-disabled={disabled || undefined}
+        onClick={disabled ? undefined : onClick}
+        onKeyDown={(e) => {
+          if (!interactive || e.target !== e.currentTarget) return
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            e.currentTarget.click()
+          }
+        }}
+        {...props}
+      >
         {content}
         <button
           type="button"
-          aria-label="삭제"
+          aria-label={deleteLabel}
           disabled={disabled}
           className={cn(
             '-mr-1 inline-flex items-center justify-center rounded-pill p-0.5',
-            'hover:bg-current/10 transition-colors',
+            'transition-colors duration-fast hover:bg-current/10',
             focusRing,
             disabledStyle
           )}

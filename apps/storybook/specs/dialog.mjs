@@ -18,73 +18,144 @@ export const specs = [
         ],
       },
       { from: '@comwit/ui-templates/button', names: ['Button'] },
+      { from: '@comwit/ui-templates/input', names: ['Input'] },
+      { from: '@comwit/ui-templates/label', names: ['Label'] },
     ],
+    extraImports: [`import * as React from 'react'`],
     stories: [
       {
         name: 'Default',
-        description: '트리거 버튼으로 여는 기본 다이얼로그',
+        gallery: true,
+        description: 'A trigger button opens a modal form with a footer of actions.',
         render: `<Dialog>
   <DialogTrigger asChild>
-    <Button variant="outline">프로필 수정</Button>
+    <Button variant="outline">Edit profile</Button>
   </DialogTrigger>
   <DialogContent>
     <DialogHeader>
-      <DialogTitle>프로필 수정</DialogTitle>
+      <DialogTitle>Edit profile</DialogTitle>
       <DialogDescription>
-        계정 정보를 변경합니다. 완료되면 저장을 눌러주세요.
+        Update how your name and username appear to teammates.
       </DialogDescription>
     </DialogHeader>
+    <div className="grid gap-4">
+      <div className="grid gap-2">
+        <Label htmlFor="dialog-name">Name</Label>
+        <Input id="dialog-name" defaultValue="Jordan Lee" />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="dialog-username">Username</Label>
+        <Input id="dialog-username" defaultValue="@jordan" />
+      </div>
+    </div>
     <DialogFooter>
       <DialogClose asChild>
-        <Button variant="outline">취소</Button>
+        <Button variant="outline">Cancel</Button>
       </DialogClose>
-      <Button>저장</Button>
+      <DialogClose asChild>
+        <Button>Save changes</Button>
+      </DialogClose>
     </DialogFooter>
   </DialogContent>
 </Dialog>`,
       },
       {
         name: 'Destructive',
-        description: '확인/취소가 있는 삭제 확인 다이얼로그',
+        description: 'Confirm an irreversible action with a destructive primary button.',
         render: `<Dialog>
   <DialogTrigger asChild>
-    <Button variant="destructive">계정 삭제</Button>
+    <Button variant="destructive">Delete project</Button>
   </DialogTrigger>
   <DialogContent>
     <DialogHeader>
-      <DialogTitle>정말 삭제하시겠어요?</DialogTitle>
+      <DialogTitle>Delete project?</DialogTitle>
       <DialogDescription>
-        이 작업은 되돌릴 수 없습니다. 계정과 관련된 모든 데이터가 영구적으로 삭제됩니다.
+        This permanently removes "Marketing site" along with its deployments and environment variables. This can't be undone.
       </DialogDescription>
     </DialogHeader>
     <DialogFooter>
       <DialogClose asChild>
-        <Button variant="outline">취소</Button>
+        <Button variant="outline">Cancel</Button>
       </DialogClose>
       <DialogClose asChild>
-        <Button variant="destructive">삭제</Button>
+        <Button variant="destructive">Delete project</Button>
       </DialogClose>
     </DialogFooter>
   </DialogContent>
 </Dialog>`,
       },
       {
+        name: 'Controlled',
+        description: 'open / onOpenChange — close the dialog from your own submit handler.',
+        renderFn: `const [open, setOpen] = React.useState(false)
+const [email, setEmail] = React.useState('')
+const [invited, setInvited] = React.useState<string[]>([])
+return (
+  <div className="flex flex-col items-center gap-3">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>Invite teammates</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <form
+          className="grid gap-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (!email) return
+            setInvited((list) => [...list, email])
+            setEmail('')
+            setOpen(false)
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Invite teammates</DialogTitle>
+            <DialogDescription>
+              They'll get an email with a link to join your workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="dialog-invite">Email address</Label>
+            <Input
+              id="dialog-invite"
+              type="email"
+              placeholder="name@company.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button type="submit" disabled={!email}>Send invite</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+    <p className="text-caption text-muted-foreground">
+      {invited.length ? 'Invited: ' + invited.join(', ') : 'No invites sent yet'}
+    </p>
+  </div>
+)`,
+      },
+      {
         name: 'WithoutCloseButton',
-        description: 'showCloseButton={false} — 우측 상단 X 버튼 숨김',
+        description:
+          'showCloseButton={false} hides the top-right close icon when an explicit choice is required.',
         render: `<Dialog>
   <DialogTrigger asChild>
-    <Button variant="secondary">약관 보기</Button>
+    <Button variant="secondary">Review terms</Button>
   </DialogTrigger>
   <DialogContent showCloseButton={false}>
     <DialogHeader>
-      <DialogTitle>서비스 이용약관</DialogTitle>
+      <DialogTitle>Updated terms of service</DialogTitle>
       <DialogDescription>
-        계속하려면 아래 약관에 동의해 주세요.
+        We've updated how we handle data exports. Please accept the new terms to keep using your workspace.
       </DialogDescription>
     </DialogHeader>
     <DialogFooter>
       <DialogClose asChild>
-        <Button className="w-full">동의합니다</Button>
+        <Button className="w-full">Accept and continue</Button>
       </DialogClose>
     </DialogFooter>
   </DialogContent>

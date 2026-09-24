@@ -8,65 +8,53 @@ export const specs = [
     stories: [
       {
         name: 'Default',
-        description: '제어형 · value(YYYY-MM) / onChange',
-        renderFn: `const [value, setValue] = React.useState('')
+        gallery: true,
+        description:
+          'A field trigger that opens a glass year view of twelve months. value is YYYY-MM.',
+        renderFn: `const [value, setValue] = React.useState('2026-09')
 return (
-  <div className="w-[280px] space-y-2">
-    <MonthPicker value={value} onChange={setValue} />
-    <p className="text-caption text-muted-foreground">
-      선택된 값: {value || '(없음)'}
-    </p>
-  </div>
-)`,
-      },
-      {
-        name: 'WithValue',
-        description: '초기 선택 값이 있는 상태',
-        renderFn: `const [value, setValue] = React.useState('2026-07')
-return (
-  <div className="w-[280px]">
+  <div className="w-64">
     <MonthPicker value={value} onChange={setValue} />
   </div>
 )`,
       },
       {
-        name: 'Placeholder',
-        description: '커스텀 placeholder',
+        name: 'Controlled',
+        description:
+          'Starts empty with a placeholder; onChange reports YYYY-MM, or an empty string on clear.',
         renderFn: `const [value, setValue] = React.useState('')
 return (
-  <div className="w-[280px]">
-    <MonthPicker
-      value={value}
-      onChange={setValue}
-      placeholder="정산 월을 선택하세요"
-    />
+  <div className="flex w-64 flex-col gap-2">
+    <MonthPicker value={value} onChange={setValue} placeholder="Select billing month" />
+    <p className="text-caption text-muted-foreground">
+      {value ? 'Invoice period: ' + value : 'No month selected'}
+    </p>
   </div>
 )`,
       },
       {
-        name: 'MinMax',
-        description: 'min / max 로 선택 가능한 월 범위 제한',
-        renderFn: `const [value, setValue] = React.useState('2026-07')
+        name: 'MinMaxAndLabels',
+        description:
+          'min / max disable months outside the range; labels override the footer and navigation copy.',
+        renderFn: `const [value, setValue] = React.useState('2026-06')
 return (
-  <div className="w-[280px] space-y-2">
+  <div className="flex w-64 flex-col gap-2">
     <MonthPicker
       value={value}
       onChange={setValue}
-      min="2026-03"
-      max="2026-10"
+      min="2026-01"
+      max="2026-09"
+      labels={{ clear: 'Reset', thisMonth: 'Current month', previousYear: 'Earlier', nextYear: 'Later' }}
     />
-    <p className="text-caption text-muted-foreground">
-      2026년 3월 ~ 10월만 선택 가능
-    </p>
+    <p className="text-caption text-muted-foreground">Reports are available from January to September 2026.</p>
   </div>
 )`,
       },
       {
         name: 'Disabled',
-        description: '비활성화 상태',
-        renderFn: `const [value, setValue] = React.useState('2026-07')
+        renderFn: `const [value, setValue] = React.useState('2026-09')
 return (
-  <div className="w-[280px]">
+  <div className="w-64">
     <MonthPicker value={value} onChange={setValue} disabled />
   </div>
 )`,

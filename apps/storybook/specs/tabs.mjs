@@ -9,44 +9,77 @@ export const specs = [
         names: ['Tabs', 'TabsList', 'TabsTrigger', 'TabsContent'],
       },
     ],
+    extraImports: [`import { BarChart3, Bell, LayoutGrid, Settings } from 'lucide-react'`],
     stories: [
       {
-        name: 'Default',
-        description: 'defaultValue로 첫 탭 활성화 · 3개 탭 + 콘텐츠',
-        render: `<Tabs defaultValue="account" className="w-[400px]">
-  <TabsList>
-    <TabsTrigger value="account">계정</TabsTrigger>
-    <TabsTrigger value="password">비밀번호</TabsTrigger>
-    <TabsTrigger value="notifications">알림</TabsTrigger>
+        name: 'Project',
+        gallery: true,
+        description: 'The active tab lifts out of the track as a white segment.',
+        render: `<Tabs defaultValue="overview" className="w-full max-w-md">
+  <TabsList className="w-full">
+    <TabsTrigger value="overview">Overview</TabsTrigger>
+    <TabsTrigger value="activity">Activity</TabsTrigger>
+    <TabsTrigger value="settings">Settings</TabsTrigger>
   </TabsList>
-  <TabsContent value="account" className="rounded-md border p-4 text-sm text-muted-foreground">
-    계정 정보를 확인하고 프로필을 수정할 수 있습니다.
+  <TabsContent value="overview" className="rounded-card border border-border p-4">
+    <p className="text-title-sm text-foreground">Q3 roadmap</p>
+    <p className="mt-1 text-body-sm text-soft-foreground">12 of 18 milestones shipped · updated 2 hours ago</p>
   </TabsContent>
-  <TabsContent value="password" className="rounded-md border p-4 text-sm text-muted-foreground">
-    비밀번호를 변경하려면 현재 비밀번호를 입력하세요.
+  <TabsContent value="activity" className="rounded-card border border-border p-4">
+    <p className="text-title-sm text-foreground">Recent activity</p>
+    <p className="mt-1 text-body-sm text-soft-foreground">Morgan closed 3 issues and merged 1 pull request.</p>
   </TabsContent>
-  <TabsContent value="notifications" className="rounded-md border p-4 text-sm text-muted-foreground">
-    이메일 및 푸시 알림 수신 여부를 설정합니다.
+  <TabsContent value="settings" className="rounded-card border border-border p-4">
+    <p className="text-title-sm text-foreground">Project settings</p>
+    <p className="mt-1 text-body-sm text-soft-foreground">Rename the project, change visibility or archive it.</p>
+  </TabsContent>
+</Tabs>`,
+      },
+      {
+        name: 'WithIcons',
+        description: 'Icons inside TabsTrigger are sized automatically.',
+        render: `<Tabs defaultValue="dashboard" className="w-full max-w-md">
+  <TabsList>
+    <TabsTrigger value="dashboard">
+      <LayoutGrid /> Dashboard
+    </TabsTrigger>
+    <TabsTrigger value="reports">
+      <BarChart3 /> Reports
+    </TabsTrigger>
+    <TabsTrigger value="alerts">
+      <Bell /> Alerts
+    </TabsTrigger>
+  </TabsList>
+  <TabsContent value="dashboard" className="p-1 text-body-sm text-soft-foreground">
+    Revenue is up 8.2% compared with last week.
+  </TabsContent>
+  <TabsContent value="reports" className="p-1 text-body-sm text-soft-foreground">
+    Your monthly report is ready to download.
+  </TabsContent>
+  <TabsContent value="alerts" className="p-1 text-body-sm text-soft-foreground">
+    No alerts in the last 24 hours.
   </TabsContent>
 </Tabs>`,
       },
       {
         name: 'DisabledTab',
-        description: '특정 탭 비활성화',
-        render: `<Tabs defaultValue="general" className="w-[400px]">
+        description: 'A disabled trigger is skipped by keyboard navigation.',
+        render: `<Tabs defaultValue="general" className="w-full max-w-md">
   <TabsList>
-    <TabsTrigger value="general">일반</TabsTrigger>
-    <TabsTrigger value="team">팀</TabsTrigger>
-    <TabsTrigger value="billing" disabled>결제</TabsTrigger>
+    <TabsTrigger value="general">General</TabsTrigger>
+    <TabsTrigger value="members">Members</TabsTrigger>
+    <TabsTrigger value="billing" disabled>
+      <Settings /> Billing
+    </TabsTrigger>
   </TabsList>
-  <TabsContent value="general" className="rounded-md border p-4 text-sm text-muted-foreground">
-    일반 설정입니다.
+  <TabsContent value="general" className="p-1 text-body-sm text-soft-foreground">
+    Workspace name, URL and default language.
   </TabsContent>
-  <TabsContent value="team" className="rounded-md border p-4 text-sm text-muted-foreground">
-    팀 구성원을 관리합니다.
+  <TabsContent value="members" className="p-1 text-body-sm text-soft-foreground">
+    Invite people and manage their roles.
   </TabsContent>
-  <TabsContent value="billing" className="rounded-md border p-4 text-sm text-muted-foreground">
-    결제 정보입니다.
+  <TabsContent value="billing" className="p-1 text-body-sm text-soft-foreground">
+    Only owners can view billing.
   </TabsContent>
 </Tabs>`,
       },

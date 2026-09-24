@@ -149,7 +149,7 @@ const FILLED_CALLOUTS = [
   { tone: 'info', wrap: 'bg-info text-info-foreground', Icon: Info, title: '새 버전이 있습니다' },
 ] as const
 
-const CHIP_TONES = ['neutral', 'primary', 'success', 'warning', 'destructive', 'info'] as const
+const CHIP_TONES = ['neutral', 'brand', 'success', 'warning', 'destructive', 'info'] as const
 
 const FRUITS: [string, string][] = [
   ['apple', '사과'],
@@ -343,7 +343,7 @@ export function DesignSystemCatalog() {
 
             <CatalogSection index="05" eyebrow="Chips" title="칩">
               <div className="space-y-6 rounded-lg border border-border p-6">
-                {(['tonal', 'filled', 'outline'] as const).map((variant) => (
+                {(['soft', 'solid', 'outline'] as const).map((variant) => (
                   <div key={variant} className="flex flex-wrap items-center gap-2">
                     <span className="w-14 shrink-0 font-mono text-caption text-muted-foreground">
                       {variant}
@@ -547,94 +547,29 @@ export function DesignSystemCatalog() {
                 </div>
               </div>
 
-              {/* TextField — MUI 모티브 variant. 라벨이 떠오르는 트랜지션 + 빈/값 상태 섞어 전시 */}
+              {/* TextField — 컴윗은 라벨 고정(outlined) 하나. 라벨↔컨트롤·도움말·에러 배선은 프리미티브가 책임 */}
               <div className="mt-10 space-y-8">
                 <div>
-                  <GroupLabel>TextField · outlined (기본)</GroupLabel>
+                  <GroupLabel>TextField</GroupLabel>
                   <div className="grid gap-6 rounded-lg border border-border p-6 md:grid-cols-3">
-                    <TextField label="이름">
+                    <TextField label="이름" helperText="실명을 입력하세요">
                       <Input value={floatName} onChange={(e) => setFloatName(e.target.value)} />
                     </TextField>
-                    <TextField label="이메일" required description="회사 이메일">
-                      <Input type="email" defaultValue="name@example.com" />
-                    </TextField>
-                    <TextField label="회사" error="필수 항목입니다">
-                      <Input aria-invalid />
-                    </TextField>
-                  </div>
-                </div>
-
-                <div>
-                  <GroupLabel>TextField · outlined · 유색 바탕(진짜 노치 검증)</GroupLabel>
-                  {/* 흰색이 아닌 바탕 위에서 라벨이 떠올라도 흰 패치가 안 생기고 보더선만 뚫려야 정상 */}
-                  <div className="grid gap-6 rounded-lg border border-border bg-muted p-6 md:grid-cols-2">
-                    <TextField label="이름" description="회색(bg-muted) 위">
-                      <Input defaultValue="홍길동" />
-                    </TextField>
-                    <TextField label="이메일" required>
-                      <Input type="email" defaultValue="name@example.com" />
-                    </TextField>
-                  </div>
-                  <div className="mt-6 grid gap-6 rounded-lg bg-gradient-to-br from-primary/15 to-accent/20 p-6 md:grid-cols-2">
-                    <TextField label="이름" description="그라디언트 위">
-                      <Input defaultValue="홍길동" />
-                    </TextField>
-                    <TextField label="회사" error="필수 항목입니다">
-                      <Input aria-invalid defaultValue="컴윗" />
-                    </TextField>
-                  </div>
-                </div>
-
-                <div>
-                  <GroupLabel>TextField · filled</GroupLabel>
-                  <div className="grid gap-6 rounded-lg border border-border p-6 md:grid-cols-3">
-                    <TextField label="이름" variant="filled">
-                      <Input value={floatEmail} onChange={(e) => setFloatEmail(e.target.value)} />
-                    </TextField>
-                    <TextField label="비밀번호" variant="filled" required>
-                      <Input type="password" defaultValue="secret" />
-                    </TextField>
-                    <TextField label="자기소개" variant="filled" className="md:col-span-3">
-                      <Textarea value={floatBio} onChange={(e) => setFloatBio(e.target.value)} />
-                    </TextField>
-                  </div>
-                </div>
-
-                <div>
-                  <GroupLabel>TextField · standard</GroupLabel>
-                  <div className="grid gap-6 rounded-lg border border-border p-6 md:grid-cols-3">
-                    <TextField label="이름" variant="standard">
-                      <Input />
-                    </TextField>
-                    <TextField label="이메일" variant="standard" required>
-                      <Input type="email" defaultValue="name@example.com" />
-                    </TextField>
-                    <TextField label="회사" variant="standard" error="필수 항목입니다">
-                      <Input aria-invalid />
-                    </TextField>
-                  </div>
-                </div>
-
-                <div>
-                  <GroupLabel>TextField · stacked (라벨 고정 · 어드민)</GroupLabel>
-                  <div className="grid gap-6 rounded-lg border border-border p-6 md:grid-cols-3">
-                    <TextField label="이름" variant="stacked" description="실명을 입력하세요">
-                      <Input placeholder="홍길동" />
-                    </TextField>
-                    <TextField label="이메일" variant="stacked" error="이메일 형식이 아닙니다">
+                    <TextField label="이메일" required helperText="회사 이메일">
                       <Input
-                        aria-invalid
-                        placeholder="name@example.com"
-                        defaultValue="not-an-email"
+                        type="email"
+                        value={floatEmail}
+                        onChange={(e) => setFloatEmail(e.target.value)}
                       />
                     </TextField>
-                    <TextField
-                      label="아이디"
-                      variant="stacked"
-                      disabled
-                      description="변경할 수 없습니다"
-                    >
-                      <Input defaultValue="token_user" />
+                    <TextField label="회사" error="필수 항목입니다">
+                      <Input aria-invalid />
+                    </TextField>
+                    <TextField label="자기소개" className="md:col-span-2">
+                      <Textarea value={floatBio} onChange={(e) => setFloatBio(e.target.value)} />
+                    </TextField>
+                    <TextField label="아이디" disabled helperText="변경할 수 없습니다">
+                      <Input defaultValue="token_user" disabled />
                     </TextField>
                   </div>
                 </div>

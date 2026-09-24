@@ -32,16 +32,18 @@ export function useRichTextEditor(opts: {
   value?: string
   onChange?: (html: string) => void
   placeholder?: string
+  /** 편집 영역(contenteditable)에 얹을 속성 — id·aria-label·aria-labelledby 등 */
+  attributes?: Record<string, string>
   editable?: boolean
 }): TiptapEditor | null {
-  const { value = '', onChange, placeholder, editable = true } = opts
+  const { value = '', onChange, placeholder, editable = true, attributes } = opts
 
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit,
       Placeholder.configure({
-        placeholder: placeholder ?? '내용을 입력하세요...',
+        placeholder: placeholder ?? 'Write something…',
       }),
       Link.configure({
         openOnClick: false,
@@ -55,6 +57,9 @@ export function useRichTextEditor(opts: {
     editorProps: {
       attributes: {
         class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-40 px-3 py-2',
+        role: 'textbox',
+        'aria-multiline': 'true',
+        ...attributes,
       },
     },
     onUpdate: ({ editor }) => {

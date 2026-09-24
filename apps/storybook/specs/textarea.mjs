@@ -4,20 +4,62 @@ export const specs = [
     slug: 'textarea',
     covers: ['textarea'],
     component: 'Textarea',
-    imports: [{ from: '@comwit/ui-templates/textarea', names: ['Textarea'] }],
+    imports: [
+      { from: '@comwit/ui-templates/textarea', names: ['Textarea'] },
+      { from: '@comwit/ui-templates/label', names: ['Label'] },
+      { from: '@comwit/ui-templates/button', names: ['Button'] },
+    ],
     stories: [
       {
         name: 'Default',
-        render: `<Textarea placeholder="내용을 입력하세요" defaultValue="안녕하세요. 여러 줄의 텍스트를 입력할 수 있습니다." />`,
+        gallery: true,
+        description: 'Grows with its content from a four-line minimum',
+        render: `<div className="grid w-full max-w-sm gap-2">
+  <Label htmlFor="textarea-release-notes">Release notes</Label>
+  <Textarea
+    id="textarea-release-notes"
+    placeholder="What changed in this release?"
+    defaultValue="Faster search across projects, plus a new dark theme for the editor."
+  />
+  <p className="text-caption text-muted-foreground">Shared with everyone in the workspace.</p>
+</div>`,
       },
       {
         name: 'Invalid',
-        description: 'aria-invalid 상태',
-        render: `<Textarea aria-invalid defaultValue="잘못된 입력입니다" placeholder="내용을 입력하세요" />`,
+        description: 'aria-invalid draws the destructive border',
+        render: `<div className="grid w-full max-w-sm gap-2">
+  <Label htmlFor="textarea-invalid-bio">Short bio</Label>
+  <Textarea
+    id="textarea-invalid-bio"
+    defaultValue="Hi"
+    aria-invalid
+    aria-describedby="textarea-invalid-bio-error"
+  />
+  <p id="textarea-invalid-bio-error" className="text-caption text-destructive">
+    Write at least 20 characters.
+  </p>
+</div>`,
       },
       {
         name: 'Disabled',
-        render: `<Textarea disabled defaultValue="비활성화된 텍스트 영역" placeholder="내용을 입력하세요" />`,
+        render: `<div className="grid w-full max-w-sm gap-2">
+  <Label htmlFor="textarea-disabled-policy">Retention policy</Label>
+  <Textarea
+    id="textarea-disabled-policy"
+    disabled
+    defaultValue="Messages are kept for 90 days. Contact an admin to change this."
+  />
+</div>`,
+      },
+      {
+        name: 'Bare',
+        description: 'bare drops the field skin so rows sets the height inside a custom composer',
+        render: `<div className="grid w-full max-w-sm gap-2 rounded-card border border-border bg-card p-3">
+  <Textarea bare rows={2} placeholder="Write a reply" aria-label="Reply" className="resize-none" />
+  <div className="flex justify-end">
+    <Button size="sm">Send</Button>
+  </div>
+</div>`,
       },
     ],
   },

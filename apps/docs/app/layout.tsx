@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter, Geist_Mono, Manrope } from 'next/font/google'
+import localFont from 'next/font/local'
 import 'highlight.js/styles/github-dark.css'
 import './globals.css'
 
@@ -11,6 +12,14 @@ const inter = Inter({
 const manrope = Manrope({
   variable: '--font-manrope',
   subsets: ['latin'],
+})
+
+// UI 라이브러리 기본 서체 — --font-pretendard 를 <html> 에 두어 토큰의 --font-sans 가 :root 에서 풀린다.
+const pretendard = localFont({
+  src: '../../ui-dev/app/fonts/PretendardVariable.woff2',
+  variable: '--font-pretendard',
+  weight: '45 920',
+  display: 'swap',
 })
 
 const geistMono = Geist_Mono({
@@ -39,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    <html lang="en" data-scroll-behavior="smooth" className={pretendard.variable}>
       <body className={`${inter.variable} ${geistMono.variable} ${manrope.variable} antialiased`}>
         {children}
       </body>

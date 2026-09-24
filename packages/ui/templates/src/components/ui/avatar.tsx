@@ -15,6 +15,7 @@ function Avatar({ className, ...props }: React.ComponentProps<typeof AvatarPrimi
   )
 }
 
+// 프리미티브 Image 는 실제 <img /> 로 렌더된다.
 function AvatarImage({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
     <AvatarPrimitive.Image
@@ -32,7 +33,10 @@ function AvatarFallback({
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
-      className={cn('bg-muted flex size-full items-center justify-center rounded-full', className)}
+      className={cn(
+        'flex size-full items-center justify-center rounded-full bg-muted text-caption font-semibold text-muted-foreground',
+        className
+      )}
       {...props}
     />
   )

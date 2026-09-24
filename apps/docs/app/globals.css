@@ -1,6 +1,8 @@
 @import '@comwit/ui-templates/styles.css';
 @source '../../../packages/ui/templates/src';
 @source '../../../packages/ui/core/src';
+/* gitignore 된 생성 예시는 자동 감지에서 빠지므로 명시한다 */
+@source './ui/_generated';
 @plugin '@tailwindcss/typography';
 
 :root {
@@ -10,48 +12,48 @@
   --site-border: #dedbe3;
   --site-accent: #755291;
 }
-@theme inline {
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-geist-mono);
-}
-html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 110px;
-}
-body {
-  margin: 0;
-  background: var(--site-background);
-  color: var(--site-foreground);
-  font-family: var(--font-inter), sans-serif;
-}
-button,
-a {
-  -webkit-tap-highlight-color: transparent;
-}
-button {
-  cursor: pointer;
-}
-button,
-a {
-  transition:
-    color 0.18s,
-    background-color 0.18s,
-    border-color 0.18s,
-    box-shadow 0.18s;
-}
-:focus-visible {
-  outline: 3px solid #a67bbf;
-  outline-offset: 5px;
-}
-::selection {
-  background: #d8bee8;
-  color: #24212c;
-}
-h1,
-h2,
-h3,
-.wordmark {
-  font-family: var(--font-manrope), sans-serif;
+/* 사이트 요소 규칙은 base 레이어에 둔다 — unlayered 로 두면 라이브러리 컴포넌트의
+   유틸(transition·outline-none·font)을 이겨서 docs 안의 컴포넌트가 원래 모습과 달라진다. */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 110px;
+  }
+  body {
+    margin: 0;
+    background: var(--site-background);
+    color: var(--site-foreground);
+    font-family: var(--font-inter), sans-serif;
+  }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button {
+    cursor: pointer;
+  }
+  button,
+  a {
+    transition:
+      color 0.18s,
+      background-color 0.18s,
+      border-color 0.18s,
+      box-shadow 0.18s;
+  }
+  :focus-visible {
+    outline: 3px solid #a67bbf;
+    outline-offset: 5px;
+  }
+  ::selection {
+    background: #d8bee8;
+    color: #24212c;
+  }
+  h1,
+  h2,
+  h3,
+  .wordmark {
+    font-family: var(--font-manrope), sans-serif;
+  }
 }
 .skip-link {
   position: fixed;
@@ -1725,280 +1727,6 @@ h3,
 .libraries-footer a:hover {
   color: var(--site-foreground);
 }
-.ui-product {
-  background: #fcfcfb;
-  min-height: 100svh;
-  color: #262626;
-}
-.ui-product .site-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: #fcfcfb;
-}
-.ui-docs-shell {
-  display: flex;
-  max-width: 1500px;
-  margin-inline: auto;
-}
-.ui-sidebar {
-  width: 250px;
-  flex-shrink: 0;
-  border-right: 1px solid #e5e5e3;
-}
-.ui-sidebar-content {
-  position: sticky;
-  top: 88px;
-  height: calc(100svh - 88px);
-  overflow-y: auto;
-  padding: 32px 24px;
-  scrollbar-width: thin;
-}
-.ui-sidebar-title {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 19px;
-}
-.ui-sidebar-title span {
-  font-size: 10px;
-  font-family: var(--font-geist-mono);
-  color: #777;
-  margin-left: 7px;
-}
-.ui-sidebar nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.ui-sidebar nav a {
-  font-size: 13px;
-  padding: 7px 10px;
-  border-radius: 5px;
-  color: #646464;
-}
-.ui-sidebar nav a:hover {
-  background: #f2f2ef;
-  color: #222;
-}
-.ui-sidebar nav a[aria-current] {
-  color: #181818;
-  background: #eeeee9;
-  font-weight: 600;
-}
-.ui-sidebar input {
-  width: 100%;
-  margin: 28px 0 12px;
-  border: 1px solid #deded8;
-  background: transparent;
-  border-radius: 6px;
-  padding: 9px;
-  font-size: 12px;
-}
-.ui-agent-link {
-  display: block;
-  border-top: 1px solid #e5e5e3;
-  padding-top: 16px;
-  margin-top: 24px;
-  font: 12px var(--font-geist-mono);
-}
-.ui-mobile-menu {
-  display: none;
-}
-.ui-docs-main {
-  flex: 1;
-  min-width: 0;
-  padding: 52px clamp(24px, 5vw, 80px) 90px;
-}
-.ui-docs-main > * {
-  max-width: 850px;
-}
-.product-eyebrow {
-  font: 10px var(--font-geist-mono);
-  letter-spacing: 0.14em;
-  color: #7a7a75;
-}
-.product-headline {
-  font-size: clamp(52px, 6.5vw, 80px);
-  line-height: 1.03;
-  letter-spacing: -0.065em;
-  font-weight: 700;
-  margin: 24px 0;
-}
-.product-description {
-  font-size: 17px;
-  line-height: 1.7;
-  color: #777;
-}
-.product-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 24px;
-  margin-top: 27px;
-  font-size: 13px;
-}
-.primary-link {
-  display: inline-flex;
-  padding: 12px 19px;
-  border-radius: 6px;
-  background: #262626;
-  color: white;
-}
-.primary-link:hover {
-  background: #474747;
-}
-.showcase-frame {
-  margin-top: 44px;
-  background: #f1f1ed;
-  border-radius: 8px;
-  padding: 45px 24px;
-}
-.ui-showcase {
-  max-width: 420px;
-  margin: auto;
-  padding: 27px;
-  border: 1px solid #e1e1da;
-  border-radius: 10px;
-  background: #fff;
-  display: grid;
-  gap: 24px;
-  --primary: #262626;
-  --primary-foreground: #fff;
-  --ring: #666;
-}
-.showcase-kicker {
-  font: 9px var(--font-geist-mono);
-  letter-spacing: 0.12em;
-  color: #92928a;
-  margin-bottom: 11px;
-}
-.ui-showcase h2 {
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.035em;
-}
-.showcase-switch {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.showcase-switch p {
-  font-size: 12px;
-  color: #888;
-  margin-top: 5px;
-}
-.showcase-bottom {
-  border-top: 1px solid #ededeb;
-  padding-top: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-}
-.showcase-bottom > span {
-  font-size: 10px;
-  color: #666;
-  line-height: 1.5;
-}
-.ui-quick-install {
-  margin-top: 24px;
-}
-.ui-quick-install > a {
-  display: inline-block;
-  margin-top: 18px;
-  font-size: 12px;
-  color: #777;
-}
-.ui-examples {
-  display: grid;
-  gap: 26px;
-}
-.preview-controls {
-  display: flex;
-  gap: 20px;
-  border-bottom: 1px solid #e4e4df;
-}
-.preview-controls button {
-  padding: 8px 0 11px;
-  font-size: 13px;
-  color: #888;
-}
-.preview-controls button[aria-pressed='true'] {
-  border-bottom: 2px solid #262626;
-  color: #262626;
-}
-.ui-example h3 {
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 12px;
-}
-.component-preview {
-  min-height: 155px;
-  padding: 32px 24px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  border: 1px solid #e6e6e0;
-  border-radius: 8px;
-  background: #fff;
-}
-.theme-editor-frame {
-  display: block;
-  width: 100%;
-  height: 780px;
-  border: 1px solid #e6e6e0;
-  border-radius: 8px;
-  background: #fff;
-}
-.theme-preview {
-  padding: 24px;
-  background: var(--background);
-  color: var(--foreground);
-  min-height: 100svh;
-}
-.ui-no-results {
-  color: #777;
-  font-size: 12px;
-  padding: 10px;
-}
-.ui-guide {
-  max-width: 740px;
-}
-.ui-guide h1 {
-  font-size: 38px;
-  letter-spacing: -0.05em;
-  font-weight: 700;
-  margin-bottom: 16px;
-}
-.ui-guide h2 {
-  font-size: 21px;
-  font-weight: 600;
-  margin: 35px 0 16px;
-  letter-spacing: -0.03em;
-}
-.ui-guide p,
-.ui-guide li {
-  font-size: 15px;
-  line-height: 1.9;
-  color: #62625e;
-}
-.ui-guide p {
-  margin: 12px 0;
-}
-.ui-guide a {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-.ui-guide code {
-  font: 0.88em var(--font-geist-mono);
-}
-.ui-guide ul {
-  padding-left: 20px;
-  list-style: disc;
-}
 .docs-header {
   top: 0;
 }
@@ -2071,17 +1799,6 @@ h3,
   .site-header .github-nav {
     margin-left: 7px;
   }
-  .ui-sidebar {
-    width: 215px;
-  }
-  .ui-sidebar-content {
-    top: 74px;
-    height: calc(100svh - 74px);
-    padding-inline: 17px;
-  }
-  .ui-docs-main {
-    padding: 35px 24px 60px;
-  }
   .libraries-main {
     padding: 60px 0 70px;
   }
@@ -2139,48 +1856,6 @@ h3,
   .libraries-footer > div {
     gap: 15px;
   }
-  .ui-docs-shell {
-    flex-direction: column;
-  }
-  .ui-sidebar {
-    width: 100%;
-    border-right: 0;
-    border-bottom: 1px solid #e5e5e3;
-  }
-  .ui-mobile-menu {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    padding: 16px 24px;
-    font-size: 13px;
-  }
-  .ui-sidebar-content {
-    display: none;
-    position: static;
-    height: auto;
-    max-height: 65svh;
-    padding: 10px 24px 22px;
-  }
-  .ui-sidebar-content.is-open {
-    display: block;
-  }
-  .ui-sidebar-title {
-    display: none;
-  }
-  .ui-docs-main {
-    padding: 34px 24px 60px;
-  }
-  .showcase-frame {
-    padding: 25px 16px;
-  }
-  .ui-showcase {
-    padding: 21px;
-  }
-  .component-preview {
-    padding: 24px 16px;
-    overflow-x: auto;
-    justify-content: flex-start;
-  }
   .docs-mobile-nav {
     background: #f6f5f1;
     color: #53495b;
@@ -2202,64 +1877,9 @@ h3,
   color: #85788e;
   margin-left: 4px;
 }
-
-.ui-product {
-  --site-accent: #393939;
-}
-.ui-product :focus-visible {
-  outline-color: #656560;
-}
 .docs-mobile-nav summary {
   color: #55445f;
   border-color: #ded6e3;
-}
-
-/* Product introduction shared details. */
-.state-example-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-  align-items: center;
-  margin: 34px 0 20px;
-}
-.state-example-heading h2 {
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: -0.035em;
-}
-.state-example-heading > span {
-  font: 9px var(--font-geist-mono);
-  color: #8b7c93;
-}
-.ui-intro-title {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  font-size: 44px;
-  font-weight: 700;
-  letter-spacing: -0.055em;
-  margin: 25px 0 16px;
-}
-.ui-intro-install {
-  display: grid;
-  gap: 10px;
-  margin-top: 26px;
-}
-.ui-doc-shortcuts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 25px;
-  margin: 20px 0 40px;
-  font-size: 12px;
-  color: #555;
-}
-.ui-doc-shortcuts a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.ui-doc-introduction .showcase-frame {
-  margin-top: 0;
 }
 
 /* One header geometry across the landing and both libraries. Reserve scrollbar space. */
@@ -2548,13 +2168,6 @@ html {
   }
   .site-header.app-header .github-nav {
     display: none;
-  }
-  .ui-intro-title {
-    font-size: 35px;
-    gap: 12px;
-  }
-  .ui-doc-shortcuts {
-    gap: 18px;
   }
 }
 .state-docs-original .hero-copy,

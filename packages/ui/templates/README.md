@@ -49,21 +49,31 @@ export function Providers({ children }: { children: React.ReactNode }) {
 import { Button } from '@/components/ui/button' // CLI 가 복사한 경로
 
 ;<Button variant="secondary" size="lg">
-  저장
+  Save
 </Button>
 ```
 
 동작·a11y·IME·포커스·달력/시간 로직은 전부 `@comwit/ui`(엔진)가 소유하고, 이 파일은 cva 로 **시각/variant 만** 입힌다.
 그래서 컴포넌트를 열어 Tailwind 클래스를 마음대로 고쳐도 동작은 안 깨진다.
 
-## 컴포넌트 (34)
+## 컴포넌트 (43 + popup)
 
-accordion · alert · autocomplete · avatar · badge · button · calendar · card · checkbox · chip ·
-collapsible · date-picker · dialog · dropdown-menu · editor · form · input · input-group · label ·
-month-picker · pagination · popover · radio-group · select · separator · sheet · skeleton · sonner ·
-switch · table · tabs · text-field · textarea · time-picker
+docs 갤러리와 같은 묶음 — 컴윗 특화 UX 가 먼저, 기본형이 마지막.
 
-공용: `lib/utils` · `lib/interaction`(focusRing 등) · `lib/popup`(overlay-kit 래퍼) · `hooks/use-mobile`
+- **모바일 앱** — app-bar · bottom-nav · pull-to-refresh · drag-scroller
+- **유리** — glass(`Glass` · `GlassSurface` · `GlassButton`) · dropdown-menu · popover
+- **알림** — sonner(토스트) · `lib/popup`(confirm · alert · sheet) · alert · empty-state
+- **피커** — date-picker · time-picker · month-picker (데스크톱 팝오버 · 모바일 바텀시트) · calendar
+- **선택** — segmented-control · chip · checkbox · radio-group · pager
+- **폼·데이터** — text-field · autocomplete · select · form · data-table · editor
+- **기본형** — button · badge · input · input-group · textarea · label · switch · tabs · accordion · collapsible ·
+  dialog · sheet · card · table · avatar · separator · skeleton · pagination
+
+공용: `lib/utils`(토큰을 아는 `cn`) · `lib/interaction`(focusRing 등) · `lib/popup`(overlay-kit 래퍼) ·
+`hooks/use-mobile` · `hooks/use-scroll-chrome`(앱바 reveal · 바텀내비 compact 가 공유하는 스크롤 의도)
+
+피커·페이저·데이터 테이블의 표시 문구는 영어가 기본이고 `locale`·`labels` 로 바꾼다
+(예: `<DatePicker locale="ko-KR" labels={{ today: '오늘', clear: '지우기' }} />`).
 
 > 카탈로그(`apps/ui-dev`, http://localhost:3007)와 스토리북(`apps/storybook`, http://localhost:6008)에서
 > variant별로 미리 볼 수 있다.

@@ -48,38 +48,38 @@ comwit-ui 작업 모음. 정한 것 · 만들 것 · 아이디어를 여기 쌓�
 
 ### 추가로 만들 것
 
-- [ ] AppBar — absolute / sticky 지원
-- [ ] BottomNav — floating 형태
-- [ ] SmartSelect — 선택 UI
-- [ ] Toast — 알림 표시
-- [ ] PopupSheet — 모바일용 팝업 시트
-- [ ] Sheet — 기본 시트 컴포넌트
-- [ ] InfiniteScroll — 기존 comwit-ui 방식
+- [x] AppBar — flow / pinned / reveal + 유리 뒤로가기 · FloatingBackButton(hero)
+- [x] BottomNav — 플로팅 유리 캡슐 · 스프링 인디케이터 · 스크롤 compact
+- [ ] SmartSelect — 선택 UI (모바일에선 바텀시트로 뜨는 Select)
+- [x] Toast — sonner 유리 토스트(모바일 상단 · 데스크톱 우하단)
+- [x] PopupSheet — `popup.sheet()` (피커 3종이 모바일에서 사용)
+- [x] Sheet — 기본 시트 컴포넌트
+- [ ] InfiniteScroll — 컴윗 피드의 IntersectionObserver 센티넬(rootMargin 600px)을 훅으로 추출
+- [x] PullToRefresh · DragScroller · SegmentedControl · Pager · EmptyState · Glass(굴절 유리) — 컴윗에서 이식
 
-| 컴포넌트     | 상태 | 메모                                                 |
-| ------------ | ---- | ---------------------------------------------------- |
-| autocomplete | 유지 | 이름 확정. shadcn combobox 대응                      |
-| chip         | 메인 | badge 대신 밀기                                      |
-| text-field   | 유지 | MUI 플로팅라벨 compound (shadcn `field`와 개념 겹침) |
-| editor       | 유지 | tiptap 리치텍스트                                    |
-| month-picker | 유지 |                                                      |
-| time-picker  | 유지 |                                                      |
+| 컴포넌트     | 상태 | 메모                                                |
+| ------------ | ---- | --------------------------------------------------- |
+| autocomplete | 유지 | 이름 확정. shadcn combobox 대응                     |
+| chip         | 메인 | badge 대신 밀기                                     |
+| text-field   | 유지 | 컴윗식 라벨 고정 하나(MUI 플로팅/노치 variant 제거) |
+| editor       | 유지 | tiptap 리치텍스트                                   |
+| month-picker | 유지 |                                                     |
+| time-picker  | 유지 |                                                     |
 
 ---
 
 ## 📚 Docs — ✅ 1차 구축 완료 (`apps/docs`)
 
-- [x] Next 16 + Tailwind 4 docs 앱 (`pnpm docs` → :3009). `scripts/gen.mjs` 가 specs+registry+analysis 로 카탈로그 생성.
-- [x] 컴포넌트 카탈로그 34종 — 페이지마다 **라이브 예시 + 복붙 코드 + `npx comwit-ui add` + 구성(컴파운드 파트) + 쓰는 토큰 + 소스**
+- [x] Next 16 + Tailwind 4 docs 앱. `scripts/gen-ui.mjs` 가 gallery.mjs + specs + registry + 토큰 CSS 로 카탈로그 생성(파트·토큰은 소스에서 자동 추출).
+- [x] **스크롤 갤러리** `/ui/components` — 44종을 용도별 7그룹 한 장에. 모바일 앱(폰 프레임) → 유리 → 알림 → 피커 → 선택 → 폼·데이터 → 기본형(견본지). Code 는 시트로(예시·복붙 코드·CLI·소스). 컴포넌트별 페이지는 앵커로 리다이렉트.
 - [x] **토큰 & 테마** — 토큰 편집 시 라이브 전파(색 바꾸면 컴포넌트+문서UI 즉시 반영) + 토큰→컴포넌트 의존맵
 - [x] **OpenNext → Cloudflare** 셋업(`open-next.config.ts`·`wrangler.jsonc`·`pnpm --filter docs deploy`)
 - [ ] **배포 실행** — `cd apps/docs && pnpm deploy` (Cloudflare 계정 로그인 `wrangler login` 필요 — 내 환경에선 인증 불가라 미실행)
 - [x] **다크모드 토큰 세트** — `.dark` 클래스 단일 스위치로 완료(토큰 v2)
-- [ ] 후속: 검색 · 모바일 사이드바 · 예시 없는 6개(스토리 지운 것)에 폴백 예시 채움(현재 최소 예시로 커버)
+- [x] 검색(⌘K) · 스크롤스파이 · 모바일 내비 시트 · docsOnly 스펙으로 폴백 예시 대체 · 예시 전부 영어
 - [x] docs 토큰 파서(`scripts/gen.mjs`) 토큰 v2 대응 — 86토큰 · 라이트/다크 동시 · 램프 비노출 · alias 를 hex 로 해석
       (※ 옛 파서는 `css.split('@theme')[0]` 이라 **주석에 "@theme" 이라는 글자만 있어도 토큰 0개**가 됐다)
-- [ ] docs `/tokens` 페이지가 새 `dark` 필드를 아직 안 그린다 — 라이트/다크 스와치 나란히 + 노브 슬라이더로 갱신
-- [ ] docs ThemeEditor 를 램프 12단 + 노브 편집으로 갱신 (현재 시맨틱 색만 편집)
+- [x] `/ui/theming` — 라이트/다크 스와치 나란히 · 프리미티브→시맨틱→컴포넌트 의존 · ThemeEditor 에 팔레트+노브+다크 토글+붙여넣을 CSS
 
 ---
 
@@ -88,16 +88,31 @@ comwit-ui 작업 모음. 정한 것 · 만들 것 · 아이디어를 여기 쌓�
 ### 토큰 v2 — 알려진 노브 예외 (후속)
 
 - [ ] `lib/popup.tsx` 오버레이/시트 모션이 framer-motion JS 값(0.15s·0.18s)이라 `--duration-*` 를 안 탄다. dialog.tsx 처럼 CSS 애니로 옮기거나 JS 쪽에 토큰 주입.
-- [ ] `text-field` outlined 노치(`h-[0.6875rem]` legend)는 Pretendard 메트릭에 튜닝돼 있어 `--font-sans` 를 메트릭이 크게 다른 폰트로 갈면 라벨 갭이 어긋난다. filled/standard 는 안전.
 - [ ] 장식적 `opacity-50` 3곳(select·autocomplete 셰브론, calendar 네비) — 비활성 상태가 아니라 흐림 표현이라 `--state-*` 로 안 묶었다. 필요하면 `--state-muted` 신설.
 - [ ] shadcn 잔재 `dark:` 변형 7곳(tabs 4 · badge 3)이 토큰 대신 알파 리터럴을 쓴다(`dark:bg-input/30` 등). 이제 같은 `.dark` 스위치를 물어 동작은 정상.
-- [ ] `--radius` (v1) 제거 · `focusRing` 2px→3px — **breaking change**. major 범프 + 마이그레이션 가이드 필요.
+- [ ] 컴윗 기준 재정렬은 **breaking change** 다(칩 variant·tone 이름, TextField props, 램프 제거, 포커스 링 2px). 0.x 범프 + 마이그레이션 노트 필요.
+- [ ] Autocomplete — invalid 가 보더만 바꾼다(에러 문구 슬롯 없음) · `AutocompleteSection` 제목 스타일 없음.
+- [ ] core `rich-text` 가 아직 `prose` 클래스를 방출한다(typography 플러그인 전제) — 본문 스타일은 이제 styles.css 가 대신한다.
+- [ ] Pagination(조립형) 과 Pager(page/totalPages) 가 공존 — 하나로 합칠지 결정.
+- [ ] 다크모드 유리(`--glass-*` 다크값)는 실사진 위 시각 QA 가 더 필요.
 
 - (여기에 계속 추가)
 
 ---
 
 ## 🧾 완료 (참고 — 최근 세션)
+
+- **컴윗 디자인 시스템을 기본값으로** — 토큰을 컴윗 `globals.css` 기준으로 재구성: 램프 `--n-*` 제거 → 이름 있는 팔레트
+  (`--canvas*` · `--surface-subtle` · `--fill*` · `--ink*` · `--brand*` · `--line*`), 목적형 반경(`rounded-control/card/sheet/pill`),
+  `shadow-panel/message`, 굴절 유리(`.glass*` · `--glass-*`), 유리 토스트, 메뉴 모션. 템플릿 전부를 컴윗 `src/lib/components/ui` 기준으로 재이식.
+- 🐛 **`cn()` 이 포커스 링을 지우고 있었다** — tailwind-merge 가 `ring-focus` 를 링 색으로 오인해 `ring-ring` 옆에서 삭제 →
+  **전 컴포넌트 키보드 포커스 링 0px**. `text-label`·`text-caption` 도 글자색 옆에서 지워졌다. `extendTailwindMerge` 로 토큰 등록.
+- 🐛 `z-dropdown`(1000) < `z-modal`(1200) 이라 다이얼로그 안 셀렉트·메뉴·피커가 다이얼로그 뒤로 숨었다 → dropdown 을 modal 위로.
+- 🐛 ScrollChrome — passive 휠이 먼저 스크롤한 뒤 핸들러가 기준점을 다시 읽어 한 칸짜리 휠 입력이 사라지던 것 수정.
+- 🐛 docs — 사이트의 unlayered 요소 규칙(`button{transition}` · `:focus-visible{outline}` · `h1{font}` · Inter `--font-sans` 덮어쓰기)이
+  라이브러리 유틸을 이겨 docs 안 컴포넌트가 실제와 달랐다 → base 레이어로 · 폰트 덮어쓰기 제거.
+- Label 이 Checkbox/Radio 옆에서 비활성을 못 따라가던 것(`peer-has-[:disabled]`) · 삭제 칩 disabled/키보드 · Pagination disabled/라벨 ·
+  TextField 이중 흐림 · Switch 이름 있는 group · Editor 플레이스홀더/a11y 속성 · 피커 `locale`/`labels` + MonthPicker 모바일 시트.
 
 - **data-table** 이식(base-template → templates). TanStack Table · 서버 페이지네이션 · 스켈레톤 + 빈행 패딩 · 재조회 스피너. `ColumnDef` 재수출.
 - **디자인 토큰 v2** — 3계층(L0 노브 / L1 시맨틱 / L2 유틸) 재설계 + 35개 컴포넌트 전파(104곳) + 다크모드
