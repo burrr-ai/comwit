@@ -1,74 +1,25 @@
-# CLAUDE.md
+# Repository guide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Project Overview
-
-Comwit is a React state management library designed for LLM-friendly vibe coding. It uses proxy-based reactivity (similar to valtio) with a built-in query/resource system (similar to TanStack Query) and class-based action interceptors (decorators).
+Comwit is a pnpm workspace containing independent State and UI libraries used in comwit.io templates.
 
 ## Commands
 
-```bash
-# Install (yarn only — enforced by preinstall hook)
-yarn install
+- `pnpm install` — install the pinned workspace dependencies.
+- `pnpm build` — build the two runtime packages, generate UI docs, and build the docs site.
+- `pnpm test` — State tests and workspace/CLI integration tests.
+- `pnpm typecheck` — generate required artifacts and typecheck workspaces.
+- `pnpm dev:docs` — start the shared documentation app.
+- `pnpm dev:state` / `pnpm dev:ui` — watch-build a runtime.
+- `pnpm dev:playground`, `pnpm dev:ui-catalog`, `pnpm storybook` — development apps.
 
-# Build the library
-yarn build                          # all workspaces
-yarn workspace comwit build         # library only
+## Boundaries
 
-# Dev
-yarn dev:lib                        # watch-build library
-yarn dev:docs                       # docs site (Next.js)
-yarn dev:playground                 # playground app (port 3001)
+- `packages/state/core` (`@comwit/state`) owns state, query/local descriptors, actions and interceptors. `es-toolkit` is its sole runtime dependency. Its Vitest configuration is in `vite.config.ts`; React integration tests use happy-dom.
+- `packages/ui/core` (`@comwit/ui`) owns headless behavior and accessibility.
+- `packages/ui/templates` (`@comwit/ui-templates`) owns editable component source and the shared CSS token contract.
+- `packages/ui/cli` (`comwit-ui`) installs component source into consumer projects. Generate its registry from templates; do not edit generated JSON.
+- `apps/docs` owns the shared site, product-specific human docs and separate llms.txt files. Generate UI previews from Storybook specs and registry source.
 
-# Test (vitest, in packages/comwit)
-yarn test                           # run all tests once
-yarn workspace comwit test:watch    # watch mode
-yarn workspace comwit run vitest run tests/model.test.ts  # single file
+Keep public package names, independent versions, and runtime exports stable during repository maintenance. Site branding must not change the UI library's token defaults. Never couple the UI engine to State just to support a docs example.
 
-# Type checking
-yarn workspace comwit typecheck
-
-# Format
-yarn format                         # prettier --write on everything
-yarn format:check                   # CI check
-```
-
-## Architecture
-
-### Core (`packages/comwit/src/core/`)
-
-- **proxy.ts** — Custom proxy-based reactivity engine. `createProxy()` wraps objects in recursive Proxies that track mutations and batch notifications via microtask. `snapshot()` deep-clones + freezes for immutable reads. `subscribe()` registers listeners on a proxy's internal state.
-
-- **model.ts** — `model(initial)` creates a Model descriptor. Each Model holds a `key` (Symbol), a `ResourceDescriptorMap` (for query fields), and an `instance()` factory that creates a proxy store entry. `useModel(model, selector?)` is the React hook — uses `useSyncExternalStore` with structural equality (`isEqual` from es-toolkit) to prevent unnecessary re-renders.
-
-- **query.ts** — The resource/query system. `query({ initialData, queryFn })` creates a resource descriptor that is embedded in model state. At runtime, `bindResourceState()` wraps resource fields with Proxy accessors that add `.query()`, `.refetch()`, `.set()` methods (and `.nextFetch()`/`.previousFetch()` for infinite queries). Includes caching with `staleTime`, `gcTime`, and `placeholderData` support.
-
-- **action.ts** — `action(factory)` defines action modules. The factory receives `{ state, context }` where `state(model)` returns the proxy with bound resources. Actions support class instances — prototype methods are walked and bound. Lazy interceptor factories (decorators) stored on methods are resolved at bind time via `resolveLazyInterceptors`.
-
-- **provider.tsx** — `<ComwitProvider>` creates a React context holding a `StoreRegistry` (Map of Model → StoreEntry), shared `queryDefaults`, `queryBinding` registry, and user-provided `context` object.
-
-- **silent.ts** — Deprecated synchronous subscriber-notification suppression. It does not make
-  render-time external-store mutations safe; selector `.suspend(arg)` is the SSR query path.
-
-### Interceptors (`packages/comwit/src/interceptors/`)
-
-Built on `intercept(hooks | factory)` which creates method/class decorators with lifecycle hooks (`onBefore`, `onSuccess`, `onError`, `onSettled`, `intercept`). Two modes:
-
-- **Immediate**: `intercept({ onError: ... })` — hooks applied at decoration time
-- **Lazy**: `intercept((ctx) => ({ ... }))` — factory stored, resolved when action binds to context
-
-Pre-built decorators: `onError`, `onSuccess`, `debounce`, `throttle`, `transaction`, `onAuthorized`, `retry`, `queue`, `log`.
-
-### Utils (`packages/comwit/src/utils/`)
-
-Re-exports from `es-toolkit`: `isEqual`, `debounce`, `throttle`, `pipe` (flow), `compose` (flowRight).
-
-## Key Patterns
-
-- **Yarn only** — enforced via `preinstall` script. Never use npm/pnpm.
-- **Vitest config is in `vite.config.ts`** — no separate `vitest.config.ts`. Test environment uses `happy-dom`.
-- **Tests live in `packages/comwit/tests/`** — `.test.ts` for unit tests, `.test.tsx` for React integration tests (using `@testing-library/react`).
-- **ESM-first** — `"type": "module"` in package.json. Builds to both ESM and CJS via Vite library mode.
-- **Husky + lint-staged** — pre-commit runs prettier on staged files.
-- **`es-toolkit` is the sole runtime dependency** — used for equality checks and function utilities. Avoid adding new runtime deps.
+See CONTRIBUTING.md for generation, verification and release details.

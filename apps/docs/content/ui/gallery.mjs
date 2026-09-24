@@ -1,0 +1,218 @@
+// Gallery layout for /ui/components — the order people browse in.
+// Distinctive UX first; plain building blocks last as a quick specimen sheet.
+// Every template component must appear exactly once (scripts/gen-ui.mjs checks this).
+//
+// exhibit: 'phone' renders inside a device frame, 'wide' spans the row, default is a card.
+
+export const groups = [
+  {
+    id: 'mobile',
+    title: 'Mobile app',
+    blurb: 'Chrome that behaves like a native app and gets out of the way while you read.',
+    items: [
+      {
+        name: 'app-bar',
+        title: 'App bar',
+        exhibit: 'phone',
+        summary: 'Glass top bar. Hides while you scroll down, returns the moment you scroll up.',
+      },
+      {
+        name: 'bottom-nav',
+        title: 'Bottom nav',
+        exhibit: 'phone',
+        summary:
+          'Floating tab capsule. The indicator springs between tabs; the bar shrinks as you scroll.',
+      },
+      {
+        name: 'pull-to-refresh',
+        title: 'Pull to refresh',
+        exhibit: 'phone',
+        summary: 'Pull down at the top to reload. Only the dial moves, so sticky bars stay put.',
+      },
+      {
+        name: 'drag-scroller',
+        title: 'Drag scroller',
+        exhibit: 'wide',
+        summary:
+          'Horizontal rail with drag, flick momentum, wheel and arrow keys. Taps still click.',
+      },
+    ],
+  },
+  {
+    id: 'glass',
+    title: 'Glass',
+    blurb: 'A refracting surface for everything that floats above content.',
+    items: [
+      {
+        name: 'glass',
+        title: 'Glass',
+        exhibit: 'wide',
+        summary:
+          'Four materials: morphing lens, blur, frosted and fade. Put it under any container.',
+      },
+      {
+        name: 'dropdown-menu',
+        title: 'Dropdown menu',
+        summary: 'Menus on morphing glass. Hover tints the text instead of filling the row.',
+      },
+      {
+        name: 'popover',
+        title: 'Popover',
+        summary: 'Anchored glass panel for small tasks next to their trigger.',
+      },
+    ],
+  },
+  {
+    id: 'notifications',
+    title: 'Notifications',
+    blurb: 'Tell people what happened and what to do next.',
+    items: [
+      {
+        name: 'sonner',
+        title: 'Toast',
+        summary: 'Glass toasts. Top of the screen on phones, bottom right on desktop.',
+      },
+      {
+        name: 'popup',
+        title: 'Popup',
+        summary:
+          'await popup.confirm(), popup.alert() and popup.sheet() from anywhere, no state needed.',
+      },
+      {
+        name: 'alert',
+        title: 'Alert',
+        summary: 'Inline callout in five tones.',
+      },
+      {
+        name: 'empty-state',
+        title: 'Empty state',
+        summary: 'When a list is empty, offer the one thing to do next.',
+      },
+    ],
+  },
+  {
+    id: 'pickers',
+    title: 'Pickers',
+    blurb: 'A popover on desktop, a bottom sheet on phones. Same panel, same value.',
+    items: [
+      {
+        name: 'date-picker',
+        title: 'Date picker',
+        summary: 'YYYY-MM-DD in, YYYY-MM-DD out. Min, max and any locale.',
+      },
+      {
+        name: 'time-picker',
+        title: 'Time picker',
+        summary: 'Slot list that scrolls to the selected time.',
+      },
+      {
+        name: 'month-picker',
+        title: 'Month picker',
+        summary: 'Year pages of twelve months for billing periods and reports.',
+      },
+      {
+        name: 'calendar',
+        title: 'Calendar',
+        summary: 'Inline calendar for single dates and ranges.',
+      },
+    ],
+  },
+  {
+    id: 'selection',
+    title: 'Selection',
+    blurb: 'Small controls with a physical response: ripples, springs and a drawn check.',
+    items: [
+      {
+        name: 'segmented-control',
+        title: 'Segmented control',
+        summary: 'A white pill on a sunken track for switching views and filters.',
+      },
+      {
+        name: 'chip',
+        title: 'Chip',
+        summary: 'Filters and tags with a ripple, a selected state and an optional remove button.',
+      },
+      {
+        name: 'checkbox',
+        title: 'Checkbox',
+        summary: 'The check draws itself in. A soft halo follows hover and press.',
+      },
+      {
+        name: 'radio-group',
+        title: 'Radio group',
+        summary: 'The dot pops in on a spring, with arrow-key navigation.',
+      },
+      {
+        name: 'pager',
+        title: 'Pager',
+        summary: 'Numbered pages from just page and totalPages.',
+      },
+    ],
+  },
+  {
+    id: 'forms',
+    title: 'Forms and data',
+    blurb: 'Inputs that handle Korean and Japanese IME composition, plus tables that never jump.',
+    items: [
+      {
+        name: 'text-field',
+        title: 'Text field',
+        summary: 'Label, helper text and error wired to the control for screen readers.',
+      },
+      {
+        name: 'autocomplete',
+        title: 'Autocomplete',
+        summary: 'Type to filter, arrow keys to choose.',
+      },
+      {
+        name: 'select',
+        title: 'Select',
+        summary: 'Pick one option from a list, with type-ahead and a brand check mark.',
+      },
+      {
+        name: 'form',
+        title: 'Form',
+        summary: 'react-hook-form fields with accessible messages.',
+      },
+      {
+        name: 'data-table',
+        title: 'Data table',
+        exhibit: 'wide',
+        summary:
+          'Server pagination with skeleton rows and a quiet refetch badge. The height never jumps.',
+      },
+      {
+        name: 'editor',
+        title: 'Editor',
+        exhibit: 'wide',
+        summary: 'Rich text on tiptap with a compact toolbar.',
+      },
+    ],
+  },
+  {
+    id: 'basics',
+    title: 'Basics',
+    blurb: 'The everyday parts, styled with the same tokens.',
+    specimen: true,
+    items: [
+      { name: 'button', title: 'Button', summary: 'Pill buttons that press in.' },
+      { name: 'badge', title: 'Badge', summary: 'Status labels.' },
+      { name: 'input', title: 'Input', summary: 'Single-line text.' },
+      { name: 'input-group', title: 'Input group', summary: 'Input with icons or units.' },
+      { name: 'textarea', title: 'Textarea', summary: 'Grows with its content.' },
+      { name: 'label', title: 'Label', summary: 'Names a control.' },
+      { name: 'switch', title: 'Switch', summary: 'On or off, right away.' },
+      { name: 'tabs', title: 'Tabs', summary: 'Segmented tabs.' },
+      { name: 'accordion', title: 'Accordion', summary: 'Stacked sections that expand.' },
+      { name: 'collapsible', title: 'Collapsible', summary: 'Show or hide one region.' },
+      { name: 'dialog', title: 'Dialog', summary: 'Modal window.' },
+      { name: 'sheet', title: 'Sheet', summary: 'Panel from any edge.' },
+      { name: 'card', title: 'Card', summary: 'Content container.' },
+      { name: 'table', title: 'Table', summary: 'Plain table parts.' },
+      { name: 'avatar', title: 'Avatar', summary: 'Image with a fallback.' },
+      { name: 'separator', title: 'Separator', summary: 'Hairline divider.' },
+      { name: 'skeleton', title: 'Skeleton', summary: 'Loading placeholder.' },
+      { name: 'pagination', title: 'Pagination', summary: 'Composable page links.' },
+    ],
+  },
+]

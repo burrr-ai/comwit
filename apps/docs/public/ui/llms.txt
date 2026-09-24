@@ -1,0 +1,80 @@
+# Comwit UI — implementation guide
+
+Comwit UI provides headless behavior (@comwit/ui) and editable component source installed into a React project by the comwit-ui CLI. The default look is the Comwit design system: warm white, deep ink, a blue brand (#3182f6), Pretendard, and refractive glass. It is independent of Comwit State.
+
+## Install
+
+Requires React 18 or 19. The styled templates use Tailwind CSS v4.
+
+npx comwit-ui@latest init
+npx comwit-ui@latest add button dialog input
+
+Run these in the consumer project. init creates comwit.json, wires comwit-tokens.css, and installs base dependencies. add copies component sources and their registry dependencies (other components, lib/* and hooks/*), then installs needed npm dependencies. The default locations are components/ui, lib, and hooks; comwit.json controls aliases and the CSS path.
+
+Import installed components from the consumer's configured alias, for example:
+
+'use client'
+import { Button } from '@/components/ui/button'
+
+Do not import @comwit/ui-templates in a CLI consumer app. It is the source package used to build the registry and previews. @comwit/ui remains a runtime dependency for behavior.
+
+Put the font variable --font-pretendard on <html> (for example with next/font/local). Without it components fall back to the system font.
+
+## Components
+
+- Mobile app: app-bar, bottom-nav, pull-to-refresh, drag-scroller
+- Glass: glass (Glass, GlassSurface, GlassButton), dropdown-menu, popover
+- Notifications: sonner (Toaster), popup (popup.confirm / alert / sheet), alert, empty-state
+- Pickers: date-picker, time-picker, month-picker (popover on desktop, bottom sheet on phones), calendar
+- Selection: segmented-control, chip, checkbox, radio-group, pager
+- Forms and data: text-field, autocomplete, select, form, data-table, editor
+- Basics: button, badge, input, input-group, textarea, label, switch, tabs, accordion, collapsible, dialog, sheet, card, table, avatar, separator, skeleton, pagination
+
+## App shell
+
+AppBar (behavior: flow | pinned | reveal) and BottomNav read one shared scroll intent. Wrap the scroller once:
+
+import { ScrollChromeProvider } from '@/hooks/use-scroll-chrome'
+<ScrollChromeProvider scrollRef={mainRef} resetKey={pathname}>…</ScrollChromeProvider>
+
+Omit scrollRef to follow window scroll. PullToRefresh renders its own scroller and forwards ref to it, so pass that ref to ScrollChromeProvider. Routing is yours: pass onClick={() => router.back()} to AppBarBackButton or FloatingBackButton, and use BottomNavItem asChild with your Link.
+
+## Ownership
+
+Edit copied component files directly. Existing files are skipped; --overwrite replaces local edits, so review first. Use --dry for a preview or --no-install when managing dependencies separately.
+
+Keep behavior and accessibility in @comwit/ui; component source composes primitive parts and applies styles.
+
+## Tokens
+
+Use the shipped semantic utilities, not hardcoded colors:
+- Surfaces and text: bg-background, bg-card, bg-muted, text-foreground, text-soft-foreground (default reading text), text-muted-foreground (meta), text-subtle-foreground (placeholder)
+- Brand: bg-primary, hover:bg-primary-strong, bg-primary-surface with text-primary-ink
+- Status (success, warning, destructive, info): bg-{s}, text-{s}-foreground, bg-{s}-surface, text-{s}-surface-foreground, border-{s}-border
+- Radius: rounded-control (inputs), rounded-card, rounded-sheet, rounded-pill (buttons, chips); rounded-full is always a circle
+- Type: text-display-xl…sm, text-title-lg…sm, text-body, text-body-sm, text-label, text-caption, text-micro
+- Motion and layers: duration-fast/base/slow, z-appbar < z-overlay < z-modal < z-dropdown < z-toast
+
+Theme by overriding primitives after the token import, for example :root { --brand: #0b68ba; --brand-strong: #08528f; --radius-scale: 0.6; --pill-radius: 12px }. Dark mode is the .dark class. There is no named-theme preset.
+
+Always merge classes with cn() from lib/utils. It registers the token utilities with tailwind-merge; a plain twMerge silently drops text-label next to text-foreground and ring-focus next to ring-ring.
+
+Keep a consumer's own global element rules (button, a, :focus-visible, h1–h3) inside @layer base. Unlayered element rules override Tailwind utilities and change the components' transitions, focus rings and fonts.
+
+## Composition
+
+Primitives use namespace exports such as Dialog.Root / Trigger / Portal / Overlay / Content / Title / Description / Close. Button, Input and Textarea are flat exports. Preserve labels, focus behavior and keyboard interactions when modifying a component. Use the actual component source for supported props; do not assume every shadcn or Radix API is interchangeable.
+
+Default copy is English. Pickers take locale (Intl, for example 'ko-KR') and labels; Pager and DataTable take labels.
+
+For direct unstyled use, install @comwit/ui and import primitives from that package. For styled UI, prefer the CLI installation flow above.
+
+For imperative popup helpers mount OverlayProvider from overlay-kit once. For toast notifications install the sonner template and mount its Toaster once. Basic controls do not require these providers.
+
+## References
+
+- Components (live gallery): https://library.comwit.io/ui/components
+- Installation: https://library.comwit.io/ui/docs/installation
+- Headless primitives: https://library.comwit.io/ui/docs/primitives
+- Tokens and theming: https://library.comwit.io/ui/theming
+- State (separate library): https://library.comwit.io/state/llms.txt

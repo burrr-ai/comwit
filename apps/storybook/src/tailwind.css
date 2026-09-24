@@ -1,0 +1,11 @@
+/* Storybook 전역 스타일.
+   토큰 계약(SSOT)은 @comwit/ui-templates 의 shipped styles.css 를 그대로 가져온다 — 복제 없음.
+   그 안의 `@import "tailwindcss"` + 디자인 토큰 + ripple 키프레임 + base 레이어가 전부 딸려온다. */
+@import '@comwit/ui-templates/styles.css';
+@import 'tw-animate-css';
+
+/* Tailwind v4 는 클래스 문자열을 소스에서 스캔한다. 워크스페이스 패키지 소스를 스캔 대상에 포함:
+   @comwit/ui 프리미티브의 구조/인터랙션 클래스 + @comwit/ui-templates 의 cva variant + 우리 스토리. */
+@source '../../../packages/ui/core/src';
+@source '../../../packages/ui/templates/src';
+@source '../src';

@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
 
-const CONTENT_DIR = path.join(process.cwd(), 'content/docs')
+const CONTENT_DIR = path.join(process.cwd(), 'content/state')
 
 export interface DocMeta {
   title: string

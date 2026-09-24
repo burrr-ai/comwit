@@ -8,3 +8,9 @@ coverage
 *.lock
 package-lock.json
 yarn.lock
+
+apps/docs/app/ui/_generated
+apps/storybook/src/generated
+packages/ui/cli/registry
+
+pnpm-lock.yaml

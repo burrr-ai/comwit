@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter, Geist_Mono, Manrope } from 'next/font/google'
+import localFont from 'next/font/local'
 import 'highlight.js/styles/github-dark.css'
 import './globals.css'
 
@@ -13,64 +14,32 @@ const manrope = Manrope({
   subsets: ['latin'],
 })
 
+// UI 라이브러리 기본 서체 — --font-pretendard 를 <html> 에 두어 토큰의 --font-sans 가 :root 에서 풀린다.
+const pretendard = localFont({
+  src: '../../ui-dev/app/fonts/PretendardVariable.woff2',
+  variable: '--font-pretendard',
+  weight: '45 920',
+  display: 'swap',
+})
+
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 })
 
 export const metadata: Metadata = {
-  title: 'comwit — React state management for vibe coding',
-  description:
-    'React state management for you and your coding agent. One llms.txt for models, actions, queries, and server hydration. Used by 1,000+ projects on comwit.io.',
-  keywords: [
-    'comwit',
-    'react',
-    'state management',
-    'vibe coding',
-    'claude code',
-    'llm',
-    'ai',
-    'proxy',
-    'reactivity',
-    'zustand',
-    'valtio',
-    'tanstack query',
-  ],
-  openGraph: {
-    title: 'comwit — React state management for vibe coding',
-    description:
-      'React state management for you and your coding agent. One llms.txt. Then get back to making things.',
-    siteName: 'comwit',
-    url: 'https://library.comwit.io',
-    type: 'website',
-    locale: 'en_US',
-    images: [
-      {
-        url: '/og/panda-garden',
-        width: 1200,
-        height: 630,
-        alt: 'comwit — A little state. A lot of possibility. A panda coding in a purple garden.',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'comwit — React state management for vibe coding',
-    description:
-      'React state management for you and your coding agent. One llms.txt. Then get back to making things.',
-    images: ['/og/panda-garden'],
-  },
-  other: {
-    llmstxt: 'https://library.comwit.io/llms.txt',
-  },
+  title: 'Comwit — State & UI',
+  description: 'The open-source State and UI libraries behind comwit.io templates.',
   metadataBase: new URL('https://library.comwit.io'),
-  icons: {
-    icon: [
-      { url: '/panda-icon-32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/panda-icon-192.png', sizes: '192x192', type: 'image/png' },
-    ],
-    apple: '/panda-apple-icon.png',
+  openGraph: {
+    title: 'Comwit — State & UI',
+    description: 'The building blocks behind comwit.io.',
+    siteName: 'Comwit',
+    type: 'website',
+    images: ['/og/libraries'],
   },
+  twitter: { card: 'summary_large_image', images: ['/og/libraries'] },
+  icons: { icon: '/logo.svg' },
 }
 
 export default function RootLayout({
@@ -79,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth" className={pretendard.variable}>
       <body className={`${inter.variable} ${geistMono.variable} ${manrope.variable} antialiased`}>
         {children}
       </body>

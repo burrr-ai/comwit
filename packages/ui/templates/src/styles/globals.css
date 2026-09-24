@@ -1,0 +1,1103 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* 다크는 클래스 단일 스위치. `light-dark()` 를 쓰지 않는 이유:
+   그건 색만 커버하고 `dark:` 변형(미디어 기반)과 신호가 갈려 반쪽 다크가 난다.
+   `.dark` 하나가 (1) 토큰 값 (2) dark: 변형 (3) color-scheme 를 동시에 문다. */
+@custom-variant dark (&:is(.dark *));
+
+/* ════════════════════════════════════════════════════════════════
+   comwit-ui 디자인 토큰 (SSOT) — 기본값은 컴윗 디자인 시스템이다.
+
+   톤: 따뜻한 화이트 + 딥 잉크 + 토스톤 블루. 순블랙·네온 금지.
+   색은 항상 "면(X) / 그 위 텍스트(X-foreground)" 쌍으로 생각한다.
+
+   3계층:
+     L0 프리미티브 — 실제 값이 사는 유일한 곳. 이름 있는 팔레트(ink·brand·line…) + 노브(radius·motion…)
+     L1 시맨틱     — 역할 토큰(--background·--primary·--border…). 전부 L0 의 alias.
+     L2 유틸       — @theme inline 이 L1 을 Tailwind 유틸명으로 승격(bg-primary·rounded-card…).
+
+   커스터마이즈 = L0 만 덮는다. 컴포넌트는 리터럴을 쓰지 않고 유틸만 소비하므로 JSX 0 수정.
+   **프리셋 테마는 싣지 않는다.** 컴윗 톤이 기본값일 뿐, 의견은 소비처가 갖는다.
+   ──────────────────────────────────────────────────────────────── */
+
+/* ── L0: 프리미티브(라이트) + 노브 ─────────────────────────────── */
+:root {
+  color-scheme: light;
+
+  /* 면(Surface) — 캔버스 → 옅은 면 → hover 면 → 선택 면 */
+  --canvas: #ffffff; /* 페이지 바탕 */
+  --canvas-raised: #ffffff; /* 카드 — 라이트에선 캔버스와 같고 그림자로 뜬다 */
+  --canvas-overlay: #ffffff; /* 팝오버·다이얼로그 */
+  --surface-subtle: #f4f5f7; /* 카드·그룹 배경 (옅은 면) */
+  --fill: #e9ebef; /* hover·눌림 면. 브랜드색 아님 → bg-accent */
+  --fill-strong: #dfe2e7; /* 선택됨 — hover 보다 한 스텝 눌러 둘이 구분되게 */
+
+  /* 잉크(Ink) — 제목 → 본문 → 메타 → 힌트 → 비활성 */
+  --ink: #0a0a0a;
+  --ink-soft: #484848; /* 제목이 아닌 기본 읽기 텍스트 */
+  --ink-muted: #6b6b6b; /* 메타·도움말 */
+  --ink-subtle: #9ca3af; /* 3차 텍스트·플레이스홀더 */
+  --ink-disabled: #999999; /* 비활성 표시 전용. 대비 미달이므로 본문에 쓰지 말 것 */
+
+  /* 브랜드(Brand) — 리브랜딩은 이 5개만 바꾸면 된다 */
+  --brand: #3182f6; /* 지배적 액션 (토스 블루) */
+  --brand-foreground: #ffffff;
+  --brand-strong: #1b64da; /* hover·강조 */
+  --brand-ink: #0b2e6b; /* 브랜드 틴트 면 위 텍스트 */
+  --brand-surface: #eff5ff; /* 브랜드 틴트 면 */
+
+  /* 선(Line) */
+  --line: #e8e8e5; /* 헤어라인 — 카드·디바이더 */
+  --line-strong: #d8dade; /* 입력 외곽 — 한 톤 강하게(폼 어포던스) */
+
+  /* 상태(Status) — 계열마다 5토큰. 브랜드와 분리되어 리브랜딩에도 고정된다.
+       {s} 솔리드 면 · {s}-foreground 솔리드 위 텍스트 · {s}-surface 틴트 면
+       {s}-surface-foreground 틴트 면 위 텍스트(AA 4.5:1+) · {s}-border 틴트 면의 보더 */
+  --success: #30a46c;
+  --success-foreground: #ffffff;
+  --success-surface: #e6f6eb;
+  --success-surface-foreground: #1c7549;
+  --success-border: #8eceaa;
+  --warning: #f76b15;
+  --warning-foreground: #431407; /* 흰색은 2.97:1 미달 → 다크 잉크 */
+  --warning-surface: #ffefd6;
+  --warning-surface-foreground: #b54500;
+  --warning-border: #f5ae73;
+  --destructive: #e5484d; /* 위험·되돌릴 수 없는 액션 */
+  --destructive-foreground: #ffffff;
+  --destructive-strong: #c62a2f; /* 위험 액션 hover */
+  --destructive-surface: #feebec;
+  --destructive-surface-foreground: #c62a2f;
+  --destructive-border: #f4a9aa;
+  --info: #0090ff;
+  --info-foreground: #ffffff;
+  --info-surface: #e6f4fe;
+  --info-surface-foreground: #0b68ba;
+  --info-border: #8ec8f6;
+
+  /* 글래스(Glass) — 앱바·탭바·메뉴·토스트의 굴절 유리 면 (.glass 가 소비) */
+  --glass-tint: rgb(233 235 239); /* 유리에 섞는 색. 컴포넌트 tint prop 이 인라인으로 덮는다 */
+  --glass-opacity: 0.38; /* tint 불투명도 — 낮을수록 뒤가 비친다 */
+  --glass-veil: #ffffff; /* blur·frosted·fade 변형의 옅은 막 */
+  --glass-edge: rgba(255, 255, 255, 0.55); /* 유리 테두리 */
+  --glass-sheen: rgba(255, 255, 255, 0.9); /* 윗모서리 광택 */
+  --glass-glow: rgba(255, 255, 255, 0.42); /* 면 위 방사 반사 */
+  --glass-shade: rgba(10, 10, 10, 0.08); /* 아랫모서리 음영 */
+  --glass-shadow: 0 2px 4px rgba(16, 24, 40, 0.09), 0 12px 28px rgba(16, 24, 40, 0.12);
+
+  /* 형태 노브 */
+  --radius: 10px; /* 컨트롤(버튼 외 입력·셀렉트) 반경 → rounded-control */
+  --card-radius: 16px; /* → rounded-card */
+  --sheet-radius: 20px; /* 바텀시트·토스트 → rounded-sheet */
+  --pill-radius: 9999px; /* 알약(버튼·칩·탭바). 각지게 하려면 8px 같은 값으로 */
+  --radius-scale: 1; /* 모든 반경의 승수. 0 = 완전 직각 */
+  --text-scale: 1; /* 타입 스케일 승수. 행간은 무단위 비율이라 같이 따라온다 */
+  --tracking-scale: 1; /* 자간 승수. 0 = 타이트 자간을 끈다 */
+  --border-width: 1px; /* bare/방향 보더 두께 (아래 @layer utilities 가 배선) */
+  --border-width-strong: 2px; /* 강조 보더 두께 */
+  --focus-ring-width: 2px; /* 면 있는 컨트롤의 키보드 포커스 링 */
+  --focus-ring-offset: 2px;
+  --field-ring-width: 3px; /* 입력 필드 포커스 링(옅은 브랜드 링) */
+  --spacing: 0.25rem; /* p-/m-/gap- 시드. 낮추면 전역 밀도↑ */
+
+  /* 타이포 노브 — Tailwind 네임스페이스(--font-weight-* / --font-display)는 L2 가 매핑 */
+  --display-font: var(--font-sans);
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* 모션 노브 */
+  --duration-instant: 75ms;
+  --duration-fast: 150ms; /* 눌림·색 전환 */
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+  --press-scale: 0.98; /* 눌림 스케일. 1 = 눌림 없음 */
+  --press-scale-thumb: 1.1; /* 스위치 썸은 눌리면 오히려 커진다. 1 = 없음 */
+  --ripple-opacity: 0.35;
+
+  /* 상태 노브 — 즉흥 알파 대신 이름 있는 값 */
+  --state-hover: 0.05; /* hover 헤일로 불투명도 */
+  --state-selected: 0.1; /* 선택 상태 헤일로 불투명도 */
+  --state-disabled: 0.5; /* 비활성 컨테이너 */
+  --state-disabled-content: 0.4; /* 비활성 셀·아이콘 */
+
+  /* 레이어링 SSOT — 오버레이가 서로 물리지 않게.
+     dropdown 은 modal **위**다: 다이얼로그·시트 안에서 연 셀렉트·메뉴·피커가 body 로 포털되므로
+     modal 보다 낮으면 자기를 연 다이얼로그 뒤로 숨는다. */
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-appbar: 40; /* 앱바·바텀내비 — 콘텐츠 위, 오버레이 아래 */
+  --z-overlay: 1000;
+  --z-modal: 1100;
+  --z-dropdown: 1200;
+  --z-toast: 1300;
+
+  /* 치수 정합 */
+  --menu-min-width: 8rem;
+  --picker-width: 320px;
+  --appbar-height: 56px;
+  --bottom-nav-height: 64px;
+
+  /* Elevation(라이트) — 보더는 옅게, 분리는 그림자로. 다크는 .dark 에서 재저작 */
+  --elevation-0: none;
+  --elevation-1: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --elevation-2: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 8px rgba(16, 24, 40, 0.06);
+  --elevation-3: 0 2px 4px rgba(16, 24, 40, 0.06), 0 10px 28px rgba(16, 24, 40, 0.08);
+  --elevation-4: 0 4px 12px rgba(16, 24, 40, 0.1), 0 16px 40px rgba(16, 24, 40, 0.12);
+  --elevation-5: 0 8px 24px rgba(16, 24, 40, 0.12), 0 24px 64px rgba(16, 24, 40, 0.16);
+  /* 소형 요소(스위치 썸·활성 탭) 전용. 컨테이너 사다리와 분리해야 썸이 깨지지 않는다 */
+  --elevation-raised: 0 1px 2px rgba(16, 24, 40, 0.1), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --elevation-message: 0 4px 20px rgba(11, 46, 107, 0.06); /* 말풍선·카드형 메시지 */
+  --elevation-panel: 0 10px 30px rgba(11, 46, 107, 0.08); /* 캔버스 위에 뜬 큰 패널 */
+}
+
+/* ── L0: 프리미티브(다크) ─────────────────────────────────────── */
+.dark {
+  color-scheme: dark;
+
+  /* 다크의 depth 는 그림자가 아니라 톤이다 — 인접 면이 항상 한 스텝씩 분리되게 올린다.
+     canvas → card → muted·popover → hover → selected */
+  --canvas: #161618;
+  --canvas-raised: #1e1f22;
+  --canvas-overlay: #26272b;
+  --surface-subtle: #26272b;
+  --fill: #2f3035;
+  --fill-strong: #3a3b41;
+
+  --ink: #f4f4f7;
+  --ink-soft: #b6b7c0;
+  --ink-muted: #a1a2ab;
+  --ink-subtle: #8b8c94;
+  --ink-disabled: #6a6b74;
+
+  /* 브랜드 솔리드는 그대로 — 틴트 면과 그 위 텍스트만 어두운 바탕용으로 재저작 */
+  --brand-ink: #b9d4ff;
+  --brand-surface: #0c273f;
+
+  /* 선 — hairline 은 은은하게, 입력 외곽은 배경 대비 3:1(WCAG 1.4.11) 이상 */
+  --line: #45464d;
+  --line-strong: #8b8c94;
+
+  /* status — 솔리드(step9)와 전경은 라이트와 동일. 어두운 면에 얹히는 surface·텍스트·보더만 재저작 */
+  --success-surface: #10261b;
+  --success-surface-foreground: #63d69b;
+  --success-border: #3f9169;
+  --warning-surface: #2a1804;
+  --warning-surface-foreground: #ffb066;
+  --warning-border: #ad6c33;
+  --destructive-surface: #2a1416;
+  --destructive-surface-foreground: #ff9ea0;
+  --destructive-border: #b85557;
+  --info-surface: #0c273f;
+  --info-surface-foreground: #7cc0ff;
+  --info-border: #4278b0;
+
+  --glass-tint: rgb(38 39 43);
+  --glass-opacity: 0.55;
+  --glass-veil: #1e1f22;
+  --glass-edge: rgba(255, 255, 255, 0.1);
+  --glass-sheen: rgba(255, 255, 255, 0.14);
+  --glass-glow: rgba(255, 255, 255, 0.06);
+  --glass-shade: rgba(0, 0, 0, 0.3);
+  --glass-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 12px 28px rgba(0, 0, 0, 0.55);
+
+  /* 검정 드롭섀도만으론 근검정 배경에서 depth 가 0이 된다 → 강한 그림자 + 흰 inset 하이라이트 */
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --elevation-2:
+    0 2px 8px rgba(0, 0, 0, 0.7), 0 1px 2px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --elevation-3:
+    0 10px 28px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --elevation-4:
+    0 16px 40px rgba(0, 0, 0, 0.75), 0 4px 12px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --elevation-5:
+    0 24px 64px rgba(0, 0, 0, 0.8), 0 8px 24px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --elevation-raised: 0 1px 3px rgba(0, 0, 0, 0.6);
+  --elevation-message: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --elevation-panel: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* ── L1: 시맨틱 alias ────────────────────────────────────────────
+   셀렉터에 .dark 를 함께 나열하는 게 핵심이다.
+   CSS 커스텀 프로퍼티는 "선언한 요소"에서 var() 가 치환되므로, 자식 스코프가 L0 만 덮으면
+   :root 에서 이미 계산돼버린 alias 는 따라오지 않는다. L0 를 덮는 스코프마다 alias 도 다시 선언한다.
+
+   커스터마이즈는 소비처가 한다:
+     전역:   styles.css import **뒤에** :root { --brand: …; --radius-scale: 0 }  (같은 특이성, 나중 선언이 이김)
+     스코프: 임의의 셀렉터에서 L1(--primary 등)을 덮으면 그대로 먹는다.
+             L0(--ink 등)를 스코프에서 덮으려면 그 셀렉터에서 아래 alias 도 다시 선언해야 한다. */
+:root,
+.dark {
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--canvas-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--canvas-overlay);
+  --popover-foreground: var(--ink);
+
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --primary-strong: var(--brand-strong);
+  --primary-ink: var(--brand-ink);
+  --primary-surface: var(--brand-surface);
+
+  /* 중립 면 + 텍스트 위계 — foreground → soft(기본 읽기) → muted(메타) → subtle(힌트) */
+  --secondary: var(--surface-subtle);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-subtle);
+  --muted-foreground: var(--ink-muted);
+  --soft-foreground: var(--ink-soft);
+  --subtle-foreground: var(--ink-subtle);
+  --disabled-foreground: var(--ink-disabled);
+  --accent: var(--fill); /* hover 채움 면. 브랜드색 아님(shadcn 관례) */
+  --accent-foreground: var(--ink);
+  --selected: var(--fill-strong);
+  --skeleton: var(--surface-subtle); /* 로딩 플레이스홀더 전용면 */
+
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+  --input: var(--line-strong); /* 입력 외곽 — hairline 보다 한 톤 강하게 */
+  --ring: var(--brand); /* 포커스 링 — 지배적 액션과 같은 브랜드 신호 */
+
+  --switch-thumb: #ffffff; /* 스위치 노브 — 다크에서도 밝아야 트랙 대비 유지 */
+  --overlay: rgba(0, 0, 0, 0.5); /* 모달 스크림 */
+  --surface-glass: rgba(255, 255, 255, 0.72); /* 불투명 backdrop-blur 칩 */
+
+  /* 외부 소비자가 shadow-[var(--shadow-card)] 로 참조할 수 있게 변수도 노출 */
+  --shadow-card: var(--elevation-2);
+  --shadow-card-hover: var(--elevation-3);
+}
+
+/* 다크 전용 시맨틱 보정 — 반드시 alias 규칙 **뒤**에 둔다.
+   html.dark 는 `.dark` 와 `:root` 에 동시에 매치되고 특이성이 같아, 뒤에 오는 alias 가 앞을 되돌린다. */
+.dark {
+  --skeleton: var(--fill); /* 카드(raised) 안에서도 보이도록 한 스텝 위 */
+  --switch-thumb: #f4f4f7;
+  --overlay: rgba(0, 0, 0, 0.72);
+  --surface-glass: rgba(30, 31, 34, 0.72);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   L2 — @theme inline: 토큰을 유틸리티로 승격. 유틸명 = 토큰명.
+   inline 이라 var() 인디렉션이 유지되고, .dark 나 소비처의 오버라이드 값이 라이브로 흐른다.
+   ⚠️ 이름 규약: `bg-accent` = 중립 hover 면(브랜드 아님). 브랜드 면은 `bg-primary`.
+   ──────────────────────────────────────────────────────────────── */
+@theme inline {
+  --font-sans:
+    var(--font-pretendard, 'Pretendard Variable'), var(--font-noto-sans-kr, 'Noto Sans KR'),
+    system-ui, sans-serif;
+  --font-mono:
+    var(--font-noto-sans-mono, 'Noto Sans Mono'), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: var(--display-font); /* font-display 유틸 + 제목 슬롯 자동 배선(아래 base) */
+
+  /* 웨이트 노브 → font-normal/medium/semibold/bold 가 노브를 탄다.
+     ※ 이름은 반드시 Tailwind 네임스페이스(--font-weight-normal). */
+  --font-weight-normal: var(--weight-normal);
+  --font-weight-medium: var(--weight-medium);
+  --font-weight-semibold: var(--weight-semibold);
+  --font-weight-bold: var(--weight-bold);
+
+  /* 색 → bg-* / text-* / border-* / ring-*. 반전은 bg-foreground text-background. */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-surface: var(--primary-surface);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-soft-foreground: var(--soft-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-disabled-foreground: var(--disabled-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-selected: var(--selected);
+  --color-skeleton: var(--skeleton);
+  --color-switch-thumb: var(--switch-thumb);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+  --color-surface-glass: var(--surface-glass);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-surface: var(--success-surface);
+  --color-success-surface-foreground: var(--success-surface-foreground);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-surface-foreground: var(--warning-surface-foreground);
+  --color-warning-border: var(--warning-border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-strong: var(--destructive-strong);
+  --color-destructive-surface: var(--destructive-surface);
+  --color-destructive-surface-foreground: var(--destructive-surface-foreground);
+  --color-destructive-border: var(--destructive-border);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-surface: var(--info-surface);
+  --color-info-surface-foreground: var(--info-surface-foreground);
+  --color-info-border: var(--info-border);
+
+  /* 그림자 → shadow-*. 빌트인을 덮어써서 컴포넌트 편집 0으로 elevation 이 리테마된다. */
+  --shadow-xs: var(--elevation-1);
+  --shadow-sm: var(--elevation-2);
+  --shadow-md: var(--elevation-3);
+  --shadow-lg: var(--elevation-4);
+  --shadow-xl: var(--elevation-5);
+  --shadow-raised: var(--elevation-raised);
+  /* 의미로 부르는 별칭 — 카드가 캔버스 위에 살짝 떠 보이게 */
+  --shadow-card: var(--elevation-2);
+  --shadow-card-hover: var(--elevation-3);
+  --shadow-message: var(--elevation-message);
+  --shadow-panel: var(--elevation-panel);
+
+  /* ── 목적형 타입 스케일 — 컴윗 밀도(본문 15 · 라벨 14 · 캡션 12).
+     크기+행간+자간을 한 유틸로 묶는다. 제목(display/title)만 굵기를 내장하고,
+     본문·라벨·캡션·마이크로는 비워 두어 font-semibold 등으로 얹는다. 색은 text-* 로 따로. */
+  --text-display-xl: calc(40px * var(--text-scale));
+  --text-display-xl--line-height: 1.1;
+  --text-display-xl--font-weight: var(--weight-bold);
+  --text-display-xl--letter-spacing: calc(-0.032em * var(--tracking-scale));
+
+  --text-display-lg: calc(32px * var(--text-scale));
+  --text-display-lg--line-height: 1.14;
+  --text-display-lg--font-weight: var(--weight-bold);
+  --text-display-lg--letter-spacing: calc(-0.03em * var(--tracking-scale));
+
+  --text-display-md: calc(28px * var(--text-scale));
+  --text-display-md--line-height: 1.18;
+  --text-display-md--font-weight: var(--weight-bold);
+  --text-display-md--letter-spacing: calc(-0.028em * var(--tracking-scale));
+
+  --text-display-sm: calc(22px * var(--text-scale));
+  --text-display-sm--line-height: 1.27;
+  --text-display-sm--font-weight: var(--weight-bold);
+  --text-display-sm--letter-spacing: calc(-0.024em * var(--tracking-scale));
+
+  --text-title-lg: calc(18px * var(--text-scale));
+  --text-title-lg--line-height: 1.33;
+  --text-title-lg--font-weight: var(--weight-semibold);
+  --text-title-lg--letter-spacing: calc(-0.022em * var(--tracking-scale));
+
+  --text-title-md: calc(16px * var(--text-scale));
+  --text-title-md--line-height: 1.38;
+  --text-title-md--font-weight: var(--weight-semibold);
+  --text-title-md--letter-spacing: calc(-0.02em * var(--tracking-scale));
+
+  --text-title-sm: calc(14px * var(--text-scale));
+  --text-title-sm--line-height: 1.43;
+  --text-title-sm--font-weight: var(--weight-semibold);
+  --text-title-sm--letter-spacing: calc(-0.016em * var(--tracking-scale));
+
+  --text-body: calc(15px * var(--text-scale));
+  --text-body--line-height: 1.6;
+  --text-body--letter-spacing: calc(-0.012em * var(--tracking-scale));
+
+  --text-body-sm: calc(13px * var(--text-scale));
+  --text-body-sm--line-height: 1.6;
+  --text-body-sm--letter-spacing: calc(-0.008em * var(--tracking-scale));
+
+  --text-label: calc(14px * var(--text-scale));
+  --text-label--line-height: 1.29;
+  --text-label--letter-spacing: calc(-0.014em * var(--tracking-scale));
+
+  --text-caption: calc(12px * var(--text-scale));
+  --text-caption--line-height: 1.33;
+  --text-caption--letter-spacing: calc(-0.006em * var(--tracking-scale));
+
+  --text-micro: calc(11px * var(--text-scale));
+  --text-micro--line-height: 1.27;
+  --text-micro--letter-spacing: calc(0.01em * var(--tracking-scale));
+
+  /* 반경 — 목적형이 주 어휘: rounded-control / rounded-card / rounded-sheet / rounded-pill.
+     t-shirt 사다리(rounded-sm/md/lg…)는 Tailwind 기본값 그대로 두고 --radius-scale 만 곱한다.
+     rounded-pill = 소비처가 각지게 만들 수 있는 알약, rounded-full = 항상 원(아바타·라디오·리플). */
+  --radius-control: calc(var(--radius) * var(--radius-scale));
+  --radius-card: calc(var(--card-radius) * var(--radius-scale));
+  --radius-sheet: calc(var(--sheet-radius) * var(--radius-scale));
+  --radius-pill: var(--pill-radius);
+  --radius-none: 0px;
+  --radius-xs: calc(2px * var(--radius-scale));
+  --radius-sm: calc(4px * var(--radius-scale));
+  --radius-md: calc(6px * var(--radius-scale));
+  --radius-lg: calc(8px * var(--radius-scale));
+  --radius-xl: calc(12px * var(--radius-scale));
+  --radius-2xl: calc(16px * var(--radius-scale));
+  --radius-3xl: calc(24px * var(--radius-scale));
+  --radius-full: 9999px; /* 리터럴 = 어떤 테마도 못 바꾼다. 의도된 고정 */
+}
+
+@theme {
+  /* 이징 — 빌트인 ease-out/ease-in-out 은 하이재킹하지 않는다 */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.34, 1.56, 0.64, 1); /* 오버슈트 — 라디오 도트·탭 인디케이터 */
+
+  /* 리플 — Chip·Checkbox·Radio. forwards 로 종료 후 opacity 0 유지(잔상 방지) */
+  --animate-ripple: ripple 600ms ease-out forwards;
+  @keyframes ripple {
+    from {
+      transform: scale(0);
+      opacity: var(--ripple-opacity);
+    }
+    to {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+}
+
+/* ── bare/방향 보더 두께를 노브에 묶는다.
+   @utility 로는 안 된다 — 빌트인과 이름이 겹치면 커스텀 유틸이 조용히 버려진다(실측 확인).
+   같은 utilities 레이어에 "뒤에" 같은 특이성으로 authored 규칙을 두면 이긴다. ── */
+@layer utilities {
+  .border {
+    border-width: var(--border-width);
+  }
+  .border-t {
+    border-top-width: var(--border-width);
+  }
+  .border-r {
+    border-right-width: var(--border-width);
+  }
+  .border-b {
+    border-bottom-width: var(--border-width);
+  }
+  .border-l {
+    border-left-width: var(--border-width);
+  }
+  .border-2 {
+    border-width: var(--border-width-strong);
+  }
+  .border-b-2 {
+    border-bottom-width: var(--border-width-strong);
+  }
+}
+
+/* ── 모션 — 빌트인 duration-* 은 숫자/임의값만 매칭하므로 이름 충돌이 없다 ── */
+@utility duration-instant {
+  transition-duration: var(--duration-instant);
+}
+@utility duration-fast {
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  transition-duration: var(--duration-base);
+}
+@utility duration-slow {
+  transition-duration: var(--duration-slow);
+}
+@utility duration-slower {
+  transition-duration: var(--duration-slower);
+}
+
+/* ── 레이어링 — z-50 난립 대신 이름 있는 사다리 ── */
+@utility z-raised {
+  z-index: var(--z-raised);
+}
+@utility z-sticky {
+  z-index: var(--z-sticky);
+}
+@utility z-appbar {
+  z-index: var(--z-appbar);
+}
+@utility z-dropdown {
+  z-index: var(--z-dropdown);
+}
+@utility z-overlay {
+  z-index: var(--z-overlay);
+}
+@utility z-modal {
+  z-index: var(--z-modal);
+}
+@utility z-toast {
+  z-index: var(--z-toast);
+}
+
+/* ── 노브를 부르는 이름 있는 유틸 — 컴포넌트에 arbitrary 를 흩뿌리지 않기 위한 것 ── */
+@utility opacity-disabled {
+  opacity: var(--state-disabled);
+}
+@utility opacity-disabled-content {
+  opacity: var(--state-disabled-content);
+}
+@utility scale-press {
+  scale: var(--press-scale);
+}
+@utility scale-press-thumb {
+  scale: var(--press-scale-thumb);
+}
+@utility min-w-menu {
+  min-width: var(--menu-min-width);
+}
+@utility w-picker {
+  width: var(--picker-width);
+}
+@utility max-w-picker {
+  max-width: var(--picker-width);
+}
+@utility h-appbar {
+  height: var(--appbar-height);
+}
+@utility h-bottom-nav {
+  height: var(--bottom-nav-height);
+}
+
+/* 포커스 링 폭/오프셋 — Tailwind 가 ring-* 에 쓰는 합성 변수를 그대로 조립한다.
+   var() 폴백은 @property 등록이 없는 경우에도 box-shadow 가 무효화되지 않게 하는 안전장치. */
+@utility ring-focus {
+  --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0
+    calc(var(--focus-ring-width) + var(--tw-ring-offset-width, 0px))
+    var(--tw-ring-color, currentcolor);
+  box-shadow:
+    var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow, 0 0 #0000);
+}
+@utility ring-field {
+  --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 var(--field-ring-width)
+    var(--tw-ring-color, currentcolor);
+  box-shadow:
+    var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow, 0 0 #0000);
+}
+@utility ring-offset-focus {
+  --tw-ring-offset-width: var(--focus-ring-offset);
+  --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--focus-ring-offset)
+    var(--tw-ring-offset-color);
+}
+
+/* ── 상태 헤일로 — currentColor 를 노브 불투명도로 합성.
+   체크박스/라디오 헤일로가 checked 시 primary 를 자동으로 따라간다. ── */
+@utility state-hover-layer {
+  background-color: color-mix(in oklab, currentColor calc(var(--state-hover) * 100%), transparent);
+}
+@utility state-selected-layer {
+  background-color: color-mix(
+    in oklab,
+    currentColor calc(var(--state-selected) * 100%),
+    transparent
+  );
+}
+
+@layer base {
+  /* 색 없는 `border` 유틸의 기본색을 hairline 토큰으로.
+     (Tailwind v4 기본 보더색은 currentColor 라 이 규칙이 없으면 날것 검정 테두리가 나온다.) */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  /* 제목 슬롯이 디스플레이 폰트를 상속 — 소비처가 --display-font 만 바꾸면
+     dialog/sheet/card/alert 제목이 컴포넌트 편집 0으로 세리프/그로테스크가 된다. */
+  [data-slot='dialog-title'],
+  [data-slot='sheet-title'],
+  [data-slot='card-title'],
+  [data-slot='alert-title'],
+  [data-slot='app-bar-title'] {
+    font-family: var(--display-font);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  /* 전역 스크롤바 — 얇고 살짝 투명, hover 시 또렷해짐 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ink-subtle) 45%, transparent) transparent;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   컴포넌트 CSS — Tailwind 유틸로 표현이 안 되는 것만 여기 둔다.
+   ──────────────────────────────────────────────────────────────── */
+@layer components {
+  /* ── 굴절 유리(.glass) — RefractiveGlass / GlassSurface 가 소비한다.
+     기본(.glass) = 반투명 틴트 + 광택 + 그림자. 변형:
+       .glass-morphing  렌즈 가장자리 굴절(Chromium 은 SVG 렌즈 · 그 외 blur 폴백) — 메뉴·앱바 버튼
+       .glass-blur      강한 블러 · 보더 없음 — 앱바 전체 면
+       .glass-frosted   서리 유리 — 카드형 패널
+       .glass-fade      아래로 사라지는 블러 — 스크롤 헤더 뒤 페이드
+     tint/opacity 는 인라인 --glass-tint / --glass-opacity 로 덮는다. ── */
+  .glass {
+    border: var(--border-width) solid var(--line);
+    background-color: color-mix(
+      in srgb,
+      var(--glass-tint) calc(var(--glass-opacity) * 100%),
+      transparent
+    );
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--glass-veil) 68%, transparent) 0%,
+      color-mix(in srgb, var(--glass-tint) 48%, transparent) 100%
+    );
+    background-clip: padding-box;
+    box-shadow:
+      inset 0 1px 0 var(--glass-sheen),
+      inset 0 -1px 0 var(--glass-shade),
+      var(--glass-shadow);
+  }
+
+  /* 윗모서리 하이라이트 선 */
+  .glass::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    top: 1px;
+    right: 18%;
+    left: 18%;
+    height: 1px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent, var(--glass-sheen), transparent);
+  }
+
+  .glass-blur {
+    --glass-tint: var(--glass-veil);
+    --glass-opacity: 0.66;
+    border: 0;
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--glass-veil) 44%, transparent) 0%,
+      color-mix(in srgb, var(--glass-veil) 22%, transparent) 100%
+    );
+    box-shadow: 0 8px 28px rgba(16, 24, 40, 0.06);
+  }
+  .glass-blur::after,
+  .glass-fade::after {
+    display: none;
+  }
+
+  .glass-frosted {
+    --glass-tint: var(--glass-veil);
+    --glass-opacity: 0.66;
+    border-color: var(--glass-edge);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--glass-veil) 44%, transparent) 0%,
+      color-mix(in srgb, var(--glass-tint) 21%, transparent) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 var(--glass-sheen),
+      0 6px 20px rgba(16, 24, 40, 0.09);
+  }
+
+  .glass-fade {
+    --glass-tint: var(--glass-veil);
+    --glass-opacity: 0.08;
+    border: 0;
+    background-image: none;
+    box-shadow: none;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 28%,
+      rgba(0, 0, 0, 0.62) 62%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 28%,
+      rgba(0, 0, 0, 0.62) 62%,
+      transparent 100%
+    );
+  }
+
+  .glass-pressed {
+    border-color: color-mix(in srgb, var(--brand) 60%, transparent);
+  }
+
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass {
+      border-color: var(--glass-edge);
+      background-image:
+        radial-gradient(130% 170% at 18% -40%, var(--glass-glow) 0%, transparent 52%),
+        radial-gradient(
+          110% 150% at 84% 140%,
+          color-mix(in srgb, var(--glass-glow) 62%, transparent) 0%,
+          transparent 58%
+        ),
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--glass-veil) 14%, transparent) 0%,
+          color-mix(in srgb, var(--glass-tint) 6%, transparent) 100%
+        );
+      -webkit-backdrop-filter: blur(6px) saturate(165%) contrast(103%);
+      backdrop-filter: blur(6px) saturate(165%) contrast(103%);
+      box-shadow:
+        inset 0 1px 0 var(--glass-sheen),
+        inset 0 -1px 1px var(--glass-shade),
+        inset 0 -10px 16px -12px color-mix(in srgb, var(--glass-sheen) 88%, transparent),
+        var(--glass-shadow);
+    }
+
+    .glass-morphing {
+      --glass-opacity: 0.22;
+      -webkit-backdrop-filter: blur(12px) saturate(165%) contrast(103%);
+      backdrop-filter: blur(12px) saturate(165%) contrast(103%);
+    }
+
+    /* SVG 렌즈 — JS 가 Chromium 에서만 .glass-lens 를 붙인다 */
+    .glass-lens {
+      -webkit-backdrop-filter: var(--glass-filter);
+      backdrop-filter: var(--glass-filter);
+    }
+
+    .glass-blur {
+      --glass-opacity: 0.18;
+      border-color: transparent;
+      background-image:
+        radial-gradient(140% 260% at 12% -120%, var(--glass-glow) 0%, transparent 58%),
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--glass-veil) 8%, transparent) 0%,
+          color-mix(in srgb, var(--glass-veil) 2%, transparent) 100%
+        );
+      -webkit-backdrop-filter: blur(22px) saturate(185%) contrast(106%);
+      backdrop-filter: blur(22px) saturate(185%) contrast(106%);
+      box-shadow: 0 10px 32px rgba(16, 24, 40, 0.07);
+    }
+    .glass-blur.glass-lens {
+      -webkit-backdrop-filter: blur(24px) saturate(190%) contrast(106%) var(--glass-filter);
+      backdrop-filter: blur(24px) saturate(190%) contrast(106%) var(--glass-filter);
+    }
+
+    .glass-frosted {
+      --glass-opacity: 0.36;
+      border-color: var(--glass-edge);
+      background-image: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--glass-veil) 20%, transparent) 0%,
+        color-mix(in srgb, var(--glass-tint) 6%, transparent) 100%
+      );
+      -webkit-backdrop-filter: blur(10px) saturate(140%) contrast(102%);
+      backdrop-filter: blur(10px) saturate(140%) contrast(102%);
+    }
+    .glass-frosted.glass-lens {
+      -webkit-backdrop-filter: blur(10px) saturate(140%) var(--glass-filter);
+      backdrop-filter: blur(10px) saturate(140%) var(--glass-filter);
+    }
+
+    .glass-fade {
+      background-image: none;
+      -webkit-backdrop-filter: blur(18px) saturate(155%) contrast(102%);
+      backdrop-filter: blur(18px) saturate(155%) contrast(102%);
+      box-shadow: none;
+    }
+    .glass-fade.glass-lens {
+      -webkit-backdrop-filter: blur(18px) saturate(155%) var(--glass-filter);
+      backdrop-filter: blur(18px) saturate(155%) var(--glass-filter);
+    }
+  }
+
+  /* 레이어가 가진 그림자는 여기서 끈다(바깥 버튼이 아니라) — 앱바 뒤로가기처럼 면에 붙는 유리 */
+  .glass.glass-shadowless {
+    box-shadow: none;
+  }
+
+  /* 유리 메뉴 행 — hover·포커스에도 굴절 면이 비쳐 보이게 채움 대신 글자색으로 표시한다 */
+  .glass-morphing [data-glass-item] {
+    transition:
+      color 150ms ease,
+      background-color 150ms ease,
+      box-shadow 150ms ease,
+      transform 150ms ease;
+  }
+  .glass-morphing
+    [data-glass-item]:not(:disabled, [data-disabled], [aria-disabled='true']):is(
+      :hover,
+      :focus-visible,
+      [data-highlighted],
+      [data-state='open']
+    ) {
+    background-color: transparent;
+    color: var(--primary-strong);
+  }
+  .glass-morphing
+    [data-glass-item][data-variant='destructive']:not(
+      :disabled,
+      [data-disabled],
+      [aria-disabled='true']
+    ):is(:hover, :focus-visible, [data-highlighted]) {
+    color: var(--destructive-strong);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  .glass-morphing
+    [data-glass-item]:not(:disabled, [data-disabled], [aria-disabled='true']):is(
+      :hover,
+      :focus-visible,
+      [data-highlighted],
+      [data-state='open']
+    )
+    :is(svg, [data-glass-label]) {
+    color: inherit;
+  }
+  .glass-morphing [data-glass-item][data-variant='destructive'] svg {
+    color: inherit;
+  }
+  /* 스크롤되는 메뉴 안에서도 보이도록 안쪽 아웃라인 */
+  .glass-morphing [data-glass-item]:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+
+  /* 투명도·대비 선호 — 유리를 불투명 면으로 */
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    .glass {
+      border-color: var(--line-strong);
+      background: var(--surface-subtle);
+      box-shadow: var(--elevation-2);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    .glass::after {
+      display: none;
+    }
+  }
+  @media (forced-colors: active) {
+    .glass {
+      forced-color-adjust: auto;
+      border-color: CanvasText;
+      background: Canvas;
+      box-shadow: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    .glass::after {
+      display: none;
+    }
+  }
+
+  /* ── 메뉴 모션 — 유리 면은 tw-animate 의 transform 조합에서 WebKit 이 backdrop 을 잃는다.
+     translate3d + backface-visibility 로 합성 레이어를 고정하고, 나오는 방향만 data-side 로 바꾼다. ── */
+  .menu-motion {
+    --menu-offset-x: 0px;
+    --menu-offset-y: 0px;
+    transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+    backface-visibility: hidden;
+    will-change: opacity, transform;
+  }
+  .menu-motion[data-side='bottom'] {
+    --menu-offset-y: -0.5rem;
+  }
+  .menu-motion[data-side='top'] {
+    --menu-offset-y: 0.5rem;
+  }
+  .menu-motion[data-side='left'] {
+    --menu-offset-x: 0.5rem;
+  }
+  .menu-motion[data-side='right'] {
+    --menu-offset-x: -0.5rem;
+  }
+  .menu-motion[data-state='open'] {
+    animation: menu-enter 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .menu-motion[data-state='closed'] {
+    animation: menu-exit 110ms ease-in both;
+  }
+
+  /* ── 리치 텍스트(Editor) 본문 — typography 플러그인 없이도 읽히는 최소 규칙 ── */
+  [data-slot='editor'] .tiptap {
+    color: var(--foreground);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    outline: none;
+  }
+  [data-slot='editor'] .tiptap > * + * {
+    margin-top: 0.6em;
+  }
+  [data-slot='editor'] .tiptap :is(h1, h2, h3) {
+    font-family: var(--display-font);
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+  }
+  [data-slot='editor'] .tiptap h1 {
+    font-size: 1.6em;
+  }
+  [data-slot='editor'] .tiptap h2 {
+    font-size: 1.3em;
+  }
+  [data-slot='editor'] .tiptap h3 {
+    font-size: 1.12em;
+  }
+  [data-slot='editor'] .tiptap :is(ul, ol) {
+    padding-left: 1.4em;
+  }
+  [data-slot='editor'] .tiptap ul {
+    list-style: disc;
+  }
+  [data-slot='editor'] .tiptap ol {
+    list-style: decimal;
+  }
+  [data-slot='editor'] .tiptap blockquote {
+    border-left: 3px solid var(--primary);
+    padding: 0.2em 0 0.2em 0.9em;
+    color: var(--soft-foreground);
+  }
+  [data-slot='editor'] .tiptap code {
+    border-radius: var(--radius-xs);
+    background: var(--muted);
+    padding: 0.1em 0.35em;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+  [data-slot='editor'] .tiptap pre {
+    border-radius: var(--radius-control);
+    background: var(--muted);
+    padding: 0.8em 1em;
+    overflow-x: auto;
+  }
+  [data-slot='editor'] .tiptap pre code {
+    background: none;
+    padding: 0;
+  }
+  [data-slot='editor'] .tiptap a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  [data-slot='editor'] .tiptap img {
+    max-width: 100%;
+    border-radius: var(--radius-control);
+  }
+  [data-slot='editor'] .tiptap hr {
+    border-top: 1px solid var(--border);
+  }
+  /* 빈 문서의 플레이스홀더 — tiptap Placeholder 가 첫 빈 노드에 data-placeholder 를 단다 */
+  [data-slot='editor'] .tiptap .is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: var(--subtle-foreground);
+    pointer-events: none;
+  }
+
+  /* ── 플로팅 탭 인디케이터 — 바텀내비·세그먼트 탭의 활성 알약 ── */
+  .floating-tab-indicator {
+    border: 0;
+    background-color: color-mix(in srgb, var(--ink) 6%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-sheen) 38%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .glass-morphing [data-glass-item] {
+      transition: none;
+    }
+    .menu-motion[data-state] {
+      animation: none;
+      will-change: auto;
+    }
+  }
+}
+
+@keyframes menu-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--menu-offset-x), var(--menu-offset-y), 0) scale3d(0.95, 0.95, 1);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
+  }
+}
+@keyframes menu-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(var(--menu-offset-x), var(--menu-offset-y), 0) scale3d(0.98, 0.98, 1);
+  }
+}
+
+/* ── 토스트(sonner) — sonner 기본 CSS 는 런타임에 unlayered 로 들어오므로 같은 unlayered 규칙에서 덮는다.
+   유리 면 + 시트 반경 + 목적형 타입. 색은 Toaster 가 style 로 주입하는 --normal-bg 등이 담당한다. ── */
+.comwit-toaster[data-sonner-toaster] {
+  font-family: var(--font-sans);
+}
+.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  gap: 10px;
+  min-height: 56px;
+  padding: 11px 14px;
+  border-width: 1px;
+  border-radius: var(--radius-sheet);
+  background-clip: padding-box;
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 1px 4px rgba(16, 24, 40, 0.05),
+    0 14px 34px rgba(11, 46, 107, 0.11);
+  -webkit-backdrop-filter: blur(24px) saturate(185%);
+  backdrop-filter: blur(24px) saturate(185%);
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  letter-spacing: var(--text-label--letter-spacing);
+}
+.comwit-toaster[data-sonner-toaster] [data-sonner-toast]:focus-visible {
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 1px 4px rgba(16, 24, 40, 0.05),
+    0 14px 34px rgba(11, 46, 107, 0.11),
+    0 0 0 2px color-mix(in srgb, var(--brand) 28%, transparent);
+}
+.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-icon] {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+}
+.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-content] {
+  gap: 3px;
+}
+.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-title] {
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+}
+.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-description] {
+  color: inherit;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  opacity: 0.86;
+}
+.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button] {
+  height: 30px;
+  padding-inline: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+}
+.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-cancel] {
+  background: var(--surface-subtle);
+  color: var(--ink-soft);
+}

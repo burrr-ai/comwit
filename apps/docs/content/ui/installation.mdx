@@ -1,0 +1,46 @@
+---
+title: Installation
+---
+
+# Installation
+
+Bring the component source into your project. Edit it like the rest of your code.
+
+## Set up
+
+Start with a React project using Tailwind CSS v4. In Next.js, use the App Router.
+
+```bash
+npx comwit-ui@latest init
+npx comwit-ui@latest add button dialog input
+```
+
+`init` creates `comwit.json`, adds the token stylesheet, and installs the base dependencies. `add` copies the requested components and their local dependencies into your project.
+
+## Use a component
+
+```tsx
+'use client'
+
+import { Button } from '@/components/ui/button'
+
+export default function SaveButton() {
+  return <Button onClick={() => console.log('Saved')}>Save</Button>
+}
+```
+
+The copied files belong to your project. `@comwit/ui` supplies the underlying behavior. You do not need to install `@comwit/ui-templates` separately for this workflow.
+
+## Providers
+
+For imperative dialogs/sheets, mount `OverlayProvider` from `overlay-kit` once in a client provider. For toast notifications, install `sonner` with the CLI and mount the copied `Toaster` component once. Ordinary buttons and inputs need neither provider.
+
+## Customize
+
+Edit the installed component files, or override the CSS variables in your stylesheet. See [Tokens & theming](/ui/theming).
+
+The CLI preserves existing files. Use `--overwrite` only when you want to replace your local changes. `--dry` previews operations; `--no-install` skips installing npm dependencies.
+
+## With an agent
+
+Use [Comwit UI's llms.txt](/ui/llms.txt). State has its own [implementation guide](/state/llms.txt).
