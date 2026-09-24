@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const doc = getDocBySlug(slug.join('/'))
   if (!doc) return {}
-  return { title: `${doc.title} — comwit docs` }
+  return { title: `${doc.title} · Comwit State` }
 }
 
 export default async function DocPage({ params }: { params: Promise<{ slug: string[] }> }) {

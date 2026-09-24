@@ -6,7 +6,7 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeSlug from 'rehype-slug'
 
 export const metadata = {
-  title: 'Introduction — comwit docs',
+  title: 'Introduction · Comwit State',
 }
 
 export default function DocsIndexPage() {
