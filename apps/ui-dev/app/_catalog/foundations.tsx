@@ -115,8 +115,10 @@ function SemanticSwatches() {
             </div>
           ))}
           <div className="flex items-center gap-2">
-            <span className="h-8 w-8 rounded-md bg-placeholder" />
-            <span className="font-mono text-caption text-muted-foreground">placeholder</span>
+            <span className="h-8 w-8 rounded-md bg-subtle-foreground" />
+            <span className="font-mono text-caption text-muted-foreground">
+              subtle-foreground (placeholder)
+            </span>
           </div>
         </div>
       </div>
