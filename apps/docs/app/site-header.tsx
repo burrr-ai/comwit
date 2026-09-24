@@ -14,7 +14,7 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
       <Brand />
       <nav aria-label="Libraries">
         <Link
-          href="/state"
+          href="/state/docs"
           className="product-nav"
           aria-current={pathname.startsWith('/state') ? 'page' : undefined}
         >

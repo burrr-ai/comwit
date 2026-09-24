@@ -2213,3 +2213,293 @@ h3,
   color: #55445f;
   border-color: #ded6e3;
 }
+
+/* Product entry points open inside the documentation shell. */
+.docs-reading-intro .docs-main {
+  padding: 28px 34px 64px;
+}
+.docs-reading-intro .docs-main > div {
+  max-width: 1060px;
+}
+.state-doc-cover {
+  position: relative;
+  min-height: 355px;
+  overflow: hidden;
+  background: #24172a;
+  border-radius: 10px;
+  color: #faf5eb;
+}
+.state-doc-cover > img {
+  object-fit: cover;
+  object-position: center 63%;
+}
+.state-cover-copy {
+  position: relative;
+  z-index: 1;
+  margin-left: 47%;
+  padding: 54px 25px 35px 0;
+}
+.state-cover-copy > p {
+  font:
+    9px var(--font-geist-mono),
+    monospace;
+  letter-spacing: 0.11em;
+  color: #dcc5e9;
+}
+.state-cover-copy h1 {
+  margin: 22px 0 17px;
+  font-size: clamp(26px, 3.5vw, 45px);
+  line-height: 1.04;
+  font-weight: 800;
+  letter-spacing: -0.055em;
+}
+.state-cover-copy > span {
+  font-size: 13px;
+  color: #e5dbe9;
+}
+.state-intro-commands {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 21px 0;
+  border-bottom: 1px solid #e2dce7;
+}
+.state-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 32px;
+  border: 1px solid #ded5e5;
+  border-radius: 6px;
+  padding: 12px 14px;
+  background: #f4f0f7;
+  color: #5a406b;
+  font-size: 12px;
+}
+.state-install > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+.state-install code {
+  font: 12px var(--font-geist-mono);
+}
+.state-install span span {
+  font-size: 10px;
+  color: #897590;
+}
+.state-intro-commands > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 11px var(--font-geist-mono);
+  color: #775b89;
+}
+.state-example-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+  margin: 34px 0 20px;
+}
+.state-example-heading h2 {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+.state-example-heading > span {
+  font: 9px var(--font-geist-mono);
+  color: #8b7c93;
+}
+.state-intro-demo .demo-stage {
+  margin: 0;
+  max-width: none;
+  display: grid;
+  grid-template-columns: 135px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.state-intro-demo .live-counter {
+  position: relative;
+  right: auto;
+  top: auto;
+  width: 135px;
+  transform: none;
+  box-shadow: none;
+  margin-top: 18px;
+}
+.state-intro-demo .code-window {
+  min-width: 0;
+  box-shadow: none;
+}
+.state-intro-demo .code-window pre {
+  height: 255px;
+  font-size: 12px;
+}
+.state-intro-demo .code-tabs button {
+  font-size: 12px;
+  padding: 14px 9px;
+}
+.state-next-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #e2dce7;
+  margin-top: 35px;
+}
+.state-next-links > a {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 9px;
+  padding: 24px 18px 24px 0;
+}
+.state-next-links > a + a {
+  padding-left: 24px;
+  border-left: 1px solid #e2dce7;
+}
+.state-next-links span {
+  grid-column: 1 / -1;
+  font: 9px var(--font-geist-mono);
+  color: #8c7e93;
+}
+.state-next-links strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+.state-next-links svg {
+  color: #866797;
+}
+.ui-intro-title {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  margin: 25px 0 16px;
+}
+.ui-intro-install {
+  display: grid;
+  gap: 10px;
+  margin-top: 26px;
+}
+.ui-doc-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px;
+  margin: 20px 0 40px;
+  font-size: 12px;
+  color: #555;
+}
+.ui-doc-shortcuts a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ui-doc-introduction .showcase-frame {
+  margin-top: 0;
+}
+@media (max-width: 850px) {
+  .state-doc-cover {
+    min-height: 310px;
+  }
+  .state-cover-copy {
+    padding-top: 45px;
+    margin-left: 46%;
+  }
+  .state-cover-copy h1 {
+    font-size: 31px;
+  }
+  .state-intro-demo .demo-stage {
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 14px;
+  }
+  .state-intro-demo .live-counter {
+    width: 100px;
+  }
+  .state-intro-demo .code-tabs button {
+    padding-inline: 7px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 600px) {
+  .docs-reading-intro .docs-main {
+    padding: 20px 20px 50px;
+  }
+  .state-doc-cover {
+    min-height: 380px;
+  }
+  .state-doc-cover > img {
+    object-position: 28% center;
+  }
+  .state-cover-copy {
+    padding: 28px 22px;
+    margin-left: 0;
+    text-align: right;
+  }
+  .state-cover-copy h1 {
+    font-size: 29px;
+    max-width: 210px;
+    margin: 17px 0 12px auto;
+  }
+  .state-cover-copy > p {
+    font-size: 8px;
+  }
+  .state-cover-copy > span {
+    font-size: 11px;
+  }
+  .state-intro-commands {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .state-install {
+    padding: 11px;
+  }
+  .state-install code {
+    font-size: 11px;
+  }
+  .state-example-heading h2 {
+    font-size: 17px;
+  }
+  .state-intro-demo .demo-stage {
+    display: flex;
+    flex-direction: column;
+  }
+  .state-intro-demo .live-counter {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin: 0;
+    padding: 12px 16px;
+  }
+  .state-intro-demo .live-counter output {
+    font-size: 36px;
+    min-width: 44px;
+  }
+  .state-intro-demo .increment-button {
+    width: auto;
+    margin-left: auto;
+    padding: 8px 18px;
+  }
+  .state-intro-demo .reset-button {
+    padding: 8px;
+  }
+  .state-intro-demo .code-window {
+    width: 100%;
+  }
+  .state-next-links {
+    grid-template-columns: 1fr;
+  }
+  .state-next-links > a + a {
+    border-left: 0;
+    border-top: 1px solid #e2dce7;
+    padding-left: 0;
+  }
+  .ui-intro-title {
+    font-size: 35px;
+    gap: 12px;
+  }
+  .ui-doc-shortcuts {
+    gap: 18px;
+  }
+}
