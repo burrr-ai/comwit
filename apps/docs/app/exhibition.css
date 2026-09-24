@@ -17,34 +17,11 @@
 .exhibition[data-library='ui'] {
   --poster-paper: #e8e9df;
 }
-.exhibition .site-header {
-  min-height: 77px;
-  padding: 20px 3.4%;
-  border-bottom: 1px solid #171b1230;
-  background: transparent;
-  color: var(--poster-ink);
-}
-.exhibition .site-header .wordmark {
-  font-family: var(--font-archivo), sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.06em;
-  font-size: 29px;
-}
-.exhibition .site-header .brand-dot {
-  color: inherit;
-}
+
 .exhibition .site-header .product-nav:hover {
   background: #171b1210;
 }
-.exhibition .site-header nav a {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 11px;
-  text-transform: uppercase;
-}
-.exhibition .site-header nav img {
-  width: 25px;
-  height: 25px;
-}
+
 .exhibition-main {
   flex: 1;
   display: flex;
@@ -282,13 +259,6 @@
   }
 }
 @media (max-width: 600px) {
-  .exhibition .site-header {
-    min-height: 70px;
-    padding: 15px 6%;
-  }
-  .exhibition .site-header .wordmark {
-    font-size: 26px;
-  }
   .exhibition-main {
     padding: 0 5%;
   }
@@ -382,10 +352,6 @@
   font-size: clamp(72px, 23cqw, 400px);
 }
 @media (min-width: 601px) and (max-height: 800px) {
-  .exhibition .site-header {
-    min-height: 65px;
-    padding-block: 13px;
-  }
   .exhibition-meta {
     padding: 16px 0 12px;
   }
@@ -419,4 +385,10 @@
   .exhibition-footer {
     padding-block: 18px;
   }
+}
+
+.exhibition .site-header.app-header {
+  background: var(--poster-paper);
+  color: var(--poster-ink);
+  border-color: #171b1230;
 }

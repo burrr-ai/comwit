@@ -8,7 +8,7 @@ pnpm dev:docs
 ```
 
 - `/` — expressive Comwit landing with direct documentation entry points.
-- `/state/docs` — panda introduction inside the documentation sidebar; `/state/docs/*` for guides and APIs. `/state` redirects here.
+- `/state/docs` — original animated panda landing alongside the documentation sidebar; `/state/docs/*` for guides and APIs. `/state` redirects here.
 - `/ui` — UI overview, installation, components, examples and theming.
 - `public/state/llms.txt`, `public/ui/llms.txt` — independent agent guides.
 - `content/state/` — State MDX.

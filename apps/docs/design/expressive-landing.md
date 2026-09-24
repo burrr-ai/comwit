@@ -2,7 +2,7 @@
 
 ## Brief
 
-An expressive, Awwwards-inspired landing with very little explanatory copy. The landing presents Comwit; State and UI links open their documentation immediately. The panda belongs to State and appears in its documentation introduction alongside the persistent sidebar.
+An expressive, Awwwards-inspired landing with very little explanatory copy. The landing presents Comwit; State and UI links open their documentation immediately. The panda belongs to State. Its original animated landing is preserved beside the persistent documentation sidebar, including the counter, code tabs and lower-page sections. Header geometry is shared across all routes; only its colors change.
 
 ## Research
 
