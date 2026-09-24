@@ -29,6 +29,8 @@ The shared header fixes height, gutters, typography, image dimensions and menu s
 
 Measured bounding rectangles for header, wordmark and both product links were exactly identical across `/`, `/state/docs` and `/ui` at both desktop and narrow mobile viewports. Desktop header height: 80 CSS pixels. Mobile header height: 72 CSS pixels. The State API page uses the same geometry. The restored State counter incremented from 1 to 2 and retained its original interaction.
 
+Opening a UI dialog initially applied duplicate scrollbar compensation (1150px header became 1136px). With stable-gutter-aware scroll-lock compensation, the header remains 1150px before and during the modal. Escape still closes the dialog normally.
+
 ## Validation
 
 - Documentation production build passed after clearing obsolete generated types from the previous workspace layout.

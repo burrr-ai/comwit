@@ -2575,3 +2575,11 @@ html {
     font-size: 41px;
   }
 }
+
+/* The document already reserves its gutter; avoid a second offset from modal scroll locks. */
+@supports (scrollbar-gutter: stable) {
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
+    --removed-body-scroll-bar-size: 0px !important;
+  }
+}
