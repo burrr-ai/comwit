@@ -1,7 +1,6 @@
 import { getAllDocs, type DocMeta } from '@/lib/mdx'
-import { SiteHeader } from '../../site-header'
 import { DocsSidebar } from './sidebar'
-import { TableOfContents } from './toc'
+import { StateDocsFrame } from './reading'
 
 function groupDocs(docs: DocMeta[]) {
   const ungrouped: DocMeta[] = []
@@ -18,26 +17,8 @@ function groupDocs(docs: DocMeta[]) {
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
   const { ungrouped, groups } = groupDocs(getAllDocs())
   return (
-    <>
-      <a href="#docs-content" className="skip-link">
-        Skip to content
-      </a>
-      <div className="docs-header">
-        <SiteHeader />
-      </div>
-      <div className="docs-shell">
-        <DocsSidebar ungrouped={ungrouped} groups={groups} />
-        <div className="docs-reading">
-          <main id="docs-content" className="docs-main">
-            <div>{children}</div>
-          </main>
-          <aside className="docs-toc">
-            <div>
-              <TableOfContents />
-            </div>
-          </aside>
-        </div>
-      </div>
-    </>
+    <StateDocsFrame navigation={<DocsSidebar ungrouped={ungrouped} groups={groups} />}>
+      {children}
+    </StateDocsFrame>
   )
 }

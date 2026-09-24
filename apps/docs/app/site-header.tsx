@@ -10,11 +10,11 @@ import { Brand } from './brand'
 export function SiteHeader({ home = false }: { home?: boolean }) {
   const pathname = usePathname()
   return (
-    <header className={`site-header ${home ? 'site-header-home' : ''}`}>
+    <header className={`site-header app-header ${home ? 'site-header-home' : ''}`}>
       <Brand />
       <nav aria-label="Libraries">
         <Link
-          href="/state"
+          href="/state/docs"
           className="product-nav"
           aria-current={pathname.startsWith('/state') ? 'page' : undefined}
         >

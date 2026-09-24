@@ -2213,3 +2213,373 @@ h3,
   color: #55445f;
   border-color: #ded6e3;
 }
+
+/* Product introduction shared details. */
+.state-example-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+  margin: 34px 0 20px;
+}
+.state-example-heading h2 {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+.state-example-heading > span {
+  font: 9px var(--font-geist-mono);
+  color: #8b7c93;
+}
+.ui-intro-title {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  margin: 25px 0 16px;
+}
+.ui-intro-install {
+  display: grid;
+  gap: 10px;
+  margin-top: 26px;
+}
+.ui-doc-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px;
+  margin: 20px 0 40px;
+  font-size: 12px;
+  color: #555;
+}
+.ui-doc-shortcuts a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ui-doc-introduction .showcase-frame {
+  margin-top: 0;
+}
+
+/* One header geometry across the landing and both libraries. Reserve scrollbar space. */
+:root {
+  --site-header-height: 80px;
+  --site-header-gutter: 32px;
+}
+html {
+  scrollbar-gutter: stable;
+}
+.site-header.app-header {
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  width: 100%;
+  height: var(--site-header-height);
+  min-height: var(--site-header-height);
+  flex-shrink: 0;
+  padding: 0 var(--site-header-gutter);
+  border-bottom: 1px solid var(--site-border);
+  font-family: var(--font-inter), sans-serif;
+}
+.site-header.app-header .wordmark {
+  font-family: var(--font-manrope), sans-serif;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -1.8px;
+  font-weight: 800;
+  gap: 0;
+}
+.site-header.app-header nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.site-header.app-header nav a {
+  font:
+    500 13px/1.4 var(--font-inter),
+    sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.site-header.app-header .product-nav {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  min-height: 44px;
+}
+.site-header.app-header .product-nav img {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.site-header.app-header .product-nav > svg {
+  width: 23px;
+  height: 23px;
+  flex-shrink: 0;
+}
+.site-header.app-header .github-nav {
+  margin-left: 24px;
+}
+.docs-sidebar-inner,
+.ui-sidebar-content {
+  top: var(--site-header-height);
+  height: calc(100svh - var(--site-header-height));
+}
+.docs-shell {
+  min-height: calc(100svh - var(--site-header-height));
+}
+
+/* Preserve the original State landing, now beside its documentation sidebar. */
+.is-introduction .docs-reading-intro {
+  max-width: none;
+}
+.is-introduction .docs-reading-intro .docs-main {
+  padding: 0;
+}
+.is-introduction .docs-reading-intro .docs-main > div {
+  max-width: none;
+  margin: 0;
+}
+.state-docs-original {
+  container-type: inline-size;
+  container-name: state-landing;
+}
+.state-docs-original .home-hero {
+  min-height: 760px;
+  height: max(760px, calc(100svh - var(--site-header-height)));
+  max-height: 1080px;
+}
+.state-docs-original .hero-main {
+  padding-top: 39px;
+}
+.state-docs-original .hero-copy h1 {
+  font-size: clamp(34px, 4.4cqw, 64px);
+}
+.state-docs-original .hero-description {
+  font-size: 14px;
+  padding-right: 120px;
+}
+.state-docs-original .hero-actions {
+  gap: 16px;
+}
+.state-docs-original .button-lilac {
+  font-size: 13px;
+  min-width: 145px;
+  padding: 12px 14px;
+}
+.state-docs-original .demo-stage {
+  margin-top: 65px;
+}
+.state-docs-original .live-counter {
+  width: 112px;
+  right: 7px;
+  top: -165px;
+}
+.state-docs-original .live-counter output {
+  font-size: 41px;
+}
+.state-docs-original .code-window pre {
+  height: 360px;
+}
+.state-docs-original .code-tabs button {
+  padding-inline: 8px;
+  font-size: 12px;
+}
+.state-docs-frame.is-introduction .app-header {
+  background: #241b2d;
+  color: #f9f6ed;
+  border-color: #45374e;
+}
+.state-docs-frame.is-introduction .app-header .product-nav[aria-current] {
+  background: #ffffff12;
+  color: #f9f6ed;
+}
+.state-docs-frame.is-introduction .app-header .product-nav:hover {
+  background: #ffffff12;
+}
+.state-docs-frame.is-introduction .docs-sidebar {
+  background: #292331;
+  color: #d8cbdf;
+  border-color: #45374e;
+}
+.is-introduction .docs-nav a {
+  color: #cfbfd8;
+}
+.is-introduction .docs-nav a:hover {
+  background: #3b2e45;
+  color: #fff;
+}
+.is-introduction .docs-nav h3,
+.is-introduction .sidebar-heading {
+  color: #eee2f5;
+}
+.is-introduction .sidebar-search {
+  color: #b6a2c1;
+  background: #231e2a;
+  border-color: #594660;
+}
+.is-introduction .sidebar-search input {
+  color: #f6ecfc;
+}
+.is-introduction .sidebar-search input::placeholder {
+  color: #b2a1bc;
+}
+.is-introduction .docs-nav-items {
+  border-color: #604b6b;
+}
+.is-introduction .docs-nav a[aria-current='page'] {
+  background: #d8bee9;
+  color: #35213e;
+}
+.is-introduction .sidebar-agent {
+  color: #eee0f6;
+  background: #3d3048;
+  border-color: #685173;
+}
+.is-introduction .state-version {
+  color: #b6a2c1;
+}
+.is-introduction .docs-mobile-nav {
+  background: #292331;
+  color: #eee2f5;
+}
+.is-introduction .docs-mobile-nav summary {
+  color: #eee2f5;
+  border-color: #594660;
+}
+@container state-landing (max-width:760px) {
+  .state-docs-original .home-hero {
+    height: auto;
+    min-height: 1160px;
+    max-height: none;
+  }
+  .state-docs-original .hero-main {
+    display: block;
+    padding: 35px 6% 0;
+  }
+  .state-docs-original .hero-copy h1 {
+    font-size: clamp(40px, 7cqw, 51px);
+  }
+  .state-docs-original .hero-description {
+    padding-right: 0;
+    margin-top: 22px;
+  }
+  .state-docs-original .hero-right .hero-actions {
+    margin-top: 25px;
+  }
+  .state-docs-original .demo-stage {
+    margin: 260px 0 0 auto;
+    width: 86%;
+    max-width: 520px;
+  }
+  .state-docs-original .live-counter {
+    width: 118px;
+    right: 14px;
+    top: -155px;
+  }
+  .state-docs-original .panda-layer .garden-frame {
+    width: 950px;
+    top: 120px;
+    left: 50%;
+    margin-top: 0;
+    transform: translateX(-26%);
+  }
+  .state-docs-original .home-story {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .state-docs-original .agent-strip {
+    flex-direction: column;
+    align-items: start;
+    gap: 25px;
+  }
+  .state-docs-original .agent-url {
+    min-width: 0;
+  }
+  .state-docs-original .site-footer {
+    flex-wrap: wrap;
+  }
+}
+@container state-landing (max-width:480px) {
+  .state-docs-original .hero-copy h1 {
+    font-size: 41px;
+  }
+  .state-docs-original .demo-stage {
+    width: 100%;
+    margin-top: 305px;
+  }
+  .state-docs-original .panda-layer .garden-frame {
+    width: 900px;
+    top: 165px;
+  }
+  .state-docs-original .code-tabs button {
+    font-size: 12px;
+  }
+}
+@media (max-width: 800px) {
+  :root {
+    --site-header-height: 72px;
+    --site-header-gutter: 24px;
+  }
+}
+@media (max-width: 600px) {
+  :root {
+    --site-header-gutter: 20px;
+  }
+  .site-header.app-header .wordmark {
+    font-size: 25px;
+  }
+  .site-header.app-header nav {
+    gap: 3px;
+  }
+  .site-header.app-header nav a {
+    font-size: 12px;
+  }
+  .site-header.app-header .product-nav {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  .site-header.app-header .product-nav img {
+    width: 24px;
+    height: 24px;
+  }
+  .site-header.app-header .github-nav {
+    display: none;
+  }
+  .ui-intro-title {
+    font-size: 35px;
+    gap: 12px;
+  }
+  .ui-doc-shortcuts {
+    gap: 18px;
+  }
+}
+.state-docs-original .hero-copy,
+.state-docs-original .hero-right,
+.state-docs-original .demo-stage {
+  min-width: 0;
+}
+.state-docs-original .hero-copy h1 {
+  font-size: clamp(32px, 4.15cqw, 64px);
+}
+@container state-landing (max-width:760px) {
+  .state-docs-original .hero-copy h1 {
+    font-size: clamp(40px, 7cqw, 51px);
+  }
+}
+@container state-landing (max-width:480px) {
+  .state-docs-original .hero-copy h1 {
+    font-size: 41px;
+  }
+}
+
+/* The document already reserves its gutter; avoid a second offset from modal scroll locks. */
+@supports (scrollbar-gutter: stable) {
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
+    --removed-body-scroll-bar-size: 0px !important;
+  }
+}
