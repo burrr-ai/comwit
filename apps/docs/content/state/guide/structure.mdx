@@ -1,0 +1,112 @@
+---
+title: 'Project Structure'
+group: 'Guide'
+slug: 'guide/structure'
+order: 2
+---
+
+# Project Structure
+
+Every feature is a self-contained domain folder under `state/`.
+
+## Folder layout
+
+```
+state/{domain}/
+  ├── types.ts          # State + Actions types
+  ├── model.ts          # model() with initial state
+  ├── actions/
+  │   ├── crud.ts       # CRUD operations
+  │   ├── load.ts       # Optional coordinated or imperative fetching
+  │   ├── init.ts       # Optional imperative initialization
+  │   └── ...           # One file per concern
+  └── index.ts          # create() hook + re-exports
+```
+
+## Write order
+
+Always create files in this order: **types.ts → model.ts → actions/\*.ts → index.ts**
+
+Start with the public contract, then its implementation. Components import the domain hook and
+types from `index.ts`; actions import model definitions directly.
+
+## Rules
+
+- **Dependencies flow one way:** pages → state → api
+- **Pass domain objects whole:** `<Card post={post} />`, not individual props
+- **One domain per feature:** don't mix concerns across domains
+- **Types first:** the types file is the contract — JSDoc on each field guides implementation
+
+## types.ts
+
+The types file defines two things: the state shape and the actions interface.
+
+```ts
+import type { Query } from '@comwit/state'
+
+export type Post = { id: string; title: string; body: string }
+export type PostComment = { id: string; postId: string; body: string }
+
+export type PostState = {
+  posts: Query<Post[]> // keyed query data
+  comments: Query<PostComment[], string> // second generic = queryFn arg type
+  current: Query<Post | null, string> // hydrate the resolved Server Component value
+}
+
+export type PostActions = {
+  /** @description Imperatively fetch posts for coordinated workflows */
+  loadPosts(): Promise<void>
+  /** @description Create a post for the signed-in user */
+  create(title: string): Promise<void>
+  /** @description Toggle like. Optimistic update on list + current */
+  like(postId: string): Promise<void>
+}
+```
+
+- `Query<Data>` for keyed query fields — provides `.data`, `.isLoading`, `.isError`, `.error`
+- `Query<Data, Arg>` — second generic is the `queryFn` parameter type
+- `Local<Data, Arg>` for an exact IndexedDB resource without a remote query function
+- Plain types for client-owned state
+
+For view-owned requests, call `s.posts.load(arg)` for non-suspending client loading. When a Server
+Component owns the resolved value, call `usePost.hydrate(...)` in a small client route adapter before
+the actual UI reads the domain hook. Keep a `loadPosts()` action when fetching is part of a command,
+multi-query sequence, preload, or user event.
+
+## Public entry point
+
+```ts
+// state/post/index.ts
+import { create } from '@comwit/state'
+import { post } from './model'
+import { postActions } from './actions/interact'
+import type { PostState, PostActions } from './types'
+
+export const usePost = create<PostState, PostActions>(post, { actions: [postActions] })
+export type { Post, PostState, PostActions } from './types'
+```
+
+Keep app-specific API calls under your `api/` layer. A client domain may call a browser-safe API
+adapter; server-only database code belongs behind a server boundary. Pass resolved server data
+through a [route adapter](/state/docs/guide/nextjs).
+
+## Cross-domain access
+
+Actions can read other domains directly via `state()`:
+
+```ts
+const postActions = action<Pick<PostActions, 'create'>, AppContext>(({ state }) => {
+  class Actions {
+    private post = state(post)
+    private user = state(user) // read from user domain
+
+    async create(title: string) {
+      if (!this.user.me) return
+      // ...
+    }
+  }
+  return new Actions()
+})
+```
+
+State flows one way. No circular dependencies.

@@ -1,0 +1,99 @@
+---
+title: 'create()'
+group: 'API'
+slug: 'api/create'
+order: 5
+---
+
+# create()
+
+Combine a model and action factories into one domain hook.
+
+```ts
+import { create } from '@comwit/state'
+import { post } from './model'
+import { crudActions } from './actions/crud'
+import { loadActions } from './actions/load'
+import type { PostState, PostActions } from './types'
+
+export const usePost = create<PostState, PostActions>(post, {
+  actions: [crudActions, loadActions],
+})
+```
+
+For a read-only domain, pass `{ actions: [] }`.
+
+## Select the state you render
+
+```tsx
+const { title, actions } = usePost((s) => ({
+  title: s.detail.data?.title,
+  actions: s.actions,
+}))
+```
+
+Selectors compare results with deep equality. This example updates when the title changes; selecting
+`s.detail` instead would also observe its query status and other data. Calling `usePost()` without
+a selector subscribes to the whole domain.
+
+## Load a query
+
+For a field typed `Query<Post[], { page: number }>`, pass its argument in the selector:
+
+```tsx
+const posts = usePost((s) => s.posts.load({ page }))
+
+if (posts.isLoading) return <Skeleton />
+if (posts.isError && !posts.isSuccess) return <p>{posts.error}</p>
+return posts.data.map((post) => <Card key={post.id} post={post} />)
+```
+
+`.load(arg)` reports loading during render and starts the request after commit. Selecting `s.posts`
+without `.load(...)` only reads state. Use actions for imperative loading and coordinated workflows.
+See [query()](/state/docs/api/query) for cache keys, freshness, and experimental `.suspend(arg)`.
+
+## Hydrate server data
+
+```tsx
+'use client'
+
+function PostRoute({ slug, initialPost }: Props) {
+  usePost.hydrate({ detail: { arg: slug, data: initialPost } })
+  return <PostDetail />
+}
+
+function PostDetail() {
+  const post = usePost((s) => s.detail.data)
+  return post ? <article>{post.title}</article> : null
+}
+```
+
+`hydrate(entries)` infers query field names, arguments, and data from the model. Call it
+unconditionally before the normal domain read. It returns `void` and accepts `null` or `undefined`
+as a no-op. New entries initialize before their first snapshot; changes to observed entries apply
+when the requesting render commits. See the complete [Next.js guide](/state/docs/guide/nextjs).
+
+## Call an action
+
+```tsx
+const actions = usePost((s) => s.actions)
+
+return <button onClick={() => actions.like(postId)}>Like</button>
+```
+
+Actions are bound to the current provider. Keep writes inside actions and call them from events or
+imperative workflows. Do not initialize the store by calling an action during render.
+
+## Lower-level hooks
+
+`create()` combines the two hooks below and attaches the typed hydration method. You can use them
+separately when composing your own integration:
+
+```tsx
+import { useModel, useAction } from '@comwit/state'
+
+const title = useModel(post, (s) => s.detail.data?.title)
+const actions = useAction<PostActions>([crudActions, loadActions])
+```
+
+Both require `ComwitProvider`. `useModel()` selectors expose the same query `.load()` interface.

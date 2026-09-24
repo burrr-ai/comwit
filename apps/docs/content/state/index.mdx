@@ -1,0 +1,50 @@
+---
+title: 'Introduction'
+order: 0
+---
+
+# One domain. One hook.
+
+comwit is state management for React and Next.js, built for vibe coding. Give your coding agent
+[`llms.txt`](/state/llms.txt): one compact guide covers the core interface, domain structure, and examples
+it needs to start building.
+
+It powers the [comwit.io](https://comwit.io) vibe coding platform, where more than **1,000 projects**
+use it. Sponsored by [burrr.ai](https://burrr.ai).
+
+## The interface
+
+```tsx
+// Load when the view mounts. Render the query state directly.
+const products = useProduct((s) => s.products.load(filter))
+
+// Read existing data without starting a request.
+const detail = useProduct((s) => s.detail.data)
+
+// Keep mutations and side effects in the domain.
+const actions = useProduct((s) => s.actions)
+```
+
+A domain defines its types, initial state, and actions. `create()` combines them into a hook.
+Actions mutate state directly; components subscribe to the fields they use. One `ComwitProvider`
+scopes the state for your app, and models initialize on access.
+
+## Pick the data flow
+
+| You need to…                                          | Use                                                  |
+| ----------------------------------------------------- | ---------------------------------------------------- |
+| Fetch for a mounted view                              | [`query()` + `.load(arg)`](/state/docs/api/query)    |
+| Render data fetched by a Server Component             | [`useDomain.hydrate(...)`](/state/docs/guide/nextjs) |
+| Restore an exact IndexedDB snapshot and revalidate    | [`local.query()`](/state/docs/api/local)             |
+| Restore cached data without an API call               | [`local()` + `.restore(arg)`](/state/docs/api/local) |
+| Save preferences or a local draft                     | [`persist()`](/state/docs/api/persist)               |
+| Run a command, optimistic update, or several requests | [`action()`](/state/docs/api/action)                 |
+
+Related lists, details, filters, and UI state stay in the same domain. Add derived values,
+validation, undo/redo, or action decorators when the feature needs them.
+
+## Start building
+
+- [Quickstart](/state/docs/guide/quickstart) — install, create a domain, and render it.
+- [LLM Setup](/state/docs/llm-setup) — hand your agent the interface in one file.
+- [Project Structure](/state/docs/guide/structure) — grow from one domain to a full app.

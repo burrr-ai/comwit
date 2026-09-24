@@ -1,0 +1,9 @@
+/* 토큰 SSOT 는 @comwit/ui-templates/styles.css 한 곳뿐이다.
+   예전엔 이 파일이 globals.css 를 통째로 손복사했고 그래서 3벌이 갈라질 수 있었다.
+   이제 직접 import 한다 — 토큰을 고칠 곳은 패키지 하나. */
+@import '@comwit/ui-templates/styles.css';
+
+/* 워크스페이스 패키지 소스도 Tailwind 클래스 스캔 대상에 포함
+   (@comwit/ui 프리미티브의 구조/인터랙션 클래스 + @comwit/ui-templates 의 cva variant) */
+@source "../../../packages/ui/core/src";
+@source "../../../packages/ui/templates/src";

@@ -1,0 +1,19 @@
+---
+title: 'Comwit State and UI, together'
+date: '2026-09-24'
+author: 'Comwit'
+description: 'One home for the libraries behind Comwit templates.'
+product: 'libraries'
+---
+
+Comwit State and Comwit UI now share a repository and documentation site.
+
+- [State](/state) keeps its panda, guides, and API reference.
+- [UI](/ui) brings editable components, live examples, and a theme playground.
+- Each product has its own agent guide: [State llms.txt](/state/llms.txt) and [UI llms.txt](/ui/llms.txt).
+
+The workspace uses pnpm, with source grouped under `packages/state` and `packages/ui`. Public package names and versions remain independent. The retired `comwit` compatibility wrapper has been removed from the workspace; use `@comwit/state`.
+
+Existing State documentation and agent URLs continue to resolve through redirects. UI component sources are still installed into your project with `comwit-ui`, where you can edit them directly.
+
+This is a repository and documentation milestone, not a new npm package version.
