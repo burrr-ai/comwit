@@ -189,6 +189,20 @@
   --p4: #f0abfc;
   --p5: #312e81;
 }
+.ui-photo[data-tone='sand'] {
+  --p1: #fff1c7;
+  --p2: #f6b26b;
+  --p3: #9a6b3c;
+  --p4: #f9d99a;
+  --p5: #c2794a;
+}
+.ui-photo[data-tone='lava'] {
+  --p1: #9fb7c9;
+  --p2: #4b5a6b;
+  --p3: #0b1220;
+  --p4: #6b7c8c;
+  --p5: #1f2a37;
+}
 
 /* Code blocks share one dark surface; highlight.js colors ride on top. */
 .ui-code {

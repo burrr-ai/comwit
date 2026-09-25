@@ -73,7 +73,7 @@ const [path, setPath] = React.useState('/notes')
   <PageBoundary path={path}>{path === '/notes' ? <Notes open={(id) => setPath('/notes/' + id)} /> : <Note back={() => setPath('/notes')} />}</PageBoundary>
 </PageTransition>
 
-PageTransition renders the shell the outgoing page needs (relative, z-0, min-h-dvh, overflow-x-clip); inside your own scroller pass className="min-h-full". Use overflow-x clip, never hidden: hidden turns the shell into a scroll container and scroll restoration targets the wrong element. Give every page a background so the page underneath does not show through. Reduced motion swaps pages without animating unless reducedMotion="keep".
+PageTransition renders the shell the outgoing page needs (relative, z-0, min-h-dvh, overflow-x-clip); inside your own scroller pass className="min-h-full". Use overflow-x clip, never hidden: hidden turns the shell into a scroll container and scroll restoration targets the wrong element. Give every page a background so the page underneath does not show through. PageBoundary is min-h-full by default, so a short page stays as tall as the shell while it leaves and its sticky bottom nav or action bar does not ride up. Reduced motion swaps pages without animating unless reducedMotion="keep".
 
 The app bar belongs to the page: render it inside the boundary so it moves with the page. A persistent shell keeps only what sits below the page (the bottom nav): an outer boundary with a fixed routeKey, an inner boundary that swaps the page.
 

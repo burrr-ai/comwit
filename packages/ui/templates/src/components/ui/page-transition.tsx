@@ -24,6 +24,7 @@
  *  - <PageBoundary>     라우트가 소유한 DOM. path = 규칙이 매칭하는 논리 경로, routeKey = DOM 수명(생략 시 path).
  *                       key 가 바뀌면 React 가 언마운트·마운트하고 엔진이 그 교체를 전환으로 바꾼다 — 라우터 없이
  *                       상태값(`const [path, setPath] = useState('/notes')`)으로도 똑같이 돈다.
+ *                       기본 min-h-full: 페이지는 최소 쉘 높이라 나가는 동안 sticky 탭바·액션바가 바닥에 머문다.
  *  - <RouteBoundary>    (route-boundary.tsx · CLI 가 라우터를 감지해 설치) 라우터의 pathname 을 대신 읽는 <PageBoundary>.
  *
  * 앱바는 페이지 안(경계 안)에 둔다 — 페이지와 함께 움직이는 것이 앱의 감각이다. 살아남는 쉘은 탭바처럼 페이지
@@ -114,12 +115,15 @@ function PageBoundary<T extends React.ElementType = 'div'>({
   ...props
 }: PageBoundaryProps<T>) {
   const Component: React.ElementType = as ?? 'div'
+  const { className, ...rest } = props as { className?: string }
   return (
     <Component
-      {...props}
+      {...rest}
       key={routeKey ?? path}
       data-slot="page-boundary"
       data-ssgoi-transition={path}
+      // 페이지는 최소 쉘 높이다 — 나가는 동안(absolute) 짧은 페이지가 줄어들어 sticky 탭바·액션바가 위로 올라오지 않는다.
+      className={cn('min-h-full', className)}
     >
       {children}
     </Component>
