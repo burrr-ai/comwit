@@ -665,17 +665,17 @@
       var(--glass-shadow);
   }
 
-  /* 윗모서리 하이라이트 선 */
+  /* 윗모서리 하이라이트 — 면의 반경을 그대로 따라 휘고 가운데가 가장 밝다. 직선으로 그으면 원형·짧은 알약
+     버튼에서 곡선 밖으로 삐져나와 윗부분이 잘린 것처럼 보인다. */
   .glass::after {
     content: '';
     pointer-events: none;
     position: absolute;
-    top: 1px;
-    right: 18%;
-    left: 18%;
-    height: 1px;
-    border-radius: 9999px;
-    background: linear-gradient(90deg, transparent, var(--glass-sheen), transparent);
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 2px 0 var(--glass-sheen);
+    -webkit-mask-image: linear-gradient(90deg, transparent 18%, #000 50%, transparent 82%);
+    mask-image: linear-gradient(90deg, transparent 18%, #000 50%, transparent 82%);
   }
 
   .glass-blur {
