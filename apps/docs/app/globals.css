@@ -1040,16 +1040,13 @@
   }
   .docs-mobile-nav {
     display: block;
-    border-bottom: 1px solid #594660;
+    position: fixed;
+    inset: var(--site-header-height) 0 0;
+    z-index: 35;
     background: #292331;
   }
-  .docs-mobile-nav summary {
-    list-style-position: inside;
-    cursor: pointer;
-    padding: 15px 6%;
-    color: #eee0f6;
-    font-size: 14px;
-    font-weight: 600;
+  .docs-mobile-nav[hidden] {
+    display: none;
   }
   .docs-main {
     padding: 29px 6% 55px;
@@ -1540,8 +1537,7 @@
     border-radius: 9px;
   }
   .docs-mobile-nav .docs-sidebar-content {
-    height: min(680px, calc(100svh - 150px));
-    min-height: 260px;
+    height: 100%;
     padding: 20px 6% 24px;
   }
   .docs-mobile-nav .sidebar-heading {
@@ -1877,10 +1873,6 @@
   color: #85788e;
   margin-left: 4px;
 }
-.docs-mobile-nav summary {
-  color: #55445f;
-  border-color: #ded6e3;
-}
 
 /* One header geometry across the landing and both libraries. Reserve scrollbar space. */
 :root {
@@ -2066,10 +2058,6 @@ html {
   background: #292331;
   color: #eee2f5;
 }
-.is-introduction .docs-mobile-nav summary {
-  color: #eee2f5;
-  border-color: #594660;
-}
 @container state-landing (max-width:760px) {
   .state-docs-original .home-hero {
     height: auto;
@@ -2194,5 +2182,85 @@ html {
   html body[data-scroll-locked] {
     margin-right: 0 !important;
     --removed-body-scroll-bar-size: 0px !important;
+  }
+}
+
+/* Inside a library the header belongs to it: `comwit. / State` or `comwit. / UI`. The wordmark is
+   the way back out; narrow screens put the navigation button here instead of a second bar. */
+.ui-product,
+.state-docs-frame {
+  --site-header-height: 64px;
+  --site-header-gutter: 24px;
+}
+.product-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.site-header.product-header .wordmark {
+  font-size: 23px;
+  letter-spacing: -1.4px;
+}
+.product-slash {
+  font-size: 20px;
+  font-weight: 300;
+  opacity: 0.28;
+}
+.product-home {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: -6px;
+  padding: 6px;
+  border-radius: 8px;
+  font:
+    600 15px/1 var(--font-inter),
+    sans-serif;
+  color: inherit;
+}
+.product-home img {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+.product-home > svg {
+  width: 20px;
+  height: 20px;
+}
+.product-home:hover,
+.docs-menu-button:hover {
+  background: #eae8e2;
+}
+.site-header.product-header .github-nav {
+  margin-left: 0;
+}
+.docs-menu-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-right: -8px;
+  border-radius: 8px;
+  color: inherit;
+}
+.is-introduction .product-home:hover,
+.is-introduction .docs-menu-button:hover {
+  background: #ffffff12;
+}
+@media (max-width: 800px) {
+  .ui-product,
+  .state-docs-frame {
+    --site-header-height: 56px;
+    --site-header-gutter: 16px;
+  }
+  .site-header.product-header .wordmark {
+    font-size: 21px;
+  }
+}
+@media (max-width: 600px) {
+  .docs-menu-button {
+    display: inline-flex;
   }
 }

@@ -15,12 +15,12 @@ import {
 import { Button } from '../components/ui/button'
 import { GlassSurface } from '../components/ui/glass'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '../components/ui/sheet'
+  BottomSheet,
+  BottomSheetContent,
+  BottomSheetDescription,
+  BottomSheetHeader,
+  BottomSheetTitle,
+} from '../components/ui/bottom-sheet'
 
 interface ConfirmOptions {
   title?: string
@@ -184,9 +184,9 @@ interface SheetOptions {
 }
 
 /**
- * 바텀시트(아래→위) 오버레이 — popup.confirm 과 같은 overlay-kit 임페러티브 패턴.
- * 모바일에서 Popover 대신 시트로 띄울 때(예: 캘린더·시간 선택). render 콜백이 resolve(값)을
- * 부르면 그 값으로 Promise 가 풀리고, 딤/✕/스와이프로 닫으면 undefined 로 풀린다.
+ * 바텀시트(아래→위) 오버레이 — popup.confirm 과 같은 overlay-kit 임페러티브 패턴. 면은 bottom-sheet 템플릿
+ * (핸들을 끌어내려 닫는 시트)이다. 모바일에서 Popover 대신 시트로 띄울 때(예: 캘린더·시간 선택). render 콜백이
+ * resolve(값)을 부르면 그 값으로 Promise 가 풀리고, 딤/핸들/드래그/ESC 로 닫으면 undefined 로 풀린다.
  *
  * @example
  * const ymd = await popup.sheet<string>(({ resolve }) => <CalendarPanel onSelect={resolve} />, { title: '날짜 선택' })
@@ -206,30 +206,22 @@ function sheet<T = void>(
         close()
       }
       return (
-        <Sheet
+        <BottomSheet
           open={isOpen}
           onOpenChange={(open) => {
             if (!open) settle(undefined)
           }}
         >
-          <SheetContent
-            side="bottom"
-            style={{ maxWidth }}
-            className="mx-auto gap-0 rounded-t-3xl px-5 pb-8 pt-5"
-          >
-            <SheetHeader className="p-0">
-              <SheetTitle className="text-title-md text-foreground">{title}</SheetTitle>
-              {description ? (
-                <SheetDescription className="text-caption text-soft-foreground">
-                  {description}
-                </SheetDescription>
-              ) : null}
-            </SheetHeader>
-            <div className="mt-4">
+          <BottomSheetContent style={{ maxWidth }}>
+            <BottomSheetHeader>
+              <BottomSheetTitle>{title}</BottomSheetTitle>
+              {description ? <BottomSheetDescription>{description}</BottomSheetDescription> : null}
+            </BottomSheetHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-1 pb-6">
               {render({ resolve: (v) => settle(v), close: () => settle(undefined) })}
             </div>
-          </SheetContent>
-        </Sheet>
+          </BottomSheetContent>
+        </BottomSheet>
       )
     })
   })

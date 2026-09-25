@@ -68,8 +68,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
 </PageTransition>
 ```
 
-탭바가 살아남는 쉘은 바깥 `RouteBoundary` 에 `routeKey` 를 고정하고 바뀌는 콘텐츠만 안쪽 경계로 감싼다.
+경계는 key 가 바뀌는 DOM 요소 하나다(`PageBoundary path=…`). React 가 옛 페이지를 언마운트하면 엔진이 그 노드를 붙잡아
+새 페이지 위에 absolute 로 놓고 둘을 함께 움직인다 — 그래서 라우터 없이 `useState` 값으로도 그대로 돈다(docs 의 폰 데모가 그 방식이다).
+
+앱바는 페이지 안(경계 안)에 둔다 — 페이지와 함께 움직인다. 탭바가 살아남는 쉘은 바깥 `RouteBoundary` 에 `routeKey` 를
+고정하고 안쪽 경계가 페이지를 바꾼다(쉘에는 탭바만 남긴다). 안쪽 경계 위에 다른 크롬을 두는 구조라면 그 경계를 `relative`
+부모로 감싸야 한다 — 나가는 페이지가 가장 가까운 positioned 조상의 윗변에 놓이기 때문이다. `hero()` 는 두 페이지의 같은
+요소에 `data-hero-exit-key` / `data-hero-enter-key` 와 `data-hero-radius` 를 단다.
 규칙(`on/except` · `from/to` · `ordered`)·프리셋 옵션·스크롤 복원·트러블슈팅은 엔진 문서 [ssgoi.dev](https://ssgoi.dev/docs) 를 그대로 따른다(설정 모양이 같고 컴포넌트 이름만 다르다).
+
+## 바텀시트
+
+`bottom-sheet` 는 아래에서 올라오는 시트다. 위의 핸들을 끌어내리면(또는 탭하면) 닫히고, 본문 스크롤러가 맨 위일 때는 본문을
+끌어도 따라온다. 끌기·거리/속도 판정·안쪽 스크롤 양보는 `@comwit/ui` 의 `BottomSheet` 프리미티브가 갖고, 템플릿은 프리미티브가
+쓰는 `--sheet-drag` 를 translate 로, `--sheet-drag-progress` 를 스크림 불투명도로 그릴 뿐이다. `popup.sheet()` 도 이 시트를 띄운다.
 
 ## 채팅
 

@@ -63,7 +63,61 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 ```
 
-The CLI reads `package.json` and installs the `RouteBoundary` for Next.js, React Router or TanStack Router; pass `--router` to choose, or use the generic one and hand it your router's pathname. Rules, every preset, persistent layouts and troubleshooting are documented by [SSGOI](https://ssgoi.dev/docs), the engine behind it. The [gallery](/ui/components#page-transition) shows drill, sheet and tab slides live.
+The CLI reads `package.json` and installs the `RouteBoundary` for Next.js, React Router or TanStack Router; pass `--router` to choose, or use the generic one and hand it your router's pathname.
+
+The whole contract is one keyed element: `RouteBoundary` renders a `PageBoundary` whose React key and route id are the pathname. When the key changes, React unmounts the old page and mounts the new one, and the engine keeps the detached node, lays it `position: absolute` over the new page and animates both. That is why it needs no router at all: `PageBoundary` takes `path` directly, so a `useState` value works the same way, which is how the [gallery](/ui/components#page-transition) demos drill, sheet and hero.
+
+`PageTransition` lays the shell the leaving page needs (`relative z-0 min-h-dvh overflow-x-clip`); inside your own scroller pass `className="min-h-full"`. Use `clip`, never `overflow-x-hidden`, which would turn the shell into a scroll container. Give every page a background; `PageBoundary` is `min-h-full` by default so a short page stays as tall as the shell while it leaves and its sticky bars do not ride up. The app bar belongs to the page, inside the boundary, so it moves with the page. A shell that survives tab changes keeps only the bottom nav: an outer boundary with a fixed `routeKey`, and an inner boundary that swaps the page:
+
+```tsx
+<RouteBoundary routeKey="tabs" className="flex min-h-full flex-col">
+  <RouteBoundary className="flex-1">{children}</RouteBoundary>
+  <BottomNav>…</BottomNav>
+</RouteBoundary>
+```
+
+The leaving page is laid `position: absolute` at the top of its nearest positioned ancestor, so if you ever put chrome above a nested boundary, give that boundary a `relative` parent or it jumps up by the chrome's height.
+
+`hero()` carries one element between two pages: give it `data-hero-exit-key={id}` where you leave and `data-hero-enter-key={id}` where you arrive, plus `data-hero-radius` (the corner radius in px) on both ends so the corners morph with the box. Rules, every preset, persistent layouts, scroll restoration and troubleshooting are documented by [SSGOI](https://ssgoi.dev/llms.txt), the engine behind it; the config shape is identical, only the component names differ.
+
+## Bottom sheet
+
+`bottom-sheet` installs a sheet that rises from the bottom with a grab handle. Drag the handle down, or the body while its scroller is at the top, and the sheet follows your finger; past a quarter of its height or with a quick flick it closes, otherwise it springs back. The gesture and its thresholds live in the `BottomSheet` primitive of `@comwit/ui`; the copied file draws the glass surface and the handle.
+
+```tsx
+'use client'
+
+import {
+  BottomSheet,
+  BottomSheetContent,
+  BottomSheetDescription,
+  BottomSheetFooter,
+  BottomSheetHeader,
+  BottomSheetTitle,
+  BottomSheetTrigger,
+  BottomSheetClose,
+} from '@/components/ui/bottom-sheet'
+
+;<BottomSheet>
+  <BottomSheetTrigger asChild>
+    <Button variant="outline">Filters</Button>
+  </BottomSheetTrigger>
+  <BottomSheetContent>
+    <BottomSheetHeader>
+      <BottomSheetTitle>Filters</BottomSheetTitle>
+      <BottomSheetDescription>Drag the handle down to dismiss.</BottomSheetDescription>
+    </BottomSheetHeader>
+    <div className="min-h-0 flex-1 overflow-y-auto px-5">…</div>
+    <BottomSheetFooter>
+      <BottomSheetClose asChild>
+        <Button>Apply</Button>
+      </BottomSheetClose>
+    </BottomSheetFooter>
+  </BottomSheetContent>
+</BottomSheet>
+```
+
+Give a long body `min-h-0 flex-1 overflow-y-auto`. `drag="handle"` limits the gesture to the handle, `closeThreshold` and `velocityThreshold` tune when a release closes, and `container` portals the sheet into an app shell instead of `body`. `popup.sheet()` opens the same component imperatively.
 
 ## Chat
 

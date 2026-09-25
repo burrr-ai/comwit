@@ -76,7 +76,7 @@ function BottomNav({
       data-labels={showLabels ? '' : undefined}
       aria-label={ariaLabel}
       className={cn(
-        'group/nav bottom-0 z-appbar px-[max(0.75rem,env(safe-area-inset-left))] pt-2 pb-[max(0.625rem,env(safe-area-inset-bottom))]',
+        'group/nav bottom-0 z-appbar px-[max(0.75rem,env(safe-area-inset-left))] pt-2 pb-[max(0.625rem,env(safe-area-inset-bottom))] shrink-0',
         position === 'fixed' ? 'fixed inset-x-0' : 'sticky',
         className
       )}

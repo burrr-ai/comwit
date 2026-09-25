@@ -22,16 +22,16 @@ Put the font variable --font-pretendard on <html> (for example with next/font/lo
 
 ## Components
 
-- Mobile app: app-bar, bottom-nav, page-transition (with route-boundary), pull-to-refresh, drag-scroller
+- Mobile app: app-bar, bottom-nav, page-transition (with route-boundary), bottom-sheet, pull-to-refresh, drag-scroller
 - Chat: chat (Chat, ChatHeader, ChatTitle, ChatDescription, ChatHeaderActions, ChatMessages, ChatScrollToBottom, ChatMessage, ChatBubble, ChatMessageMeta, ChatTyping, ChatDivider, ChatComposer, ChatComposerInput, ChatComposerActions, ChatComposerSubmit)
 - Glass: glass (Glass, GlassSurface, GlassButton), dropdown-menu, popover
-- Notifications: toast (Toaster, toast(), Toast; formerly sonner), popup (popup.confirm / alert / sheet), alert, empty-state
+- Notifications: toast (Toaster, toast(), Toast; formerly sonner), popup (popup.confirm / alert / sheet; sheet renders the bottom-sheet template), alert, empty-state
 - Pickers: date-picker, time-picker, month-picker (popover on desktop, bottom sheet on phones), calendar
 - Selection: segmented-control, chip, checkbox, radio-group, pager
 - Forms and data: text-field, autocomplete, select, form, data-table, editor
 - Basics: button, badge, input, input-group, textarea, label, switch, tabs, accordion, collapsible, dialog, sheet, card, table, avatar, separator, skeleton, pagination
 
-Dialog, sheet, popup and toast surfaces are refractive glass (the same material as menus and the app bar), denser over the modal scrim so text stays readable. Do not add bg-* classes to their content parts; that removes the glass.
+Dialog, sheet, bottom sheet, popup and toast surfaces are refractive glass (the same material as menus and the app bar), denser over the modal scrim so text stays readable. Do not add bg-* classes to their content parts; that removes the glass.
 
 ## App shell
 
@@ -65,9 +65,51 @@ const transitions = {
   <RouteBoundary>{children}</RouteBoundary>
 </PageTransition>
 
-PageTransition renders the shell the outgoing page needs (relative, z-0, min-h-dvh, overflow-x-clip); inside your own scroller pass className="min-h-full". Give every page a background. Persistent shells use an outer RouteBoundary with a fixed routeKey around an inner one. Without a router, PageBoundary takes path and routeKey directly. Reduced motion swaps pages without animating unless reducedMotion="keep".
+How it works: the boundary is a keyed DOM element (key = routeKey ?? path, data-ssgoi-transition = path). When the key changes React unmounts the old page and mounts the new one; the engine keeps the detached node, reinserts it position:absolute over the new page and animates both. So it needs no router at all: any state that changes path works.
+
+'use client'
+const [path, setPath] = React.useState('/notes')
+<PageTransition config={transitions}>
+  <PageBoundary path={path}>{path === '/notes' ? <Notes open={(id) => setPath('/notes/' + id)} /> : <Note back={() => setPath('/notes')} />}</PageBoundary>
+</PageTransition>
+
+PageTransition renders the shell the outgoing page needs (relative, z-0, min-h-dvh, overflow-x-clip); inside your own scroller pass className="min-h-full". Use overflow-x clip, never hidden: hidden turns the shell into a scroll container and scroll restoration targets the wrong element. Give every page a background so the page underneath does not show through. PageBoundary is min-h-full by default, so a short page stays as tall as the shell while it leaves and its sticky bottom nav or action bar does not ride up. Reduced motion swaps pages without animating unless reducedMotion="keep".
+
+The app bar belongs to the page: render it inside the boundary so it moves with the page. A persistent shell keeps only what sits below the page (the bottom nav): an outer boundary with a fixed routeKey, an inner boundary that swaps the page.
+
+<RouteBoundary routeKey="tabs" className="flex min-h-full flex-col">
+  <RouteBoundary className="flex-1">{children}</RouteBoundary>   {/* the page, app bar included */}
+  <BottomNav … />
+</RouteBoundary>
+
+The leaving page is placed position:absolute at the top of the nearest positioned ancestor, so if you do put chrome above a nested boundary, wrap that boundary in a position:relative element or it jumps up by the chrome's height.
+
+hero() carries one element between two pages: put data-hero-exit-key={id} on the element in the page you leave and data-hero-enter-key={id} on its counterpart in the page you enter (same value, unique per page), with a from/to rule such as { from: '/photos', to: '/photos/*', transition: hero({ type: 'fade' }) }. Also give each end data-hero-radius (its corner radius in px, e.g. 16 on a rounded thumbnail and 0 on the full-bleed photo): the engine does not read the CSS radius, and without it the corners do not morph with the box. Unmatched keys are a no-op.
 
 Route rules (on/except, from/to, ordered, priority), every preset and its options, persistent layouts, scroll restoration and troubleshooting are SSGOI's and are documented at https://ssgoi.dev/llms.txt (config shape is identical; only the component names differ).
+
+## Bottom sheet
+
+npx comwit-ui add bottom-sheet
+
+A sheet that rises from the bottom with a grab handle. Drag the handle (or the sheet body while its scroller is at the top) down to dismiss; release past 25% of the sheet height or a fast flick closes it, otherwise it springs back. Tapping the handle, the scrim, Escape and BottomSheetClose also close it. The gesture, thresholds, inner-scroll yielding, focus trap and scroll lock are BottomSheet.Root / Content / Handle in @comwit/ui; the copied file styles the glass surface, the handle and the data-dragging / --sheet-drag / --sheet-drag-progress values the primitive emits.
+
+'use client'
+import { BottomSheet, BottomSheetTrigger, BottomSheetContent, BottomSheetHeader, BottomSheetTitle, BottomSheetDescription, BottomSheetFooter, BottomSheetClose } from '@/components/ui/bottom-sheet'
+
+<BottomSheet>
+  <BottomSheetTrigger asChild><Button>Filters</Button></BottomSheetTrigger>
+  <BottomSheetContent>
+    <BottomSheetHeader>
+      <BottomSheetTitle>Filters</BottomSheetTitle>
+      <BottomSheetDescription>Drag the handle down to dismiss.</BottomSheetDescription>
+    </BottomSheetHeader>
+    <div className="min-h-0 flex-1 overflow-y-auto px-5">…</div>
+    <BottomSheetFooter><BottomSheetClose asChild><Button>Apply</Button></BottomSheetClose></BottomSheetFooter>
+  </BottomSheetContent>
+</BottomSheet>
+
+Props: open / defaultOpen / onOpenChange (like Dialog); on BottomSheetContent drag ('sheet' | 'handle' | false, default 'sheet'), closeThreshold (fraction of the sheet height, default 0.25), velocityThreshold (px/ms, default 0.4), showHandle (default true), showCloseButton (default false), container (portal target, for rendering inside an app shell). A long body needs min-h-0 flex-1 overflow-y-auto on the middle region. popup.sheet() (lib/popup) opens this component imperatively and resolves with the value you pass to resolve().
 
 ## Chat
 
@@ -131,7 +173,7 @@ Keep a consumer's own global element rules (button, a, :focus-visible, h1–h3) 
 
 ## Composition
 
-Primitives use namespace exports such as Dialog.Root / Trigger / Portal / Overlay / Content / Title / Description / Close, and for app shells and gestures AppBar.Root, BottomNav.Root / Item, DragScroller.Root / Track, PullToRefresh.Root / Scroller / Indicator and Chat.Root / List / Message / Bubble / Composer. Button, Input and Textarea are flat exports, as are the hooks ScrollChromeProvider / useScrollChrome, useMobile / useMobileDevice and useGlassLens. Preserve labels, focus behavior and keyboard interactions when modifying a component. Use the actual component source for supported props; do not assume every shadcn or Radix API is interchangeable.
+Primitives use namespace exports such as Dialog.Root / Trigger / Portal / Overlay / Content / Title / Description / Close, BottomSheet.Root / Trigger / Portal / Overlay / Content / Handle / Title / Description / Close, and for app shells and gestures AppBar.Root, BottomNav.Root / Item, DragScroller.Root / Track, PullToRefresh.Root / Scroller / Indicator and Chat.Root / List / Message / Bubble / Composer. Button, Input and Textarea are flat exports, as are the hooks ScrollChromeProvider / useScrollChrome, useMobile / useMobileDevice and useGlassLens. Preserve labels, focus behavior and keyboard interactions when modifying a component. Use the actual component source for supported props; do not assume every shadcn or Radix API is interchangeable.
 
 Default copy is English. Pickers take locale (Intl, for example 'ko-KR') and labels; Pager and DataTable take labels.
 
