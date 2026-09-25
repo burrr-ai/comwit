@@ -14,6 +14,7 @@ pnpm dev:docs
 - `content/state/` — State MDX.
 - `content/ui/` — UI editorial docs and component metadata.
 - `scripts/gen-ui.mjs` — UI examples and source generated from Storybook specs and the CLI registry.
+- `public/icon.svg` — the Comwit mark; `scripts/gen-icons.mjs` regenerates the favicon, touch and manifest icons from it. See `design/brand.md`.
 
 The development and production build scripts build the runtime packages and generate UI content first. Theme editing is isolated at `/preview/ui/theme` inside an iframe. Site CSS tokens use `--site-*` names.
 
