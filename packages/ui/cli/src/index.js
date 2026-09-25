@@ -54,6 +54,11 @@ function loadIndex() {
 }
 // 옛 이름 → 지금 이름. 템플릿 이름은 중성적으로 간다(엔진 브랜드가 아니라 역할).
 const ALIASES = { sonner: 'toast' }
+// 동작 훅은 이제 엔진(@comwit/ui)이 내보낸다 — 복사할 소스가 없다.
+const MOVED_TO_ENGINE = {
+  'use-mobile': 'useMobile · useMobileDevice',
+  'use-scroll-chrome': 'ScrollChromeProvider · useScrollChrome',
+}
 function canonical(name) {
   const to = ALIASES[name]
   if (to) log(c.dim(`  '${name}' 은(는) 이제 '${to}' 입니다.`))
@@ -61,7 +66,13 @@ function canonical(name) {
 }
 function loadItem(name) {
   const p = join(REGISTRY_DIR, `${name}.json`)
-  if (!existsSync(p)) die(`레지스트리에 '${name}' 이(가) 없습니다. \`comwit list\` 로 확인하세요.`)
+  if (!existsSync(p)) {
+    if (MOVED_TO_ENGINE[name])
+      die(
+        `'${name}' 은(는) 이제 @comwit/ui 가 내보냅니다 — import { ${MOVED_TO_ENGINE[name].replace(/ · /g, ', ')} } from '@comwit/ui'. 복사할 파일이 없습니다.`
+      )
+    die(`레지스트리에 '${name}' 이(가) 없습니다. \`comwit list\` 로 확인하세요.`)
+  }
   return JSON.parse(readFileSync(p, 'utf8'))
 }
 /** name 목록을 registryDependencies 까지 재귀 해석해 위상정렬(의존 먼저) + 중복 제거. */

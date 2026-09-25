@@ -37,6 +37,9 @@
 - **form-control (자체 엔진, Radix Primitives 이식)**: checkbox · radio-group · switch
 - **자체 헤드리스 (radix 에 없던 것)**: button(press/ripple) · input(IME-safe, bare) · textarea(IME-safe)
 - **compound (React Aria a11y)**: text-field (= MUI TextField. Root/Label/Control/Description/Error)
+- **앱 셸·제스처·대화 (자체 헤드리스 — 동작은 여기, 시각은 templates)**: app-bar · bottom-nav · drag-scroller ·
+  pull-to-refresh · chat(react-virtuoso 가상화 + 스크롤 규칙 + 컴포저) · scroll-chrome(훅) · use-mobile(훅) · glass-lens(훅)
+  → 프리미티브는 `data-state` · `data-tone` 같은 속성으로 상태를 알리고, 템플릿은 그걸로 스타일만 입힌다.
 - **utils**: ripple(위치/타이밍만 — 시각은 없음, `itemClassName` 으로 소비 레이어가 입힌다)
 
 lib/components/ui 는 이들을 re-import 해 **토큰 + cva variant** 로만 시각을 입힌다(a11y·동작은 프리미티브 소유).

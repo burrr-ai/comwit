@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
@@ -102,12 +102,33 @@ test('page-transition installs the route boundary that matches the detected rout
   }
 })
 
-test('chat installs its compound parts with the virtualization engine as a dependency', () => {
+test('behavior lives in the engine: templates depend on @comwit/ui, not on engine libraries or hooks', () => {
   execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
   const index = JSON.parse(readFileSync(join(root, 'packages/ui/cli/registry/index.json'), 'utf8'))
+  const core = JSON.parse(readFileSync(join(root, 'packages/ui/core/package.json'), 'utf8'))
+  assert.ok(core.dependencies['react-virtuoso'], 'the engine owns react-virtuoso')
+  for (const name of [
+    'chat',
+    'app-bar',
+    'bottom-nav',
+    'drag-scroller',
+    'pull-to-refresh',
+    'glass',
+  ]) {
+    const item = index.items.find((i) => i.name === name)
+    assert.ok(item, `${name} is in the registry`)
+    assert.ok(item.dependencies.includes('@comwit/ui'), `${name} depends on the engine`)
+    assert.ok(
+      !item.dependencies.includes('react-virtuoso'),
+      `${name} does not install react-virtuoso`
+    )
+    assert.ok(
+      !item.registryDependencies.some((d) => d.startsWith('use-')),
+      `${name} installs no hook files`
+    )
+  }
+  assert.ok(!index.items.some((i) => i.type === 'hook'), 'no hook items remain in the registry')
   const chat = index.items.find((i) => i.name === 'chat')
-  assert.ok(chat, 'chat is in the registry')
-  assert.ok(chat.dependencies.includes('react-virtuoso'))
   for (const dep of ['button', 'glass', 'textarea', 'utils', 'interaction'])
     assert.ok(chat.registryDependencies.includes(dep), `chat depends on ${dep}`)
 
@@ -123,13 +144,22 @@ test('chat installs its compound parts with the virtualization engine as a depen
     run('init')
     run('add', 'chat')
     const source = readFileSync(join(fixture, 'components/ui/chat.tsx'), 'utf8')
-    assert.match(source, /from ['"]react-virtuoso['"]/)
+    assert.match(source, /from ['"]@comwit\/ui['"]/)
+    assert.doesNotMatch(source, /from ['"]react-virtuoso['"]/)
     assert.match(source, /from ['"]@\/components\/ui\/glass['"]/)
     assert.match(source, /from ['"]@\/lib\/interaction['"]/)
     for (const part of ['ChatMessages', 'ChatBubble', 'ChatComposer', 'ChatScrollToBottom'])
       assert.match(source, new RegExp(`\\b${part}\\b`))
     for (const file of ['button', 'glass', 'textarea'])
       assert.ok(readFileSync(join(fixture, `components/ui/${file}.tsx`), 'utf8').length)
+    // The app bar imports its scroll intent from the engine; nothing lands in hooks/.
+    run('add', 'app-bar', 'bottom-nav')
+    assert.match(
+      readFileSync(join(fixture, 'components/ui/app-bar.tsx'), 'utf8'),
+      /from ['"]@comwit\/ui['"]/
+    )
+    assert.ok(!existsSync(join(fixture, 'hooks')), 'no hooks directory is created')
+    assert.throws(() => run('add', 'use-scroll-chrome'), /@comwit\/ui/)
   } finally {
     rmSync(fixture, { recursive: true, force: true })
   }

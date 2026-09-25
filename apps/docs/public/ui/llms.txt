@@ -1,6 +1,6 @@
 # Comwit UI — implementation guide
 
-Comwit UI provides headless behavior (@comwit/ui) and editable component source installed into a React project by the comwit-ui CLI. It is a curated kit: for each job it wraps a proven library under a neutral name (page transitions on SSGOI, toasts on Sonner, popups on overlay-kit, springs on Motion, rich text on Tiptap, tables on TanStack Table, dates on React DayPicker, forms on React Hook Form, chat lists on React Virtuoso) and installs the wrapper as source the project owns; the library itself is an npm dependency. The default look is the Comwit design system: warm white, deep ink, a blue brand (#3182f6), Pretendard, and refractive glass. It is independent of Comwit State.
+Comwit UI provides headless behavior (@comwit/ui) and editable component source installed into a React project by the comwit-ui CLI. Behavior lives in the engine: scroll rules, gestures, virtualization, keyboard and IME handling are @comwit/ui primitives driven by props and data-* attributes; the copied component files only compose those parts and apply the tokens, so restyling a file never touches behavior. It is a curated kit: for each job it wraps a proven library under a neutral name (page transitions on SSGOI, toasts on Sonner, popups on overlay-kit, springs on Motion, rich text on Tiptap, tables on TanStack Table, dates on React DayPicker, forms on React Hook Form, chat lists on React Virtuoso) and installs the wrapper as source the project owns; the library itself is an npm dependency. The default look is the Comwit design system: warm white, deep ink, a blue brand (#3182f6), Pretendard, and refractive glass. It is independent of Comwit State.
 
 ## Install
 
@@ -35,12 +35,12 @@ Dialog, sheet, popup and toast surfaces are refractive glass (the same material 
 
 ## App shell
 
-AppBar (behavior: flow | pinned | reveal) and BottomNav read one shared scroll intent. Wrap the scroller once:
+AppBar (behavior: flow | pinned | reveal) and BottomNav read one shared scroll intent that the engine provides. Wrap the scroller once:
 
-import { ScrollChromeProvider } from '@/hooks/use-scroll-chrome'
+import { ScrollChromeProvider } from '@comwit/ui'
 <ScrollChromeProvider scrollRef={mainRef} resetKey={pathname}>…</ScrollChromeProvider>
 
-Omit scrollRef to follow window scroll. PullToRefresh renders its own scroller and forwards ref to it, so pass that ref to ScrollChromeProvider. Routing is yours: pass onClick={() => router.back()} to AppBarBackButton or FloatingBackButton, and use BottomNavItem asChild with your Link.
+Omit scrollRef to follow window scroll. useScrollChrome() (also from @comwit/ui) returns { compact, expand } for your own chrome. PullToRefresh renders its own scroller and forwards ref to it, so pass that ref to ScrollChromeProvider. Routing is yours: pass onClick={() => router.back()} to AppBarBackButton or FloatingBackButton, and use BottomNavItem asChild with your Link. The templates style the engine's data-state (app bar hidden/visible, bottom nav compact/expanded, item active/inactive); the reveal, expand-on-touch and selection logic is AppBar.Root / BottomNav.Root in @comwit/ui. useMobile(breakpoint) and useMobileDevice() come from @comwit/ui as well (there are no hooks/ files to install).
 
 ## Page transitions
 
@@ -73,7 +73,7 @@ Route rules (on/except, from/to, ordered, priority), every preset and its option
 
 npx comwit-ui add chat
 
-One file, compound parts, no data shape imposed. Chat is a vertical flex column that fills its parent (the parent needs a height: h-dvh, or flex-1 min-h-0); ChatHeader and ChatComposer are fixed rows and ChatMessages takes the rest. ChatMessages virtualizes the list with react-virtuoso (installed as a dependency; the copied file wraps it, so import from the copied file only).
+One file, compound parts, no data shape imposed. Chat is a vertical flex column that fills its parent (the parent needs a height: h-dvh, or flex-1 min-h-0); ChatHeader and ChatComposer are fixed rows and ChatMessages takes the rest. Every behavior below is the Chat primitive in @comwit/ui (Chat.Root / List / ScrollToBottom / Message / MessageContent / Bubble / Composer / ComposerInput / ComposerSubmit / ComposerStop); the list is virtualized with react-virtuoso inside the engine. The copied chat.tsx only composes those parts and styles the data-tone / data-align / data-state attributes they emit.
 
 'use client'
 import { Chat, ChatHeader, ChatTitle, ChatMessages, ChatMessage, ChatBubble, ChatMessageMeta, ChatTyping, ChatComposer } from '@/components/ui/chat'
@@ -104,7 +104,7 @@ ChatMessage takes align ('start' | 'end') and avatar. ChatBubble takes tone ('pr
 
 ChatComposer: onSend(text) receives the trimmed text and clears the input; value/onValueChange for a controlled value; pending + onStop turns the send button into a stop button; disabled, placeholder, submitOnEnter (default true: Enter sends, Shift+Enter breaks a line; Cmd/Ctrl+Enter always sends; Enter during IME composition never sends), labels ({ send, stop }). Without children it renders ChatComposerInput plus ChatComposerSubmit; with children compose ChatComposerInput, ChatComposerActions (a row for attachment or tool buttons) and ChatComposerSubmit yourself. The input grows with its content up to max-h-40.
 
-Tones are tokens: own bubbles bg-primary/text-primary-foreground, theirs bg-muted, the composer surface rounded-sheet with shadow-message and the field focus ring. Override in the copied file or through the tokens.
+Tones are tokens: own bubbles bg-primary/text-primary-foreground, theirs bg-muted, the composer surface rounded-sheet with shadow-message and the field focus ring. Override in the copied file or through the tokens; the scroll rules, pinning, IME guard and auto-grow stay in the engine.
 
 ## Ownership
 
@@ -131,7 +131,7 @@ Keep a consumer's own global element rules (button, a, :focus-visible, h1–h3) 
 
 ## Composition
 
-Primitives use namespace exports such as Dialog.Root / Trigger / Portal / Overlay / Content / Title / Description / Close. Button, Input and Textarea are flat exports. Preserve labels, focus behavior and keyboard interactions when modifying a component. Use the actual component source for supported props; do not assume every shadcn or Radix API is interchangeable.
+Primitives use namespace exports such as Dialog.Root / Trigger / Portal / Overlay / Content / Title / Description / Close, and for app shells and gestures AppBar.Root, BottomNav.Root / Item, DragScroller.Root / Track, PullToRefresh.Root / Scroller / Indicator and Chat.Root / List / Message / Bubble / Composer. Button, Input and Textarea are flat exports, as are the hooks ScrollChromeProvider / useScrollChrome, useMobile / useMobileDevice and useGlassLens. Preserve labels, focus behavior and keyboard interactions when modifying a component. Use the actual component source for supported props; do not assume every shadcn or Radix API is interchangeable.
 
 Default copy is English. Pickers take locale (Intl, for example 'ko-KR') and labels; Pager and DataTable take labels.
 

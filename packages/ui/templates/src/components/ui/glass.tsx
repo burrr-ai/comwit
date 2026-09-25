@@ -9,23 +9,21 @@
  *  - <GlassButton>     유리 레이어를 기본으로 까는 원형/알약 버튼(앱바 뒤로가기·플로팅 액션).
  *
  * variant — morphing(렌즈 가장자리 굴절 · 기본) · blur(강한 블러) · frosted(서리) · fade(아래로 사라짐 · 앱바)
- * 시각은 styles.css 의 `.glass*` 가 전부 갖고, 여기선 클래스·CSS 변수·SVG 렌즈만 붙인다.
- * 굴절 렌즈(SVG backdrop-filter)는 안정적으로 도는 Chromium 에서만 켜고, 그 외엔 블러로 폴백한다.
+ * 시각은 styles.css 의 `.glass*` 가 전부 갖고, 여기선 클래스·CSS 변수·SVG 필터만 붙인다.
+ * 굴절 렌즈의 변위 맵(지원 감지·크기 추적·캔버스 생성)은 @comwit/ui 의 `useGlassLens` 가 만든다 —
+ * 안정적으로 도는 Chromium 에서만 켜고, 그 외엔 블러로 폴백한다.
  */
 
 import {
-  cloneElement,
-  useEffect,
   useId,
   useState,
   type ComponentProps,
   type CSSProperties,
-  type MutableRefObject,
   type ReactElement,
   type ReactNode,
   type Ref,
-  type RefCallback,
 } from 'react'
+import { Slot, Slottable, useGlassLens, type GlassLensTexture } from '@comwit/ui'
 import { Button } from './button'
 import { cn } from '../../lib/utils'
 
@@ -117,30 +115,33 @@ function GlassSurface({
 }: GlassSurfaceProps) {
   const visual = useGlassVisual({ opacity, shape, tint, variant })
 
-  return cloneElement(
-    children,
-    {
-      // 자식의 ref 를 유지하면서 우리도 DOM 을 본다 — 열릴 때마다 마운트되는 팝오버·다이얼로그 콘텐츠의 렌즈를 그때 만든다.
-      ref: composeRefs(getElementRef(children), visual.ref),
-      'data-glass': variant,
-      className: cn(
+  return (
+    // Slot 이 자식의 ref 를 유지하면서 우리 ref 도 합친다 — 열릴 때마다 마운트되는 팝오버·다이얼로그 콘텐츠의 렌즈를 그때 만든다.
+    <Slot
+      ref={visual.ref}
+      data-glass={variant}
+      className={cn(
         'glass',
         VARIANT_CLASS[variant],
         visual.hasLens && 'glass-lens',
         pressed && 'glass-pressed',
         !shadow && 'glass-shadowless',
         dense && 'glass-dense',
-        children.props.className,
         className
-      ),
-      style: { ...children.props.style, ...visual.style },
-    } as Record<string, unknown>,
-    <>
-      {children.props.children}
-      {visual.hasLens ? (
-        <GlassFilter filterId={visual.filterId} variant={variant} lensMap={visual.lensMap} />
-      ) : null}
-    </>
+      )}
+      style={visual.style}
+    >
+      <Slottable child={children}>
+        {(inner) => (
+          <>
+            {inner}
+            {visual.hasLens ? (
+              <GlassFilter filterId={visual.filterId} variant={variant} lensMap={visual.lensMap} />
+            ) : null}
+          </>
+        )}
+      </Slottable>
+    </Slot>
   )
 }
 
@@ -207,11 +208,10 @@ function useGlassVisual({
   shape,
   variant,
 }: Required<Pick<GlassOptions, 'shape' | 'variant'>> & Pick<GlassOptions, 'opacity' | 'tint'>) {
-  const hasLens = useLensSupport()
   const filterId = `glass-${variant}-${useId().replace(/:/g, '')}`
   // 유리 면 DOM 은 콜백 ref 로 받는다 — 프레즌스로 열고 닫히는 콘텐츠는 마운트 시점이 매번 다르다.
   const [element, setElement] = useState<HTMLElement | null>(null)
-  const lensMap = useLensMap(element, hasLens && variant === 'morphing', shape)
+  const lens = useGlassLens(element, { enabled: variant === 'morphing', shape })
   const clamped = opacity === undefined ? undefined : Math.min(1, Math.max(0, opacity))
   const style = {
     '--glass-filter': `url(#${filterId})`,
@@ -219,121 +219,13 @@ function useGlassVisual({
     ...(clamped === undefined ? {} : { '--glass-opacity': String(clamped) }),
   } as CSSProperties
 
-  return { filterId, hasLens, style, lensMap, ref: setElement as Ref<HTMLElement> }
-}
-
-type PossibleRef<T> = Ref<T> | undefined
-
-function setRef<T>(ref: PossibleRef<T>, value: T) {
-  if (typeof ref === 'function') ref(value)
-  else if (ref !== null && ref !== undefined) (ref as MutableRefObject<T>).current = value
-}
-
-/** 콜백 ref 와 RefObject 를 하나로 합친다. */
-function composeRefs<T>(...refs: PossibleRef<T>[]): RefCallback<T> {
-  return (node) => {
-    for (const ref of refs) setRef(ref, node)
-  }
-}
-
-// React 18 은 element.ref, React 19 는 element.props.ref 가 정본이고 반대쪽을 읽으면 경고한다.
-// 경고를 내는 getter(isReactWarning)를 피해 다른 쪽을 읽는다. (@comwit/ui slot 과 같은 방식)
-function getElementRef(element: ReactElement): Ref<HTMLElement> | undefined {
-  let getter = Object.getOwnPropertyDescriptor(element.props, 'ref')?.get
-  let mayWarn = getter && 'isReactWarning' in getter && getter.isReactWarning
-  if (mayWarn) return (element as unknown as { ref?: Ref<HTMLElement> }).ref
-  getter = Object.getOwnPropertyDescriptor(element, 'ref')?.get
-  mayWarn = getter && 'isReactWarning' in getter && getter.isReactWarning
-  if (mayWarn) return (element.props as { ref?: Ref<HTMLElement> }).ref
-  return (
-    (element.props as { ref?: Ref<HTMLElement> }).ref ||
-    (element as unknown as { ref?: Ref<HTMLElement> }).ref
-  )
-}
-
-/** SVG backdrop-filter 가 안정적으로 동작하는 Chromium 계열에서만 굴절 렌즈를 켠다. */
-function useLensSupport() {
-  const [hasLens, setHasLens] = useState(false)
-  useEffect(() => {
-    setHasLens('userAgentData' in navigator)
-  }, [])
-  return hasLens
-}
-
-type LensTexture = { url: string; width: number; height: number; scale: number }
-
-/** 크기가 바뀔 때만 렌즈 맵을 다시 만든다. 스크롤·이동에는 캡처 비용이 없다. */
-function useLensMap(element: HTMLElement | null, enabled: boolean, shape: GlassShape) {
-  const [texture, setTexture] = useState<LensTexture>()
-  useEffect(() => {
-    if (!enabled || !element) return
-    const update = () => {
-      const width = element.offsetWidth
-      const height = element.offsetHeight
-      if (width === 0 || height === 0) return
-      const map = createLensMap(width, height, shape)
-      const canvas = document.createElement('canvas')
-      canvas.width = map.width
-      canvas.height = map.height
-      const context = canvas.getContext('2d')
-      if (!context) return
-      context.putImageData(new ImageData(map.pixels, map.width, map.height), 0, 0)
-      setTexture({ url: canvas.toDataURL(), width, height, scale: map.scale })
-    }
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [element, enabled, shape])
-  return texture
-}
-
-/** 가장자리만 대칭으로 굴절시킨다 — 중앙과 렌즈 밖 픽셀은 고정. */
-function lensDisplacement(x: number, y: number, width: number, height: number, radius: number) {
-  const px = x - width / 2
-  const py = y - height / 2
-  const qx = Math.abs(px) - (width / 2 - radius)
-  const qy = Math.abs(py) - (height / 2 - radius)
-  const outsideX = Math.max(qx, 0)
-  const outsideY = Math.max(qy, 0)
-  const cornerLength = Math.hypot(outsideX, outsideY)
-  const distance = cornerLength - radius
-  const rim = Math.min(radius, 18)
-  if (distance >= 0 || distance <= -rim) return { x: 0, y: 0 }
-  // 도함수가 1 미만이라 글자가 접히지 않고 휘기만 한다.
-  const bend = Math.sin((-distance / rim) * Math.PI) * rim * 0.3125
   return {
-    x: ((Math.sign(px) * outsideX) / cornerLength) * bend,
-    y: ((Math.sign(py) * outsideY) / cornerLength) * bend,
+    filterId,
+    hasLens: lens.supported,
+    style,
+    lensMap: lens.texture,
+    ref: setElement as Ref<HTMLElement>,
   }
-}
-
-/** 모양만으로 만드는 작은 변위 맵. 페이지 캡처·원격 이미지·프레임 캡처 없음. */
-function createLensMap(width: number, height: number, shape: GlassShape) {
-  const radius =
-    shape === 'panel' ? Math.min(16, width / 2, height / 2) : Math.min(width, height) / 2
-  const ratio = Math.min(1, 256 / Math.max(width, height))
-  const mapWidth = Math.max(1, Math.ceil(width * ratio))
-  const mapHeight = Math.max(1, Math.ceil(height * ratio))
-  const strength = Math.min(radius, 18) * 0.3125
-  const pixels = new Uint8ClampedArray(mapWidth * mapHeight * 4)
-  for (let y = 0; y < mapHeight; y += 1) {
-    for (let x = 0; x < mapWidth; x += 1) {
-      const shift = lensDisplacement(
-        ((x + 0.5) * width) / mapWidth,
-        ((y + 0.5) * height) / mapHeight,
-        width,
-        height,
-        radius
-      )
-      const index = (y * mapWidth + x) * 4
-      pixels[index] = 128 + Math.round((127 * shift.x) / strength)
-      pixels[index + 1] = 128 + Math.round((127 * shift.y) / strength)
-      pixels[index + 2] = 128
-      pixels[index + 3] = 255
-    }
-  }
-  return { width: mapWidth, height: mapHeight, pixels, scale: strength * 2 }
 }
 
 function GlassFilter({
@@ -343,7 +235,7 @@ function GlassFilter({
 }: {
   filterId: string
   variant: GlassVariant
-  lensMap?: LensTexture
+  lensMap?: GlassLensTexture
 }) {
   const isBlur = variant === 'blur'
   const isFrosted = variant === 'frosted'

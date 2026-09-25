@@ -5,7 +5,7 @@
 //   <name>.json     — 아이템 전체(파일 content 포함)
 // comwit-ui 가 이걸 번들로 싣고 `comwit-ui add <name>` 시 소비한다. shadcn CLI/스키마/components.json 안 씀.
 // ─────────────────────────────────────────────────────────────────────────
-import { readFileSync, writeFileSync, readdirSync, mkdirSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, basename } from 'node:path'
 
@@ -61,7 +61,6 @@ for (const file of readdirSync(uiDir).filter((f) => f.endsWith('.tsx'))) {
       registryDeps.add(s.slice(2)) // 형제 ui 컴포넌트
     else if (s.startsWith('../../lib/')) registryDeps.add(basename(s))
     else if (s.startsWith('../../hooks/')) registryDeps.add(basename(s))
-    else if (s === '../../hooks') registryDeps.add('use-mobile')
     else if (s.startsWith('.')) continue
     else {
       const p = pkgName(s)
@@ -145,11 +144,13 @@ function fileItem(name, relPath, type) {
     files: [{ path: relPath, content }],
   }
 }
-// lib/* 와 hooks/* 는 파일 하나 = 아이템 하나 (hooks/index.ts 배럴은 패키지 전용이라 제외)
+// lib/* 와 hooks/* 는 파일 하나 = 아이템 하나 (index.ts 배럴은 패키지 전용이라 제외).
+// 동작 훅(useMobile · ScrollChrome)은 엔진(@comwit/ui)으로 옮겨져 hooks/ 는 비어 있을 수 있다.
 for (const [dir, type] of [
   ['lib', 'lib'],
   ['hooks', 'hook'],
 ]) {
+  if (!existsSync(join(tplSrc, dir))) continue
   for (const file of readdirSync(join(tplSrc, dir))
     .filter((f) => /\.tsx?$/.test(f))
     .sort()) {

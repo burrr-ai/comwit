@@ -24,7 +24,7 @@ import { Toaster as Sonner, toast as sonner, type ExternalToast, type ToasterPro
 
 import { Button } from './button'
 import { GlassSurface } from './glass'
-import { useMobile } from '../../hooks/use-mobile'
+import { useMobile } from '@comwit/ui'
 import { focusRing } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
 
