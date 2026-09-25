@@ -1,6 +1,6 @@
 {
   "name": "@comwit/state",
-  "version": "2.4.0",
+  "version": "2.5.0-beta.0",
   "private": false,
   "homepage": "https://library.comwit.io/state",
   "repository": {
@@ -33,7 +33,7 @@
     "node": ">=18"
   },
   "license": "MIT",
-  "author": "meursyphus",
+  "author": "burrr-ai",
   "main": "dist/state.cjs",
   "module": "dist/state.js",
   "types": "dist/index.d.ts",

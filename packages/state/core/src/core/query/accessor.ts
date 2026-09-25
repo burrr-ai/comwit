@@ -8,6 +8,8 @@ import {
   RESOURCE_QUERY_OPTION_KEYS,
   RESOURCE_SUSPEND_COMMIT,
   RESOURCE_SUSPEND_PREPARE,
+  RESOURCE_SUSPEND_RESTORE,
+  RESOURCE_SUSPEND_STREAM,
   type AnyResourceDescriptor,
   type ConnectionStatus,
   type InfiniteResourceDescriptor,
@@ -31,6 +33,7 @@ import {
   type SingleResourceDescriptor,
   type SubscribeCallbacks,
 } from './types'
+import type { StreamedSuspendResult } from './stream'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -732,6 +735,7 @@ export function createResourceAccessor(
         state.isSuccess = true
         entry.lastFetchedAt = Date.now()
         entry.lastResult = lastYield
+        entry.suspendFetched = false
         await commitLifecycleSuccess(entry, entry.lastFetchedAt, requestTokens)
         updateCachedState(entry, state)
 
@@ -751,6 +755,7 @@ export function createResourceAccessor(
       entry.hasQueried = true
       entry.lastFetchedAt = Date.now()
       entry.lastResult = result
+      entry.suspendFetched = false
 
       if (descriptor.kind === 'infinite' && mode !== 'restore') {
         const infiniteHistory = entry.cursorHistory
@@ -937,6 +942,7 @@ export function createResourceAccessor(
           stagedEntry.suspendPromise = undefined
           stagedEntry.suspendError = undefined
           stagedEntry.suspendNeedsCommit = true
+          stagedEntry.suspendFetched = true
 
           if (descriptor.kind === 'infinite') {
             stagedEntry.cursorHistory = [(nextState as ResourceInfiniteState<unknown>).cursor]
@@ -969,6 +975,60 @@ export function createResourceAccessor(
       })
 
     return promise
+  }
+
+  /**
+   * Experimental: seed a `.suspend()` key from a result the server resolved and streamed into
+   * this document. It runs while the selector reads its snapshot, so it only touches the
+   * non-observable key cache; the staged entry becomes the active proxy value after commit like
+   * any other suspend resolution, and the hydrating render never calls `queryFn`.
+   */
+  const restoreSuspend = (
+    arg: unknown,
+    hasArg: boolean,
+    key: QueryCacheKey,
+    hookId: string
+  ): void => {
+    const stream = registry.suspendStream
+    if (!stream) return
+    const existing = runtime.cacheEntries.get(key)
+    if (existing?.hasQueried || existing?.suspendPromise) return
+
+    const streamed = stream.take(hookId, path, key)
+    if (!streamed) return
+
+    const queryArg = hasArg ? arg : undefined
+    const entry = existing ?? createCacheEntry(state, key, queryArg)
+    entry.arg = queryArg
+
+    const nextState = structuredClone(descriptor.initialState) as ResourceDataLike
+    mergeResult(nextState, streamed.result, false)
+    nextState.isLoading = false
+    nextState.isFetching = false
+    nextState.isSuccess = true
+    nextState.isError = false
+    nextState.error = null
+
+    entry.state = immutableResourceState(nextState)
+    entry.hasQueried = true
+    // Server clocks may run ahead; never record a fetch time in the browser's future.
+    entry.lastFetchedAt = Math.min(streamed.fetchedAt, Date.now())
+    entry.lastResult = streamed.result
+    entry.suspendPromise = undefined
+    entry.suspendError = undefined
+    entry.suspendNeedsCommit = true
+    entry.suspendFetched = false
+    if (descriptor.kind === 'infinite') {
+      entry.cursorHistory = [(nextState as ResourceInfiniteState<unknown>).cursor]
+    }
+    runtime.cacheEntries.set(key, entry)
+  }
+
+  /** Server: expose a render-resolved result so the provider can stream it to the browser. */
+  const readSuspendStream = (key: QueryCacheKey): StreamedSuspendResult | undefined => {
+    const entry = runtime.cacheEntries.get(key)
+    if (!entry?.hasQueried || !entry.suspendFetched) return undefined
+    return { fetchedAt: entry.lastFetchedAt, result: entry.lastResult }
   }
 
   /** Apply a render-staged value only after the selecting tree commits. */
@@ -1170,6 +1230,7 @@ export function createResourceAccessor(
     entry.resourceHydrated = true
     entry.lastFetchedAt = Date.now()
     entry.lastResult = state.data
+    entry.suspendFetched = false
     updateCachedState(entry, state)
 
     return next
@@ -1240,6 +1301,7 @@ export function createResourceAccessor(
     entry.suspendPromise = undefined
     entry.suspendError = undefined
     entry.suspendNeedsCommit = false
+    entry.suspendFetched = false
     entry.hydrationNeedsCommit = lifecycleBindings.length > 0
     if (descriptor.kind === 'infinite') {
       entry.cursorHistory = [(nextState as ResourceInfiniteState<unknown>).cursor]
@@ -1270,6 +1332,8 @@ export function createResourceAccessor(
       if (prop === RESOURCE_HYDRATE) return hydrateResource
       if (prop === RESOURCE_SUSPEND_PREPARE) return prepareSuspend
       if (prop === RESOURCE_SUSPEND_COMMIT) return commitSuspend
+      if (prop === RESOURCE_SUSPEND_RESTORE) return restoreSuspend
+      if (prop === RESOURCE_SUSPEND_STREAM) return readSuspendStream
       if (prop === 'query') return queryFn
       if (descriptor.selectorMethod && prop === descriptor.selectorMethod) return queryFn
       if (prop === 'refetch') return refetch

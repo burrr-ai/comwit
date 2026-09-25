@@ -7,7 +7,13 @@ import type {
   ResourceDescriptorMap,
   ResourceRuntimeState,
 } from './types'
-import { RESOURCE_SUSPEND_COMMIT, RESOURCE_SUSPEND_PREPARE } from './types'
+import {
+  RESOURCE_SUSPEND_COMMIT,
+  RESOURCE_SUSPEND_PREPARE,
+  RESOURCE_SUSPEND_RESTORE,
+  RESOURCE_SUSPEND_STREAM,
+} from './types'
+import type { StreamedSuspendResult } from './stream'
 
 export type QuerySelectorLoad = {
   arg: unknown
@@ -91,7 +97,8 @@ function createResourceSelector(
   descriptor: AnyResourceDescriptor,
   path: string,
   registry: QueryBindingRegistry,
-  loads: QuerySelectorLoad[]
+  loads: QuerySelectorLoad[],
+  hookId: string | undefined
 ) {
   return new Proxy(state, {
     get(target, prop, receiver) {
@@ -115,6 +122,13 @@ function createResourceSelector(
         }
         loads.push(load)
 
+        // A result the server already resolved must seed the key before this snapshot is read,
+        // so the hydrating render matches the server HTML without throwing or refetching.
+        if (isSuspend && hookId !== undefined && registry.suspendStream) {
+          const restore = Reflect.get(controller, RESOURCE_SUSPEND_RESTORE)
+          if (typeof restore === 'function') restore.call(controller, arg, hasArg, key, hookId)
+        }
+
         const runtime = registry.boundResourceRuntime.get(controller)
         return cachedState(state, runtime, controller, descriptor, key, registry)
       }
@@ -128,6 +142,7 @@ function bindSelectorPath(
   descriptors: ResourceDescriptorMap,
   registry: QueryBindingRegistry,
   loads: QuerySelectorLoad[],
+  hookId: string | undefined,
   path = ''
 ): object {
   return new Proxy(state, {
@@ -142,13 +157,13 @@ function bindSelectorPath(
       if (descriptor && isRecord(next)) {
         const bound = Reflect.get(controller, prop, controller)
         if (!isRecord(bound)) return next
-        return createResourceSelector(next, bound, descriptor, nextPath, registry, loads)
+        return createResourceSelector(next, bound, descriptor, nextPath, registry, loads, hookId)
       }
 
       if (isRecord(next) && hasNestedPath(descriptors, nextPath)) {
         const bound = Reflect.get(controller, prop, controller)
         if (!isRecord(bound)) return next
-        return bindSelectorPath(next, bound, descriptors, registry, loads, nextPath)
+        return bindSelectorPath(next, bound, descriptors, registry, loads, hookId, nextPath)
       }
 
       return next
@@ -161,11 +176,41 @@ export function createQuerySelectorState<T extends object>(
   controller: object,
   descriptors: ResourceDescriptorMap,
   registry: QueryBindingRegistry,
-  loads: QuerySelectorLoad[]
+  loads: QuerySelectorLoad[],
+  hookId?: string
 ): T {
   if (descriptors.size === 0) return state
   const target = Object.isFrozen(state) ? { ...state } : state
-  return bindSelectorPath(target, controller, descriptors, registry, loads) as T
+  return bindSelectorPath(target, controller, descriptors, registry, loads, hookId) as T
+}
+
+/**
+ * Queue every `.suspend()` key this selector resolved through a render-time request so the
+ * provider can stream it before the HTML that used it. Only meaningful on the server; the
+ * browser transport ignores records.
+ */
+export function recordQuerySelectorSuspense(
+  loads: QuerySelectorLoad[],
+  registry: QueryBindingRegistry,
+  hookId: string
+): void {
+  const stream = registry.suspendStream
+  if (!stream) return
+
+  for (const load of loads) {
+    if (load.mode !== 'suspend') continue
+    const read = Reflect.get(load.controller, RESOURCE_SUSPEND_STREAM)
+    if (typeof read !== 'function') continue
+    const resolved = read.call(load.controller, load.key) as StreamedSuspendResult | undefined
+    if (!resolved) continue
+    stream.record({
+      id: hookId,
+      path: load.path,
+      key: load.key,
+      fetchedAt: resolved.fetchedAt,
+      result: resolved.result,
+    })
+  }
 }
 
 export function querySelectorLoadKey(loads: QuerySelectorLoad[]): string {

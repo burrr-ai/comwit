@@ -13,6 +13,7 @@ import type { StageMethodDecorator } from '../interceptors/utils'
 import { getDevTools, initDevTools } from './devtools'
 import type { LocalDefaults } from './local'
 import type { QueryBindingRegistry, QueryDefaultOptions } from './query/types'
+import { createSuspendStream, escapeJsonForHtml, SUSPEND_STREAM_ATTRIBUTE } from './query/stream'
 import {
   createBrowserRouterAdapter,
   prepareSearchParamStore,
@@ -29,12 +30,25 @@ export type RegistryDefaults = {
   [pluginName: string]: unknown
 }
 
+/**
+ * Framework hook that inserts the returned element into the HTML stream before the next flushed
+ * chunk. Next.js exports it as `useServerInsertedHTML` from `next/navigation`.
+ */
+export type ServerInsertedHTMLHook = (callback: () => React.ReactNode) => void
+
 export type ComwitProviderProps = {
   children: React.ReactNode
   context?: Record<string, unknown>
   defaultOptions?: RegistryDefaults
   /** Read once during server rendering. Return null when request search is unavailable. Never called in the browser. */
   getServerSearchParams?: () => string | null
+  /**
+   * Experimental. Streams `.suspend()` results resolved during server rendering into the browser
+   * cache, so the hydrating selector renders the same data without calling `queryFn` again. Pass
+   * Next.js `useServerInsertedHTML`; the provider inserts an inert JSON script ahead of each
+   * flushed Suspense boundary. Read once at mount; it must not change afterwards.
+   */
+  useServerInsertedHTML?: ServerInsertedHTMLHook
 }
 
 export type LifecycleState = {
@@ -86,10 +100,7 @@ function readServerSearch(id: string): string | null {
 }
 
 function serializeServerSearch(search: string | null): string {
-  return JSON.stringify(search)
-    .replace(/</g, '\\u003c')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029')
+  return escapeJsonForHtml(JSON.stringify(search))
 }
 
 export function ComwitProvider({
@@ -97,10 +108,14 @@ export function ComwitProvider({
   defaultOptions,
   context = {},
   getServerSearchParams,
+  useServerInsertedHTML,
 }: ComwitProviderProps) {
-  const id = `comwit-search-${useId()}`
+  const reactId = useId()
+  const id = `comwit-search-${reactId}`
   const registryRef = useRef<StoreRegistry>(null!)
   const transfer = useRef(Boolean(getServerSearchParams))
+  // A framework hook is called conditionally below; fixing it at mount keeps hook order stable.
+  const insertServerHTML = useRef(useServerInsertedHTML).current
 
   if (registryRef.current === null) {
     const serverSearch =
@@ -187,12 +202,30 @@ export function ComwitProvider({
       },
     }
     const queryRegistry = pluginStates.get('query') as QueryBindingRegistry | undefined
-    if (queryRegistry)
+    if (queryRegistry) {
       queryRegistry.getModelState = (source) => registry.get(source as Model<object>).proxy
+      if (insertServerHTML) {
+        queryRegistry.suspendStream = createSuspendStream(reactId, typeof window === 'undefined')
+      }
+    }
     registryRef.current = registry
   }
 
   const registry = registryRef.current
+  // Next.js runs the callback on the server whenever a chunk is flushed and ignores it in the
+  // browser. Each flush drains the results resolved since the previous one.
+  insertServerHTML?.(() => {
+    const queries = registry.pluginStates.get('query') as QueryBindingRegistry | undefined
+    const payload = queries?.suspendStream?.flush()
+    if (!payload) return null
+    return (
+      <script
+        type="application/json"
+        {...{ [SUSPEND_STREAM_ATTRIBUTE]: reactId }}
+        dangerouslySetInnerHTML={{ __html: payload }}
+      />
+    )
+  })
   useCommitEffect(() => {
     // Strict Mode may reactivate the same provider, including action-only queries.
     const queries = registry.pluginStates.get('query') as QueryBindingRegistry | undefined

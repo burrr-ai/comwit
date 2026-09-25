@@ -119,7 +119,7 @@ function ProductFallback({ id }: { id: string }) {
 For state-backed server data, await the remote value in a Server Component and initialize
 `local.query()` / `local.infinite()` in a small client route adapter. Storage reconciliation,
 persistence, and entity fanout run after commit. Standalone `local()` remains restore-only. Do not
-call a mutating action during render, including one wrapped in deprecated `silent()`.
+call a mutating action during render.
 
 ```tsx
 // `list` is the local.query() field declared above; `detail` is restore-only.

@@ -6,6 +6,13 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: '/state', destination: '/state/docs', permanent: true },
+      // The deprecated silent() page was removed; its guidance lives in the Next.js guide.
+      {
+        source: '/state/docs/api/silent',
+        destination: '/state/docs/guide/nextjs',
+        permanent: true,
+      },
+      { source: '/docs/api/silent', destination: '/state/docs/guide/nextjs', permanent: true },
       { source: '/docs/:path*', destination: '/state/docs/:path*', permanent: true },
       { source: '/llms.txt', destination: '/state/llms.txt', permanent: true },
       { source: '/llm/:path*', destination: '/state/llm/:path*', permanent: true },

@@ -9,14 +9,21 @@ project contract. Follow the linked references for exhaustive APIs.
 yarn add @comwit/state
 ```
 
-Wrap the client tree once. Models remain lazy and are created only when accessed.
+Wrap the client tree once. Models remain lazy and are created only when accessed. Next.js owns
+request data and the HTML stream, so pass its functions to the provider instead of a framework
+wrapper: `getServerSearchParams` seeds `searchParam()` fields during SSR and `useServerInsertedHTML`
+streams server-resolved `.suspend()` results to the browser. Both are optional.
 
 ```tsx
 'use client'
 
+import { useRouter, useServerInsertedHTML } from 'next/navigation'
+
 <ComwitProvider
   key={user.id}
   context={{ router }}
+  getServerSearchParams={getServerSearchParams}
+  useServerInsertedHTML={useServerInsertedHTML}
   defaultOptions={{
     query: { staleTime: 30_000, gcTime: 5 * 60_000 },
     local: { database: 'my-app', scope: `user:${user.id}` },
@@ -136,21 +143,41 @@ model. It returns `void`, accepts `null` / `undefined` as a no-op, infers field,
 types from query fields, and records freshness internally. New `query()` / `local.query()` entries
 initialize before their first snapshot. Equivalent repeated seeds are no-ops. A changed seed for an
 observed entry is applied only after the requesting render commits, so an abandoned transition
-cannot replace current state. It never invokes `queryFn`, and it does not use actions, public proxy
-mutation, or `silent()`.
+cannot replace current state. It never invokes `queryFn`, and it does not use actions or public
+proxy mutation.
 
 ### Experimental selector Suspense
 
 `.suspend(arg)` is experimental. It starts or reuses `queryFn` during render and throws the keyed
-Promise while pending. It accepts only the query argument—never a Promise or initial-data override.
-Use it only when `queryFn` is safe to execute in every render environment. In particular, Next.js
-forbids calling a Server Function from a Client Component's initial render, and server and browser
-provider caches are separate without explicit hydration. It is not the default SSR solution.
+Promise while pending, so a `<Suspense>` boundary shows its fallback. It accepts only the query
+argument—never a Promise or initial-data override.
+
+```tsx
+// Server Component: the boundary streams once the query resolves.
+<Suspense fallback={<ProductSkeleton />}>
+  <ProductDetail id={id} />
+</Suspense>
+
+// Client Component: the same selector renders on the server and hydrates in the browser.
+function ProductDetail({ id }: { id: string }) {
+  const detail = useProduct((state) => state.detail.suspend(id))
+  return detail.data ? <ProductView product={detail.data} /> : <NotFound />
+}
+```
+
+With `useServerInsertedHTML` on the provider (available in `@comwit/state@2.5.0-beta.0`), a result
+resolved during the Next.js server render is inserted as an inert JSON script before that boundary's HTML. The hydrating `.suspend()` reads it,
+renders the identical snapshot, activates the entry after commit with the server's fetch time, and
+never calls `queryFn` again. Without the prop, the browser fetches again while hydrating.
+
+Requirements: `queryFn` runs inside the Client Component bundle on both server and browser. It
+cannot call a Next.js Server Function or import database code; use a Route Handler or external API
+with an absolute URL on the server. Results must be JSON-serializable. Keep the boundary inside the
+provider. Ordinary single/infinite queries and `local.query()` / `local.infinite()` are supported;
+realtime and streaming resources are not. Prefer `hydrate()` for data that must stay on the server.
 
 The descriptor option `suspense: true` and `Query.Suspense*` aliases are deprecated. They retain
-legacy behavior for compatibility. Experimental `.suspend()` currently supports ordinary single
-and infinite queries plus `local.query()` / `local.infinite()`, but not realtime or streaming
-resources.
+legacy behavior for compatibility.
 
 Query state: `data`, `isLoading`, `isFetching`, `isSuccess`, `isError`, `error`. Infinite resources
 also expose `cursor` and `hasMore`; realtime resources expose `connectionStatus` and `isConnected`.
@@ -196,13 +223,14 @@ mutating action during render to initialize the same store.
 
 ## SSR safety
 
-Await server-owned reads in a Server Component. Pass the resolved value only to the route adapter,
-hydrate the query cache there, and let the actual UI read the domain hook as shown above.
+Server-owned data has two paths. Await it in a Server Component, pass the resolved value only to the
+route adapter, and hydrate the query cache there; or render a streamed `<Suspense>` boundary with an
+isomorphic `.suspend(arg)` and `useServerInsertedHTML`. In both cases the actual UI reads the domain
+hook.
 
-Do not use `silent()` for render-time hydration. It suppresses subscriber callbacks but React also
-checks external-store snapshots before commit. Changing a snapshot during render can cause the
-tree to be discarded and retried repeatedly. `silent()` is deprecated; existing synchronous calls
-remain only for compatibility.
+Never initialize state by mutating it during render. React checks external-store snapshots before
+commit even when no subscriber fires, so a render-time mutation can discard and retry the tree
+repeatedly. Actions belong to events and imperative workflows.
 
 ## Local data
 
@@ -292,10 +320,11 @@ await search(snapshot(this.m.filters))
 
 - Query arguments and route identities are explicit.
 - `.load()` owns client fetching; `.hydrate()` initializes resolved server query values.
-- Experimental `.suspend()` is used only with a render-safe, isomorphic query function.
+- Experimental `.suspend()` is used only with a render-safe, isomorphic query function, and the
+  provider receives `useServerInsertedHTML` so SSR results stream instead of refetching.
 - Passive selectors do not accidentally fetch.
 - Loading, error, empty, and background-fetch UX is defined.
-- No action, public proxy mutation, or `silent()` initialization occurs during render.
+- No action or public proxy mutation initializes state during render.
 - CRUD keeps list/detail/stats consistent and rolls back failed optimistic writes.
 - Proxies are snapshotted at serialization boundaries.
 
