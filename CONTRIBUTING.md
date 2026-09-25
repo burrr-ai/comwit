@@ -15,9 +15,9 @@ Use the existing tests and add regression coverage when behavior changes. The wo
 
 `apps/docs` is the only public documentation app. State MDX lives in `content/state`; UI guides and the gallery layout (`content/ui/gallery.mjs`: groups, order and one-line summaries) live in `content/ui`. The site has shared navigation and separate product routes.
 
-State agent guidance lives in `public/state/llms.txt` and `public/state/llm/`. UI agent guidance lives in `public/ui/llms.txt`. Update the relevant guide when its public API or installation contract changes.
+State agent guidance lives in `public/state/llms.txt` and `public/state/llm/`; update it when State's public API changes. UI agent guidance is `public/ui/llms.txt`, kept to installation and a catalog of what each component is for: the generator fills `content/ui/llms-template.txt` (install steps and setup rules) with the groups and summaries from `gallery.mjs`. Edit the template or the gallery, not the output; usage details belong in the installation guide and the component source.
 
-UI examples are generated from `apps/storybook/specs/*.mjs`; the story marked `gallery: true` is the one shown on the gallery card, and `docsOnly: true` specs produce docs examples without a Storybook story. The registry comes from the actual template files. Every template component must appear once in `gallery.mjs`; the generator warns about gaps. Run `pnpm --filter docs gen` after changing specs or template source. Do not hand-edit `app/ui/_generated` or `packages/ui/cli/registry`.
+UI examples are generated from `apps/storybook/specs/*.mjs`; the story marked `gallery: true` is the one shown on the gallery card, and `docsOnly: true` specs produce docs examples without a Storybook story. The registry comes from the actual template files. Every template component must appear once in `gallery.mjs`; the generator warns about gaps. Run `pnpm --filter docs gen` after changing specs or template source. Do not hand-edit `app/ui/_generated`, `public/ui/llms.txt` or `packages/ui/cli/registry`.
 
 The theme editor runs inside an iframe so CSS changes and portaled components cannot change the outer documentation shell. Site tokens use the `--site-` prefix to avoid colliding with library tokens.
 
