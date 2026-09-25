@@ -175,8 +175,11 @@ test('generated docs consume the moved registry and expose separate agent guides
   const ui = readFileSync(join(root, 'apps/docs/public/ui/llms.txt'), 'utf8')
   const state = readFileSync(join(root, 'apps/docs/public/state/llms.txt'), 'utf8')
   assert.match(ui, /comwit-ui@latest init/)
-  assert.match(ui, /page-transition/)
-  assert.match(ui, /comwit-ui add chat/)
+  assert.doesNotMatch(ui, /\{\{components\}\}/)
+  // The UI guide is install + catalog: every gallery component is listed by its CLI name, once.
+  for (const name of [...catalog.matchAll(/"cli": "npx comwit-ui add ([\w-]+)"/g)].map((m) => m[1]))
+    assert.equal(ui.split(`\n- ${name}: `).length, 2, `ui llms.txt lists ${name} once`)
+  assert.doesNotMatch(ui, /@comwit\/state/)
   assert.match(state, /@comwit\/state/)
   assert.doesNotMatch(state, /library\.comwit\.io\/(docs|llm)\//)
 })
