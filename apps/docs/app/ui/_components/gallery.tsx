@@ -90,7 +90,12 @@ function GalleryCard({ component: c }: { component: Component }) {
       <div
         className={cn(
           'flex items-center justify-center overflow-hidden rounded-card bg-muted',
-          tall ? 'px-4 py-8' : c.exhibit === 'wide' ? 'min-h-72 p-6 sm:p-8' : 'min-h-72 p-6'
+          // 폰 카드는 높이를 고정한다(폰 612 + 아래 줄 36 + 여백). 전시물이 무엇을 두든 카드 사각형이 같다.
+          tall
+            ? 'h-[732px] px-4 py-8'
+            : c.exhibit === 'wide'
+              ? 'min-h-72 p-6 sm:p-8'
+              : 'min-h-72 p-6'
         )}
       >
         <div className={cn('flex w-full justify-center', c.exhibit === 'card' && 'max-w-xl')}>

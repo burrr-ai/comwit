@@ -111,6 +111,31 @@ export function PhoneFrame({
   )
 }
 
+/**
+ * 갤러리 카드 위의 폰 무대 — 모든 폰 전시물이 같은 골격(폰 + 아래 한 줄)을 갖는다.
+ * 아래 줄은 높이가 고정이라(h-9) 컨트롤이 오든 캡션이 오든 카드 높이가 같다.
+ */
+function PhoneStage({
+  label,
+  footer,
+  children,
+}: {
+  label: string
+  footer?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col items-center gap-5">
+      <PhoneFrame label={label}>{children}</PhoneFrame>
+      {footer !== undefined && (
+        <div className="flex h-9 items-center justify-center text-center text-caption text-muted-foreground">
+          {footer}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** 폰 안의 스크롤러 — 앱바·바텀내비가 같은 스크롤 의도(ScrollChrome)를 본다. */
 function PhoneScreen({
   children,
@@ -142,6 +167,60 @@ function PhoneScreen({
   )
 }
 
+/* ── Mobile shell — one phone, many pages, no router ────────────────── */
+
+/**
+ * 라우터 대신 쓰는 아주 작은 히스토리. path 가 곧 현재 페이지고, push/back 이 스택을 움직인다.
+ * 실제 앱에서는 이 자리가 라우터의 pathname 이고 RouteBoundary 가 그 값을 경계에 넣는다.
+ */
+function useMiniRouter(initial: string) {
+  const [stack, setStack] = React.useState<string[]>([initial])
+  const path = stack[stack.length - 1]
+  const push = React.useCallback((to: string) => setStack((s) => [...s, to]), [])
+  const replace = React.useCallback((to: string) => setStack((s) => [...s.slice(0, -1), to]), [])
+  const back = React.useCallback(() => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)), [])
+  return { path, push, replace, back }
+}
+
+/**
+ * 폰 안의 앱 쉘: 스크롤러 + 전환 프로바이더 + 라우트 경계 하나. 여러 페이지가 있다는 전제로 만든 공통 골격이다 —
+ * `path` 가 바뀌면 경계(key)가 바뀌고, 나가는 페이지는 엔진이 붙잡아 애니메이션한다. 앱바는 페이지 안에 있어
+ * 페이지와 함께 움직인다. 살아남는 탭 쉘은 `routeKey` 를 고정하고 안쪽에 경계를 하나 더 둔다.
+ */
+function MobileShell({
+  label,
+  path,
+  routeKey,
+  config,
+  onRefresh,
+  footer,
+  children,
+}: {
+  label: string
+  path: string
+  routeKey?: string
+  config: PageTransitionConfig
+  onRefresh?: () => Promise<unknown>
+  footer?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <PhoneStage label={label} footer={footer}>
+      <PhoneScreen resetKey={path} resetScroll={false} onRefresh={onRefresh}>
+        <PageTransition config={config} className="flex min-h-full flex-1 flex-col">
+          <PageBoundary
+            path={path}
+            routeKey={routeKey}
+            className="flex min-h-full flex-1 flex-col bg-background"
+          >
+            {children}
+          </PageBoundary>
+        </PageTransition>
+      </PhoneScreen>
+    </PhoneStage>
+  )
+}
+
 type Tone = 'sunset' | 'sea' | 'forest' | 'dusk'
 
 function Photo({
@@ -165,18 +244,52 @@ const PLACES: { name: string; area: string; tone: Tone }[] = [
   { name: 'Udo island ferry', area: 'Jeju', tone: 'sea' },
   { name: 'Hallasan trail', area: 'Jeju', tone: 'forest' },
 ]
+const PLACE_ROWS = [...PLACES, ...PLACES]
+
+function PlaceRowText({ place }: { place: (typeof PLACES)[number] }) {
+  return (
+    <div className="min-w-0 flex-1">
+      <p className="truncate text-label font-semibold text-foreground">{place.name}</p>
+      <p className="flex items-center gap-1 text-caption text-muted-foreground">
+        <MapPin className="size-3" /> {place.area}
+      </p>
+    </div>
+  )
+}
 
 function PlaceRow({ place }: { place: (typeof PLACES)[number] }) {
   return (
     <div className="flex items-center gap-3">
       <Photo tone={place.tone} className="size-14 shrink-0 rounded-control" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-label font-semibold text-foreground">{place.name}</p>
-        <p className="flex items-center gap-1 text-caption text-muted-foreground">
-          <MapPin className="size-3" /> {place.area}
-        </p>
-      </div>
+      <PlaceRowText place={place} />
     </div>
+  )
+}
+
+/** 목록 행 — 누르면 어디로든 간다. heroKey 를 주면 썸네일이 상세로 이어진다. */
+function PlaceRowButton({
+  place,
+  onClick,
+  heroKey,
+}: {
+  place: (typeof PLACES)[number]
+  onClick: () => void
+  heroKey?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-card px-2 py-2 text-left transition-colors duration-fast hover:bg-accent"
+    >
+      <Photo
+        tone={place.tone}
+        className="size-14 shrink-0 rounded-control"
+        data-hero-exit-key={heroKey}
+      />
+      <PlaceRowText place={place} />
+      <ChevronRight className="size-4 shrink-0 text-subtle-foreground" />
+    </button>
   )
 }
 
@@ -187,58 +300,60 @@ type BarMode = AppBarBehavior | 'hero'
 export function AppBarExhibit() {
   const [mode, setMode] = React.useState<BarMode>('reveal')
   return (
-    <div className="flex flex-col items-center gap-5">
-      <PhoneFrame label="App bar demo — scroll inside the phone">
-        <PhoneScreen resetKey={mode}>
-          {mode === 'hero' ? (
-            <>
-              <FloatingBackButton onClick={() => toast('Back')} style={{ left: 12, top: 46 }} />
-              <Photo tone="sunset" className="h-72 shrink-0" />
-            </>
-          ) : (
-            <AppBar behavior={mode}>
-              <AppBarBackButton onClick={() => toast('Back')} />
-              <AppBarTitle>Jeju in spring</AppBarTitle>
-              <AppBarActions>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Share"
-                  onClick={() => toast('Link copied')}
-                >
-                  <Share />
-                </Button>
-              </AppBarActions>
-            </AppBar>
-          )}
-          <div className="space-y-5 px-5 pt-3 pb-10">
-            {mode !== 'hero' && <Photo tone="sunset" className="h-44 rounded-card" />}
-            <div>
-              <h4 className="text-title-lg text-foreground">Four days on the island</h4>
-              <p className="mt-1.5 text-body-sm text-soft-foreground">
-                Scroll down and the bar slides away. Nudge up and it comes straight back.
-              </p>
-            </div>
-            <div className="space-y-4">
-              {[...PLACES, ...PLACES].map((place, i) => (
-                <PlaceRow key={i} place={place} />
-              ))}
-            </div>
+    <PhoneStage
+      label="App bar demo — scroll inside the phone"
+      footer={
+        <SegmentedControl<BarMode>
+          aria-label="App bar behavior"
+          value={mode}
+          onValueChange={setMode}
+          options={[
+            { label: 'Reveal', value: 'reveal' },
+            { label: 'Pinned', value: 'pinned' },
+            { label: 'Flow', value: 'flow' },
+            { label: 'Hero', value: 'hero' },
+          ]}
+        />
+      }
+    >
+      <PhoneScreen resetKey={mode}>
+        {mode === 'hero' ? (
+          <>
+            <FloatingBackButton onClick={() => toast('Back')} style={{ left: 12, top: 46 }} />
+            <Photo tone="sunset" className="h-72 shrink-0" />
+          </>
+        ) : (
+          <AppBar behavior={mode}>
+            <AppBarBackButton onClick={() => toast('Back')} />
+            <AppBarTitle>Jeju in spring</AppBarTitle>
+            <AppBarActions>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Share"
+                onClick={() => toast('Link copied')}
+              >
+                <Share />
+              </Button>
+            </AppBarActions>
+          </AppBar>
+        )}
+        <div className="space-y-5 px-5 pt-3 pb-10">
+          {mode !== 'hero' && <Photo tone="sunset" className="h-44 rounded-card" />}
+          <div>
+            <h4 className="text-title-lg text-foreground">Four days on the island</h4>
+            <p className="mt-1.5 text-body-sm text-soft-foreground">
+              Scroll down and the bar slides away. Nudge up and it comes straight back.
+            </p>
           </div>
-        </PhoneScreen>
-      </PhoneFrame>
-      <SegmentedControl<BarMode>
-        aria-label="App bar behavior"
-        value={mode}
-        onValueChange={setMode}
-        options={[
-          { label: 'Reveal', value: 'reveal' },
-          { label: 'Pinned', value: 'pinned' },
-          { label: 'Flow', value: 'flow' },
-          { label: 'Hero', value: 'hero' },
-        ]}
-      />
-    </div>
+          <div className="space-y-4">
+            {PLACE_ROWS.map((place, i) => (
+              <PlaceRow key={i} place={place} />
+            ))}
+          </div>
+        </div>
+      </PhoneScreen>
+    </PhoneStage>
   )
 }
 
@@ -256,68 +371,145 @@ export function BottomNavExhibit() {
   const [tab, setTab] = React.useState('/home')
   const current = TABS.find((t) => t.value === tab) ?? TABS[0]
   return (
-    <div className="flex flex-col items-center gap-5">
-      <PhoneFrame label="Bottom nav demo — tap a tab, scroll to shrink the bar">
-        <PhoneScreen resetKey={tab}>
-          <AppBar behavior="flow" glass={false}>
-            <AppBarTitle size="lg">{current.label}</AppBarTitle>
-            <AppBarActions>
-              <Button variant="ghost" size="icon" aria-label="Search">
-                <Search />
-              </Button>
-            </AppBarActions>
-          </AppBar>
-          <div className="flex-1 space-y-3 px-4 pb-4">
-            {Array.from({ length: 7 }, (_, i) => (
-              <Photo
-                key={i}
-                tone={TABS[(TABS.indexOf(current) + i) % TABS.length].tone}
-                className="flex h-36 items-end rounded-card p-3"
-              >
-                <span className="relative z-raised text-label font-semibold text-white drop-shadow">
-                  {PLACES[i % PLACES.length].name}
-                </span>
-              </Photo>
-            ))}
-          </div>
-          <BottomNav value={tab} onValueChange={setTab}>
-            {TABS.map((t) => (
-              <BottomNavItem key={t.value} value={t.value} label={t.label} icon={t.icon} />
-            ))}
-          </BottomNav>
-        </PhoneScreen>
-      </PhoneFrame>
-      <p className="text-caption text-muted-foreground">Tap a tab. Scroll to shrink the bar.</p>
-    </div>
+    <PhoneStage
+      label="Bottom nav demo — tap a tab, scroll to shrink the bar"
+      footer="Tap a tab. Scroll to shrink the bar."
+    >
+      <PhoneScreen resetKey={tab}>
+        <AppBar behavior="flow" glass={false}>
+          <AppBarTitle size="lg">{current.label}</AppBarTitle>
+          <AppBarActions>
+            <Button variant="ghost" size="icon" aria-label="Search">
+              <Search />
+            </Button>
+          </AppBarActions>
+        </AppBar>
+        <div className="flex-1 space-y-3 px-4 pb-4">
+          {Array.from({ length: 7 }, (_, i) => (
+            <Photo
+              key={i}
+              tone={TABS[(TABS.indexOf(current) + i) % TABS.length].tone}
+              className="flex h-36 items-end rounded-card p-3"
+            >
+              <span className="relative z-raised text-label font-semibold text-white drop-shadow">
+                {PLACES[i % PLACES.length].name}
+              </span>
+            </Photo>
+          ))}
+        </div>
+        <BottomNav value={tab} onValueChange={setTab}>
+          {TABS.map((t) => (
+            <BottomNavItem key={t.value} value={t.value} label={t.label} icon={t.icon} />
+          ))}
+        </BottomNav>
+      </PhoneScreen>
+    </PhoneStage>
   )
 }
 
 /* ── Page transition ────────────────────────────────────────────────── */
 
-// 상태값이 라우터를 대신한다. 세 모드 모두 같은 두 화면(목록 ↔ 상세)을 쓰므로 효과가 그대로 비교된다.
-const EFFECTS = {
-  drill: {
-    label: 'Drill',
-    hint: 'Tap a place. It slides in over the list; Back slides it out and the list keeps its scroll.',
-  },
-  sheet: {
-    label: 'Sheet',
-    hint: 'The detail rises as a sheet while the list recedes and blurs behind it.',
-  },
-  hero: {
-    label: 'Hero',
-    hint: 'The photo travels from the row into the detail, and back into its row again.',
-  },
-} as const
+// 같은 두 페이지(목록 ↔ 상세)에 규칙만 바꿔 끼운다 — 세 효과가 그대로 비교된다.
+const EFFECTS = { drill: 'Drill', sheet: 'Sheet', hero: 'Hero' } as const
 type Effect = keyof typeof EFFECTS
 
-const PLACE_ROWS = [...PLACES, ...PLACES]
+function PlaceListPage({
+  onOpen,
+  heroKeys,
+}: {
+  onOpen: (index: number) => void
+  heroKeys?: boolean
+}) {
+  return (
+    <>
+      <AppBar behavior="reveal">
+        <AppBarTitle size="lg">Places</AppBarTitle>
+      </AppBar>
+      <ul className="px-3 pb-6">
+        {PLACE_ROWS.map((p, i) => (
+          <li key={i}>
+            <PlaceRowButton
+              place={p}
+              onClick={() => onOpen(i)}
+              heroKey={heroKeys ? `place-${i}` : undefined}
+            />
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+function PlaceDetailPage({
+  index,
+  onBack,
+  variant,
+}: {
+  index: number
+  onBack: () => void
+  variant: Effect
+}) {
+  const place = PLACE_ROWS[index % PLACE_ROWS.length]
+  return (
+    <>
+      {variant === 'sheet' ? (
+        <AppBar behavior="pinned" glass={false}>
+          <AppBarTitle>{place.name}</AppBarTitle>
+          <AppBarActions>
+            <AppBarBackButton icon="close" onClick={onBack} />
+          </AppBarActions>
+        </AppBar>
+      ) : (
+        <AppBar behavior="reveal">
+          <AppBarBackButton onClick={onBack} />
+          <AppBarTitle>{place.name}</AppBarTitle>
+          <AppBarActions>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Share"
+              onClick={() => toast('Link copied')}
+            >
+              <Share />
+            </Button>
+          </AppBarActions>
+        </AppBar>
+      )}
+      <Photo
+        tone={place.tone}
+        className="h-56 shrink-0"
+        data-hero-enter-key={variant === 'hero' ? `place-${index}` : undefined}
+      />
+      <div className="space-y-4 px-5 pt-4 pb-8">
+        <div>
+          <h4 className="text-title-lg text-foreground">{place.name}</h4>
+          <p className="mt-1 flex items-center gap-1 text-caption text-muted-foreground">
+            <MapPin className="size-3" /> {place.area}
+          </p>
+        </div>
+        <p className="text-body-sm text-soft-foreground">
+          {variant === 'hero'
+            ? 'The photo came along from the row. Everything else faded in around it.'
+            : variant === 'sheet'
+              ? 'The list is still underneath, dimmed and blurred. Close this and it is exactly where you left it.'
+              : 'The list you came from is still there underneath. Go back and it is exactly where you left it.'}
+        </p>
+        {PLACES.filter((p) => p !== place)
+          .slice(0, 3)
+          .map((p) => (
+            <PlaceRow key={p.name} place={p} />
+          ))}
+      </div>
+    </>
+  )
+}
 
 export function PageTransitionExhibit() {
   const [effect, setEffect] = React.useState<Effect>('drill')
-  const [path, setPath] = React.useState('/places')
-  const index = path.startsWith('/places/') ? Number(path.slice('/places/'.length)) : null
-  const place = index === null ? null : PLACE_ROWS[index % PLACE_ROWS.length]
+  const router = useMiniRouter('/places')
+  const index = router.path.startsWith('/places/')
+    ? Number(router.path.slice('/places/'.length))
+    : null
 
   const config = React.useMemo<PageTransitionConfig>(
     () => ({
@@ -341,113 +533,28 @@ export function PageTransitionExhibit() {
   )
 
   return (
-    <div className="flex flex-col items-center gap-5">
-      <SegmentedControl<Effect>
-        aria-label="List to detail effect"
-        value={effect}
-        onValueChange={setEffect}
-        options={(Object.keys(EFFECTS) as Effect[]).map((key) => ({
-          label: EFFECTS[key].label,
-          value: key,
-        }))}
-      />
-      <PhoneFrame label="Page transition demo — open a place, then go back">
-        <PhoneScreen resetKey={path} resetScroll={false}>
-          <PageTransition config={config} className="flex min-h-full flex-1 flex-col">
-            {/* 경계 하나: path 가 React key 이자 라우트 id 다. 바뀌면 옛 페이지가 언마운트되고 엔진이 그 교체를 전환으로 만든다. */}
-            <PageBoundary path={path} className="flex min-h-full flex-1 flex-col bg-background">
-              {place && index !== null ? (
-                <>
-                  {effect === 'sheet' ? (
-                    <AppBar behavior="pinned" glass={false}>
-                      <AppBarTitle>{place.name}</AppBarTitle>
-                      <AppBarActions>
-                        <AppBarBackButton icon="close" onClick={() => setPath('/places')} />
-                      </AppBarActions>
-                    </AppBar>
-                  ) : (
-                    <AppBar behavior="reveal">
-                      <AppBarBackButton onClick={() => setPath('/places')} />
-                      <AppBarTitle>{place.name}</AppBarTitle>
-                      <AppBarActions>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Share"
-                          onClick={() => toast('Link copied')}
-                        >
-                          <Share />
-                        </Button>
-                      </AppBarActions>
-                    </AppBar>
-                  )}
-                  <Photo
-                    tone={place.tone}
-                    className="h-56 shrink-0"
-                    data-hero-enter-key={effect === 'hero' ? `place-${index}` : undefined}
-                  />
-                  <div className="space-y-4 px-5 pt-4 pb-8">
-                    <div>
-                      <h4 className="text-title-lg text-foreground">{place.name}</h4>
-                      <p className="mt-1 flex items-center gap-1 text-caption text-muted-foreground">
-                        <MapPin className="size-3" /> {place.area}
-                      </p>
-                    </div>
-                    <p className="text-body-sm text-soft-foreground">
-                      {effect === 'hero'
-                        ? 'The photo came along from the row. Everything else faded in around it.'
-                        : effect === 'sheet'
-                          ? 'The list is still underneath, dimmed and blurred. Close this and it is exactly where you left it.'
-                          : 'The list you came from is still there underneath. Go back and it is exactly where you left it.'}
-                    </p>
-                    {PLACES.filter((p) => p !== place)
-                      .slice(0, 3)
-                      .map((p) => (
-                        <PlaceRow key={p.name} place={p} />
-                      ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <AppBar behavior="reveal">
-                    <AppBarTitle size="lg">Places</AppBarTitle>
-                  </AppBar>
-                  <ul className="px-3 pb-6">
-                    {PLACE_ROWS.map((p, i) => (
-                      <li key={i}>
-                        <button
-                          type="button"
-                          onClick={() => setPath(`/places/${i}`)}
-                          className="flex w-full items-center gap-3 rounded-card px-2 py-2 text-left transition-colors duration-fast hover:bg-accent"
-                        >
-                          <Photo
-                            tone={p.tone}
-                            className="size-14 shrink-0 rounded-control"
-                            data-hero-exit-key={effect === 'hero' ? `place-${i}` : undefined}
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-label font-semibold text-foreground">
-                              {p.name}
-                            </span>
-                            <span className="flex items-center gap-1 text-caption text-muted-foreground">
-                              <MapPin className="size-3" /> {p.area}
-                            </span>
-                          </span>
-                          <ChevronRight className="size-4 shrink-0 text-subtle-foreground" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </PageBoundary>
-          </PageTransition>
-        </PhoneScreen>
-      </PhoneFrame>
-      <p className="max-w-xs text-center text-caption text-muted-foreground">
-        {EFFECTS[effect].hint}
-      </p>
-    </div>
+    <MobileShell
+      label="Page transition demo — open a place, then go back"
+      path={router.path}
+      config={config}
+      footer={
+        <SegmentedControl<Effect>
+          aria-label="List to detail effect"
+          value={effect}
+          onValueChange={setEffect}
+          options={(Object.keys(EFFECTS) as Effect[]).map((key) => ({
+            label: EFFECTS[key],
+            value: key,
+          }))}
+        />
+      }
+    >
+      {index === null ? (
+        <PlaceListPage onOpen={(i) => router.push(`/places/${i}`)} heroKeys={effect === 'hero'} />
+      ) : (
+        <PlaceDetailPage index={index} onBack={router.back} variant={effect} />
+      )}
+    </MobileShell>
   )
 }
 
@@ -455,17 +562,18 @@ export function PageTransitionExhibit() {
 
 const AREAS = ['Jeju', 'Seogwipo', 'Udo', 'Hallim']
 const SORTS = ['Closest first', 'Top rated', 'Newest', 'Most saved']
+const NO_TRANSITIONS: PageTransitionConfig = { transitions: [] }
 
 export function BottomSheetExhibit() {
   return (
-    <div className="flex flex-col items-center gap-5">
-      <PhoneFrame label="Bottom sheet demo — open the filters, then drag the handle down">
-        <BottomSheetScreen />
-      </PhoneFrame>
-      <p className="text-caption text-muted-foreground">
-        Open the filters. Drag the handle down, or tap it, to close.
-      </p>
-    </div>
+    <MobileShell
+      label="Bottom sheet demo — open the filters, then drag the handle down"
+      path="/places"
+      config={NO_TRANSITIONS}
+      footer="Open the filters. Drag the handle down, or tap it, to close."
+    >
+      <BottomSheetScreen />
+    </MobileShell>
   )
 }
 
@@ -481,50 +589,42 @@ function BottomSheetScreen() {
     setAreas((list) => (list.includes(area) ? list.filter((a) => a !== area) : [...list, area]))
   return (
     <>
-      <PhoneScreen>
-        <AppBar behavior="pinned">
-          <AppBarTitle size="lg">Places</AppBarTitle>
-          <AppBarActions>
+      <AppBar behavior="pinned">
+        <AppBarTitle size="lg">Places</AppBarTitle>
+        <AppBarActions>
+          <Button variant="ghost" size="icon" aria-label="Filters" onClick={() => setFilters(true)}>
+            <SlidersHorizontal />
+          </Button>
+        </AppBarActions>
+      </AppBar>
+      {/* 스크롤러의 flex 열 안이라 shrink-0 — 안 주면 긴 목록에 눌려 칩이 잘린다 */}
+      <div className="flex shrink-0 gap-2 overflow-x-clip px-4 pb-3">
+        {AREAS.map((area) => (
+          <Chip
+            key={area}
+            size="sm"
+            selected={areas.includes(area)}
+            onClick={() => toggleArea(area)}
+          >
+            {area}
+          </Chip>
+        ))}
+      </div>
+      <ul className="px-3 pb-6">
+        {PLACE_ROWS.map((p, i) => (
+          <li key={i} className="flex items-center gap-1 rounded-card px-2 py-2">
+            <PlaceRow place={p} />
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Filters"
-              onClick={() => setFilters(true)}
+              aria-label={`More about ${p.name}`}
+              onClick={() => setActionFor(i)}
             >
-              <SlidersHorizontal />
+              <Ellipsis />
             </Button>
-          </AppBarActions>
-        </AppBar>
-        <div className="flex gap-2 overflow-hidden px-4 pb-3">
-          {AREAS.map((area) => (
-            <Chip
-              key={area}
-              size="sm"
-              selected={areas.includes(area)}
-              onClick={() => toggleArea(area)}
-            >
-              {area}
-            </Chip>
-          ))}
-        </div>
-        <ul className="px-3 pb-6">
-          {PLACE_ROWS.map((p, i) => (
-            <li key={i} className="flex items-center gap-1 rounded-card px-2 py-2">
-              <div className="min-w-0 flex-1">
-                <PlaceRow place={p} />
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`More about ${p.name}`}
-                onClick={() => setActionFor(i)}
-              >
-                <Ellipsis />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      </PhoneScreen>
+          </li>
+        ))}
+      </ul>
 
       <BottomSheet open={filters} onOpenChange={setFilters}>
         <BottomSheetContent container={screen ?? undefined}>
@@ -660,40 +760,38 @@ export function PullToRefreshExhibit() {
       }, 1100)
     )
   return (
-    <div className="flex flex-col items-center gap-5">
-      <PhoneFrame label="Pull to refresh demo — drag down from the top">
-        <PhoneScreen onRefresh={refresh}>
-          <AppBar behavior="pinned">
-            <AppBarTitle size="lg">Activity</AppBarTitle>
-            <AppBarActions>
-              <Button variant="ghost" size="icon" aria-label="Messages">
-                <MessageCircle />
-              </Button>
-            </AppBarActions>
-          </AppBar>
-          <ul className="px-4 pb-8">
-            {notes.map((note) => (
-              <li
-                key={note.id}
-                className="flex items-center gap-3 border-b border-border py-3 last:border-0 animate-in fade-in-0 slide-in-from-top-2"
-              >
-                <Photo tone={note.tone} className="size-10 shrink-0 rounded-full" />
-                <p className="min-w-0 flex-1 text-body-sm text-soft-foreground">
-                  <span className="font-semibold text-foreground">{note.who}</span> {note.text}
-                  <span className="ml-1 text-caption text-subtle-foreground">{note.time}</span>
-                </p>
-                {note.unread && (
-                  <span className="size-2 shrink-0 rounded-full bg-primary" aria-label="Unread" />
-                )}
-              </li>
-            ))}
-          </ul>
-        </PhoneScreen>
-      </PhoneFrame>
-      <p className="text-caption text-muted-foreground">
-        Drag down from the top with a finger or the mouse.
-      </p>
-    </div>
+    <PhoneStage
+      label="Pull to refresh demo — drag down from the top"
+      footer="Drag down from the top with a finger or the mouse."
+    >
+      <PhoneScreen onRefresh={refresh}>
+        <AppBar behavior="pinned">
+          <AppBarTitle size="lg">Activity</AppBarTitle>
+          <AppBarActions>
+            <Button variant="ghost" size="icon" aria-label="Messages">
+              <MessageCircle />
+            </Button>
+          </AppBarActions>
+        </AppBar>
+        <ul className="px-4 pb-8">
+          {notes.map((note) => (
+            <li
+              key={note.id}
+              className="flex items-center gap-3 border-b border-border py-3 last:border-0 animate-in fade-in-0 slide-in-from-top-2"
+            >
+              <Photo tone={note.tone} className="size-10 shrink-0 rounded-full" />
+              <p className="min-w-0 flex-1 text-body-sm text-soft-foreground">
+                <span className="font-semibold text-foreground">{note.who}</span> {note.text}
+                <span className="ml-1 text-caption text-subtle-foreground">{note.time}</span>
+              </p>
+              {note.unread && (
+                <span className="size-2 shrink-0 rounded-full bg-primary" aria-label="Unread" />
+              )}
+            </li>
+          ))}
+        </ul>
+      </PhoneScreen>
+    </PhoneStage>
   )
 }
 
@@ -777,260 +875,269 @@ const SHELL_TRANSITIONS: PageTransitionConfig = {
   ],
 }
 
-type ShellScreen = { kind: 'place' | 'photo'; index: number } | { kind: 'compose' } | null
+const isTab = (path: string) => TABS.some((t) => t.value === path)
 
 export function AppShellExhibit() {
-  const [tab, setTab] = React.useState('/home')
-  const [screen, setScreen] = React.useState<ShellScreen>(null)
+  const router = useMiniRouter('/home')
+  const { path } = router
   const [liked, setLiked] = React.useState(false)
-  const current = TABS.find((t) => t.value === tab) ?? TABS[0]
-  const path =
-    screen === null
-      ? tab
-      : screen.kind === 'compose'
-        ? '/compose'
-        : `/${screen.kind === 'photo' ? 'photo' : 'p'}/${screen.index}`
-  const place = screen && screen.kind !== 'compose' ? PLACES[screen.index % PLACES.length] : null
-  const back = () => setScreen(null)
+  const placeIndex = /^\/(p|photo)\//.test(path) ? Number(path.split('/')[2]) : null
+  const place = placeIndex === null ? null : PLACES[placeIndex % PLACES.length]
+  const refresh = () =>
+    new Promise<void>((done) =>
+      setTimeout(() => {
+        toast.success('Feed updated')
+        done()
+      }, 900)
+    )
 
   return (
-    <PhoneFrame label="Comwit UI app shell — scroll, pull, switch tabs, open a photo, write a post">
-      <PhoneScreen
-        resetKey={path}
-        resetScroll={false}
-        onRefresh={() =>
-          new Promise<void>((done) =>
-            setTimeout(() => {
-              toast.success('Feed updated')
-              done()
-            }, 900)
-          )
-        }
-      >
-        <PageTransition config={SHELL_TRANSITIONS} className="flex min-h-full flex-1 flex-col">
-          {screen?.kind === 'compose' ? (
-            // 임시 작업 — 시트로 올라오고, 뒤의 쉘은 물러나 흐려진다.
-            <PageBoundary path={path} className="flex min-h-full flex-1 flex-col bg-background">
-              <AppBar behavior="pinned" glass={false}>
-                <AppBarTitle>New post</AppBarTitle>
-                <AppBarActions>
-                  <AppBarBackButton icon="close" onClick={back} />
-                </AppBarActions>
-              </AppBar>
-              <div className="flex flex-1 flex-col gap-3 px-4 pb-6">
-                <Textarea placeholder="Where did you go today?" className="min-h-40 flex-1" />
-                <Button
-                  onClick={() => {
-                    toast.success('Posted')
-                    back()
-                  }}
-                >
-                  Post
-                </Button>
-              </div>
-            </PageBoundary>
-          ) : place && screen?.kind === 'photo' ? (
-            // 홈 카드의 사진이 그대로 이어진다(hero) — 같은 키를 단 요소가 두 페이지를 잇고 나머지는 페이드한다.
-            <PageBoundary path={path} className="flex min-h-full flex-1 flex-col bg-background">
-              <FloatingBackButton onClick={back} style={{ left: 12, top: 46 }} />
-              <Photo
-                tone={place.tone}
-                className="h-72 shrink-0"
-                data-hero-enter-key={`photo-${screen.index}`}
-              />
-              <div className="space-y-4 px-5 pt-4 pb-8">
-                <div>
-                  <h4 className="text-title-lg text-foreground">{place.name}</h4>
-                  <p className="mt-1 flex items-center gap-1 text-caption text-muted-foreground">
-                    <MapPin className="size-3" /> {place.area}
-                  </p>
-                </div>
-                <p className="text-body-sm text-soft-foreground">
-                  The photo travelled here from its card. Go back and it settles into the feed
-                  again.
-                </p>
-                <div className="flex gap-2">
-                  {['Save', 'Directions', 'Hours'].map((c) => (
-                    <Chip key={c} size="sm" onClick={() => toast(c)}>
-                      {c}
-                    </Chip>
-                  ))}
-                </div>
-                {PLACES.filter((p) => p !== place)
-                  .slice(0, 3)
-                  .map((p) => (
-                    <PlaceRow key={p.name} place={p} />
-                  ))}
-              </div>
-            </PageBoundary>
-          ) : place ? (
-            // 상세는 탭 쉘 밖의 라우트 — 바깥 경계의 key 가 바뀌어 앱바·탭바까지 함께 드릴인한다.
-            <PageBoundary path={path} className="flex min-h-full flex-1 flex-col bg-background">
-              <AppBar behavior="reveal">
-                <AppBarBackButton onClick={back} />
-                <AppBarTitle>{place.name}</AppBarTitle>
-                <AppBarActions>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Share"
-                    onClick={() => toast('Link copied')}
-                  >
-                    <Share />
-                  </Button>
-                </AppBarActions>
-              </AppBar>
-              <Photo tone={place.tone} className="h-60 shrink-0" />
-              <div className="space-y-4 px-5 pt-4 pb-8">
-                <div>
-                  <h4 className="text-title-lg text-foreground">{place.name}</h4>
-                  <p className="mt-1 flex items-center gap-1 text-caption text-muted-foreground">
-                    <MapPin className="size-3" /> {place.area}
-                  </p>
-                </div>
-                <p className="text-body-sm text-soft-foreground">
-                  Drilled in over the whole shell. Go back and the list is still scrolled where you
-                  left it.
-                </p>
-                <div className="flex gap-2">
-                  {['Save', 'Directions', 'Hours'].map((c) => (
-                    <Chip key={c} size="sm" onClick={() => toast(c)}>
-                      {c}
-                    </Chip>
-                  ))}
-                </div>
-                {PLACES.filter((p) => p !== place)
-                  .slice(0, 3)
-                  .map((p) => (
-                    <PlaceRow key={p.name} place={p} />
-                  ))}
-              </div>
-            </PageBoundary>
-          ) : (
-            // 탭 쉘 — routeKey 를 고정해 앱바·탭바는 살아남고, 안쪽 경계만 탭 순서대로 슬라이드한다.
-            // 안쪽 경계는 자기만의 relative 부모 안에 둔다: 나가는 페이지가 거기(앱바 아래)에 머문다.
-            <PageBoundary
-              path={path}
-              routeKey="tabs"
-              className="flex min-h-full flex-1 flex-col bg-background"
-            >
-              <AppBar behavior="reveal">
-                <AppBarTitle size="lg">{current.label}</AppBarTitle>
-                <AppBarActions>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="New post"
-                    onClick={() => setScreen({ kind: 'compose' })}
-                  >
-                    <PenLine />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Notifications"
-                    onClick={() => toast('No new notifications')}
-                  >
-                    <Bell />
-                  </Button>
-                </AppBarActions>
-              </AppBar>
-              <div className="relative flex flex-1 flex-col">
-                <PageBoundary path={path} className="flex-1 space-y-4 bg-background px-4 pb-4">
-                  {tab === '/home' ? (
-                    <>
-                      <div className="flex gap-2 overflow-hidden">
-                        {['For you', 'Nearby', 'Trending'].map((c, i) => (
-                          <Chip key={c} size="sm" selected={i === 0} onClick={() => toast(c)}>
-                            {c}
-                          </Chip>
-                        ))}
-                      </div>
-                      {PLACES.map((p, i) => (
-                        <div key={i} className="overflow-hidden rounded-card bg-card shadow-card">
-                          {/* 사진을 누르면 hero — 이 요소가 상세의 사진으로 이어진다 */}
-                          <button
-                            type="button"
-                            aria-label={`Open photo of ${p.name}`}
-                            onClick={() => setScreen({ kind: 'photo', index: i })}
-                            className="block w-full text-left"
-                          >
-                            <Photo
-                              tone={p.tone}
-                              className="h-40"
-                              data-hero-exit-key={`photo-${i}`}
-                            />
-                          </button>
-                          <div className="flex items-center justify-between gap-3 p-3">
-                            {/* 제목을 누르면 drill — 상세가 쉘 위로 밀려 들어온다 */}
-                            <button
-                              type="button"
-                              onClick={() => setScreen({ kind: 'place', index: i })}
-                              className="min-w-0 flex-1 text-left"
-                            >
-                              <PlaceRowText place={p} />
-                            </button>
-                            <GlassButton
-                              shape="circle"
-                              shadow={false}
-                              aria-label="Like"
-                              aria-pressed={i === 0 && liked}
-                              onClick={() => i === 0 && setLiked((v) => !v)}
-                              className="size-10 shrink-0"
-                            >
-                              <Heart
-                                className={cn(
-                                  'size-4',
-                                  i === 0 && liked && 'fill-destructive text-destructive'
-                                )}
-                              />
-                            </GlassButton>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <ul className="-mx-2">
-                      {(tab === '/explore' ? [...PLACES, ...PLACES] : PLACES.slice(0, 3)).map(
-                        (p, i) => (
-                          <li key={i}>
-                            <button
-                              type="button"
-                              onClick={() => setScreen({ kind: 'place', index: i })}
-                              className="flex w-full items-center gap-3 rounded-card px-2 py-2 text-left transition-colors duration-fast hover:bg-accent"
-                            >
-                              <Photo tone={p.tone} className="size-14 shrink-0 rounded-control" />
-                              <PlaceRowText place={p} />
-                              <ChevronRight className="ml-auto size-4 shrink-0 text-subtle-foreground" />
-                            </button>
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  )}
-                </PageBoundary>
-              </div>
-              <BottomNav value={tab} onValueChange={setTab}>
-                {TABS.map((t) => (
-                  <BottomNavItem key={t.value} value={t.value} label={t.label} icon={t.icon} />
-                ))}
-              </BottomNav>
-            </PageBoundary>
-          )}
-        </PageTransition>
-      </PhoneScreen>
-    </PhoneFrame>
+    <MobileShell
+      label="Comwit UI app shell — scroll, pull, switch tabs, open a photo, write a post"
+      path={path}
+      // 탭들은 한 쉘(고정 키)을 공유한다 — 앱바·탭바가 살아남고 안쪽 경계만 슬라이드한다.
+      routeKey={isTab(path) ? 'tabs' : undefined}
+      config={SHELL_TRANSITIONS}
+      onRefresh={refresh}
+    >
+      {path === '/compose' ? (
+        <ComposePage onClose={router.back} />
+      ) : place && placeIndex !== null && path.startsWith('/photo/') ? (
+        <PhotoPage place={place} index={placeIndex} onBack={router.back} />
+      ) : place ? (
+        <PlacePage place={place} onBack={router.back} />
+      ) : (
+        <TabsLayout
+          tab={path}
+          onTabChange={router.replace}
+          onOpenPlace={(i) => router.push(`/p/${i}`)}
+          onOpenPhoto={(i) => router.push(`/photo/${i}`)}
+          onCompose={() => router.push('/compose')}
+          liked={liked}
+          onLike={() => setLiked((v) => !v)}
+        />
+      )}
+    </MobileShell>
   )
 }
 
-function PlaceRowText({ place }: { place: (typeof PLACES)[number] }) {
+// 임시 작업 — 시트로 올라오고, 뒤의 쉘은 물러나 흐려진다.
+function ComposePage({ onClose }: { onClose: () => void }) {
   return (
-    <div className="min-w-0">
-      <p className="truncate text-label font-semibold text-foreground">{place.name}</p>
-      <p className="flex items-center gap-1 text-caption text-muted-foreground">
-        <MapPin className="size-3" /> {place.area}
-      </p>
-    </div>
+    <>
+      <AppBar behavior="pinned" glass={false}>
+        <AppBarTitle>New post</AppBarTitle>
+        <AppBarActions>
+          <AppBarBackButton icon="close" onClick={onClose} />
+        </AppBarActions>
+      </AppBar>
+      <div className="flex flex-1 flex-col gap-3 px-4 pb-6">
+        <Textarea placeholder="Where did you go today?" className="min-h-40 flex-1" />
+        <Button
+          onClick={() => {
+            toast.success('Posted')
+            onClose()
+          }}
+        >
+          Post
+        </Button>
+      </div>
+    </>
+  )
+}
+
+// 홈 카드의 사진이 그대로 이어진다(hero) — 같은 키를 단 요소가 두 페이지를 잇고 나머지는 페이드한다.
+function PhotoPage({
+  place,
+  index,
+  onBack,
+}: {
+  place: (typeof PLACES)[number]
+  index: number
+  onBack: () => void
+}) {
+  return (
+    <>
+      <FloatingBackButton onClick={onBack} style={{ left: 12, top: 46 }} />
+      <Photo tone={place.tone} className="h-72 shrink-0" data-hero-enter-key={`photo-${index}`} />
+      <div className="space-y-4 px-5 pt-4 pb-8">
+        <div>
+          <h4 className="text-title-lg text-foreground">{place.name}</h4>
+          <p className="mt-1 flex items-center gap-1 text-caption text-muted-foreground">
+            <MapPin className="size-3" /> {place.area}
+          </p>
+        </div>
+        <p className="text-body-sm text-soft-foreground">
+          The photo travelled here from its card. Go back and it settles into the feed again.
+        </p>
+        <div className="flex gap-2">
+          {['Save', 'Directions', 'Hours'].map((c) => (
+            <Chip key={c} size="sm" onClick={() => toast(c)}>
+              {c}
+            </Chip>
+          ))}
+        </div>
+        {PLACES.filter((p) => p !== place)
+          .slice(0, 3)
+          .map((p) => (
+            <PlaceRow key={p.name} place={p} />
+          ))}
+      </div>
+    </>
+  )
+}
+
+// 상세는 탭 쉘 밖의 라우트 — 바깥 경계의 key 가 바뀌어 앱바·탭바까지 함께 드릴인한다.
+function PlacePage({ place, onBack }: { place: (typeof PLACES)[number]; onBack: () => void }) {
+  return (
+    <>
+      <AppBar behavior="reveal">
+        <AppBarBackButton onClick={onBack} />
+        <AppBarTitle>{place.name}</AppBarTitle>
+        <AppBarActions>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Share"
+            onClick={() => toast('Link copied')}
+          >
+            <Share />
+          </Button>
+        </AppBarActions>
+      </AppBar>
+      <Photo tone={place.tone} className="h-60 shrink-0" />
+      <div className="space-y-4 px-5 pt-4 pb-8">
+        <div>
+          <h4 className="text-title-lg text-foreground">{place.name}</h4>
+          <p className="mt-1 flex items-center gap-1 text-caption text-muted-foreground">
+            <MapPin className="size-3" /> {place.area}
+          </p>
+        </div>
+        <p className="text-body-sm text-soft-foreground">
+          Drilled in over the whole shell. Go back and the list is still scrolled where you left it.
+        </p>
+        <div className="flex gap-2">
+          {['Save', 'Directions', 'Hours'].map((c) => (
+            <Chip key={c} size="sm" onClick={() => toast(c)}>
+              {c}
+            </Chip>
+          ))}
+        </div>
+        {PLACES.filter((p) => p !== place)
+          .slice(0, 3)
+          .map((p) => (
+            <PlaceRow key={p.name} place={p} />
+          ))}
+      </div>
+    </>
+  )
+}
+
+// 탭 쉘 — 앱바·탭바는 살아남고, 안쪽 경계만 탭 순서대로 슬라이드한다.
+// 안쪽 경계는 자기만의 relative 부모 안에 둔다: 나가는 페이지가 거기(앱바 아래)에 머문다.
+function TabsLayout({
+  tab,
+  onTabChange,
+  onOpenPlace,
+  onOpenPhoto,
+  onCompose,
+  liked,
+  onLike,
+}: {
+  tab: string
+  onTabChange: (tab: string) => void
+  onOpenPlace: (index: number) => void
+  onOpenPhoto: (index: number) => void
+  onCompose: () => void
+  liked: boolean
+  onLike: () => void
+}) {
+  const current = TABS.find((t) => t.value === tab) ?? TABS[0]
+  return (
+    <>
+      <AppBar behavior="reveal">
+        <AppBarTitle size="lg">{current.label}</AppBarTitle>
+        <AppBarActions>
+          <Button variant="ghost" size="icon" aria-label="New post" onClick={onCompose}>
+            <PenLine />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Notifications"
+            onClick={() => toast('No new notifications')}
+          >
+            <Bell />
+          </Button>
+        </AppBarActions>
+      </AppBar>
+      <div className="relative flex flex-1 flex-col">
+        <PageBoundary path={tab} className="flex-1 space-y-4 bg-background px-4 pb-4">
+          {tab === '/home' ? (
+            <>
+              <div className="flex gap-2 overflow-x-clip">
+                {['For you', 'Nearby', 'Trending'].map((c, i) => (
+                  <Chip key={c} size="sm" selected={i === 0} onClick={() => toast(c)}>
+                    {c}
+                  </Chip>
+                ))}
+              </div>
+              {PLACES.map((p, i) => (
+                <div key={i} className="overflow-hidden rounded-card bg-card shadow-card">
+                  {/* 사진을 누르면 hero — 이 요소가 상세의 사진으로 이어진다 */}
+                  <button
+                    type="button"
+                    aria-label={`Open photo of ${p.name}`}
+                    onClick={() => onOpenPhoto(i)}
+                    className="block w-full text-left"
+                  >
+                    <Photo tone={p.tone} className="h-40" data-hero-exit-key={`photo-${i}`} />
+                  </button>
+                  <div className="flex items-center justify-between gap-3 p-3">
+                    {/* 제목을 누르면 drill — 상세가 쉘 위로 밀려 들어온다 */}
+                    <button
+                      type="button"
+                      onClick={() => onOpenPlace(i)}
+                      className="flex min-w-0 flex-1 text-left"
+                    >
+                      <PlaceRowText place={p} />
+                    </button>
+                    <GlassButton
+                      shape="circle"
+                      shadow={false}
+                      aria-label="Like"
+                      aria-pressed={i === 0 && liked}
+                      onClick={() => i === 0 && onLike()}
+                      className="size-10 shrink-0"
+                    >
+                      <Heart
+                        className={cn(
+                          'size-4',
+                          i === 0 && liked && 'fill-destructive text-destructive'
+                        )}
+                      />
+                    </GlassButton>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <ul className="-mx-2">
+              {(tab === '/explore' ? PLACE_ROWS : PLACES.slice(0, 3)).map((p, i) => (
+                <li key={i}>
+                  <PlaceRowButton place={p} onClick={() => onOpenPlace(i)} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </PageBoundary>
+      </div>
+      <BottomNav value={tab} onValueChange={onTabChange}>
+        {TABS.map((t) => (
+          <BottomNavItem key={t.value} value={t.value} label={t.label} icon={t.icon} />
+        ))}
+      </BottomNav>
+    </>
   )
 }
 
@@ -1222,25 +1329,22 @@ function AssistantScreen() {
 export function ChatExhibit() {
   const [mode, setMode] = React.useState<ChatMode>('messenger')
   return (
-    <div className="flex flex-col items-center gap-5">
-      <SegmentedControl
-        value={mode}
-        onValueChange={(v) => setMode(v as ChatMode)}
-        options={[
-          { value: 'messenger', label: 'Messenger' },
-          { value: 'assistant', label: 'Assistant' },
-        ]}
-        aria-label="Chat mode"
-      />
-      <PhoneFrame label="Chat demo — send a message">
-        {mode === 'messenger' ? <MessengerScreen /> : <AssistantScreen />}
-      </PhoneFrame>
-      <p className="text-caption text-muted-foreground">
-        {mode === 'messenger'
-          ? 'Send a message. Ava replies, and the list stays at the bottom.'
-          : 'Send a message. It rises to the top and the answer streams in below.'}
-      </p>
-    </div>
+    <PhoneStage
+      label="Chat demo — send a message"
+      footer={
+        <SegmentedControl
+          value={mode}
+          onValueChange={(v) => setMode(v as ChatMode)}
+          options={[
+            { value: 'messenger', label: 'Messenger' },
+            { value: 'assistant', label: 'Assistant' },
+          ]}
+          aria-label="Chat mode"
+        />
+      }
+    >
+      {mode === 'messenger' ? <MessengerScreen /> : <AssistantScreen />}
+    </PhoneStage>
   )
 }
 

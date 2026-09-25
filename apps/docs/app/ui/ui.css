@@ -36,8 +36,8 @@
 }
 .ui-sidebar {
   position: sticky;
-  top: 88px;
-  height: calc(100svh - 88px);
+  top: var(--site-header-height);
+  height: calc(100svh - var(--site-header-height));
   border-right: 1px solid var(--border);
 }
 .ui-main {
@@ -48,7 +48,7 @@
 /* Anchored items clear the sticky site header. */
 .ui-product [data-gallery-item],
 .ui-product [data-gallery-group] {
-  scroll-margin-top: 112px;
+  scroll-margin-top: calc(var(--site-header-height) + 24px);
 }
 
 @media (max-width: 900px) {
@@ -60,10 +60,6 @@
   }
   .ui-main {
     padding-top: 24px;
-  }
-  .ui-product [data-gallery-item],
-  .ui-product [data-gallery-group] {
-    scroll-margin-top: 136px;
   }
 }
 
@@ -93,6 +89,8 @@
   background: var(--background);
   isolation: isolate;
   transform: translateZ(0);
+  /* backdrop-filter 레이어(시트 전환의 블러·유리)는 overflow:hidden 의 둥근 모서리를 무시할 수 있다 — clip-path 가 확실히 자른다. */
+  clip-path: inset(0 round 38px);
 }
 .phone-status {
   position: relative;
@@ -208,21 +206,14 @@
   }
 }
 
-/* Narrow screens: a sticky bar opens the same navigation in a sheet. */
-.ui-mobile-bar {
+/* Narrow screens: the header's menu button opens the same navigation in a sheet. */
+.ui-menu-button {
   display: none;
 }
 @media (max-width: 900px) {
-  .ui-mobile-bar {
-    position: sticky;
-    top: 72px; /* 좁은 화면의 사이트 헤더 높이 */
-    z-index: 30;
-    display: flex;
-    margin: -24px calc(-1 * clamp(20px, 4vw, 64px)) 24px;
-    padding: 10px clamp(20px, 4vw, 64px);
-    background: color-mix(in srgb, var(--background) 88%, transparent);
-    backdrop-filter: blur(12px) saturate(160%);
-    border-bottom: 1px solid var(--border);
+  .ui-menu-button {
+    display: inline-flex;
+    margin-right: -8px;
   }
 }
 
