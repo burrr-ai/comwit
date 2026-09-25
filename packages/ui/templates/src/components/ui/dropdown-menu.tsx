@@ -5,6 +5,7 @@ import { DropdownMenu as DropdownMenuPrimitive } from '@comwit/ui'
 import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
 
 import { GlassSurface } from './glass'
+import { OverlayMotion } from '../../lib/overlay-motion'
 import { cn } from '../../lib/utils'
 
 function DropdownMenu({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
@@ -36,12 +37,14 @@ function DropdownMenuContent({
           data-slot="dropdown-menu-content"
           sideOffset={sideOffset}
           className={cn(
-            'menu-motion text-popover-foreground relative z-dropdown max-h-(--radix-dropdown-menu-content-available-height) min-w-menu overflow-x-hidden overflow-y-auto rounded-card p-1',
+            'text-popover-foreground relative z-dropdown max-h-(--radix-dropdown-menu-content-available-height) min-w-menu origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-card p-1',
             className
           )}
           {...props}
+          asChild
         >
-          {children}
+          {/* 트리거 쪽에서 0.6 배로 커지며 나타나고 같은 길로 사라진다 — lib/overlay-motion */}
+          <OverlayMotion preset="menu">{children}</OverlayMotion>
         </DropdownMenuPrimitive.Content>
       </GlassSurface>
     </DropdownMenuPrimitive.Portal>
@@ -217,12 +220,13 @@ function DropdownMenuSubContent({
       <DropdownMenuPrimitive.SubContent
         data-slot="dropdown-menu-sub-content"
         className={cn(
-          'menu-motion text-popover-foreground relative z-dropdown min-w-menu overflow-hidden rounded-card p-1',
+          'text-popover-foreground relative z-dropdown min-w-menu origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-card p-1',
           className
         )}
         {...props}
+        asChild
       >
-        {children}
+        <OverlayMotion preset="menu">{children}</OverlayMotion>
       </DropdownMenuPrimitive.SubContent>
     </GlassSurface>
   )

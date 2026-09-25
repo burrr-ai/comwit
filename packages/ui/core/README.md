@@ -25,7 +25,8 @@ npm i @comwit/ui
   `Chat.Root/List/ScrollToBottom/Message/MessageContent/Bubble/Composer/ComposerInput/ComposerSubmit/ComposerStop`
   (react-virtuoso 가상화 · messenger/assistant 스크롤 규칙 · Enter/IME · 자동 높이).
 - **훅(flat)**: `ScrollChromeProvider`/`useScrollChrome`(앱바·바텀내비가 공유하는 스크롤 의도) · `useMobile`/`useMobileDevice` ·
-  `useGlassLens`(굴절 유리 변위 맵).
+  `useGlassLens`(굴절 유리 변위 맵) · `usePresenceAnimation`(오버레이 파트의 열림·닫힘을 내장 Web Animations API 로 —
+  닫힘 애니메이션이 끝날 때까지 파트를 남기고, 도중에 뒤집히면 지금 자리에서 되돌아간다).
 - **Radix 어댑터**: accordion · avatar · collapsible · dialog · dropdown-menu · label · popover · select · separator · tabs · checkbox · radio-group · switch.
 
 ## ⚠️ Tailwind 토큰 결합 (오버라이드 지점)

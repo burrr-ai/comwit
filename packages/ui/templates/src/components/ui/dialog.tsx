@@ -5,6 +5,7 @@ import { Dialog as DialogPrimitive } from '@comwit/ui'
 import { XIcon } from 'lucide-react'
 
 import { GlassSurface } from './glass'
+import { OverlayMotion } from '../../lib/overlay-motion'
 import { cn } from '../../lib/utils'
 import { focusRing } from '../../lib/interaction'
 
@@ -31,12 +32,12 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
-      className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-overlay bg-overlay',
-        className
-      )}
+      className={cn('fixed inset-0 z-overlay bg-overlay', className)}
       {...props}
-    />
+      asChild
+    >
+      <OverlayMotion preset="scrim" />
+    </DialogPrimitive.Overlay>
   )
 }
 
@@ -56,24 +57,28 @@ function DialogContent({
         <DialogPrimitive.Content
           data-slot="dialog-content"
           className={cn(
-            'text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-modal grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-card p-6 duration-base sm:max-w-lg',
+            'text-popover-foreground fixed top-[50%] left-[50%] z-modal grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-card p-6 sm:max-w-lg',
             className
           )}
           {...props}
+          asChild
         >
-          {children}
-          {showCloseButton && (
-            <DialogPrimitive.Close
-              data-slot="dialog-close"
-              className={cn(
-                focusRing,
-                "absolute top-4 right-4 rounded-lg p-1 opacity-60 transition hover:bg-accent hover:opacity-100 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
-              )}
-            >
-              <XIcon />
-              <span className="sr-only">Close</span>
-            </DialogPrimitive.Close>
-          )}
+          {/* 0.9 배에서 커지며 나타나고 같은 길로 사라진다 — lib/overlay-motion */}
+          <OverlayMotion preset="dialog">
+            {children}
+            {showCloseButton && (
+              <DialogPrimitive.Close
+                data-slot="dialog-close"
+                className={cn(
+                  focusRing,
+                  "absolute top-4 right-4 rounded-lg p-1 opacity-60 transition hover:bg-accent hover:opacity-100 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+                )}
+              >
+                <XIcon />
+                <span className="sr-only">Close</span>
+              </DialogPrimitive.Close>
+            )}
+          </OverlayMotion>
         </DialogPrimitive.Content>
       </GlassSurface>
     </DialogPortal>

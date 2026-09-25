@@ -141,6 +141,7 @@
   --z-toast: 1300;
 
   /* 치수 정합 */
+  --page-gutter: 1rem; /* 페이지 좌우 여백 → px-gutter. 페이지 콘텐츠와 모바일 토스트가 같은 선에 선다 */
   --menu-min-width: 8rem;
   --picker-width: 320px;
   --appbar-height: 56px;
@@ -495,20 +496,26 @@
   }
 }
 
-/* ── 모션 — 빌트인 duration-* 은 숫자/임의값만 매칭하므로 이름 충돌이 없다 ── */
+/* ── 모션 — 빌트인 duration-* 은 숫자/임의값만 매칭하므로 이름 충돌이 없다.
+   빌트인처럼 --tw-duration 도 쓴다 — tw-animate 의 animate-in/out 이 이 값을 읽는다(없으면 150ms 로 뭉개진다). ── */
 @utility duration-instant {
+  --tw-duration: var(--duration-instant);
   transition-duration: var(--duration-instant);
 }
 @utility duration-fast {
+  --tw-duration: var(--duration-fast);
   transition-duration: var(--duration-fast);
 }
 @utility duration-base {
+  --tw-duration: var(--duration-base);
   transition-duration: var(--duration-base);
 }
 @utility duration-slow {
+  --tw-duration: var(--duration-slow);
   transition-duration: var(--duration-slow);
 }
 @utility duration-slower {
+  --tw-duration: var(--duration-slower);
   transition-duration: var(--duration-slower);
 }
 
@@ -562,6 +569,21 @@
 }
 @utility h-bottom-nav {
   height: var(--bottom-nav-height);
+}
+/* 페이지 좌우 여백 — 노치 쪽(safe-area)은 그보다 넓으면 그만큼 비운다. 페이지 콘텐츠도 이걸 쓰면 크롬과 줄이 맞는다. */
+@utility px-gutter {
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right));
+}
+@utility pl-gutter {
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left));
+}
+@utility pr-gutter {
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right));
+}
+@utility mx-gutter {
+  margin-left: max(var(--page-gutter), env(safe-area-inset-left));
+  margin-right: max(var(--page-gutter), env(safe-area-inset-right));
 }
 
 /* 포커스 링 폭/오프셋 — Tailwind 가 ring-* 에 쓰는 합성 변수를 그대로 조립한다.
@@ -833,20 +855,6 @@
     box-shadow: var(--glass-dense-shadow);
   }
 
-  /* 유리 토스트의 상태 틴트 — 아이콘이 상태를 말하고, 면은 상태 틴트를 살짝만 섞는다 */
-  .comwit-toaster [data-slot='toast'][data-type='success'] {
-    --glass-tint: color-mix(in srgb, var(--success-surface) 45%, var(--popover));
-  }
-  .comwit-toaster [data-slot='toast'][data-type='error'] {
-    --glass-tint: color-mix(in srgb, var(--destructive-surface) 45%, var(--popover));
-  }
-  .comwit-toaster [data-slot='toast'][data-type='warning'] {
-    --glass-tint: color-mix(in srgb, var(--warning-surface) 45%, var(--popover));
-  }
-  .comwit-toaster [data-slot='toast'][data-type='info'] {
-    --glass-tint: color-mix(in srgb, var(--info-surface) 45%, var(--popover));
-  }
-
   /* 유리 메뉴 행 — hover·포커스에도 굴절 면이 비쳐 보이게 채움 대신 글자색으로 표시한다 */
   .glass-morphing [data-glass-item] {
     transition:
@@ -921,34 +929,6 @@
     .glass::after {
       display: none;
     }
-  }
-
-  /* ── 메뉴 모션 — 유리 면은 tw-animate 의 transform 조합에서 WebKit 이 backdrop 을 잃는다.
-     translate3d + backface-visibility 로 합성 레이어를 고정하고, 나오는 방향만 data-side 로 바꾼다. ── */
-  .menu-motion {
-    --menu-offset-x: 0px;
-    --menu-offset-y: 0px;
-    transform-origin: var(--radix-dropdown-menu-content-transform-origin);
-    backface-visibility: hidden;
-    will-change: opacity, transform;
-  }
-  .menu-motion[data-side='bottom'] {
-    --menu-offset-y: -0.5rem;
-  }
-  .menu-motion[data-side='top'] {
-    --menu-offset-y: 0.5rem;
-  }
-  .menu-motion[data-side='left'] {
-    --menu-offset-x: 0.5rem;
-  }
-  .menu-motion[data-side='right'] {
-    --menu-offset-x: -0.5rem;
-  }
-  .menu-motion[data-state='open'] {
-    animation: menu-enter 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .menu-motion[data-state='closed'] {
-    animation: menu-exit 110ms ease-in both;
   }
 
   /* ── 리치 텍스트(Editor) 본문 — typography 플러그인 없이도 읽히는 최소 규칙 ── */
@@ -1039,31 +1019,6 @@
     .glass-morphing [data-glass-item] {
       transition: none;
     }
-    .menu-motion[data-state] {
-      animation: none;
-      will-change: auto;
-    }
-  }
-}
-
-@keyframes menu-enter {
-  from {
-    opacity: 0;
-    transform: translate3d(var(--menu-offset-x), var(--menu-offset-y), 0) scale3d(0.95, 0.95, 1);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
-  }
-}
-@keyframes menu-exit {
-  from {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
-  }
-  to {
-    opacity: 0;
-    transform: translate3d(var(--menu-offset-x), var(--menu-offset-y), 0) scale3d(0.98, 0.98, 1);
   }
 }
 
