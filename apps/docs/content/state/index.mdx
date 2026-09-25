@@ -31,14 +31,15 @@ scopes the state for your app, and models initialize on access.
 
 ## Pick the data flow
 
-| You need to…                                          | Use                                                  |
-| ----------------------------------------------------- | ---------------------------------------------------- |
-| Fetch for a mounted view                              | [`query()` + `.load(arg)`](/state/docs/api/query)    |
-| Render data fetched by a Server Component             | [`useDomain.hydrate(...)`](/state/docs/guide/nextjs) |
-| Restore an exact IndexedDB snapshot and revalidate    | [`local.query()`](/state/docs/api/local)             |
-| Restore cached data without an API call               | [`local()` + `.restore(arg)`](/state/docs/api/local) |
-| Save preferences or a local draft                     | [`persist()`](/state/docs/api/persist)               |
-| Run a command, optimistic update, or several requests | [`action()`](/state/docs/api/action)                 |
+| You need to…                                             | Use                                                                                                   |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Fetch for a mounted view                                 | [`query()` + `.load(arg)`](/state/docs/api/query)                                                     |
+| Render data fetched by a Server Component                | [`useDomain.hydrate(...)`](/state/docs/guide/nextjs)                                                  |
+| Stream a Suspense boundary with its query (experimental) | [`.suspend(arg)` + `useServerInsertedHTML`](/state/docs/guide/nextjs#streaming-suspense-experimental) |
+| Restore an exact IndexedDB snapshot and revalidate       | [`local.query()`](/state/docs/api/local)                                                              |
+| Restore cached data without an API call                  | [`local()` + `.restore(arg)`](/state/docs/api/local)                                                  |
+| Save preferences or a local draft                        | [`persist()`](/state/docs/api/persist)                                                                |
+| Run a command, optimistic update, or several requests    | [`action()`](/state/docs/api/action)                                                                  |
 
 Related lists, details, filters, and UI state stay in the same domain. Add derived values,
 validation, undo/redo, or action decorators when the feature needs them.

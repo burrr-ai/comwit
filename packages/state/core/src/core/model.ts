@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -34,6 +35,7 @@ import {
   createQuerySelectorState,
   prepareQuerySelectorSuspense,
   querySelectorLoadKey,
+  recordQuerySelectorSuspense,
   runQuerySelectorLoads,
   type QuerySelectorLoad,
 } from './query/select'
@@ -335,6 +337,9 @@ export function useModel<T extends object, R>(
   }
 
   const registry = useStoreRegistry()
+  // Identifies this selector across SSR and hydration so streamed `.suspend()` results can be
+  // matched without a serializable model identity.
+  const hookId = useId()
   const store = registry.get(m)
   const queryBag = m.pluginBags.get(QUERY_PLUGIN_NAME) as ResourceDescriptorMap | undefined
   const queryRegistry = registry.pluginStates.get(QUERY_PLUGIN_NAME) as
@@ -387,7 +392,7 @@ export function useModel<T extends object, R>(
       const loads: QuerySelectorLoad[] = []
       const selectable =
         queryBag?.size && queryRegistry
-          ? createQuerySelectorState(raw, queryController, queryBag, queryRegistry, loads)
+          ? createQuerySelectorState(raw, queryController, queryBag, queryRegistry, loads, hookId)
           : raw
       queryLoadsRef.current = loads
       const next = selectorRef.current
@@ -405,7 +410,7 @@ export function useModel<T extends object, R>(
       prevRef.current = next
       return next as R
     },
-    [queryBag, queryController, queryRegistry, store]
+    [hookId, queryBag, queryController, queryRegistry, store]
   )
 
   const getSnapshot = useCallback(() => readSelectedSnapshot(false), [readSelectedSnapshot])
@@ -428,6 +433,9 @@ export function useModel<T extends object, R>(
 
   if (queryRegistry) {
     prepareQuerySelectorSuspense(queryLoads, queryRegistry)
+    // Every suspend key is resolved once prepare returns; on the server, stream them ahead of
+    // the HTML this render produces.
+    recordQuerySelectorSuspense(queryLoads, queryRegistry, hookId)
   }
 
   // Run plugin onRender hooks

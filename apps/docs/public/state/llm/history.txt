@@ -77,5 +77,5 @@ s.$history.ignore(() => {
 })
 ```
 
-`ignore()` is not the same as deprecated `silent()`. `silent()` suppresses notifications;
-`ignore()` only skips history recording and is the correct API for history control.
+`ignore()` only skips history recording. Every change inside it still notifies subscribers and
+rerenders; it is the correct API for history control.

@@ -1,8 +1,12 @@
+import type { SuspendStream } from './stream'
+
 export const RESOURCE_BRAND = Symbol('comwit-resource')
 export const RESOURCE_LIFECYCLE = Symbol('comwit-resource-lifecycle')
 export const RESOURCE_TYPE_OVERRIDE = Symbol('comwit-resource-type-override')
 export const RESOURCE_SUSPEND_PREPARE = Symbol('comwit-resource-suspend-prepare')
 export const RESOURCE_SUSPEND_COMMIT = Symbol('comwit-resource-suspend-commit')
+export const RESOURCE_SUSPEND_RESTORE = Symbol('comwit-resource-suspend-restore')
+export const RESOURCE_SUSPEND_STREAM = Symbol('comwit-resource-suspend-stream')
 export const RESOURCE_HYDRATE = Symbol('comwit-resource-hydrate')
 
 export type AsyncResult<T> = T | Promise<T> | AsyncIterable<T>
@@ -442,6 +446,8 @@ export type QueryCacheEntry = {
   suspendError?: Error
   /** Whether the staged result still needs to become the active proxy after commit. */
   suspendNeedsCommit?: boolean
+  /** Whether the latest result came from a render-time `.suspend()` request in this registry. */
+  suspendFetched?: boolean
   /** Whether resolved hydration still needs lifecycle persistence after commit. */
   hydrationNeedsCommit?: boolean
   /** Whether lifecycle adapters have already attempted restoration for this key. */
@@ -474,6 +480,8 @@ export type QueryBindingRegistry = {
   services: Map<symbol, unknown>
   /** Lazily resolves another model from the same provider. */
   getModelState?: (model: object) => object
+  /** Provider transport carrying server-resolved `.suspend()` results into the browser cache. */
+  suspendStream?: SuspendStream
 }
 
 export type ResourceRuntimeState = {

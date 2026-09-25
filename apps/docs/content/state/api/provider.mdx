@@ -1,8 +1,8 @@
 ---
 title: 'ComwitProvider'
-group: 'API'
+group: 'Setup'
 slug: 'api/provider'
-order: 2.5
+order: 11
 ---
 
 # ComwitProvider
@@ -14,8 +14,9 @@ initializes when a hook or action first accesses it.
 'use client'
 
 import { ComwitProvider, keepPreviousData } from '@comwit/state'
-import { useRouter } from 'next/navigation'
+import { useRouter, useServerInsertedHTML } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { getServerSearchParams } from './get-server-search-params'
 
 export function Providers({ children }: { children: ReactNode }) {
   const router = useRouter()
@@ -23,6 +24,8 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <ComwitProvider
       context={{ router }}
+      getServerSearchParams={getServerSearchParams}
+      useServerInsertedHTML={useServerInsertedHTML}
       defaultOptions={{
         query: {
           staleTime: 30_000,
@@ -41,17 +44,32 @@ export function Providers({ children }: { children: ReactNode }) {
 
 Only `children` is required. `<ComwitProvider>{children}</ComwitProvider>` is a complete setup.
 
-| Prop                          | Purpose                                                                                          |
-| ----------------------------- | ------------------------------------------------------------------------------------------------ |
-| `context`                     | Shared values available to action factories, such as the router or auth helpers                  |
-| `getServerSearchParams`       | Optional `() => string \| null` server getter for [searchParam() fields](/state/docs/api/router) |
-| `defaultOptions.query`        | Global `staleTime`, `gcTime`, and `placeholderData`                                              |
-| `defaultOptions.persist`      | Global persistence debounce interval                                                             |
-| `defaultOptions.local`        | IndexedDB database, fallback scope, and storage error handler                                    |
-| `defaultOptions.interceptors` | Interceptors applied to every action method                                                      |
+| Prop                          | Purpose                                                                                                           |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `context`                     | Shared values available to action factories, such as the router or auth helpers                                   |
+| `getServerSearchParams`       | Optional `() => string \| null` server getter for [searchParam() fields](/state/docs/api/router)                  |
+| `useServerInsertedHTML`       | Optional framework hook that streams server-resolved [`.suspend()`](/state/docs/api/query) results (experimental) |
+| `defaultOptions.query`        | Global `staleTime`, `gcTime`, and `placeholderData`                                                               |
+| `defaultOptions.persist`      | Global persistence debounce interval                                                                              |
+| `defaultOptions.local`        | IndexedDB database, fallback scope, and storage error handler                                                     |
+| `defaultOptions.interceptors` | Interceptors applied to every action method                                                                       |
 
 Query defaults can be overridden on a query field or by an imperative `.query(arg, options)` call.
 Selector `.load(arg)` only takes the query argument.
+
+## Framework functions
+
+The provider never imports a framework. Where Next.js owns request data or the HTML stream, pass
+the function it exports and the provider decides when to call it:
+
+- `getServerSearchParams` runs once during server initialization and seeds `searchParam()` fields.
+  The provider transfers the result to hydration as inert JSON; the browser never calls it.
+- `useServerInsertedHTML` from `next/navigation` inserts an inert JSON script with the `.suspend()`
+  results resolved so far ahead of each flushed chunk. Hydrating selectors read those scripts
+  instead of running `queryFn` again. It is a hook, so keep it fixed for the provider's lifetime.
+
+Both props are optional and independent. See the [Next.js guide](/state/docs/guide/nextjs) for the
+complete `providers.tsx` and the request getter.
 
 ## Use shared context in actions
 
