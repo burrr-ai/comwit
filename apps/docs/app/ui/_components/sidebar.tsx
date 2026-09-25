@@ -129,10 +129,7 @@ function NavContent({
 
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-3 pb-10">
         {!q && (
-          <nav aria-label="Guides" className="mb-6">
-            <p className="px-2 pb-1.5 text-caption font-semibold text-muted-foreground">
-              Get started
-            </p>
+          <nav aria-label="Guides" className="mb-5 border-b border-border pb-5">
             {guides.map((g) => (
               <Link
                 key={g.href}
@@ -148,17 +145,8 @@ function NavContent({
         )}
 
         <nav aria-label="Components">
-          <Link
-            href={GALLERY}
-            onClick={onNavigate}
-            aria-current={onGallery && !active ? 'page' : undefined}
-            className="flex h-8 items-center justify-between rounded-lg px-2 text-caption font-semibold text-muted-foreground transition-colors duration-fast hover:text-foreground"
-          >
-            Components
-            <span className="tabular-nums">{Object.keys(byName).length}</span>
-          </Link>
           {visibleGroups.map((g) => (
-            <div key={g.id} className="mt-3">
+            <div key={g.id} className="mt-3 first:mt-0">
               <Link
                 href={`${GALLERY}#${g.id}`}
                 onClick={onNavigate}
@@ -233,18 +221,19 @@ export function Sidebar() {
   )
 }
 
-/** 좁은 화면 — 상단 바의 버튼이 같은 내비를 왼쪽 시트로 연다. */
+/** 좁은 화면 — 헤더의 메뉴 버튼이 같은 내비를 왼쪽 시트로 연다. */
 export function MobileNav() {
   const [open, setOpen] = React.useState(false)
-  const pathname = usePathname()
-  const current =
-    pathname === GALLERY
-      ? 'Components'
-      : (guides.find((g) => g.href === pathname)?.label ?? 'Comwit UI')
   return (
-    <div className="ui-mobile-bar">
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
-        <Menu /> {current}
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="ui-menu-button"
+        aria-label="Open navigation"
+        onClick={() => setOpen(true)}
+      >
+        <Menu className="size-5" />
       </Button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
@@ -261,6 +250,6 @@ export function MobileNav() {
           <NavContent onNavigate={() => setOpen(false)} inSheet />
         </SheetContent>
       </Sheet>
-    </div>
+    </>
   )
 }
