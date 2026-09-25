@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@comwit/ui-te
 import { cn } from '@comwit/ui-templates/lib/utils'
 import { byName, groups } from '../_generated/catalog'
 import { uiVersion } from '@/lib/products'
+import { goToGalleryTarget } from './gallery-nav'
 
 const GALLERY = '/ui/components'
 const guides = [
@@ -20,15 +21,28 @@ const guides = [
   { href: '/ui/docs/primitives', label: 'Headless primitives' },
 ]
 
-/** 갤러리 페이지에서 지금 읽고 있는 항목 — 판정선(화면 위 35%)을 지난 마지막 항목. */
+/**
+ * 갤러리 페이지에서 지금 읽고 있는 항목 — 헤더 바로 아래 판정선을 지난 마지막 항목.
+ * 사이드바에서 고른 항목은 그리로 가는 스크롤이 멈출 때까지 붙잡아 둔다. 그래야 끝까지 못 올라가는
+ * 마지막 항목들도 고른 대로 켜진다. 다음 스크롤부터 다시 위치로 판정한다.
+ */
 function useActiveItem(enabled: boolean) {
   const [active, setActive] = React.useState<string | null>(null)
+  const held = React.useRef(false)
+  const settle = React.useRef(0)
+
+  const release = React.useCallback(() => {
+    window.clearTimeout(settle.current)
+    settle.current = window.setTimeout(() => (held.current = false), 160)
+  }, [])
+
   React.useEffect(() => {
     if (!enabled) return
     let frame = 0
     const measure = () => {
       frame = 0
-      const line = window.innerHeight * 0.35
+      // html 의 scroll-padding-top 이 곧 "헤더 바로 아래" — 앵커로 올라온 항목이 그 선에 선다.
+      const line = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) + 48
       let current: string | null = null
       for (const node of document.querySelectorAll<HTMLElement>('[data-gallery-item]')) {
         if (node.getBoundingClientRect().top <= line) current = node.id
@@ -37,6 +51,7 @@ function useActiveItem(enabled: boolean) {
       setActive(current)
     }
     const onScroll = () => {
+      if (held.current) return release()
       if (!frame) frame = requestAnimationFrame(measure)
     }
     measure()
@@ -45,10 +60,21 @@ function useActiveItem(enabled: boolean) {
     return () => {
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
+      window.clearTimeout(settle.current)
       if (frame) cancelAnimationFrame(frame)
     }
-  }, [enabled])
-  return enabled ? active : null
+  }, [enabled, release])
+
+  const hold = React.useCallback(
+    (id: string) => {
+      held.current = true
+      setActive(id)
+      release() // 이미 제자리라 스크롤이 일어나지 않아도 풀린다
+    },
+    [release]
+  )
+
+  return [enabled ? active : null, hold] as const
 }
 
 function NavContent({
@@ -66,7 +92,7 @@ function NavContent({
   const pathname = usePathname()
   const router = useRouter()
   const onGallery = pathname === GALLERY
-  const active = useActiveItem(onGallery)
+  const [active, holdActive] = useActiveItem(onGallery)
   const [query, setQuery] = React.useState('')
   const listRef = React.useRef<HTMLDivElement>(null)
 
@@ -92,6 +118,23 @@ function NavContent({
 
   const hrefOf = (name: string) => `${GALLERY}#${name}`
 
+  /**
+   * 갤러리 위에서는 라우터를 거치지 않고 바로 스크롤한다. 시트 안에서 눌렀다면 시트가 닫혀
+   * 스크롤 잠금이 풀린 다음 움직인다. 새 탭 열기(⌘·Ctrl·가운데 클릭)는 링크 그대로 둔다.
+   */
+  const goTo = (id: string, item?: string) => {
+    if (item) holdActive(item)
+    onNavigate?.()
+    if (onNavigate) window.setTimeout(() => goToGalleryTarget(id), 320)
+    else goToGalleryTarget(id)
+  }
+  const onAnchorClick = (id: string, item?: string) => (e: React.MouseEvent) => {
+    if (!onGallery || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+      return onNavigate?.()
+    e.preventDefault()
+    goTo(id, item)
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className={cn('px-5 pt-6 pb-4', inSheet && 'pr-14')}>
@@ -100,10 +143,10 @@ function NavContent({
           onSubmit={(e) => {
             e.preventDefault()
             const first = visibleGroups[0]?.items[0]
-            if (first) {
-              router.push(hrefOf(first))
-              onNavigate?.()
-            }
+            if (!first) return
+            if (onGallery) return goTo(first, first)
+            router.push(hrefOf(first))
+            onNavigate?.()
           }}
         >
           <InputGroup className="bg-background">
@@ -149,7 +192,7 @@ function NavContent({
             <div key={g.id} className="mt-3 first:mt-0">
               <Link
                 href={`${GALLERY}#${g.id}`}
-                onClick={onNavigate}
+                onClick={onAnchorClick(g.id, g.items[0])}
                 className="flex h-8 items-center rounded-lg px-2 text-body-sm font-semibold text-foreground transition-colors duration-fast hover:bg-accent"
               >
                 {g.title}
@@ -162,7 +205,7 @@ function NavContent({
                       <Link
                         href={hrefOf(name)}
                         data-nav={name}
-                        onClick={onNavigate}
+                        onClick={onAnchorClick(name, name)}
                         aria-current={isActive ? 'location' : undefined}
                         className={cn(
                           '-ml-px flex h-8 items-center border-l-2 border-transparent pl-3 text-body-sm transition-colors duration-fast',

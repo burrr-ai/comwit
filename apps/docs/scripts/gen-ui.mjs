@@ -222,6 +222,11 @@ mkdirSync(exDir, { recursive: true })
 const tokens = parseTokens()
 const withExamples = []
 const components = []
+// 그룹과 항목은 같은 페이지의 앵커다(/ui/components#id) — 겹치면 사이드바가 엉뚱한 곳으로 간다.
+const itemNames = new Set(groups.flatMap((g) => g.items.map((i) => i.name)))
+for (const group of groups)
+  if (itemNames.has(group.id))
+    throw new Error(`gallery group id "${group.id}" collides with a component anchor`)
 for (const group of groups) {
   for (const item of group.items) {
     const spec = specsByName[item.name]

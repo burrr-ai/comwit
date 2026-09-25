@@ -45,10 +45,40 @@
   padding: 48px clamp(20px, 4vw, 64px) 120px;
 }
 
-/* Anchored items clear the sticky site header. */
-.ui-product [data-gallery-item],
+/* Anchors land flush under the sticky site header (html scroll-padding-top): an item's top rule sits
+   right below it, a group heading keeps a little air. */
 .ui-product [data-gallery-group] {
-  scroll-margin-top: calc(var(--site-header-height) + 24px);
+  scroll-margin-top: 24px;
+}
+
+/* 사이드바로 도착한 항목이 잠깐 빛난다 — 이미 제자리였거나 페이지 끝이라 덜 올라간 항목도 어디인지 보인다. */
+.ui-product [data-arrived] [data-gallery-stage='card'] {
+  animation: gallery-arrive-ring 1.6s ease-out;
+}
+.ui-product [data-arrived][data-gallery-stage='row'] {
+  animation: gallery-arrive-wash 1.6s ease-out;
+}
+@keyframes gallery-arrive-ring {
+  0%,
+  35% {
+    box-shadow:
+      0 0 0 2px var(--primary),
+      0 0 0 7px color-mix(in srgb, var(--primary) 16%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px transparent,
+      0 0 0 7px transparent;
+  }
+}
+@keyframes gallery-arrive-wash {
+  0%,
+  35% {
+    background-color: var(--primary-surface);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 @media (max-width: 900px) {

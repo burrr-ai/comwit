@@ -2,7 +2,8 @@
 // Distinctive UX first; plain building blocks last as a quick specimen sheet.
 // Every template component must appear exactly once (scripts/gen-ui.mjs checks this).
 //
-// exhibit: 'phone' renders inside a device frame, 'wide' spans the row, default is a card.
+// Every item gets its own row (name column + stage), so the sidebar can bring any of them to the top.
+// exhibit: 'phone' renders inside a device frame, 'wide' fills the stage, default is a card (≤576px).
 
 // Comwit UI curates libraries rather than reinventing them. When a component's npm dependencies
 // include one of these, the gallery links to it ("Built on …"). Keyed by package name.
@@ -73,7 +74,7 @@ export const groups = [
     ],
   },
   {
-    id: 'chat',
+    id: 'messaging',
     title: 'Chat',
     blurb:
       'Header, messages and composer that fill their parent. The list is virtualized and scrolls the way each kind of conversation expects.',
@@ -88,7 +89,7 @@ export const groups = [
     ],
   },
   {
-    id: 'glass',
+    id: 'surfaces',
     title: 'Glass',
     blurb: 'A refracting surface for everything that floats above content.',
     items: [
