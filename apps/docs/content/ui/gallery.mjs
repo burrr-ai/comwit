@@ -15,6 +15,7 @@ export const credits = {
   '@tanstack/react-table': { label: 'TanStack Table', href: 'https://tanstack.com/table' },
   'react-day-picker': { label: 'React DayPicker', href: 'https://daypicker.dev' },
   'react-hook-form': { label: 'React Hook Form', href: 'https://react-hook-form.com' },
+  'react-virtuoso': { label: 'React Virtuoso', href: 'https://virtuoso.dev' },
 }
 
 export const groups = [
@@ -55,6 +56,21 @@ export const groups = [
         exhibit: 'wide',
         summary:
           'Horizontal rail with drag, flick momentum, wheel and arrow keys. Taps still click.',
+      },
+    ],
+  },
+  {
+    id: 'chat',
+    title: 'Chat',
+    blurb:
+      'Header, messages and composer that fill their parent. The list is virtualized and scrolls the way each kind of conversation expects.',
+    items: [
+      {
+        name: 'chat',
+        title: 'Chat',
+        exhibit: 'phone',
+        summary:
+          'Messenger mode keeps you at the bottom; assistant mode lifts your message to the top and streams the answer under it.',
       },
     ],
   },

@@ -11,9 +11,11 @@ import {
   MapPin,
   MessageCircle,
   PenLine,
+  Phone,
   Search,
   Share,
   SignalHigh,
+  Sparkles,
   User,
   Wifi,
   BatteryFull,
@@ -38,6 +40,22 @@ import {
   type PageTransitionConfig,
 } from '@comwit/ui-templates/page-transition'
 import { PullToRefresh } from '@comwit/ui-templates/pull-to-refresh'
+import {
+  Chat,
+  ChatBubble,
+  ChatComposer,
+  ChatDescription,
+  ChatDivider,
+  ChatHeader,
+  ChatHeaderActions,
+  ChatMessage,
+  ChatMessageMeta,
+  ChatMessages,
+  ChatTitle,
+  ChatTyping,
+  type ChatMode,
+} from '@comwit/ui-templates/chat'
+import { Avatar, AvatarFallback } from '@comwit/ui-templates/avatar'
 import { Glass, GlassButton, type GlassVariant } from '@comwit/ui-templates/glass'
 import { SegmentedControl } from '@comwit/ui-templates/segmented-control'
 import { Button } from '@comwit/ui-templates/button'
@@ -723,11 +741,222 @@ function PlaceRowText({ place }: { place: (typeof PLACES)[number] }) {
   )
 }
 
+/* ── Chat ───────────────────────────────────────────────────────────── */
+
+type ChatNote = { id: number; from: 'me' | 'ava' | 'system'; text: string; time?: string }
+type ChatTurn = { id: number; role: 'user' | 'assistant'; text: string }
+
+const CHAT_THREAD: ChatNote[] = [
+  { id: 1, from: 'system', text: 'Yesterday' },
+  { id: 2, from: 'ava', text: 'Are we still on for the coast road on Saturday?', time: '6:10 PM' },
+  { id: 3, from: 'me', text: 'Yes! I booked the car for 9.', time: '6:12 PM' },
+  {
+    id: 4,
+    from: 'ava',
+    text: 'Perfect. I found a noodle place near the harbor that opens at eleven.',
+    time: '6:12 PM',
+  },
+  { id: 5, from: 'me', text: 'Send me the pin?', time: '6:14 PM' },
+  { id: 6, from: 'ava', text: 'Sent. It is the one with the blue roof.', time: '6:15 PM' },
+  { id: 7, from: 'system', text: 'Today' },
+  {
+    id: 8,
+    from: 'ava',
+    text: 'Morning! Weather looks clear until the afternoon.',
+    time: '8:02 AM',
+  },
+  { id: 9, from: 'me', text: 'Great, I will bring the good camera.', time: '8:05 AM' },
+  { id: 10, from: 'ava', text: 'And one book too many, knowing you.', time: '8:05 AM' },
+  { id: 11, from: 'me', text: 'Two, actually.', time: '8:06 AM' },
+]
+const CHAT_REPLIES = [
+  'Ha. See you at nine then.',
+  'I will grab coffee for both of us on the way.',
+  'Sunrise peak first, then the harbor?',
+  'Sounds good to me.',
+]
+const CHAT_ANSWER =
+  'Day one is the east: land, pick up the car and drive to Seongsan for the sunrise peak the next morning, so stay nearby. Day two is Hallasan by the Yeongsil trail, which is the shorter route with the better views, and grilled black pork in the evening. Day three is the west coast: the Suwolbong cliffs, a slow lunch of abalone porridge in Hallim, and the flight home from Jeju City.'
+const clock = () => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+
+function MessengerScreen() {
+  const [messages, setMessages] = React.useState<ChatNote[]>(CHAT_THREAD)
+  const [typing, setTyping] = React.useState(false)
+  const next = React.useRef(0)
+  const timer = React.useRef(0)
+  React.useEffect(() => () => window.clearTimeout(timer.current), [])
+  const send = (text: string) => {
+    setMessages((m) => [...m, { id: Date.now(), from: 'me', text, time: clock() }])
+    setTyping(true)
+    timer.current = window.setTimeout(() => {
+      setTyping(false)
+      setMessages((m) => [
+        ...m,
+        {
+          id: Date.now(),
+          from: 'ava',
+          text: CHAT_REPLIES[next.current++ % CHAT_REPLIES.length],
+          time: clock(),
+        },
+      ])
+    }, 1200)
+  }
+  const ava = (
+    <Avatar className="size-7">
+      <AvatarFallback>AC</AvatarFallback>
+    </Avatar>
+  )
+  return (
+    <Chat mode="messenger" className="h-auto flex-1">
+      <ChatHeader>
+        <Avatar>
+          <AvatarFallback>AC</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <ChatTitle>Ava Chen</ChatTitle>
+          <ChatDescription>Active now</ChatDescription>
+        </div>
+        <ChatHeaderActions>
+          <Button variant="ghost" size="icon" aria-label="Call">
+            <Phone />
+          </Button>
+        </ChatHeaderActions>
+      </ChatHeader>
+      <ChatMessages
+        items={messages}
+        isOwn={(m) => m.from === 'me'}
+        footer={
+          typing ? (
+            <ChatMessage avatar={ava}>
+              <ChatTyping />
+            </ChatMessage>
+          ) : null
+        }
+      >
+        {(m) =>
+          m.from === 'system' ? (
+            <ChatDivider>{m.text}</ChatDivider>
+          ) : (
+            <ChatMessage
+              align={m.from === 'me' ? 'end' : 'start'}
+              avatar={m.from === 'ava' ? ava : undefined}
+            >
+              <ChatBubble>{m.text}</ChatBubble>
+              <ChatMessageMeta>{m.time}</ChatMessageMeta>
+            </ChatMessage>
+          )
+        }
+      </ChatMessages>
+      <ChatComposer placeholder="Message Ava" onSend={send} className="pb-7" />
+    </Chat>
+  )
+}
+
+function AssistantScreen() {
+  const [turns, setTurns] = React.useState<ChatTurn[]>([
+    {
+      id: 1,
+      role: 'user',
+      text: 'Plan three days in Jeju for two people who like hiking and seafood.',
+    },
+    { id: 2, role: 'assistant', text: CHAT_ANSWER },
+  ])
+  const [pending, setPending] = React.useState(false)
+  const timer = React.useRef(0)
+  const stop = React.useCallback(() => {
+    window.clearInterval(timer.current)
+    window.clearTimeout(timer.current)
+    setPending(false)
+  }, [])
+  React.useEffect(() => stop, [stop])
+  const send = (text: string) => {
+    const id = Date.now()
+    setTurns((t) => [...t, { id, role: 'user', text }])
+    setPending(true)
+    const words = CHAT_ANSWER.split(' ')
+    let count = 0
+    timer.current = window.setTimeout(() => {
+      setTurns((t) => [...t, { id: id + 1, role: 'assistant', text: '' }])
+      timer.current = window.setInterval(() => {
+        count += 1
+        setTurns((t) =>
+          t.map((m) => (m.id === id + 1 ? { ...m, text: words.slice(0, count).join(' ') } : m))
+        )
+        if (count >= words.length) stop()
+      }, 45)
+    }, 700)
+  }
+  const waiting = pending && turns[turns.length - 1]?.role === 'user'
+  return (
+    <Chat mode="assistant" className="h-auto flex-1">
+      <ChatHeader>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-surface text-primary-ink">
+          <Sparkles className="size-4" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <ChatTitle>Trip planner</ChatTitle>
+          <ChatDescription>Your message rises, the answer streams</ChatDescription>
+        </div>
+      </ChatHeader>
+      <ChatMessages
+        items={turns}
+        footer={
+          waiting ? (
+            <ChatMessage>
+              <ChatTyping />
+            </ChatMessage>
+          ) : null
+        }
+      >
+        {(turn) => (
+          <ChatMessage align={turn.role === 'user' ? 'end' : 'start'}>
+            <ChatBubble>{turn.text}</ChatBubble>
+          </ChatMessage>
+        )}
+      </ChatMessages>
+      <ChatComposer
+        placeholder="Ask anything"
+        onSend={send}
+        pending={pending}
+        onStop={stop}
+        className="pb-7"
+      />
+    </Chat>
+  )
+}
+
+/** 두 스크롤 모드를 한 폰에서 — 메신저(바닥 고정)와 어시스턴트(내 메시지 상단 고정 + 스트리밍). */
+export function ChatExhibit() {
+  const [mode, setMode] = React.useState<ChatMode>('messenger')
+  return (
+    <div className="flex flex-col items-center gap-5">
+      <SegmentedControl
+        value={mode}
+        onValueChange={(v) => setMode(v as ChatMode)}
+        options={[
+          { value: 'messenger', label: 'Messenger' },
+          { value: 'assistant', label: 'Assistant' },
+        ]}
+        aria-label="Chat mode"
+      />
+      <PhoneFrame label="Chat demo — send a message">
+        {mode === 'messenger' ? <MessengerScreen /> : <AssistantScreen />}
+      </PhoneFrame>
+      <p className="text-caption text-muted-foreground">
+        {mode === 'messenger'
+          ? 'Send a message. Ava replies, and the list stays at the bottom.'
+          : 'Send a message. It rises to the top and the answer streams in below.'}
+      </p>
+    </div>
+  )
+}
+
 /** 갤러리 카드에서 스펙 예시 대신 쓰는 전시물 */
 export const EXHIBITS: Record<string, React.ComponentType> = {
   'app-bar': AppBarExhibit,
   'bottom-nav': BottomNavExhibit,
   'page-transition': PageTransitionExhibit,
   'pull-to-refresh': PullToRefreshExhibit,
+  chat: ChatExhibit,
   glass: GlassExhibit,
 }

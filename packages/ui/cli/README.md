@@ -29,7 +29,7 @@ npx comwit-ui@latest add button    # 컴포넌트 + 의존 설치
    `comwit.json` 의 `importAlias`+`aliases` 로 치환(`@/lib/utils` · `@/components/ui/popover` · `@/hooks/use-mobile`).
    `@comwit/ui`(엔진)는 그대로 npm 참조.
 4. **npm `dependencies` 설치** — `@comwit/ui` 및 `class-variance-authority`·`lucide-react`·(해당 시)
-   `react-hook-form`·`@tiptap/*`·`sonner`·`@ssgoi/react` 등. 패키지 매니저(pnpm/yarn/bun/npm) 자동 감지.
+   `react-hook-form`·`@tiptap/*`·`sonner`·`@ssgoi/react`·`react-virtuoso` 등. 패키지 매니저(pnpm/yarn/bun/npm) 자동 감지.
 5. **라우터 감지 변형** — `variants` 가 있는 아이템(`route-boundary`)은 `package.json` 의 `next` ·
    `react-router(-dom)` · `@tanstack/react-router` 를 보고 맞는 구현체를 쓴다(없으면 generic). 프레임워크 패키지는
    이미 있으므로 설치 목록에 넣지 않는다. `--router` 로 강제할 수 있고, `comwit-ui list` 가 변형 목록을 보여준다.

@@ -1,6 +1,6 @@
 {
   "name": "comwit-ui",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Comwit UI CLI \u2014 copy-paste \uc2a4\ud0c0\uc77c \ucef4\ud3ec\ub10c\ud2b8\ub97c \ub0b4 \ud504\ub85c\uc81d\ud2b8\ub85c \uc124\uce58\ud55c\ub2e4 (comwit \uc790\uccb4 \ub808\uc9c0\uc2a4\ud2b8\ub9ac, shadcn \ud234 \ube44\uc758\uc874). \uc124\uce58\ub418\ub294 \uc5d4\uc9c4\uc740 @comwit/ui.",
   "keywords": [
     "comwit",

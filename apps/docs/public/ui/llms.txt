@@ -1,6 +1,6 @@
 # Comwit UI — implementation guide
 
-Comwit UI provides headless behavior (@comwit/ui) and editable component source installed into a React project by the comwit-ui CLI. It is a curated kit: for each job it wraps a proven library under a neutral name (page transitions on SSGOI, toasts on Sonner, popups on overlay-kit, springs on Motion, rich text on Tiptap, tables on TanStack Table, dates on React DayPicker, forms on React Hook Form) and installs the wrapper as source the project owns; the library itself is an npm dependency. The default look is the Comwit design system: warm white, deep ink, a blue brand (#3182f6), Pretendard, and refractive glass. It is independent of Comwit State.
+Comwit UI provides headless behavior (@comwit/ui) and editable component source installed into a React project by the comwit-ui CLI. It is a curated kit: for each job it wraps a proven library under a neutral name (page transitions on SSGOI, toasts on Sonner, popups on overlay-kit, springs on Motion, rich text on Tiptap, tables on TanStack Table, dates on React DayPicker, forms on React Hook Form, chat lists on React Virtuoso) and installs the wrapper as source the project owns; the library itself is an npm dependency. The default look is the Comwit design system: warm white, deep ink, a blue brand (#3182f6), Pretendard, and refractive glass. It is independent of Comwit State.
 
 ## Install
 
@@ -23,6 +23,7 @@ Put the font variable --font-pretendard on <html> (for example with next/font/lo
 ## Components
 
 - Mobile app: app-bar, bottom-nav, page-transition (with route-boundary), pull-to-refresh, drag-scroller
+- Chat: chat (Chat, ChatHeader, ChatTitle, ChatDescription, ChatHeaderActions, ChatMessages, ChatScrollToBottom, ChatMessage, ChatBubble, ChatMessageMeta, ChatTyping, ChatDivider, ChatComposer, ChatComposerInput, ChatComposerActions, ChatComposerSubmit)
 - Glass: glass (Glass, GlassSurface, GlassButton), dropdown-menu, popover
 - Notifications: toast (Toaster, toast(), Toast; formerly sonner), popup (popup.confirm / alert / sheet), alert, empty-state
 - Pickers: date-picker, time-picker, month-picker (popover on desktop, bottom sheet on phones), calendar
@@ -68,6 +69,43 @@ PageTransition renders the shell the outgoing page needs (relative, z-0, min-h-d
 
 Route rules (on/except, from/to, ordered, priority), every preset and its options, persistent layouts, scroll restoration and troubleshooting are SSGOI's and are documented at https://ssgoi.dev/llms.txt (config shape is identical; only the component names differ).
 
+## Chat
+
+npx comwit-ui add chat
+
+One file, compound parts, no data shape imposed. Chat is a vertical flex column that fills its parent (the parent needs a height: h-dvh, or flex-1 min-h-0); ChatHeader and ChatComposer are fixed rows and ChatMessages takes the rest. ChatMessages virtualizes the list with react-virtuoso (installed as a dependency; the copied file wraps it, so import from the copied file only).
+
+'use client'
+import { Chat, ChatHeader, ChatTitle, ChatMessages, ChatMessage, ChatBubble, ChatMessageMeta, ChatTyping, ChatComposer } from '@/components/ui/chat'
+
+<div className="h-dvh">
+  <Chat mode="messenger">
+    <ChatHeader><ChatTitle>Ava Chen</ChatTitle></ChatHeader>
+    <ChatMessages items={messages} isOwn={(m) => m.mine} footer={typing ? <ChatMessage><ChatTyping /></ChatMessage> : null}>
+      {(m) => (
+        <ChatMessage align={m.mine ? 'end' : 'start'} avatar={m.mine ? undefined : <Avatar>…</Avatar>}>
+          <ChatBubble>{m.text}</ChatBubble>
+          <ChatMessageMeta>{m.time}</ChatMessageMeta>
+        </ChatMessage>
+      )}
+    </ChatMessages>
+    <ChatComposer onSend={(text) => send(text)} />
+  </Chat>
+</div>
+
+mode (on Chat, or per ChatMessages) selects the scroll behavior:
+- messenger (people): an own message always scrolls to the bottom; another person's message follows only while the list is already at the bottom, otherwise the unread count accumulates on the ChatScrollToBottom pill (rendered by ChatMessages; scrollToBottomButton={false} to place it yourself).
+- assistant (AI): an own message is pinned to the top of the viewport (the space below is filled and shrinks as the answer grows, so nothing jumps) and the answer streams under it; once it overflows, the list follows only while at the bottom. Bubbles on the start side default to the plain tone (no surface, full width).
+Both modes open at the last message. Mount ChatMessages with a key per conversation.
+
+ChatMessages props: items (readonly array), children (item, index) => node, itemKey (default item.id), isOwn (default item.role === 'user'), empty (node shown when there are no items), footer (node under the last message, outside virtualization; put ChatTyping there), labels ({ scrollToBottom, newMessages(count) }).
+
+ChatMessage takes align ('start' | 'end') and avatar. ChatBubble takes tone ('primary' | 'muted' | 'plain'); the default is primary for end, muted for start, plain for start in assistant mode. ChatMessageMeta is the time/status line, ChatDivider a centered caption (dates, system notes) that can be rendered as an item.
+
+ChatComposer: onSend(text) receives the trimmed text and clears the input; value/onValueChange for a controlled value; pending + onStop turns the send button into a stop button; disabled, placeholder, submitOnEnter (default true: Enter sends, Shift+Enter breaks a line; Cmd/Ctrl+Enter always sends; Enter during IME composition never sends), labels ({ send, stop }). Without children it renders ChatComposerInput plus ChatComposerSubmit; with children compose ChatComposerInput, ChatComposerActions (a row for attachment or tool buttons) and ChatComposerSubmit yourself. The input grows with its content up to max-h-40.
+
+Tones are tokens: own bubbles bg-primary/text-primary-foreground, theirs bg-muted, the composer surface rounded-sheet with shadow-message and the field focus ring. Override in the copied file or through the tokens.
+
 ## Ownership
 
 Edit copied component files directly. Existing files are skipped; --overwrite replaces local edits, so review first. Use --dry for a preview or --no-install when managing dependencies separately.
@@ -106,6 +144,7 @@ For imperative popup helpers mount OverlayProvider from overlay-kit once. For to
 - Components (live gallery): https://library.comwit.io/ui/components
 - Installation: https://library.comwit.io/ui/docs/installation
 - Page transitions engine (SSGOI): https://ssgoi.dev/llms.txt
+- Chat list engine (React Virtuoso): https://virtuoso.dev
 - Headless primitives: https://library.comwit.io/ui/docs/primitives
 - Tokens and theming: https://library.comwit.io/ui/theming
 - State (separate library): https://library.comwit.io/state/llms.txt

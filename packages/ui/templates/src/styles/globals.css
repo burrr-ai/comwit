@@ -617,7 +617,8 @@
   [data-slot='sheet-title'],
   [data-slot='card-title'],
   [data-slot='alert-title'],
-  [data-slot='app-bar-title'] {
+  [data-slot='app-bar-title'],
+  [data-slot='chat-title'] {
     font-family: var(--display-font);
   }
 

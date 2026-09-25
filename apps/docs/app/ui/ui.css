@@ -130,10 +130,12 @@
   pointer-events: none;
 }
 /* The scroller inside the phone hides its scrollbar like a real device. */
-.phone-screen [data-slot='pull-to-refresh'] > div:last-child {
+.phone-screen [data-slot='pull-to-refresh'] > div:last-child,
+.phone-screen [data-slot='chat-messages'] [data-virtuoso-scroller] {
   scrollbar-width: none;
 }
-.phone-screen [data-slot='pull-to-refresh'] > div:last-child::-webkit-scrollbar {
+.phone-screen [data-slot='pull-to-refresh'] > div:last-child::-webkit-scrollbar,
+.phone-screen [data-slot='chat-messages'] [data-virtuoso-scroller]::-webkit-scrollbar {
   display: none;
 }
 

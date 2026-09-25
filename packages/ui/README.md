@@ -1,6 +1,6 @@
 # Comwit UI
 
-Headless behavior and editable UI components used in Comwit templates — a curated kit that wraps the best library for each job (page transitions, toasts, overlays, rich text, tables, dates, forms) under neutral names and one design system, installed as source you own.
+Headless behavior and editable UI components used in Comwit templates — a curated kit that wraps the best library for each job (page transitions, toasts, overlays, rich text, tables, dates, forms, chat lists) under neutral names and one design system, installed as source you own.
 
 [Documentation](https://library.comwit.io/ui) · [Components](https://library.comwit.io/ui/components) · [Agent guide](https://library.comwit.io/ui/llms.txt)
 

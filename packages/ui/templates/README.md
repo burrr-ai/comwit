@@ -9,7 +9,7 @@ Tailwind 토큰 + `cva` variant 로 **시각만** 입힌 컴포넌트.
 
 핵심은 **큐레이션 킷**이다 — UI 구성에 필요한 역할마다 최적화된 라이브러리를 고르고(페이지 전환 ssgoi ·
 토스트 sonner · 팝업 overlay-kit · 스프링 motion · 에디터 tiptap · 테이블 TanStack Table · 달력 react-day-picker ·
-폼 react-hook-form), **중성 이름**과 한 벌의 토큰으로 감싸 소스로 설치한다. 라이브러리 자체는 npm 의존성으로
+폼 react-hook-form · 채팅 가상화 react-virtuoso), **중성 이름**과 한 벌의 토큰으로 감싸 소스로 설치한다. 라이브러리 자체는 npm 의존성으로
 깔리고, 래퍼는 내 코드가 된다. docs 의 컴포넌트 카드마다 "Built on …" 으로 원 라이브러리에 링크한다.
 
 ## 설치
@@ -71,6 +71,52 @@ export function Providers({ children }: { children: React.ReactNode }) {
 탭바가 살아남는 쉘은 바깥 `RouteBoundary` 에 `routeKey` 를 고정하고 바뀌는 콘텐츠만 안쪽 경계로 감싼다.
 규칙(`on/except` · `from/to` · `ordered`)·프리셋 옵션·스크롤 복원·트러블슈팅은 엔진 문서 [ssgoi.dev](https://ssgoi.dev/docs) 를 그대로 따른다(설정 모양이 같고 컴포넌트 이름만 다르다).
 
+## 채팅
+
+`chat` 은 헤더 · 메시지 · 컴포저 세로 3단을 컴파운드 파트로 싣는다. `Chat` 이 부모를 채우고(부모에 높이가 있어야
+한다: `h-dvh` · `flex-1 min-h-0`), `ChatMessages` 가 [react-virtuoso](https://virtuoso.dev) 로 가상화한 목록이다.
+데이터 모양은 강제하지 않는다 — `items` 는 무엇이든, `isOwn` 이 "내 메시지" 를 가른다(기본 `role === 'user'`).
+
+`mode` 가 스크롤 규칙을 정한다:
+
+- **messenger** — 사람과의 대화. 내 메시지는 언제나 바닥으로, 상대 메시지는 바닥에 있을 때만 따라간다.
+  위로 올라가 읽는 중이면 안 읽은 개수를 단 유리 알약(`ChatScrollToBottom`)이 뜬다.
+- **assistant** — AI. 보낸 메시지가 **맨 위로 올라가 붙고** 답변이 그 아래로 흘러내린다(아래 여백은 답변이 채우며
+  줄어들어 튀지 않는다). 답변이 화면을 넘기면 바닥에 있을 때만 따라간다. 왼쪽 말풍선은 면 없는 `plain` 톤이 기본.
+
+```tsx
+<div className="h-dvh">
+  <Chat mode="messenger">
+    <ChatHeader>
+      <ChatTitle>Ava Chen</ChatTitle>
+    </ChatHeader>
+    <ChatMessages
+      items={messages}
+      isOwn={(m) => m.mine}
+      footer={
+        typing ? (
+          <ChatMessage>
+            <ChatTyping />
+          </ChatMessage>
+        ) : null
+      }
+    >
+      {(m) => (
+        <ChatMessage align={m.mine ? 'end' : 'start'}>
+          <ChatBubble>{m.text}</ChatBubble>
+          <ChatMessageMeta>{m.time}</ChatMessageMeta>
+        </ChatMessage>
+      )}
+    </ChatMessages>
+    <ChatComposer onSend={send} pending={streaming} onStop={stop} />
+  </Chat>
+</div>
+```
+
+`ChatComposer` 는 Enter 로 보내고 Shift+Enter 로 줄바꿈하며(한글 조합 중 Enter 는 무시), 자식 없이 쓰면 입력 + 보내기
+버튼을 그리고 `ChatComposerInput` · `ChatComposerActions` · `ChatComposerSubmit` 으로 직접 조립할 수도 있다.
+톤은 전부 토큰이다 — 내 말풍선 `bg-primary` · 상대 `bg-muted` · 컴포저 면 `rounded-sheet` + `shadow-message`.
+
 ## 사용
 
 ```tsx
@@ -84,11 +130,12 @@ import { Button } from '@/components/ui/button' // CLI 가 복사한 경로
 동작·a11y·IME·포커스·달력/시간 로직은 전부 `@comwit/ui`(엔진)가 소유하고, 이 파일은 cva 로 **시각/variant 만** 입힌다.
 그래서 컴포넌트를 열어 Tailwind 클래스를 마음대로 고쳐도 동작은 안 깨진다.
 
-## 컴포넌트 (43 + popup)
+## 컴포넌트 (44 + popup)
 
 docs 갤러리와 같은 묶음 — 컴윗 특화 UX 가 먼저, 기본형이 마지막.
 
 - **모바일 앱** — app-bar · bottom-nav · page-transition(+ route-boundary) · pull-to-refresh · drag-scroller
+- **채팅** — chat(`Chat` · `ChatHeader` · `ChatMessages`(가상화) · `ChatMessage` · `ChatBubble` · `ChatTyping` · `ChatComposer` …)
 - **유리** — glass(`Glass` · `GlassSurface` · `GlassButton`) · dropdown-menu · popover · (dialog · sheet · popup · 토스트도 같은 굴절 유리 — 스크림 위라 `dense`)
 - **알림** — toast(`Toaster` · `toast()` · `Toast`) · `lib/popup`(confirm · alert · sheet) · alert · empty-state
 - **피커** — date-picker · time-picker · month-picker (데스크톱 팝오버 · 모바일 바텀시트) · calendar

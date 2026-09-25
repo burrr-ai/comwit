@@ -58,6 +58,7 @@ comwit-ui 작업 모음. 정한 것 · 만들 것 · 아이디어를 여기 쌓�
 - [x] PullToRefresh · DragScroller · SegmentedControl · Pager · EmptyState · Glass(굴절 유리) — 컴윗에서 이식
 - [x] PageTransition · PageBoundary · RouteBoundary — 페이지 전환(ssgoi 래핑 · 중성 이름 · CLI 가 라우터 감지해 route-boundary 변형 설치)
 - [x] Dialog · Sheet · popup · Toast 를 굴절 유리(`glass-dense`)로 — 메뉴·앱바와 같은 재질
+- [x] Chat — 헤더·메시지·컴포저 컴파운드. 메시지 목록은 react-virtuoso 가상화, `mode` 로 messenger(바닥 고정) / assistant(내 메시지 상단 고정 + 스트리밍 따라가기)
 
 | 컴포넌트     | 상태 | 메모                                                |
 | ------------ | ---- | --------------------------------------------------- |
