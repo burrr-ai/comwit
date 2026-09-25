@@ -280,6 +280,60 @@ function ChatList<T>({
   isOwnRef.current = isOwn
   const pinOffsetRef = React.useRef(pinOffset)
   pinOffsetRef.current = pinOffset
+  const modeRef = React.useRef(mode)
+  modeRef.current = mode
+
+  // ── 바닥으로 내려가기 — DOM 이 안정된 뒤에 실제 scrollHeight 로 ──
+  // Virtuoso 의 내부 총높이는 같은 커밋에서 푸터(타이핑 표시)가 사라지고 항목이 붙으면 한 박자 늦게 맞는다.
+  // 그래서 목표는 Virtuoso 의 인덱스 계산이 아니라 스크롤러의 실제 높이로 잡고, 높이가 두 프레임 연속 같아질 때 내린다.
+  // 커밋 직후의 DOM 높이로 즉시 내리고(백그라운드 탭에서 rAF 가 1fps 로 늦어져도 바닥은 맞는다), 높이가 두 프레임
+  // 연속 같아지면(이미지 로드 등) 한 번 더 맞춘다. 내려가는 동안(`following`) 온 메시지는 안 읽음으로 세지 않는다.
+  const scrollFrame = React.useRef(0)
+  const following = React.useRef(false)
+  const followingTimer = React.useRef(0)
+  // assistant 모드에서 내 메시지가 상단으로 **올라가는 동안**(smooth) 참. 이 사이에 총높이가 바뀌어도(여백·타이핑 표시)
+  // 바닥으로 즉시 붙이지 않는다 — 즉시 붙이면 목적지가 같아 애니메이션이 통째로 사라진다.
+  const pinning = React.useRef(false)
+  const pinningTimer = React.useRef(0)
+  const scrollToEnd = React.useCallback((behavior: ScrollBehaviorOption) => {
+    cancelAnimationFrame(scrollFrame.current)
+    const scroll = () => {
+      const element = scroller.current
+      if (!element) return
+      const top = element.scrollHeight - element.clientHeight
+      if (virtuoso.current) virtuoso.current.scrollTo({ top, behavior })
+      else element.scrollTo({ top, behavior })
+    }
+    following.current = true
+    window.clearTimeout(followingTimer.current)
+    followingTimer.current = window.setTimeout(() => {
+      following.current = false
+    }, 1500)
+    scroll()
+    let seen = scroller.current?.scrollHeight ?? -1
+    let frames = 0
+    const settle = () => {
+      const element = scroller.current
+      if (!element) return
+      const height = element.scrollHeight
+      frames += 1
+      if (height !== seen && frames < 12) {
+        seen = height
+        scrollFrame.current = requestAnimationFrame(settle)
+        return
+      }
+      scroll()
+    }
+    scrollFrame.current = requestAnimationFrame(settle)
+  }, [])
+  React.useEffect(
+    () => () => {
+      cancelAnimationFrame(scrollFrame.current)
+      window.clearTimeout(followingTimer.current)
+      window.clearTimeout(pinningTimer.current)
+    },
+    []
+  )
 
   // ── assistant 모드: 상단에 붙인 내 메시지(pinned) 아래를 채우는 여백 ──
   // pinned 인덱스부터 끝까지(+ footer)의 높이를 재서, 뷰포트에서 남는 만큼을 --chat-tail-space 로 준다.
@@ -304,15 +358,15 @@ function ChatList<T>({
       if (key === 'footer' || key >= index) tail += height
     const space = Math.max(0, element.clientHeight - pinOffsetRef.current - tail)
     element.style.setProperty(TAIL_SPACE_VAR, `${space}px`)
-    // 여백이 실제로 생긴 뒤에 붙여야 맨 위까지 올라간다(그 전엔 스크롤 한계에 걸린다).
+    // 여백이 실제로 생긴 뒤에 올려야 맨 위까지 간다(그 전엔 스크롤 한계에 걸린다). 여백이 뷰포트를 정확히 채우므로
+    // "붙인 메시지가 상단" = "스크롤 바닥" — Virtuoso 의 scrollToIndex 대신 스크롤러를 직접 smooth 로 내린다
+    // (scrollToIndex 는 목록이 다시 재는 동안 이동을 미루고 다시 쏴서, 올라가는 모션이 늦거나 끊긴다).
     if (pending.current?.target === 'pin') {
       const behavior = pending.current.behavior
       pending.current = null
-      requestAnimationFrame(() =>
-        virtuoso.current?.scrollToIndex({ index: 'LAST', align: 'start', behavior })
-      )
+      requestAnimationFrame(() => scrollToEnd(behavior))
     }
-  }, [])
+  }, [scrollToEnd])
 
   const ensureObserver = React.useCallback(() => {
     if (observer.current || typeof ResizeObserver === 'undefined') return observer.current
@@ -380,53 +434,6 @@ function ChatList<T>({
   const count = items.length
   if (pinned !== null && pinned >= count) setPinned(null)
 
-  // ── 바닥으로 내려가기 — DOM 이 안정된 뒤에 실제 scrollHeight 로 ──
-  // Virtuoso 의 내부 총높이는 같은 커밋에서 푸터(타이핑 표시)가 사라지고 항목이 붙으면 한 박자 늦게 맞는다.
-  // 그래서 목표는 Virtuoso 의 인덱스 계산이 아니라 스크롤러의 실제 높이로 잡고, 높이가 두 프레임 연속 같아질 때 내린다.
-  // 커밋 직후의 DOM 높이로 즉시 내리고(백그라운드 탭에서 rAF 가 1fps 로 늦어져도 바닥은 맞는다), 높이가 두 프레임
-  // 연속 같아지면(이미지 로드 등) 한 번 더 맞춘다. 내려가는 동안(`following`) 온 메시지는 안 읽음으로 세지 않는다.
-  const scrollFrame = React.useRef(0)
-  const following = React.useRef(false)
-  const followingTimer = React.useRef(0)
-  const scrollToEnd = React.useCallback((behavior: ScrollBehaviorOption) => {
-    cancelAnimationFrame(scrollFrame.current)
-    const scroll = () => {
-      const element = scroller.current
-      if (!element) return
-      const top = element.scrollHeight - element.clientHeight
-      if (virtuoso.current) virtuoso.current.scrollTo({ top, behavior })
-      else element.scrollTo({ top, behavior })
-    }
-    following.current = true
-    window.clearTimeout(followingTimer.current)
-    followingTimer.current = window.setTimeout(() => {
-      following.current = false
-    }, 1500)
-    scroll()
-    let seen = scroller.current?.scrollHeight ?? -1
-    let frames = 0
-    const settle = () => {
-      const element = scroller.current
-      if (!element) return
-      const height = element.scrollHeight
-      frames += 1
-      if (height !== seen && frames < 12) {
-        seen = height
-        scrollFrame.current = requestAnimationFrame(settle)
-        return
-      }
-      scroll()
-    }
-    scrollFrame.current = requestAnimationFrame(settle)
-  }, [])
-  React.useEffect(
-    () => () => {
-      cancelAnimationFrame(scrollFrame.current)
-      window.clearTimeout(followingTimer.current)
-    },
-    []
-  )
-
   // ── 새 메시지가 붙으면 스크롤 의도를 정한다 ──
   // Virtuoso 의 followOutput 은 자기 atBottom 판정이 참일 때만 불려(내려가는 도중엔 아예 안 온다) 쓰지 않는다.
   // 개수 변화는 레이아웃 이펙트가 항상 본다. 새 항목의 DOM 은 Virtuoso 가 다음 렌더에서 그리므로,
@@ -446,7 +453,12 @@ function ChatList<T>({
     if (isOwnRef.current(list[count - 1])) {
       setListState((state) => (state.unread === 0 ? state : { ...state, unread: 0 }))
       if (mode === 'assistant') {
-        // 상단 고정 — 여백(applyTailSpace)이 생긴 뒤 그쪽이 붙인다.
+        // 상단 고정 — 여백(applyTailSpace)이 생긴 뒤 그쪽이 smooth 로 올린다. 올라가는 동안은 바닥 추종을 멈춘다.
+        pinning.current = true
+        window.clearTimeout(pinningTimer.current)
+        pinningTimer.current = window.setTimeout(() => {
+          pinning.current = false
+        }, 1500)
         pending.current = { target: 'pin', behavior: 'smooth' }
         for (const key of [...tailHeights.current.keys()])
           if (key !== 'footer') tailHeights.current.delete(key)
@@ -464,20 +476,29 @@ function ChatList<T>({
   }, [count, mode, scrollToEnd, setListState])
 
   const onTotalListHeightChanged = React.useCallback(() => {
-    const handle = virtuoso.current
     const element = scroller.current
+    if (!element) return
+    // assistant 모드에서 방금 붙은 내 메시지는 상단 고정 대상이다. Virtuoso 의 이 콜백은 자식 이펙트라 우리 레이아웃
+    // 이펙트(pin 예약)보다 먼저 올 수 있으므로, 예약 여부와 무관하게 "아직 안 붙인 내 메시지"면 바닥 추종을 건너뛴다.
+    const list = itemsRef.current
+    const last = list.length - 1
+    const ownLanding =
+      modeRef.current === 'assistant' &&
+      last >= 0 &&
+      isOwnRef.current(list[last]) &&
+      (pinnedRef.current !== last || pinning.current)
     if (pending.current?.target === 'pin') {
       // 여백까지 반영된 높이 변화가 최종 위치를 정한다(여백 전엔 스크롤 한계에 걸린다).
-      if (handle && element?.style.getPropertyValue(TAIL_SPACE_VAR)) {
+      if (element.style.getPropertyValue(TAIL_SPACE_VAR)) {
         const behavior = pending.current.behavior
         pending.current = null
-        handle.scrollToIndex({ index: 'LAST', align: 'start', behavior })
+        scrollToEnd(behavior)
       }
-    } else if ((atBottomRef.current || following.current) && element) {
+    } else if (!ownLanding && (atBottomRef.current || following.current)) {
       // 바닥에서 마지막 메시지가 자라면(스트리밍 답변·이미지 로드) 따라간다.
       element.scrollTop = element.scrollHeight - element.clientHeight
     }
-  }, [])
+  }, [scrollToEnd])
 
   const onAtBottomStateChange = React.useCallback(
     (atBottom: boolean) => {
@@ -485,6 +506,9 @@ function ChatList<T>({
       if (atBottom) {
         following.current = false
         window.clearTimeout(followingTimer.current)
+        // 붙인 메시지 아래 여백이 뷰포트를 채우므로, 다 올라가면 곧 바닥이다.
+        pinning.current = false
+        window.clearTimeout(pinningTimer.current)
       }
       setListState((state) => ({
         settled: state.settled || atBottom,

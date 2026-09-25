@@ -19,12 +19,28 @@
  *   </PageTransition>
  *
  *  - <PageTransition>   앱 루트에 한 번. 나가는 페이지가 제자리에 머물도록 쉘(relative · z-0 · overflow-x-clip)을 깐다.
+ *                       overflow-x 는 hidden 이 아니라 clip 이어야 한다 — hidden 은 쉘을 스크롤 컨테이너로 만들어
+ *                       스크롤 복원이 엉뚱한 요소를 겨눈다.
  *  - <PageBoundary>     라우트가 소유한 DOM. path = 규칙이 매칭하는 논리 경로, routeKey = DOM 수명(생략 시 path).
- *                       탭바·헤더처럼 살아남는 쉘은 routeKey 를 고정하고, 바뀌는 콘텐츠만 안쪽 경계로 한 번 더 감싼다.
+ *                       key 가 바뀌면 React 가 언마운트·마운트하고 엔진이 그 교체를 전환으로 바꾼다 — 라우터 없이
+ *                       상태값(`const [path, setPath] = useState('/notes')`)으로도 똑같이 돈다.
  *  - <RouteBoundary>    (route-boundary.tsx · CLI 가 라우터를 감지해 설치) 라우터의 pathname 을 대신 읽는 <PageBoundary>.
+ *
+ * 살아남는 쉘(앱바·탭바)은 바깥 경계의 routeKey 를 고정하고 바뀌는 콘텐츠만 안쪽 경계로 감싼다. 이때 안쪽 경계는
+ * **자기만의 positioned 부모**가 필요하다 — 나가는 페이지는 가장 가까운 positioned 조상의 윗변에 absolute 로
+ * 놓이므로, 쉘에 바로 두면 앱바 높이만큼 위로 튄다:
+ *
+ *   <PageBoundary routeKey="tabs" className="flex min-h-full flex-col">
+ *     <AppBar … />
+ *     <div className="relative flex-1">                       ← 안쪽 경계의 자리(positioned)
+ *       <PageBoundary path={pathname} className="min-h-full">{children}</PageBoundary>
+ *     </div>
+ *     <BottomNav … />
+ *   </PageBoundary>
  *
  * 규칙: on/except(계층 진입·이탈) · from/to(정확한 쌍) · ordered(탭 순서). 뒤로가기는 같은 효과를 거꾸로 돈다.
  * 스크롤 위치는 규칙에서 자동으로 복원·초기화된다. `prefers-reduced-motion` 이면 전환 없이 바로 바꾼다.
+ * hero 는 두 페이지의 공유 요소에 `data-hero-exit-key`(출발) / `data-hero-enter-key`(도착) 를 같은 값으로 단다.
  */
 
 import * as React from 'react'

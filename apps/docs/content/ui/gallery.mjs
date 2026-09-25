@@ -48,7 +48,14 @@ export const groups = [
         title: 'Page transition',
         exhibit: 'phone',
         summary:
-          'Pages drill in, rise as sheets and slide between tabs. Your router stays; one boundary marks the page.',
+          'Drill, sheet and hero between the same two screens. One keyed boundary marks the page; your router or plain state drives it.',
+      },
+      {
+        name: 'bottom-sheet',
+        title: 'Bottom sheet',
+        exhibit: 'phone',
+        summary:
+          'Rises from the bottom. Drag the handle down to dismiss; the scrim fades as you pull.',
       },
       {
         name: 'pull-to-refresh',

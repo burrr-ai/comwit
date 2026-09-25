@@ -11,9 +11,13 @@
  *     <RouteBoundary>{children}</RouteBoundary>
  *   </PageTransition>
  *
- *   // 탭바가 살아남는 쉘: 바깥은 routeKey 고정, 안쪽은 바뀌는 콘텐츠만
- *   <RouteBoundary routeKey="tabs">
- *     <RouteBoundary>{children}</RouteBoundary>
+ *   // 탭바가 살아남는 쉘: 바깥은 routeKey 고정, 안쪽은 바뀌는 콘텐츠만.
+ *   // 안쪽 경계는 positioned 부모(relative)가 있어야 나가는 페이지가 제자리에 머문다.
+ *   <RouteBoundary routeKey="tabs" className="flex min-h-full flex-col">
+ *     <AppBar … />
+ *     <div className="relative flex-1">
+ *       <RouteBoundary className="min-h-full">{children}</RouteBoundary>
+ *     </div>
  *     <BottomNav … />
  *   </RouteBoundary>
  *

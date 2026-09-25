@@ -18,6 +18,8 @@ export * as Accordion from './accordion'
 export * as Avatar from './avatar'
 export * as Collapsible from './collapsible'
 export * as Dialog from './dialog'
+// bottom-sheet: Dialog 엔진 + 끌어내려 닫기(드래그 거리·속도 판정 · 안쪽 스크롤 양보). BottomSheet.Root/Trigger/Portal/Overlay/Content/Handle/Title/Description/Close
+export * as BottomSheet from './bottom-sheet'
 export * as DropdownMenu from './dropdown-menu'
 export * as Popover from './popover'
 export * as Select from './select'

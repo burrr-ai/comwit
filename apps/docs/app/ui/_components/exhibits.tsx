@@ -4,8 +4,10 @@ import * as React from 'react'
 import {
   Bell,
   Bookmark,
+  Check,
   ChevronRight,
   Compass,
+  Ellipsis,
   Heart,
   House,
   MapPin,
@@ -15,6 +17,7 @@ import {
   Search,
   Share,
   SignalHigh,
+  SlidersHorizontal,
   Sparkles,
   User,
   Wifi,
@@ -34,11 +37,20 @@ import {
   PageBoundary,
   PageTransition,
   drill,
-  fade,
+  hero,
   sheet,
   slide,
   type PageTransitionConfig,
 } from '@comwit/ui-templates/page-transition'
+import {
+  BottomSheet,
+  BottomSheetClose,
+  BottomSheetContent,
+  BottomSheetDescription,
+  BottomSheetFooter,
+  BottomSheetHeader,
+  BottomSheetTitle,
+} from '@comwit/ui-templates/bottom-sheet'
 import { PullToRefresh } from '@comwit/ui-templates/pull-to-refresh'
 import {
   Chat,
@@ -66,6 +78,10 @@ import { cn } from '@comwit/ui-templates/lib/utils'
 
 /* ── Device ─────────────────────────────────────────────────────────── */
 
+// 폰 화면 요소. 시트·스크림처럼 body 로 포털되는 오버레이가 기기 안에 뜨도록 `container` 로 넘긴다.
+const PhoneScreenContext = React.createContext<HTMLDivElement | null>(null)
+export const usePhoneScreen = () => React.useContext(PhoneScreenContext)
+
 export function PhoneFrame({
   children,
   label,
@@ -75,9 +91,10 @@ export function PhoneFrame({
   label: string
   className?: string
 }) {
+  const [screen, setScreen] = React.useState<HTMLDivElement | null>(null)
   return (
     <div className={cn('phone', className)} role="group" aria-label={label}>
-      <div className="phone-screen">
+      <div ref={setScreen} className="phone-screen">
         <div className="phone-status" aria-hidden="true">
           <span>9:41</span>
           <span className="phone-island" />
@@ -87,7 +104,7 @@ export function PhoneFrame({
             <BatteryFull className="size-4" strokeWidth={2} />
           </span>
         </div>
-        {children}
+        <PhoneScreenContext.Provider value={screen}>{children}</PhoneScreenContext.Provider>
         <div className="phone-home" aria-hidden="true" />
       </div>
     </div>
@@ -131,13 +148,10 @@ function Photo({
   tone,
   className,
   children,
-}: {
-  tone: Tone
-  className?: string
-  children?: React.ReactNode
-}) {
+  ...props
+}: { tone: Tone } & React.ComponentProps<'div'>) {
   return (
-    <div data-tone={tone} className={cn('ui-photo', className)}>
+    <div data-tone={tone} className={cn('ui-photo', className)} {...props}>
       {children}
     </div>
   )
@@ -178,7 +192,7 @@ export function AppBarExhibit() {
         <PhoneScreen resetKey={mode}>
           {mode === 'hero' ? (
             <>
-              <FloatingBackButton onClick={() => toast('Back')} style={{ left: 22, top: 56 }} />
+              <FloatingBackButton onClick={() => toast('Back')} style={{ left: 12, top: 46 }} />
               <Photo tone="sunset" className="h-72 shrink-0" />
             </>
           ) : (
@@ -280,31 +294,47 @@ export function BottomNavExhibit() {
 
 /* ── Page transition ────────────────────────────────────────────────── */
 
-// A state stack stands in for the router: the last entry is the current path.
+// 상태값이 라우터를 대신한다. 세 모드 모두 같은 두 화면(목록 ↔ 상세)을 쓰므로 효과가 그대로 비교된다.
 const EFFECTS = {
-  parallax: { label: 'Drill', make: () => drill() },
-  slide: { label: 'Drill · slide', make: () => drill({ type: 'slide' }) },
-  fade: { label: 'Fade', make: () => fade() },
+  drill: {
+    label: 'Drill',
+    hint: 'Tap a place. It slides in over the list; Back slides it out and the list keeps its scroll.',
+  },
+  sheet: {
+    label: 'Sheet',
+    hint: 'The detail rises as a sheet while the list recedes and blurs behind it.',
+  },
+  hero: {
+    label: 'Hero',
+    hint: 'The photo travels from the row into the detail, and back into its row again.',
+  },
 } as const
 type Effect = keyof typeof EFFECTS
 
+const PLACE_ROWS = [...PLACES, ...PLACES]
+
 export function PageTransitionExhibit() {
-  const [effect, setEffect] = React.useState<Effect>('parallax')
-  const [stack, setStack] = React.useState<string[]>(['/places'])
-  const path = stack[stack.length - 1]
-  const push = (next: string) => setStack((s) => [...s, next])
-  const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
-  // 리뷰 화면은 스택에서 바로 아래의 상세(/places/:i)가 대상이다.
-  const placePath = [...stack].reverse().find((p) => p.startsWith('/places/'))
-  const place = PLACES[Number(placePath?.split('/')[2] ?? 0) % PLACES.length]
+  const [effect, setEffect] = React.useState<Effect>('drill')
+  const [path, setPath] = React.useState('/places')
+  const index = path.startsWith('/places/') ? Number(path.slice('/places/'.length)) : null
+  const place = index === null ? null : PLACE_ROWS[index % PLACE_ROWS.length]
 
   const config = React.useMemo<PageTransitionConfig>(
     () => ({
       transitions: [
-        // list → detail: entering /places/* is forward, leaving is backward
-        { on: '/places/**', except: '/places', transition: EFFECTS[effect].make() },
-        // a temporary task rises over whatever page is underneath
-        { on: '/review', transition: sheet({ type: 'blur' }) },
+        effect === 'hero'
+          ? // the element keyed data-hero-exit-key on the list and data-hero-enter-key on the detail morphs across
+            {
+              from: '/places',
+              to: '/places/*',
+              transition: hero({ type: 'fade', variant: 'smooth' }),
+            }
+          : // list → detail: entering /places/* is forward, leaving is backward
+            {
+              on: '/places/**',
+              except: '/places',
+              transition: effect === 'sheet' ? sheet({ type: 'blur' }) : drill(),
+            },
       ],
     }),
     [effect]
@@ -312,116 +342,6 @@ export function PageTransitionExhibit() {
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <PhoneFrame label="Page transition demo — open a place, write a review, go back">
-        <PhoneScreen resetKey={path} resetScroll={false}>
-          <PageTransition config={config} className="flex min-h-full flex-1 flex-col">
-            {path === '/review' ? (
-              <PageBoundary
-                path="/review"
-                className="flex min-h-full flex-1 flex-col bg-background"
-              >
-                <AppBar behavior="pinned" glass={false}>
-                  <AppBarTitle>Write a review</AppBarTitle>
-                  <AppBarActions>
-                    <AppBarBackButton icon="close" onClick={back} />
-                  </AppBarActions>
-                </AppBar>
-                <div className="flex flex-1 flex-col gap-3 px-4 pb-6">
-                  <p className="text-caption text-muted-foreground">{place.name}</p>
-                  <Textarea placeholder="How was it?" className="min-h-40 flex-1" />
-                  <Button
-                    onClick={() => {
-                      toast.success('Review posted')
-                      back()
-                    }}
-                  >
-                    Post review
-                  </Button>
-                </div>
-              </PageBoundary>
-            ) : path.startsWith('/places/') ? (
-              <PageBoundary path={path} className="flex min-h-full flex-1 flex-col bg-background">
-                <AppBar behavior="reveal">
-                  <AppBarBackButton onClick={back} />
-                  <AppBarTitle>{place.name}</AppBarTitle>
-                  <AppBarActions>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Share"
-                      onClick={() => toast('Link copied')}
-                    >
-                      <Share />
-                    </Button>
-                  </AppBarActions>
-                </AppBar>
-                <Photo tone={place.tone} className="h-56 shrink-0" />
-                <div className="space-y-4 px-5 pt-4 pb-8">
-                  <div>
-                    <h4 className="text-title-lg text-foreground">{place.name}</h4>
-                    <p className="mt-1 flex items-center gap-1 text-caption text-muted-foreground">
-                      <MapPin className="size-3" /> {place.area}
-                    </p>
-                  </div>
-                  <p className="text-body-sm text-soft-foreground">
-                    The page you came from is still there underneath. Go back and the list is
-                    exactly where you left it.
-                  </p>
-                  <Button variant="secondary" className="w-full" onClick={() => push('/review')}>
-                    <PenLine /> Write a review
-                  </Button>
-                  {PLACES.filter((p) => p !== place)
-                    .slice(0, 3)
-                    .map((p) => (
-                      <PlaceRow key={p.name} place={p} />
-                    ))}
-                </div>
-              </PageBoundary>
-            ) : (
-              <PageBoundary
-                path="/places"
-                className="flex min-h-full flex-1 flex-col bg-background"
-              >
-                <AppBar behavior="reveal">
-                  <AppBarTitle size="lg">Places</AppBarTitle>
-                  <AppBarActions>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Write a review"
-                      onClick={() => push('/review')}
-                    >
-                      <PenLine />
-                    </Button>
-                  </AppBarActions>
-                </AppBar>
-                <ul className="px-3 pb-6">
-                  {[...PLACES, ...PLACES].map((p, i) => (
-                    <li key={i}>
-                      <button
-                        type="button"
-                        onClick={() => push(`/places/${i % PLACES.length}`)}
-                        className="flex w-full items-center gap-3 rounded-card px-2 py-2 text-left transition-colors duration-fast hover:bg-accent"
-                      >
-                        <Photo tone={p.tone} className="size-14 shrink-0 rounded-control" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-label font-semibold text-foreground">
-                            {p.name}
-                          </span>
-                          <span className="flex items-center gap-1 text-caption text-muted-foreground">
-                            <MapPin className="size-3" /> {p.area}
-                          </span>
-                        </span>
-                        <ChevronRight className="size-4 shrink-0 text-subtle-foreground" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </PageBoundary>
-            )}
-          </PageTransition>
-        </PhoneScreen>
-      </PhoneFrame>
       <SegmentedControl<Effect>
         aria-label="List to detail effect"
         value={effect}
@@ -431,7 +351,267 @@ export function PageTransitionExhibit() {
           value: key,
         }))}
       />
+      <PhoneFrame label="Page transition demo — open a place, then go back">
+        <PhoneScreen resetKey={path} resetScroll={false}>
+          <PageTransition config={config} className="flex min-h-full flex-1 flex-col">
+            {/* 경계 하나: path 가 React key 이자 라우트 id 다. 바뀌면 옛 페이지가 언마운트되고 엔진이 그 교체를 전환으로 만든다. */}
+            <PageBoundary path={path} className="flex min-h-full flex-1 flex-col bg-background">
+              {place && index !== null ? (
+                <>
+                  {effect === 'sheet' ? (
+                    <AppBar behavior="pinned" glass={false}>
+                      <AppBarTitle>{place.name}</AppBarTitle>
+                      <AppBarActions>
+                        <AppBarBackButton icon="close" onClick={() => setPath('/places')} />
+                      </AppBarActions>
+                    </AppBar>
+                  ) : (
+                    <AppBar behavior="reveal">
+                      <AppBarBackButton onClick={() => setPath('/places')} />
+                      <AppBarTitle>{place.name}</AppBarTitle>
+                      <AppBarActions>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Share"
+                          onClick={() => toast('Link copied')}
+                        >
+                          <Share />
+                        </Button>
+                      </AppBarActions>
+                    </AppBar>
+                  )}
+                  <Photo
+                    tone={place.tone}
+                    className="h-56 shrink-0"
+                    data-hero-enter-key={effect === 'hero' ? `place-${index}` : undefined}
+                  />
+                  <div className="space-y-4 px-5 pt-4 pb-8">
+                    <div>
+                      <h4 className="text-title-lg text-foreground">{place.name}</h4>
+                      <p className="mt-1 flex items-center gap-1 text-caption text-muted-foreground">
+                        <MapPin className="size-3" /> {place.area}
+                      </p>
+                    </div>
+                    <p className="text-body-sm text-soft-foreground">
+                      {effect === 'hero'
+                        ? 'The photo came along from the row. Everything else faded in around it.'
+                        : effect === 'sheet'
+                          ? 'The list is still underneath, dimmed and blurred. Close this and it is exactly where you left it.'
+                          : 'The list you came from is still there underneath. Go back and it is exactly where you left it.'}
+                    </p>
+                    {PLACES.filter((p) => p !== place)
+                      .slice(0, 3)
+                      .map((p) => (
+                        <PlaceRow key={p.name} place={p} />
+                      ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <AppBar behavior="reveal">
+                    <AppBarTitle size="lg">Places</AppBarTitle>
+                  </AppBar>
+                  <ul className="px-3 pb-6">
+                    {PLACE_ROWS.map((p, i) => (
+                      <li key={i}>
+                        <button
+                          type="button"
+                          onClick={() => setPath(`/places/${i}`)}
+                          className="flex w-full items-center gap-3 rounded-card px-2 py-2 text-left transition-colors duration-fast hover:bg-accent"
+                        >
+                          <Photo
+                            tone={p.tone}
+                            className="size-14 shrink-0 rounded-control"
+                            data-hero-exit-key={effect === 'hero' ? `place-${i}` : undefined}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-label font-semibold text-foreground">
+                              {p.name}
+                            </span>
+                            <span className="flex items-center gap-1 text-caption text-muted-foreground">
+                              <MapPin className="size-3" /> {p.area}
+                            </span>
+                          </span>
+                          <ChevronRight className="size-4 shrink-0 text-subtle-foreground" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </PageBoundary>
+          </PageTransition>
+        </PhoneScreen>
+      </PhoneFrame>
+      <p className="max-w-xs text-center text-caption text-muted-foreground">
+        {EFFECTS[effect].hint}
+      </p>
     </div>
+  )
+}
+
+/* ── Bottom sheet ───────────────────────────────────────────────────── */
+
+const AREAS = ['Jeju', 'Seogwipo', 'Udo', 'Hallim']
+const SORTS = ['Closest first', 'Top rated', 'Newest', 'Most saved']
+
+export function BottomSheetExhibit() {
+  return (
+    <div className="flex flex-col items-center gap-5">
+      <PhoneFrame label="Bottom sheet demo — open the filters, then drag the handle down">
+        <BottomSheetScreen />
+      </PhoneFrame>
+      <p className="text-caption text-muted-foreground">
+        Open the filters. Drag the handle down, or tap it, to close.
+      </p>
+    </div>
+  )
+}
+
+/** 시트는 body 가 아니라 폰 화면으로 포털된다 — 스크림도 기기 안에서만 어두워진다. */
+function BottomSheetScreen() {
+  const screen = usePhoneScreen()
+  const [filters, setFilters] = React.useState(false)
+  const [areas, setAreas] = React.useState<string[]>(['Jeju'])
+  const [sort, setSort] = React.useState(SORTS[0])
+  const [actionFor, setActionFor] = React.useState<number | null>(null)
+  const target = actionFor === null ? null : PLACE_ROWS[actionFor % PLACE_ROWS.length]
+  const toggleArea = (area: string) =>
+    setAreas((list) => (list.includes(area) ? list.filter((a) => a !== area) : [...list, area]))
+  return (
+    <>
+      <PhoneScreen>
+        <AppBar behavior="pinned">
+          <AppBarTitle size="lg">Places</AppBarTitle>
+          <AppBarActions>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Filters"
+              onClick={() => setFilters(true)}
+            >
+              <SlidersHorizontal />
+            </Button>
+          </AppBarActions>
+        </AppBar>
+        <div className="flex gap-2 overflow-hidden px-4 pb-3">
+          {AREAS.map((area) => (
+            <Chip
+              key={area}
+              size="sm"
+              selected={areas.includes(area)}
+              onClick={() => toggleArea(area)}
+            >
+              {area}
+            </Chip>
+          ))}
+        </div>
+        <ul className="px-3 pb-6">
+          {PLACE_ROWS.map((p, i) => (
+            <li key={i} className="flex items-center gap-1 rounded-card px-2 py-2">
+              <div className="min-w-0 flex-1">
+                <PlaceRow place={p} />
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`More about ${p.name}`}
+                onClick={() => setActionFor(i)}
+              >
+                <Ellipsis />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </PhoneScreen>
+
+      <BottomSheet open={filters} onOpenChange={setFilters}>
+        <BottomSheetContent container={screen ?? undefined}>
+          <BottomSheetHeader>
+            <BottomSheetTitle>Filters</BottomSheetTitle>
+            <BottomSheetDescription>Drag the handle down to dismiss.</BottomSheetDescription>
+          </BottomSheetHeader>
+          <div className="phone-scroll min-h-0 flex-1 space-y-5 overflow-y-auto px-5 pb-2">
+            <section>
+              <p className="mb-2 text-caption font-semibold text-muted-foreground">Area</p>
+              <div className="flex flex-wrap gap-2">
+                {AREAS.map((area) => (
+                  <Chip
+                    key={area}
+                    size="sm"
+                    selected={areas.includes(area)}
+                    onClick={() => toggleArea(area)}
+                  >
+                    {area}
+                  </Chip>
+                ))}
+              </div>
+            </section>
+            <section>
+              <p className="mb-1 text-caption font-semibold text-muted-foreground">Sort by</p>
+              <ul className="-mx-2">
+                {SORTS.map((option) => (
+                  <li key={option}>
+                    <button
+                      type="button"
+                      onClick={() => setSort(option)}
+                      className="flex w-full items-center justify-between rounded-control px-2 py-2.5 text-left text-label text-foreground transition-colors duration-fast hover:bg-accent"
+                    >
+                      {option}
+                      {option === sort ? <Check className="size-4 text-primary" /> : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+          <BottomSheetFooter>
+            <Button
+              onClick={() => {
+                setFilters(false)
+                toast.success(`${areas.length ? areas.join(', ') : 'Everywhere'} · ${sort}`)
+              }}
+            >
+              Show places
+            </Button>
+          </BottomSheetFooter>
+        </BottomSheetContent>
+      </BottomSheet>
+
+      <BottomSheet open={actionFor !== null} onOpenChange={(open) => !open && setActionFor(null)}>
+        <BottomSheetContent container={screen ?? undefined}>
+          {target ? (
+            <>
+              <BottomSheetHeader>
+                <BottomSheetTitle>{target.name}</BottomSheetTitle>
+                <BottomSheetDescription>{target.area}</BottomSheetDescription>
+              </BottomSheetHeader>
+              <div className="grid gap-1 px-3 pb-4">
+                {(
+                  [
+                    ['Share', Share],
+                    ['Save', Bookmark],
+                    ['Directions', MapPin],
+                  ] as const
+                ).map(([label, Icon]) => (
+                  <BottomSheetClose key={label} asChild>
+                    <Button
+                      variant="ghost"
+                      className="justify-start"
+                      onClick={() => toast(`${label} · ${target.name}`)}
+                    >
+                      <Icon />
+                      {label}
+                    </Button>
+                  </BottomSheetClose>
+                ))}
+              </div>
+            </>
+          ) : null}
+        </BottomSheetContent>
+      </BottomSheet>
+    </>
   )
 }
 
@@ -586,23 +766,35 @@ export function GlassExhibit() {
 
 /* ── Overview hero — the whole shell in one phone ──────────────────── */
 
-// 쉘의 전환 규칙 — 탭은 순서대로 슬라이드, 카드를 열면 상세가 쉘 전체 위로 드릴인.
+// 쉘의 전환 규칙 — 탭은 순서대로 슬라이드, 행을 열면 상세가 쉘 전체 위로 드릴인, 홈의 사진은 hero 로 이어지고,
+// 글쓰기는 시트로 뜬다. 뒤로가기는 각각을 거꾸로 돈다.
 const SHELL_TRANSITIONS: PageTransitionConfig = {
   transitions: [
     { on: '/p/**', transition: drill() },
+    { from: '/home', to: '/photo/*', transition: hero({ type: 'fade', variant: 'smooth' }) },
+    { on: '/compose', transition: sheet({ type: 'blur' }) },
     { ordered: TABS.map((t) => t.value), transition: slide() },
   ],
 }
 
+type ShellScreen = { kind: 'place' | 'photo'; index: number } | { kind: 'compose' } | null
+
 export function AppShellExhibit() {
   const [tab, setTab] = React.useState('/home')
-  const [detail, setDetail] = React.useState<number | null>(null)
+  const [screen, setScreen] = React.useState<ShellScreen>(null)
   const [liked, setLiked] = React.useState(false)
   const current = TABS.find((t) => t.value === tab) ?? TABS[0]
-  const path = detail === null ? tab : `/p/${detail}`
-  const place = detail === null ? null : PLACES[detail % PLACES.length]
+  const path =
+    screen === null
+      ? tab
+      : screen.kind === 'compose'
+        ? '/compose'
+        : `/${screen.kind === 'photo' ? 'photo' : 'p'}/${screen.index}`
+  const place = screen && screen.kind !== 'compose' ? PLACES[screen.index % PLACES.length] : null
+  const back = () => setScreen(null)
+
   return (
-    <PhoneFrame label="Comwit UI app shell — scroll, pull, switch tabs and open a card">
+    <PhoneFrame label="Comwit UI app shell — scroll, pull, switch tabs, open a photo, write a post">
       <PhoneScreen
         resetKey={path}
         resetScroll={false}
@@ -616,11 +808,66 @@ export function AppShellExhibit() {
         }
       >
         <PageTransition config={SHELL_TRANSITIONS} className="flex min-h-full flex-1 flex-col">
-          {place ? (
+          {screen?.kind === 'compose' ? (
+            // 임시 작업 — 시트로 올라오고, 뒤의 쉘은 물러나 흐려진다.
+            <PageBoundary path={path} className="flex min-h-full flex-1 flex-col bg-background">
+              <AppBar behavior="pinned" glass={false}>
+                <AppBarTitle>New post</AppBarTitle>
+                <AppBarActions>
+                  <AppBarBackButton icon="close" onClick={back} />
+                </AppBarActions>
+              </AppBar>
+              <div className="flex flex-1 flex-col gap-3 px-4 pb-6">
+                <Textarea placeholder="Where did you go today?" className="min-h-40 flex-1" />
+                <Button
+                  onClick={() => {
+                    toast.success('Posted')
+                    back()
+                  }}
+                >
+                  Post
+                </Button>
+              </div>
+            </PageBoundary>
+          ) : place && screen?.kind === 'photo' ? (
+            // 홈 카드의 사진이 그대로 이어진다(hero) — 같은 키를 단 요소가 두 페이지를 잇고 나머지는 페이드한다.
+            <PageBoundary path={path} className="flex min-h-full flex-1 flex-col bg-background">
+              <FloatingBackButton onClick={back} style={{ left: 12, top: 46 }} />
+              <Photo
+                tone={place.tone}
+                className="h-72 shrink-0"
+                data-hero-enter-key={`photo-${screen.index}`}
+              />
+              <div className="space-y-4 px-5 pt-4 pb-8">
+                <div>
+                  <h4 className="text-title-lg text-foreground">{place.name}</h4>
+                  <p className="mt-1 flex items-center gap-1 text-caption text-muted-foreground">
+                    <MapPin className="size-3" /> {place.area}
+                  </p>
+                </div>
+                <p className="text-body-sm text-soft-foreground">
+                  The photo travelled here from its card. Go back and it settles into the feed
+                  again.
+                </p>
+                <div className="flex gap-2">
+                  {['Save', 'Directions', 'Hours'].map((c) => (
+                    <Chip key={c} size="sm" onClick={() => toast(c)}>
+                      {c}
+                    </Chip>
+                  ))}
+                </div>
+                {PLACES.filter((p) => p !== place)
+                  .slice(0, 3)
+                  .map((p) => (
+                    <PlaceRow key={p.name} place={p} />
+                  ))}
+              </div>
+            </PageBoundary>
+          ) : place ? (
             // 상세는 탭 쉘 밖의 라우트 — 바깥 경계의 key 가 바뀌어 앱바·탭바까지 함께 드릴인한다.
             <PageBoundary path={path} className="flex min-h-full flex-1 flex-col bg-background">
               <AppBar behavior="reveal">
-                <AppBarBackButton onClick={() => setDetail(null)} />
+                <AppBarBackButton onClick={back} />
                 <AppBarTitle>{place.name}</AppBarTitle>
                 <AppBarActions>
                   <Button
@@ -642,7 +889,7 @@ export function AppShellExhibit() {
                   </p>
                 </div>
                 <p className="text-body-sm text-soft-foreground">
-                  Drilled in over the whole shell. Go back and the feed is still scrolled where you
+                  Drilled in over the whole shell. Go back and the list is still scrolled where you
                   left it.
                 </p>
                 <div className="flex gap-2">
@@ -661,10 +908,23 @@ export function AppShellExhibit() {
             </PageBoundary>
           ) : (
             // 탭 쉘 — routeKey 를 고정해 앱바·탭바는 살아남고, 안쪽 경계만 탭 순서대로 슬라이드한다.
-            <PageBoundary path={path} routeKey="tabs" className="flex min-h-full flex-1 flex-col">
+            // 안쪽 경계는 자기만의 relative 부모 안에 둔다: 나가는 페이지가 거기(앱바 아래)에 머문다.
+            <PageBoundary
+              path={path}
+              routeKey="tabs"
+              className="flex min-h-full flex-1 flex-col bg-background"
+            >
               <AppBar behavior="reveal">
                 <AppBarTitle size="lg">{current.label}</AppBarTitle>
                 <AppBarActions>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="New post"
+                    onClick={() => setScreen({ kind: 'compose' })}
+                  >
+                    <PenLine />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -675,48 +935,81 @@ export function AppShellExhibit() {
                   </Button>
                 </AppBarActions>
               </AppBar>
-              <PageBoundary path={path} className="flex-1 space-y-4 bg-background px-4 pb-4">
-                <div className="flex gap-2 overflow-hidden">
-                  {['For you', 'Nearby', 'Trending'].map((c, i) => (
-                    <Chip key={c} size="sm" selected={i === 0} onClick={() => toast(c)}>
-                      {c}
-                    </Chip>
-                  ))}
-                </div>
-                {PLACES.map((p, i) => (
-                  <div key={i} className="overflow-hidden rounded-card bg-card shadow-card">
-                    <button
-                      type="button"
-                      aria-label={`Open ${p.name}`}
-                      onClick={() => setDetail(i)}
-                      className="block w-full text-left"
-                    >
-                      <Photo
-                        tone={TABS[(TABS.indexOf(current) + i) % TABS.length].tone}
-                        className="h-40"
-                      />
-                    </button>
-                    <div className="flex items-center justify-between gap-3 p-3">
-                      <PlaceRowText place={p} />
-                      <GlassButton
-                        shape="circle"
-                        shadow={false}
-                        aria-label="Like"
-                        aria-pressed={i === 0 && liked}
-                        onClick={() => i === 0 && setLiked((v) => !v)}
-                        className="size-10 shrink-0"
-                      >
-                        <Heart
-                          className={cn(
-                            'size-4',
-                            i === 0 && liked && 'fill-destructive text-destructive'
-                          )}
-                        />
-                      </GlassButton>
-                    </div>
-                  </div>
-                ))}
-              </PageBoundary>
+              <div className="relative flex flex-1 flex-col">
+                <PageBoundary path={path} className="flex-1 space-y-4 bg-background px-4 pb-4">
+                  {tab === '/home' ? (
+                    <>
+                      <div className="flex gap-2 overflow-hidden">
+                        {['For you', 'Nearby', 'Trending'].map((c, i) => (
+                          <Chip key={c} size="sm" selected={i === 0} onClick={() => toast(c)}>
+                            {c}
+                          </Chip>
+                        ))}
+                      </div>
+                      {PLACES.map((p, i) => (
+                        <div key={i} className="overflow-hidden rounded-card bg-card shadow-card">
+                          {/* 사진을 누르면 hero — 이 요소가 상세의 사진으로 이어진다 */}
+                          <button
+                            type="button"
+                            aria-label={`Open photo of ${p.name}`}
+                            onClick={() => setScreen({ kind: 'photo', index: i })}
+                            className="block w-full text-left"
+                          >
+                            <Photo
+                              tone={p.tone}
+                              className="h-40"
+                              data-hero-exit-key={`photo-${i}`}
+                            />
+                          </button>
+                          <div className="flex items-center justify-between gap-3 p-3">
+                            {/* 제목을 누르면 drill — 상세가 쉘 위로 밀려 들어온다 */}
+                            <button
+                              type="button"
+                              onClick={() => setScreen({ kind: 'place', index: i })}
+                              className="min-w-0 flex-1 text-left"
+                            >
+                              <PlaceRowText place={p} />
+                            </button>
+                            <GlassButton
+                              shape="circle"
+                              shadow={false}
+                              aria-label="Like"
+                              aria-pressed={i === 0 && liked}
+                              onClick={() => i === 0 && setLiked((v) => !v)}
+                              className="size-10 shrink-0"
+                            >
+                              <Heart
+                                className={cn(
+                                  'size-4',
+                                  i === 0 && liked && 'fill-destructive text-destructive'
+                                )}
+                              />
+                            </GlassButton>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <ul className="-mx-2">
+                      {(tab === '/explore' ? [...PLACES, ...PLACES] : PLACES.slice(0, 3)).map(
+                        (p, i) => (
+                          <li key={i}>
+                            <button
+                              type="button"
+                              onClick={() => setScreen({ kind: 'place', index: i })}
+                              className="flex w-full items-center gap-3 rounded-card px-2 py-2 text-left transition-colors duration-fast hover:bg-accent"
+                            >
+                              <Photo tone={p.tone} className="size-14 shrink-0 rounded-control" />
+                              <PlaceRowText place={p} />
+                              <ChevronRight className="ml-auto size-4 shrink-0 text-subtle-foreground" />
+                            </button>
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  )}
+                </PageBoundary>
+              </div>
               <BottomNav value={tab} onValueChange={setTab}>
                 {TABS.map((t) => (
                   <BottomNavItem key={t.value} value={t.value} label={t.label} icon={t.icon} />
@@ -956,6 +1249,7 @@ export const EXHIBITS: Record<string, React.ComponentType> = {
   'app-bar': AppBarExhibit,
   'bottom-nav': BottomNavExhibit,
   'page-transition': PageTransitionExhibit,
+  'bottom-sheet': BottomSheetExhibit,
   'pull-to-refresh': PullToRefreshExhibit,
   chat: ChatExhibit,
   glass: GlassExhibit,

@@ -34,6 +34,7 @@
 ## 프리미티브 (요소별)
 
 - **overlay/disclosure (자체 엔진, Radix Primitives 이식)**: accordion · avatar · collapsible · dialog · dropdown-menu · label · popover · select · separator · tabs
+- **bottom-sheet**: dialog 엔진 위에 끌어내려 닫기(거리·속도 판정 · 안쪽 스크롤 양보) — `--sheet-drag` · `--sheet-drag-progress` · `data-dragging` 으로 시각을 넘긴다
 - **form-control (자체 엔진, Radix Primitives 이식)**: checkbox · radio-group · switch
 - **자체 헤드리스 (radix 에 없던 것)**: button(press/ripple) · input(IME-safe, bare) · textarea(IME-safe)
 - **compound (React Aria a11y)**: text-field (= MUI TextField. Root/Label/Control/Description/Error)

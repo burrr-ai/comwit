@@ -67,8 +67,8 @@
   }
 }
 
-/* ── Phone frame — a transformed box, so position:fixed children (floating back button)
-   stay inside the device instead of escaping to the viewport. ── */
+/* ── Phone frame. The screen is a transformed box, so position:fixed children (floating back
+   button, bottom sheet, its scrim) stay inside the device and clip to its corners. ── */
 .phone {
   position: relative;
   width: 300px;
@@ -92,6 +92,7 @@
   border-radius: 38px;
   background: var(--background);
   isolation: isolate;
+  transform: translateZ(0);
 }
 .phone-status {
   position: relative;
@@ -131,11 +132,13 @@
 }
 /* The scroller inside the phone hides its scrollbar like a real device. */
 .phone-screen [data-slot='pull-to-refresh'] > div:last-child,
-.phone-screen [data-slot='chat-messages'] [data-virtuoso-scroller] {
+.phone-screen [data-slot='chat-messages'] [data-virtuoso-scroller],
+.phone-screen [data-slot='bottom-sheet-content'] .phone-scroll {
   scrollbar-width: none;
 }
 .phone-screen [data-slot='pull-to-refresh'] > div:last-child::-webkit-scrollbar,
-.phone-screen [data-slot='chat-messages'] [data-virtuoso-scroller]::-webkit-scrollbar {
+.phone-screen [data-slot='chat-messages'] [data-virtuoso-scroller]::-webkit-scrollbar,
+.phone-screen [data-slot='bottom-sheet-content'] .phone-scroll::-webkit-scrollbar {
   display: none;
 }
 
