@@ -23,7 +23,7 @@ import {
   type ReactNode,
   type Ref,
 } from 'react'
-import { Slot, Slottable, useGlassLens, type GlassLensTexture } from '@comwit/ui'
+import { Slot, useGlassLens, type GlassLensTexture } from '@comwit/ui'
 import { Button } from './button'
 import { cn } from '../../lib/utils'
 
@@ -116,32 +116,30 @@ function GlassSurface({
   const visual = useGlassVisual({ opacity, shape, tint, variant })
 
   return (
-    // Slot 이 자식의 ref 를 유지하면서 우리 ref 도 합친다 — 열릴 때마다 마운트되는 팝오버·다이얼로그 콘텐츠의 렌즈를 그때 만든다.
-    <Slot
-      ref={visual.ref}
-      data-glass={variant}
-      className={cn(
-        'glass',
-        VARIANT_CLASS[variant],
-        visual.hasLens && 'glass-lens',
-        pressed && 'glass-pressed',
-        !shadow && 'glass-shadowless',
-        dense && 'glass-dense',
-        className
-      )}
-      style={visual.style}
-    >
-      <Slottable child={children}>
-        {(inner) => (
-          <>
-            {inner}
-            {visual.hasLens ? (
-              <GlassFilter filterId={visual.filterId} variant={variant} lensMap={visual.lensMap} />
-            ) : null}
-          </>
+    <>
+      {/* Slot 이 자식의 ref 를 유지하면서 우리 ref 도 합친다 — 열릴 때마다 마운트되는 팝오버·다이얼로그 콘텐츠의 렌즈를 그때 만든다. */}
+      <Slot
+        ref={visual.ref}
+        data-glass={variant}
+        className={cn(
+          'glass',
+          VARIANT_CLASS[variant],
+          visual.hasLens && 'glass-lens',
+          pressed && 'glass-pressed',
+          !shadow && 'glass-shadowless',
+          dense && 'glass-dense',
+          className
         )}
-      </Slottable>
-    </Slot>
+        style={visual.style}
+      >
+        {children}
+      </Slot>
+      {/* 렌즈 필터는 면의 형제로 둔다 — 자식이 asChild 로 한 요소에 합쳐지는 파트(오버레이 Content)여도 자식이 하나로 남는다.
+          url(#id) 는 문서 어디의 필터든 가리킨다. 면이 없을 땐(닫힌 서브메뉴 등) 그리지 않는다. */}
+      {visual.hasLens && visual.mounted ? (
+        <GlassFilter filterId={visual.filterId} variant={variant} lensMap={visual.lensMap} />
+      ) : null}
+    </>
   )
 }
 
@@ -222,6 +220,7 @@ function useGlassVisual({
   return {
     filterId,
     hasLens: lens.supported,
+    mounted: element !== null,
     style,
     lensMap: lens.texture,
     ref: setElement as Ref<HTMLElement>,

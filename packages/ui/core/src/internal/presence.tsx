@@ -7,9 +7,43 @@ interface PresenceProps {
   present: boolean
 }
 
+/**
+ * JS 로 열림·닫힘을 그리는 자식(motion 등)과 Presence 사이의 연결. 자식이 등록해 두면 닫힘이 요청돼도
+ * CSS 애니메이션을 기다리는 대신 자식이 onExitComplete 를 부를 때까지 마운트를 유지한다. Portal 과 Content 처럼
+ * Presence 가 겹쳐 있으면 등록·완료 알림이 바깥 Presence 까지 올라간다 — 어느 층도 먼저 언마운트하지 않는다.
+ */
+type PresenceContextValue = {
+  present: boolean
+  register: () => () => void
+  onExitComplete: () => void
+}
+const PresenceContext = React.createContext<PresenceContextValue | null>(null)
+
 const Presence: React.FC<PresenceProps> = (props) => {
   const { present, children } = props
+  const parent = React.useContext(PresenceContext)
   const presence = usePresence(present)
+  const { exitRegistry, exitComplete } = presence
+  const parentRegister = parent?.register
+  const parentExitComplete = parent?.onExitComplete
+
+  // 등록·완료 함수는 present 와 무관하게 같은 참조로 둔다 — 열고 닫을 때마다 자식이 등록을 풀었다 걸지 않게.
+  const register = React.useCallback(() => {
+    exitRegistry.current += 1
+    const unregisterParent = parentRegister?.()
+    return () => {
+      exitRegistry.current -= 1
+      unregisterParent?.()
+    }
+  }, [exitRegistry, parentRegister])
+  const onExitComplete = React.useCallback(() => {
+    exitComplete()
+    parentExitComplete?.()
+  }, [exitComplete, parentExitComplete])
+  const context = React.useMemo<PresenceContextValue>(
+    () => ({ present, register, onExitComplete }),
+    [present, register, onExitComplete]
+  )
 
   const child = (
     typeof children === 'function'
@@ -19,10 +53,46 @@ const Presence: React.FC<PresenceProps> = (props) => {
 
   const ref = useStableComposedRefs(presence.ref, getElementRef(child))
   const forceMount = typeof children === 'function'
-  return forceMount || presence.isPresent ? React.cloneElement(child, { ref }) : null
+  return forceMount || presence.isPresent ? (
+    <PresenceContext.Provider value={context}>
+      {React.cloneElement(child, { ref })}
+    </PresenceContext.Provider>
+  ) : null
 }
 
 Presence.displayName = 'Presence'
+
+/* -------------------------------------------------------------------------------------------------
+ * usePresenceExit — 공개 훅
+ * -----------------------------------------------------------------------------------------------*/
+
+const NOOP = () => {}
+
+/**
+ * 오버레이 파트(Dialog · Popover · DropdownMenu · Select 의 Content/Overlay) 안에서 열림·닫힘을 JS 애니메이션
+ * 라이브러리로 그릴 때 쓴다. 이 훅을 부른 컴포넌트가 마운트되어 있는 동안에는 닫힘이 요청돼도 파트가 바로
+ * 사라지지 않고, `onExitComplete()` 가 불릴 때까지 남는다.
+ *
+ *   const { present, onExitComplete } = usePresenceExit()
+ *   <motion.div
+ *     initial="hidden"
+ *     animate={present ? 'visible' : 'hidden'}
+ *     onAnimationComplete={(name) => name === 'hidden' && onExitComplete()}
+ *   />
+ *
+ * `present` 는 요청된 상태다 — 닫힘이 요청되면 아직 마운트되어 있어도 false. 닫히는 도중 다시 열리면 true 로
+ * 돌아오고 파트는 그대로 남는다. Presence 밖에서 부르면 늘 `present: true` 다.
+ */
+function usePresenceExit(): { present: boolean; onExitComplete: () => void } {
+  const context = React.useContext(PresenceContext)
+  const register = context?.register
+  // 레이아웃 단계에서 등록한다 — Presence 가 닫힘 요청을 판단하는 것도 레이아웃 단계다.
+  useLayoutEffect(() => register?.(), [register])
+  return {
+    present: context?.present ?? true,
+    onExitComplete: context?.onExitComplete ?? NOOP,
+  }
+}
 
 /* -------------------------------------------------------------------------------------------------
  * usePresence
@@ -34,6 +104,8 @@ function usePresence(present: boolean) {
   const prevPresentRef = React.useRef(present)
   const prevAnimationNameRef = React.useRef<string>('none')
   const mountAnimationNameRef = React.useRef<string | undefined>(undefined)
+  /** usePresenceExit 로 등록한 자식 수. 0 보다 크면 닫힘을 JS 가 그린다. */
+  const exitRegistry = React.useRef(0)
   const initialState = present ? 'mounted' : 'unmounted'
   const [state, send] = useStateMachine(initialState, {
     mounted: {
@@ -81,6 +153,9 @@ function usePresence(present: boolean) {
         // CSSStyleDeclaration, avoiding a forced style recalculation.
         mountAnimationNameRef.current = currentAnimationName
         send('MOUNT')
+      } else if (exitRegistry.current > 0 && wasPresent) {
+        // JS 애니메이션이 닫힘을 그린다 — 등록한 자식이 onExitComplete 를 부를 때까지 남는다.
+        send('ANIMATION_OUT')
       } else if (currentAnimationName === 'none' || styles?.display === 'none') {
         // If there is no exit animation or the element is hidden, animations won't run
         // so we unmount instantly
@@ -170,6 +245,8 @@ function usePresence(present: boolean) {
 
   return {
     isPresent: ['mounted', 'unmountSuspended'].includes(state),
+    exitRegistry,
+    exitComplete: React.useCallback(() => send('ANIMATION_END'), [send]),
     ref: React.useCallback((node: HTMLElement) => {
       if (node) {
         const styles = getComputedStyle(node)
@@ -278,6 +355,7 @@ const Root = Presence
 
 export {
   Presence,
+  usePresenceExit,
   //
   Root,
 }

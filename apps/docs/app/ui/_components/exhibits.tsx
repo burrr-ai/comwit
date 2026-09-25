@@ -400,7 +400,7 @@ const UTILITIES = [
 
 function CollectionsTab({ onOpen }: { onOpen: (collection: Collection) => void }) {
   return (
-    <div className="space-y-4 px-4 py-4">
+    <div className="space-y-4 px-gutter py-4">
       <div className="grid grid-cols-2 gap-3">
         {UTILITIES.map(([label, Icon]) => (
           <button
@@ -445,7 +445,7 @@ const TOOLS = [
 
 function CreateTab({ onCollage }: { onCollage: () => void }) {
   return (
-    <div className="space-y-6 px-4 py-4">
+    <div className="space-y-6 px-gutter py-4">
       <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-card bg-linear-to-br from-[#8E5BE8] via-[#7B5BE8] to-[#5F76F5]">
         <span className="rounded-pill bg-white/95 px-5 py-2 text-label font-semibold text-black shadow-raised">
           Create
@@ -606,7 +606,7 @@ function CollagePage({ onClose }: { onClose: () => void }) {
           </Button>
         </AppBarActions>
       </AppBar>
-      <div className="px-4">
+      <div className="px-gutter">
         <p className="text-center text-caption text-muted-foreground">Select 1–6 photos</p>
         <div className="mt-3 flex h-11 items-center gap-2 rounded-pill bg-muted px-4 text-label text-muted-foreground">
           <Search className="size-4" aria-hidden="true" />
@@ -995,7 +995,7 @@ export function BottomNavExhibit() {
           ) : tab === '/create' ? (
             <CreateTab onCollage={() => toast('Collage')} />
           ) : (
-            <div className="space-y-4 px-4 py-4">
+            <div className="space-y-4 px-gutter py-4">
               <div className="flex h-11 items-center gap-2 rounded-pill bg-muted px-4 text-label text-muted-foreground">
                 <Search className="size-4" aria-hidden="true" />
                 Search your photos
@@ -1063,7 +1063,7 @@ export function PullToRefreshExhibit() {
             </Button>
           </AppBarActions>
         </AppBar>
-        <p className="px-4 pt-1 pb-2 text-title-sm text-foreground">Today</p>
+        <p className="px-gutter pt-1 pb-2 text-title-sm text-foreground">Today</p>
         <div className="grid grid-cols-3 gap-[2px] bg-background pb-8">
           {photos.map((p) => (
             <div

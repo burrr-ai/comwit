@@ -415,9 +415,6 @@ importers:
       lucide-react:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.4)
-      motion:
-        specifier: ^12.23.24
-        version: 12.43.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       overlay-kit:
         specifier: ^1.9.0
         version: 1.9.0(react@19.2.4)

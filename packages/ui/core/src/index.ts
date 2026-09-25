@@ -31,6 +31,10 @@ export * as Switch from './switch'
 
 // Slot 은 단일 컴포넌트라 평면 export
 export * from './slot'
+// 오버레이 파트의 열림·닫힘 애니메이션 — usePresenceAnimation 은 내장 Web Animations API 로 그리고,
+// usePresenceExit 는 다른 엔진을 쓸 때 닫힘 애니메이션이 끝날 때까지 언마운트를 미루는 저수준 훅이다
+export * from './presence-animation'
+export { usePresenceExit } from './internal/presence'
 
 // 자체 헤드리스 컴포넌트 프리미티브(radix 에 없어 직접 구현) — 단일 컴포넌트라 평면 export
 export * from './input' // Input (bare, IME-safe · InputBase 대응)

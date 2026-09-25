@@ -11,7 +11,6 @@ export const credits = {
   '@ssgoi/react': { label: 'SSGOI', href: 'https://ssgoi.dev' },
   sonner: { label: 'Sonner', href: 'https://sonner.emilkowal.ski' },
   'overlay-kit': { label: 'overlay-kit', href: 'https://overlay-kit.slash.page' },
-  motion: { label: 'Motion', href: 'https://motion.dev' },
   '@tiptap/react': { label: 'Tiptap', href: 'https://tiptap.dev' },
   '@tanstack/react-table': { label: 'TanStack Table', href: 'https://tanstack.com/table' },
   'react-day-picker': { label: 'React DayPicker', href: 'https://daypicker.dev' },
@@ -120,7 +119,8 @@ export const groups = [
       {
         name: 'toast',
         title: 'Toast',
-        summary: 'Glass toasts. Top of the screen on phones, bottom right on desktop.',
+        summary:
+          'Glass toasts, one surface for every status. Full width at the top on phones, top right on desktop.',
       },
       {
         name: 'popup',
