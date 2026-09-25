@@ -47,7 +47,9 @@ function AppBar({
       behavior={behavior}
       data-slot="app-bar"
       className={cn(
-        'box-content isolate z-appbar flex h-appbar items-center bg-transparent',
+        // shrink-0: 페이지가 높이가 정해진 flex 열이면 앱바가 콘텐츠 높이(36px)까지 눌린다 — 그러면 나가는 페이지가
+        // absolute 가 되는 순간 56px 로 돌아와 그 차이만큼 내용이 튄다. 크롬은 절대 눌리지 않는다.
+        'box-content isolate z-appbar flex h-appbar shrink-0 items-center bg-transparent',
         'pt-[env(safe-area-inset-top)] pr-[max(0.75rem,env(safe-area-inset-right))] pl-[max(0.75rem,env(safe-area-inset-left))]',
         behavior === 'flow' ? 'relative' : 'sticky top-0',
         behavior === 'reveal' &&

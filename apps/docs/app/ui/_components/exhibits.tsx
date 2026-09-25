@@ -185,7 +185,7 @@ function useMiniRouter(initial: string) {
 /**
  * 폰 안의 앱 쉘: 스크롤러 + 전환 프로바이더 + 라우트 경계 하나. 여러 페이지가 있다는 전제로 만든 공통 골격이다 —
  * `path` 가 바뀌면 경계(key)가 바뀌고, 나가는 페이지는 엔진이 붙잡아 애니메이션한다. 앱바는 페이지 안에 있어
- * 페이지와 함께 움직인다. 살아남는 탭 쉘은 `routeKey` 를 고정하고 안쪽에 경계를 하나 더 둔다.
+ * 페이지와 함께 움직인다. 살아남는 탭 쉘은 `routeKey` 를 고정하고 안쪽에 경계를 하나 더 두되, 쉘에는 탭바만 남긴다.
  */
 function MobileShell({
   label,
@@ -1044,8 +1044,8 @@ function PlacePage({ place, onBack }: { place: (typeof PLACES)[number]; onBack: 
   )
 }
 
-// 탭 쉘 — 앱바·탭바는 살아남고, 안쪽 경계만 탭 순서대로 슬라이드한다.
-// 안쪽 경계는 자기만의 relative 부모 안에 둔다: 나가는 페이지가 거기(앱바 아래)에 머문다.
+// 탭 쉘 — 탭바만 살아남고, 페이지(앱바 포함)가 탭 순서대로 슬라이드한다. 앱바는 페이지 안에 있으니 페이지와
+// 함께 움직이고, 안쪽 경계 위에는 아무것도 없어 나가는 페이지가 정확히 제자리에 머문다.
 function TabsLayout({
   tab,
   onTabChange,
@@ -1066,24 +1066,24 @@ function TabsLayout({
   const current = TABS.find((t) => t.value === tab) ?? TABS[0]
   return (
     <>
-      <AppBar behavior="reveal">
-        <AppBarTitle size="lg">{current.label}</AppBarTitle>
-        <AppBarActions>
-          <Button variant="ghost" size="icon" aria-label="New post" onClick={onCompose}>
-            <PenLine />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Notifications"
-            onClick={() => toast('No new notifications')}
-          >
-            <Bell />
-          </Button>
-        </AppBarActions>
-      </AppBar>
-      <div className="relative flex flex-1 flex-col">
-        <PageBoundary path={tab} className="flex-1 space-y-4 bg-background px-4 pb-4">
+      <PageBoundary path={tab} className="flex min-h-full flex-1 flex-col bg-background">
+        <AppBar behavior="reveal">
+          <AppBarTitle size="lg">{current.label}</AppBarTitle>
+          <AppBarActions>
+            <Button variant="ghost" size="icon" aria-label="New post" onClick={onCompose}>
+              <PenLine />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Notifications"
+              onClick={() => toast('No new notifications')}
+            >
+              <Bell />
+            </Button>
+          </AppBarActions>
+        </AppBar>
+        <div className="flex-1 space-y-4 px-4 pb-4">
           {tab === '/home' ? (
             <>
               <div className="flex gap-2 overflow-x-clip">
@@ -1146,8 +1146,8 @@ function TabsLayout({
               ))}
             </ul>
           )}
-        </PageBoundary>
-      </div>
+        </div>
+      </PageBoundary>
       <BottomNav value={tab} onValueChange={onTabChange}>
         {TABS.map((t) => (
           <BottomNavItem key={t.value} value={t.value} label={t.label} icon={t.icon} />

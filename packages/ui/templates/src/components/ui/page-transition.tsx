@@ -26,17 +26,19 @@
  *                       상태값(`const [path, setPath] = useState('/notes')`)으로도 똑같이 돈다.
  *  - <RouteBoundary>    (route-boundary.tsx · CLI 가 라우터를 감지해 설치) 라우터의 pathname 을 대신 읽는 <PageBoundary>.
  *
- * 살아남는 쉘(앱바·탭바)은 바깥 경계의 routeKey 를 고정하고 바뀌는 콘텐츠만 안쪽 경계로 감싼다. 이때 안쪽 경계는
- * **자기만의 positioned 부모**가 필요하다 — 나가는 페이지는 가장 가까운 positioned 조상의 윗변에 absolute 로
- * 놓이므로, 쉘에 바로 두면 앱바 높이만큼 위로 튄다:
+ * 앱바는 페이지 안(경계 안)에 둔다 — 페이지와 함께 움직이는 것이 앱의 감각이다. 살아남는 쉘은 탭바처럼 페이지
+ * **아래**에 오는 것만 갖고, 바깥 경계의 routeKey 를 고정한 채 안쪽 경계가 페이지를 바꾼다:
  *
  *   <PageBoundary routeKey="tabs" className="flex min-h-full flex-col">
- *     <AppBar … />
- *     <div className="relative flex-1">                       ← 안쪽 경계의 자리(positioned)
- *       <PageBoundary path={pathname} className="min-h-full">{children}</PageBoundary>
- *     </div>
+ *     <PageBoundary path={pathname} className="flex-1">      ← 페이지(앱바 포함)
+ *       <AppBar … />
+ *       {children}
+ *     </PageBoundary>
  *     <BottomNav … />
  *   </PageBoundary>
+ *
+ * 나가는 페이지는 가장 가까운 positioned 조상의 윗변에 absolute 로 놓이므로, 안쪽 경계 위에 다른 크롬을 두는
+ * 구조라면 그 경계를 `relative` 부모로 감싸야 제자리에 머문다.
  *
  * 규칙: on/except(계층 진입·이탈) · from/to(정확한 쌍) · ordered(탭 순서). 뒤로가기는 같은 효과를 거꾸로 돈다.
  * 스크롤 위치는 규칙에서 자동으로 복원·초기화된다. `prefers-reduced-motion` 이면 전환 없이 바로 바꾼다.

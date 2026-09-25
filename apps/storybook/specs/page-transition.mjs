@@ -198,7 +198,7 @@ return (
       {
         name: 'Tabs',
         description:
-          'A persistent shell: the outer boundary keeps a fixed routeKey so the app bar and bottom nav survive, and only the inner boundary swaps. The inner one sits in its own relative parent, otherwise the leaving page jumps to the top of the shell. ordered + slide(): the tab order decides the direction.',
+          'A persistent shell: the outer boundary keeps a fixed routeKey so the bottom nav survives, and the inner boundary swaps the page. The app bar belongs to the page, so it slides with it, and nothing sits above the inner boundary, so the leaving page stays exactly where it was. ordered + slide(): the tab order decides the direction.',
         renderFn: `const TABS = [
   { value: '/home', label: 'Home', icon: <House /> },
   { value: '/explore', label: 'Explore', icon: <Compass /> },
@@ -210,16 +210,16 @@ return (
   <div className="h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
     <PageTransition config={transitions} className="flex min-h-full flex-col">
       <PageBoundary path={tab} routeKey="tabs" className="flex min-h-full flex-1 flex-col bg-background">
-        <AppBar behavior="flow" glass={false}>
-          <AppBarTitle size="lg">{current.label}</AppBarTitle>
-        </AppBar>
-        <div className="relative flex flex-1 flex-col">
-          <PageBoundary path={tab} className="flex-1 space-y-3 bg-background px-4 pb-4">
+        <PageBoundary path={tab} className="flex-1 bg-background">
+          <AppBar behavior="flow" glass={false}>
+            <AppBarTitle size="lg">{current.label}</AppBarTitle>
+          </AppBar>
+          <div className="space-y-3 px-4 pb-4">
             {Array.from({ length: 4 }, (_, i) => (
               <div key={i} className="h-16 rounded-control bg-muted" />
             ))}
-          </PageBoundary>
-        </div>
+          </div>
+        </PageBoundary>
         <BottomNav value={tab} onValueChange={setTab}>
           {TABS.map((t) => (
             <BottomNavItem key={t.value} value={t.value} label={t.label} icon={t.icon} />
