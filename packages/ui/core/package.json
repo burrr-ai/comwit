@@ -11,7 +11,7 @@
   ],
   "homepage": "https://library.comwit.io/ui",
   "license": "MIT",
-  "author": "meursyphus",
+  "author": "burrr-ai",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {

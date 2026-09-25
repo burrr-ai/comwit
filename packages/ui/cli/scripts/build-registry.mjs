@@ -125,7 +125,7 @@ for (const it of items) {
 }
 const index = {
   name: 'comwit',
-  homepage: 'https://github.com/meursyphus/comwit-ui',
+  homepage: 'https://github.com/burrr-ai/comwit',
   items: items.map(({ files, ...meta }) => meta),
 }
 writeFileSync(join(outDir, 'index.json'), JSON.stringify(index, null, 2))
