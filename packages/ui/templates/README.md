@@ -7,6 +7,11 @@ Tailwind 토큰 + `cva` variant 로 **시각만** 입힌 컴포넌트.
 소스를 내 프로젝트로 가져와 **소유·수정**한다". 단 **shadcn 툴엔 의존하지 않는다**. 설치는 comwit 자체 CLI
 **[`comwit-ui`](../cli)** 로 한다(수동 복붙 아님 — shadcn 처럼 CLI 를 배포한다).
 
+핵심은 **큐레이션 킷**이다 — UI 구성에 필요한 역할마다 최적화된 라이브러리를 고르고(페이지 전환 ssgoi ·
+토스트 sonner · 팝업 overlay-kit · 스프링 motion · 에디터 tiptap · 테이블 TanStack Table · 달력 react-day-picker ·
+폼 react-hook-form), **중성 이름**과 한 벌의 토큰으로 감싸 소스로 설치한다. 라이브러리 자체는 npm 의존성으로
+깔리고, 래퍼는 내 코드가 된다. docs 의 컴포넌트 카드마다 "Built on …" 으로 원 라이브러리에 링크한다.
+
 ## 설치
 
 ```bash
@@ -26,12 +31,13 @@ CLI 명령/플래그/`comwit.json`/동작 방식 상세는 **[`comwit-ui` README
 ## 프로바이더 배선
 
 `popup.confirm/alert/sheet` 는 [overlay-kit](https://overlay-kit.slash.page/), 토스트는
-[sonner](https://sonner.emilkowal.ski/) 를 쓴다. 앱 루트에 한 번 마운트한다:
+[sonner](https://sonner.emilkowal.ski/) 위에 우리 유리 `<Toast>` 를 꽂는다(`toast.tsx` 의 `toast()` 로 부른다 —
+sonner 의 toast 를 직접 부르면 기본 스킨으로 뜬다). 앱 루트에 한 번 마운트한다:
 
 ```tsx
 'use client'
 import { OverlayProvider } from 'overlay-kit'
-import { Toaster } from '@/components/ui/sonner' // sonner 컴포넌트도 add 대상
+import { Toaster } from '@/components/ui/toast' // toast 컴포넌트도 add 대상
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -42,6 +48,28 @@ export function Providers({ children }: { children: React.ReactNode }) {
   )
 }
 ```
+
+## 페이지 전환
+
+`page-transition` 은 라우터를 바꾸지 않고 라우트 전환에 네이티브 앱 모션(드릴 · 시트 · 슬라이드 …)을 입힌다.
+엔진은 [`@ssgoi/react`](https://ssgoi.dev) 이고, 이름은 전부 중성적이다 — `PageTransition`(프로바이더) ·
+`PageBoundary`(라우트가 소유한 DOM 경계) · `RouteBoundary`(라우터의 pathname 을 대신 읽는 경계).
+
+`comwit-ui add page-transition` 이 `package.json` 에서 라우터를 감지해 `route-boundary.tsx` 구현체를 고른다
+(`next` → App Router · `react-router(-dom)` · `@tanstack/react-router` · 그 외 → `path` prop 을 받는 generic).
+`--router <name>` 으로 직접 지정할 수 있다. 소스는 `src/routers/route-boundary.<variant>.tsx`.
+
+```tsx
+// app/layout.tsx — 라우팅되는 영역을 한 번 감싼다
+<PageTransition
+  config={{ transitions: [{ on: '/posts/**', except: '/posts', transition: drill() }] }}
+>
+  <RouteBoundary>{children}</RouteBoundary>
+</PageTransition>
+```
+
+탭바가 살아남는 쉘은 바깥 `RouteBoundary` 에 `routeKey` 를 고정하고 바뀌는 콘텐츠만 안쪽 경계로 감싼다.
+규칙(`on/except` · `from/to` · `ordered`)·프리셋 옵션·스크롤 복원·트러블슈팅은 엔진 문서 [ssgoi.dev](https://ssgoi.dev/docs) 를 그대로 따른다(설정 모양이 같고 컴포넌트 이름만 다르다).
 
 ## 사용
 
@@ -60,9 +88,9 @@ import { Button } from '@/components/ui/button' // CLI 가 복사한 경로
 
 docs 갤러리와 같은 묶음 — 컴윗 특화 UX 가 먼저, 기본형이 마지막.
 
-- **모바일 앱** — app-bar · bottom-nav · pull-to-refresh · drag-scroller
-- **유리** — glass(`Glass` · `GlassSurface` · `GlassButton`) · dropdown-menu · popover
-- **알림** — sonner(토스트) · `lib/popup`(confirm · alert · sheet) · alert · empty-state
+- **모바일 앱** — app-bar · bottom-nav · page-transition(+ route-boundary) · pull-to-refresh · drag-scroller
+- **유리** — glass(`Glass` · `GlassSurface` · `GlassButton`) · dropdown-menu · popover · (dialog · sheet · popup · 토스트도 같은 굴절 유리 — 스크림 위라 `dense`)
+- **알림** — toast(`Toaster` · `toast()` · `Toast`) · `lib/popup`(confirm · alert · sheet) · alert · empty-state
 - **피커** — date-picker · time-picker · month-picker (데스크톱 팝오버 · 모바일 바텀시트) · calendar
 - **선택** — segmented-control · chip · checkbox · radio-group · pager
 - **폼·데이터** — text-field · autocomplete · select · form · data-table · editor

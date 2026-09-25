@@ -6,6 +6,8 @@ title: Installation
 
 Bring the component source into your project. Edit it like the rest of your code.
 
+Comwit UI is a curated kit: for each job in an app's UI it picks a proven library (page transitions, toasts, overlays, rich text, tables, dates, forms), wraps it under a neutral name and one design system, and installs the wrapper as source you own. Every component card in the [gallery](/ui/components) links to the library behind it.
+
 ## Set up
 
 Start with a React project using Tailwind CSS v4. In Next.js, use the App Router.
@@ -33,7 +35,35 @@ The copied files belong to your project. `@comwit/ui` supplies the underlying be
 
 ## Providers
 
-For imperative dialogs/sheets, mount `OverlayProvider` from `overlay-kit` once in a client provider. For toast notifications, install `sonner` with the CLI and mount the copied `Toaster` component once. Ordinary buttons and inputs need neither provider.
+For imperative dialogs/sheets, mount `OverlayProvider` from [overlay-kit](https://overlay-kit.slash.page) once in a client provider. For toast notifications, install `toast` with the CLI, mount the copied `Toaster` component once and call its `toast()`; it renders a glass toast through [Sonner](https://sonner.emilkowal.ski). Ordinary buttons and inputs need neither provider.
+
+## Page transitions
+
+`page-transition` installs the provider, a route boundary for your router and the presets (`drill`, `sheet`, `slide`, `axis`, `zoom`, `hero`, `fade`) as plain component source, the same way as any other component. Wrap the routed area once:
+
+```tsx
+'use client'
+
+import { PageTransition, drill, sheet } from '@/components/ui/page-transition'
+import { RouteBoundary } from '@/components/ui/route-boundary'
+
+const transitions = {
+  transitions: [
+    { on: '/posts/**', except: '/posts', transition: drill() },
+    { on: '/compose', transition: sheet({ type: 'blur' }) },
+  ],
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <PageTransition config={transitions}>
+      <RouteBoundary>{children}</RouteBoundary>
+    </PageTransition>
+  )
+}
+```
+
+The CLI reads `package.json` and installs the `RouteBoundary` for Next.js, React Router or TanStack Router; pass `--router` to choose, or use the generic one and hand it your router's pathname. Rules, every preset, persistent layouts and troubleshooting are documented by [SSGOI](https://ssgoi.dev/docs), the engine behind it. The [gallery](/ui/components#page-transition) shows drill, sheet and tab slides live.
 
 ## Customize
 

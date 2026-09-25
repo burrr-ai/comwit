@@ -52,6 +52,13 @@ function parseArgs(argv) {
 function loadIndex() {
   return JSON.parse(readFileSync(join(REGISTRY_DIR, 'index.json'), 'utf8'))
 }
+// 옛 이름 → 지금 이름. 템플릿 이름은 중성적으로 간다(엔진 브랜드가 아니라 역할).
+const ALIASES = { sonner: 'toast' }
+function canonical(name) {
+  const to = ALIASES[name]
+  if (to) log(c.dim(`  '${name}' 은(는) 이제 '${to}' 입니다.`))
+  return to ?? name
+}
 function loadItem(name) {
   const p = join(REGISTRY_DIR, `${name}.json`)
   if (!existsSync(p)) die(`레지스트리에 '${name}' 이(가) 없습니다. \`comwit list\` 로 확인하세요.`)
@@ -61,7 +68,8 @@ function loadItem(name) {
 function resolveItems(names) {
   const seen = new Set()
   const ordered = []
-  const visit = (name) => {
+  const visit = (raw) => {
+    const name = canonical(raw)
     if (seen.has(name)) return
     seen.add(name)
     const item = loadItem(name)
@@ -133,6 +141,54 @@ function writeFileSafe(abs, content, { overwrite, dry }) {
   return existed ? 'overwrite' : 'write'
 }
 
+// ── 라우터 감지 (route-boundary 변형 선택) ───────────────────────────────
+// 변형 이름은 registry 의 variants 키와 같다: nextjs · react-router · tanstack-router · generic.
+const ROUTER_PACKAGES = [
+  ['nextjs', ['next']],
+  ['tanstack-router', ['@tanstack/react-router']],
+  ['react-router', ['react-router', 'react-router-dom']],
+]
+function projectDeps(cwd) {
+  const p = join(cwd, 'package.json')
+  if (!existsSync(p)) return {}
+  try {
+    const pkg = JSON.parse(readFileSync(p, 'utf8'))
+    return { ...pkg.dependencies, ...pkg.devDependencies }
+  } catch {
+    return {}
+  }
+}
+function detectRouter(cwd) {
+  const deps = projectDeps(cwd)
+  for (const [variant, pkgs] of ROUTER_PACKAGES) if (pkgs.some((n) => n in deps)) return variant
+  return 'generic'
+}
+/** variants 가 있는 아이템의 content/deps 를 감지된(또는 --router 로 지정한) 변형으로 바꾼다. */
+function applyVariant(item, cwd, flags) {
+  if (!item.variants) return { item, variant: null }
+  const names = Object.keys(item.variants)
+  const variant = flags.router ?? detectRouter(cwd)
+  if (!names.includes(variant))
+    die(`'${item.name}' 에 '${variant}' 변형이 없습니다. 가능: ${names.join(' · ')}`)
+  const v = item.variants[variant]
+  let content = v.content
+  // React Router 6 는 react-router-dom 만 설치돼 있을 수 있다 — 그쪽에서 import 한다.
+  if (variant === 'react-router') {
+    const deps = projectDeps(cwd)
+    if ('react-router-dom' in deps && !('react-router' in deps))
+      content = content.replace(/from (['"])react-router\1/g, 'from $1react-router-dom$1')
+  }
+  return {
+    variant,
+    item: {
+      ...item,
+      dependencies: v.dependencies,
+      registryDependencies: v.registryDependencies,
+      files: item.files.map((f, i) => (i === 0 ? { ...f, content } : f)),
+    },
+  }
+}
+
 // ── package manager ────────────────────────────────────────────────────
 function detectPM(cwd) {
   if (existsSync(join(cwd, 'pnpm-lock.yaml'))) return 'pnpm'
@@ -169,6 +225,9 @@ function cmdList() {
   for (const t of ['ui', 'lib', 'hook', 'theme']) {
     if (byType[t]) log(`  ${c.cyan(t.padEnd(5))} ${byType[t].sort().join(' ')}`)
   }
+  for (const it of idx.items)
+    if (it.variants)
+      log(c.dim(`  ${it.name}: 라우터 감지 변형 ${it.variants.join(' · ')} (--router 로 지정)`))
 }
 
 function cmdInit(flags) {
@@ -262,7 +321,8 @@ function cmdAdd(names, flags) {
   const items = resolveItems(names)
   const deps = new Set()
   log(c.bold(`add: ${names.join(', ')}`) + c.dim(`  (해석된 ${items.length} 아이템)`))
-  for (const item of items) {
+  for (const raw of items) {
+    const { item, variant } = applyVariant(raw, cwd, flags)
     for (const d of item.dependencies || []) deps.add(d)
     for (const f of item.files) {
       const rel = targetPath(f.path, cfg)
@@ -270,8 +330,9 @@ function cmdAdd(names, flags) {
       const content = f.path.endsWith('.css') ? f.content : rewriteImports(f.content, cfg)
       const r = writeFileSafe(abs, content, { overwrite, dry })
       const mark = r === 'skip' ? c.yellow('•') : c.green('✔')
+      const tag = variant ? c.cyan(` (${variant}${flags.router ? '' : ' 감지'})`) : ''
       log(
-        `  ${mark} ${rel}${r === 'skip' ? c.dim(' (존재, 건너뜀 — --overwrite)') : r === 'overwrite' ? c.dim(' (덮어씀)') : ''}`
+        `  ${mark} ${rel}${tag}${r === 'skip' ? c.dim(' (존재, 건너뜀 — --overwrite)') : r === 'overwrite' ? c.dim(' (덮어씀)') : ''}`
       )
     }
   }
@@ -304,7 +365,8 @@ switch (cmd) {
   ${c.cyan('comwit-ui add <name...>')}   컴포넌트 + 의존 설치
   ${c.cyan('comwit-ui list')}            설치 가능한 컴포넌트 목록
 
-  플래그: --cwd <dir>  --overwrite  --dry  --no-install  --css <path>`)
+  플래그: --cwd <dir>  --overwrite  --dry  --no-install  --css <path>
+          --router <nextjs|react-router|tanstack-router|generic>  (route-boundary 변형 — 기본은 package.json 에서 감지)`)
     break
   default:
     die(`알 수 없는 명령: ${cmd}. \`comwit-ui help\` 참고.`)

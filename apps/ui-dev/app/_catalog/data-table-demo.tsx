@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { toast } from 'sonner'
+import { toast } from '@comwit/ui-templates/toast'
 import { Search } from 'lucide-react'
 import { DataTable, type ColumnDef, type QueryData } from '@comwit/ui-templates/data-table'
 import { Chip } from '@comwit/ui-templates/chip'

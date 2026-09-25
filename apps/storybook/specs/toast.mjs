@@ -1,12 +1,15 @@
 export const specs = [
   {
     title: 'Toast',
-    slug: 'sonner',
-    covers: ['sonner'],
+    slug: 'toast',
+    covers: ['toast'],
     // The Toaster is already mounted globally (Storybook preview decorator / docs providers),
-    // so these stories only call toast() from a button.
-    imports: [{ from: '@comwit/ui-templates/button', names: ['Button'] }],
-    extraImports: [`import { toast } from 'sonner'`],
+    // so these stories only call toast() from a button. toast() renders the glass <Toast>
+    // through sonner; calling sonner's own toast() would show its default skin instead.
+    imports: [
+      { from: '@comwit/ui-templates/toast', names: ['toast'] },
+      { from: '@comwit/ui-templates/button', names: ['Button'] },
+    ],
     stories: [
       {
         name: 'Default',
@@ -102,12 +105,13 @@ export const specs = [
       },
       {
         name: 'WithAction',
-        description: 'An action button, e.g. undo after a destructive change.',
+        description: 'An action button, e.g. undo after a destructive change, and a close button.',
         render: `<Button
   variant="outline"
   onClick={() =>
     toast('Conversation archived', {
       description: 'You can find it later in Archive.',
+      closeButton: true,
       action: { label: 'Undo', onClick: () => toast.success('Conversation restored') },
     })
   }

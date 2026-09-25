@@ -821,6 +821,31 @@
     box-shadow: none;
   }
 
+  /* 스크림 위에 뜨는 유리(다이얼로그·시트·팝업) — 뒤가 어두워지므로 틴트를 오버레이 면 색으로, 불투명도를 올려
+     본문·폼이 읽히게 한다. 가장자리 굴절·블러·광택은 그대로. @supports 의 .glass-morphing 값 뒤에 와야 이긴다. */
+  .glass-dense {
+    --glass-tint: var(--popover);
+    --glass-opacity: 0.8;
+    /* 변수로 두는 이유: 토스트의 :focus-visible 처럼 unlayered 에서 링을 덧대야 하는 곳이 같은 값을 읽는다 */
+    --glass-dense-shadow:
+      inset 0 1px 0 var(--glass-sheen), inset 0 -1px 1px var(--glass-shade), var(--elevation-3);
+    box-shadow: var(--glass-dense-shadow);
+  }
+
+  /* 유리 토스트의 상태 틴트 — 아이콘이 상태를 말하고, 면은 상태 틴트를 살짝만 섞는다 */
+  .comwit-toaster [data-slot='toast'][data-type='success'] {
+    --glass-tint: color-mix(in srgb, var(--success-surface) 45%, var(--popover));
+  }
+  .comwit-toaster [data-slot='toast'][data-type='error'] {
+    --glass-tint: color-mix(in srgb, var(--destructive-surface) 45%, var(--popover));
+  }
+  .comwit-toaster [data-slot='toast'][data-type='warning'] {
+    --glass-tint: color-mix(in srgb, var(--warning-surface) 45%, var(--popover));
+  }
+  .comwit-toaster [data-slot='toast'][data-type='info'] {
+    --glass-tint: color-mix(in srgb, var(--info-surface) 45%, var(--popover));
+  }
+
   /* 유리 메뉴 행 — hover·포커스에도 굴절 면이 비쳐 보이게 채움 대신 글자색으로 표시한다 */
   .glass-morphing [data-glass-item] {
     transition:
@@ -1041,63 +1066,24 @@
   }
 }
 
-/* ── 토스트(sonner) — sonner 기본 CSS 는 런타임에 unlayered 로 들어오므로 같은 unlayered 규칙에서 덮는다.
-   유리 면 + 시트 반경 + 목적형 타입. 색은 Toaster 가 style 로 주입하는 --normal-bg 등이 담당한다. ── */
+/* ── 토스트 — 면은 toast.tsx 의 <Toast>(GlassSurface · 굴절 유리)가 그린다. sonner 는 위치·스택·스와이프·타이머만 맡고,
+   그 <li> 래퍼(sonner 의 unlayered 기본 CSS)에 필요한 최소 규칙만 같은 unlayered 로 둔다. ── */
 .comwit-toaster[data-sonner-toaster] {
   font-family: var(--font-sans);
 }
-.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
-  gap: 10px;
-  min-height: 56px;
-  padding: 11px 14px;
-  border-width: 1px;
+.comwit-toaster[data-sonner-toaster] [data-sonner-toast] {
   border-radius: var(--radius-sheet);
-  background-clip: padding-box;
-  box-shadow:
-    inset 0 1px 0 var(--glass-sheen),
-    0 1px 4px rgba(16, 24, 40, 0.05),
-    0 14px 34px rgba(11, 46, 107, 0.11);
-  -webkit-backdrop-filter: blur(24px) saturate(185%);
-  backdrop-filter: blur(24px) saturate(185%);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
-  letter-spacing: var(--text-label--letter-spacing);
 }
 .comwit-toaster[data-sonner-toaster] [data-sonner-toast]:focus-visible {
-  box-shadow:
-    inset 0 1px 0 var(--glass-sheen),
-    0 1px 4px rgba(16, 24, 40, 0.05),
-    0 14px 34px rgba(11, 46, 107, 0.11),
-    0 0 0 2px color-mix(in srgb, var(--brand) 28%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 40%, transparent);
 }
-.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-icon] {
-  width: 28px;
-  height: 28px;
-  margin: 0;
+/* 접힌 스택 — 뒤 토스트는 유리 가장자리만 남기고 내용을 숨긴다(sonner 가 styled 모드에서 해주던 것) */
+.comwit-toaster[data-sonner-toaster] [data-slot='toast'] > * {
+  transition: opacity 400ms;
 }
-.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-content] {
-  gap: 3px;
-}
-.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-title] {
-  font-weight: var(--weight-semibold);
-  line-height: 1.4;
-}
-.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-description] {
-  color: inherit;
-  font-size: var(--text-caption);
-  line-height: var(--text-caption--line-height);
-  opacity: 0.86;
-}
-.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button] {
-  height: 30px;
-  padding-inline: 12px;
-  border-radius: var(--radius-pill);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: var(--text-caption);
-  font-weight: var(--weight-semibold);
-}
-.comwit-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-cancel] {
-  background: var(--surface-subtle);
-  color: var(--ink-soft);
+.comwit-toaster[data-sonner-toaster]
+  [data-sonner-toast][data-expanded='false'][data-front='false']
+  [data-slot='toast']
+  > * {
+  opacity: 0;
 }

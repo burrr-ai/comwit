@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from '../components/ui/dialog'
 import { Button } from '../components/ui/button'
+import { GlassSurface } from '../components/ui/glass'
 import {
   Sheet,
   SheetContent,
@@ -73,15 +74,18 @@ function PopupShell({
               forceMount
               className="pointer-events-none fixed inset-0 z-modal grid place-items-center"
             >
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="bg-popover text-popover-foreground pointer-events-auto grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-card border border-border p-6 shadow-card-hover sm:max-w-lg"
-              >
-                {children}
-              </motion.div>
+              {/* dialog.tsx 와 같은 스크림 위 굴절 유리(dense) */}
+              <GlassSurface variant="morphing" shape="panel" dense>
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="text-popover-foreground pointer-events-auto grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-card p-6 sm:max-w-lg"
+                >
+                  {children}
+                </motion.div>
+              </GlassSurface>
             </DialogPrimitive.Content>
           )}
         </AnimatePresence>
@@ -211,7 +215,7 @@ function sheet<T = void>(
           <SheetContent
             side="bottom"
             style={{ maxWidth }}
-            className="mx-auto gap-0 rounded-t-3xl border-0 bg-popover px-5 pb-8 pt-5"
+            className="mx-auto gap-0 rounded-t-3xl px-5 pb-8 pt-5"
           >
             <SheetHeader className="p-0">
               <SheetTitle className="text-title-md text-foreground">{title}</SheetTitle>
