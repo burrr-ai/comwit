@@ -48,7 +48,7 @@ export const groups = [
         title: 'Page transition',
         exhibit: 'phone',
         summary:
-          'Drill or sheet between the same two screens. One keyed boundary marks the page; your router or plain state drives it.',
+          'Hero, zoom, drill or fade from the photo grid into the photo. One keyed boundary marks the page; your router or plain state drives it.',
       },
       {
         name: 'bottom-sheet',

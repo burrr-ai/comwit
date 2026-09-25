@@ -9,7 +9,7 @@ export const specs = [
     imports: [
       {
         from: '@comwit/ui-templates/page-transition',
-        names: ['PageTransition', 'PageBoundary', 'drill', 'sheet', 'slide'],
+        names: ['PageTransition', 'PageBoundary', 'drill', 'sheet', 'zoom', 'slide'],
       },
       {
         from: '@comwit/ui-templates/app-bar',
@@ -34,10 +34,20 @@ const transitions = {
     { on: '/notes/**', except: '/notes', transition: drill() },
     // a temporary task rises over the page and blurs it
     { on: '/compose', transition: sheet({ type: 'blur' }) },
+    // a tile expands into the photo it opens
+    { from: '/photos', to: '/photos/*', transition: zoom({ type: 'expand' }) },
     // tabs slide by their order; the shell around them stays put
     { ordered: ['/home', '/explore', '/me'], transition: slide() },
   ],
 }`,
+      `const PHOTOS = [
+  { id: 'peak', tone: 'from-amber-300 to-rose-500' },
+  { id: 'beach', tone: 'from-sky-300 to-blue-700' },
+  { id: 'forest', tone: 'from-lime-300 to-teal-700' },
+  { id: 'market', tone: 'from-pink-300 to-indigo-800' },
+  { id: 'dunes', tone: 'from-orange-200 to-amber-600' },
+  { id: 'cliffs', tone: 'from-slate-400 to-slate-800' },
+]`,
     ],
     stories: [
       {
@@ -125,6 +135,49 @@ return (
                 </li>
               ))}
             </ul>
+          </>
+        )}
+      </PageBoundary>
+    </PageTransition>
+  </div>
+)`,
+      },
+      {
+        name: 'Zoom',
+        description:
+          'zoom({ type: "expand" }): the tile you tap expands into the page. Mark the tile with data-zoom-exit-key and the photo with data-zoom-enter-key, same value on both.',
+        renderFn: `const [path, setPath] = React.useState('/photos')
+const photo = PHOTOS.find((p) => '/photos/' + p.id === path)
+return (
+  <div className="h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
+    <PageTransition config={transitions} className="min-h-full">
+      <PageBoundary path={path} className="min-h-full bg-background">
+        {photo ? (
+          <>
+            <div data-zoom-enter-key={photo.id} className={'aspect-square w-full bg-linear-to-br ' + photo.tone} />
+            <div className="flex items-center gap-2 px-4 py-3">
+              <AppBarBackButton onClick={() => setPath('/photos')} />
+              <span className="text-title-md text-foreground capitalize">{photo.id}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <AppBar behavior="pinned">
+              <AppBarTitle size="lg">Photos</AppBarTitle>
+            </AppBar>
+            <div className="grid grid-cols-3 gap-0.5">
+              {PHOTOS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-label={'Open ' + p.id}
+                  onClick={() => setPath('/photos/' + p.id)}
+                  className="aspect-square"
+                >
+                  <div data-zoom-exit-key={p.id} className={'h-full w-full bg-linear-to-br ' + p.tone} />
+                </button>
+              ))}
+            </div>
           </>
         )}
       </PageBoundary>
