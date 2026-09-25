@@ -1,6 +1,6 @@
 {
   "name": "@comwit/ui-templates",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "Comwit UI templates \u2014 copy-paste styled components (shadcn-inspired ownership model, no shadcn tooling) built on the @comwit/ui headless engine.",
   "keywords": [
     "react",
