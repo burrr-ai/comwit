@@ -4,7 +4,8 @@
 //   · 예시:   storybook specs/*.mjs → 라이브 예시 모듈 + 복붙 코드
 //   · 소스/deps/CLI/파트: packages/ui/cli/registry/*.json
 //   · 토큰:   packages/ui/templates/src/styles/globals.css (:root / .dark)
-// 산출: app/ui/_generated/{catalog.ts, examples/<name>.tsx, examples/index.tsx}
+//   · llms:   content/ui/llms-template.txt 에 갤러리 카탈로그를 끼워 넣는다
+// 산출: app/ui/_generated/{catalog.ts, examples/<name>.tsx, examples/index.tsx}, public/ui/llms.txt
 // ─────────────────────────────────────────────────────────────────────────
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, rmSync, existsSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -368,6 +369,28 @@ export const tokenMap: Record<string, string[]> = ${JSON.stringify(tokenMap, nul
 
 export const byName: Record<string, Component> = Object.fromEntries(components.map((c) => [c.name, c]))
 `
+)
+
+/* ── 8. public/ui/llms.txt — 설치 + 용도 카탈로그만. 사용법 상세는 설치 가이드와 복사된 소스가 맡는다. ── */
+const catalogText = groups
+  .map((g) => {
+    const lines = components
+      .filter((c) => c.group === g.id)
+      .map((c) => {
+        const from =
+          c.importFrom === `@/components/ui/${c.name}` ? '' : ` Import from ${c.importFrom}.`
+        const built = c.credits.length
+          ? ` Built on ${c.credits.map((cr) => cr.label).join(' and ')}.`
+          : ''
+        return `- ${c.name}: ${c.summary}${from}${built}`
+      })
+    return [`### ${g.title}`, g.blurb, ...lines].join('\n')
+  })
+  .join('\n\n')
+const llmsTemplate = readFileSync(join(docsRoot, 'content', 'ui', 'llms-template.txt'), 'utf8')
+writeFileSync(
+  join(docsRoot, 'public', 'ui', 'llms.txt'),
+  llmsTemplate.replace('{{components}}', catalogText)
 )
 
 console.log(

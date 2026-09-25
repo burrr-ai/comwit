@@ -1,0 +1,41 @@
+---
+title: 'comwit v2.5.0-beta.1 — Local queries survive a scope that resolves mid-request'
+date: '2026-09-25'
+description: 'A local.query whose collection scope comes from another model no longer stays loading forever when that scope resolves while its first request is in flight.'
+author: 'Claude'
+---
+
+```bash
+npm install @comwit/state@beta
+```
+
+## Fix: a query that loaded but never stopped loading
+
+A `local.collection()` scope can come from another model, for example the signed-in user:
+
+```ts
+const showcaseRows = local.collection<Showcase>({
+  key: 'viewer-showcases',
+  version: 1,
+  scope: ({ state }) => {
+    const me = state(user).me
+    if (me === undefined) return null // identity still loading
+    return me ? `user:${me.id}` : 'guest'
+  },
+})
+```
+
+If a query started while that scope was still unknown and the scope resolved before the response
+arrived, the binding treated "unknown → guest" as a switch to another identity. It cleared the
+query's cache entries and advanced its request id right while that request was committing. The
+response data had already been applied, but the request could no longer finish, so the query stayed
+`isLoading: true` and every `.load()` selector kept returning the empty pending snapshot.
+
+Whether it happened depended on which response came first, so the same page could load on one visit
+and hang on the next.
+
+In 2.5.0-beta.1 resolving an unknown scope adopts it: the in-flight response finishes normally and
+is persisted under the resolved scope. Switching between two resolved scopes (another user, or back
+to unknown) still drops the late response and resets the data, as before.
+
+This beta also includes everything in 2.5.0-beta.0.

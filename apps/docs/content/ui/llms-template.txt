@@ -1,0 +1,40 @@
+# Comwit UI
+
+Styled React components that the comwit-ui CLI copies into your project as source, on top of the headless @comwit/ui engine. Behavior (gestures, scroll rules, focus, keyboard, IME) lives in @comwit/ui; the copied files compose its parts and apply the design tokens, so restyling them never breaks behavior. Where a proven library already does the job, a component wraps it under a neutral name and installs it as an npm dependency (noted below). Independent of Comwit State.
+
+## Install
+
+Requires React 18 or 19 and Tailwind CSS v4 (Next.js: App Router).
+
+```bash
+npx comwit-ui@latest init
+npx comwit-ui@latest add button dialog input
+```
+
+init creates comwit.json, wires comwit-tokens.css and installs the base dependencies. add copies each component, plus the components and lib/* files it uses, into components/ui and lib (aliases in comwit.json), then installs its npm dependencies. Existing files are skipped: --overwrite replaces local edits, --dry previews, --no-install skips npm.
+
+```tsx
+'use client'
+import { Button } from '@/components/ui/button'
+```
+
+- The copied file is the API reference: read it for parts and props, and edit it directly.
+- Import from the copied files, never from @comwit/ui-templates. ScrollChromeProvider, useScrollChrome, useMobile and useMobileDevice come from @comwit/ui.
+- Set the --font-pretendard variable on <html> (for example with next/font/local), or components fall back to the system font.
+- Mount once: the copied Toaster for toast (then call toast() from '@/components/ui/toast', not sonner's), OverlayProvider from overlay-kit for popup, ScrollChromeProvider around the scroller for app-bar and bottom-nav, PageTransition with RouteBoundary around the routed content for page-transition.
+- Style with the token utilities (bg-primary, text-muted-foreground, rounded-card …), not hardcoded colors, and merge classes with cn() from lib/utils; a plain twMerge drops token utilities. Keep your own global element rules inside @layer base. Theme by overriding the CSS variables; dark mode is the .dark class.
+
+## Components
+
+Add any of them by name: npx comwit-ui@latest add <name>. The gallery shows each one live with copyable code.
+
+{{components}}
+
+## More
+
+- Installation guide, with page transitions, bottom sheet and chat in depth: https://library.comwit.io/ui/docs/installation
+- Components gallery: https://library.comwit.io/ui/components
+- Tokens and theming: https://library.comwit.io/ui/theming
+- Headless primitives (@comwit/ui without the styled files): https://library.comwit.io/ui/docs/primitives
+- Page transition rules and presets (SSGOI, same config shape): https://ssgoi.dev/llms.txt
+- State (separate library): https://library.comwit.io/state/llms.txt
