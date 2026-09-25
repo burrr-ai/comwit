@@ -934,16 +934,13 @@ export function BottomSheetExhibit() {
 
 /* ── App bar ────────────────────────────────────────────────────────── */
 
-type BarMode = AppBarBehavior | 'hero'
-
 export function AppBarExhibit() {
-  const [mode, setMode] = React.useState<BarMode>('reveal')
-  const places = collectionById('col-place')
+  const [mode, setMode] = React.useState<AppBarBehavior>('reveal')
   return (
     <PhoneStage
       label="App bar demo — scroll inside the phone"
       footer={
-        <SegmentedControl<BarMode>
+        <SegmentedControl<AppBarBehavior>
           aria-label="App bar behavior"
           value={mode}
           onValueChange={setMode}
@@ -951,22 +948,21 @@ export function AppBarExhibit() {
             { label: 'Reveal', value: 'reveal' },
             { label: 'Pinned', value: 'pinned' },
             { label: 'Flow', value: 'flow' },
-            { label: 'Hero', value: 'hero' },
           ]}
         />
       }
     >
       <PhoneScreen resetKey={mode}>
-        {mode === 'hero' ? (
-          <PhotoDetailPage photo={photoById('ph-003')} onBack={() => toast('Back')} />
-        ) : (
-          <CollectionDetailPage
-            collection={places}
-            behavior={mode}
-            onBack={() => toast('Back')}
+        {/* 라이브러리 전체 — 화면보다 길어야 앱바가 스크롤을 따라 숨었다 돌아오는 게 보인다. */}
+        <TopAppBar behavior={mode} />
+        <p className="px-gutter pt-1 pb-2 text-title-sm text-foreground">Today</p>
+        <div className="pb-8">
+          <PhotoGrid
+            photos={PHOTOS}
+            keyed={false}
             onOpen={(p) => toast(p.description ?? p.takenAt)}
           />
-        )}
+        </div>
       </PhoneScreen>
     </PhoneStage>
   )

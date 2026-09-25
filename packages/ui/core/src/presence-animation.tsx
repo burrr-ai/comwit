@@ -5,7 +5,7 @@
  *
  * 오버레이 파트(Dialog · Popover · DropdownMenu · Select · BottomSheet 의 Content/Overlay)가 들어오고 나가는 움직임을
  * 스프링으로 풀고 브라우저 내장 Web Animations API(`element.animate`)로 재생한다. 첫 열림부터 돌고, 닫힘이 요청되면
- * 파트는 닫힘 스프링이 멎을 때까지 남는다(Presence 가 기다린다 — usePresenceExit).
+ * 파트는 닫힘 스프링이 멎을 때까지 남는다(Presence 가 기다린다). 공개하는 건 이 훅 하나다 — 적분기와 재생은 내부다.
  *
  *   const ref = usePresenceAnimation<HTMLDivElement>({
  *     // 진행도 t: 0 = 닫힘, 1 = 열림. 스프링이 t 를 움직이고, 매 프레임의 모습이 키프레임이 된다.
@@ -18,7 +18,8 @@
  *  - 진행도는 스프링 적분기로 60fps 프레임에 굽고, 그 프레임들을 키프레임으로 넘긴다 — 재생은 합성기가 한다.
  *  - 도중에 방향이 바뀌면 지금 재생 중인 프레임의 **위치와 속도**를 읽어 반대 목표로 다시 굽는다. 속도가 이어지므로
  *    닫히다 다시 열리는 움직임이 멈칫하지 않는다.
- *  - 첫 열림은 브라우저가 한 번 그린 뒤에 시계를 돌린다 — 마운트 직후의 무거운 작업이 앞부분을 삼키지 않게.
+ *  - 시작 시각은 WAAPI 가 정한다 — 첫 프레임이 실제로 그려질 때 출발하고(pending play), transform · opacity 는
+ *    합성기에서 돌아 그 뒤 메인 스레드가 바빠도(렌즈 맵 생성 등) 끊기지 않는다. 프레임 루프는 따로 없다.
  *  - 끝난 뒤에도 마지막 모습을 유지한다(fill: both) — 파트 자신의 위치는 translate 같은 개별 속성으로 둔다.
  *  - 시스템이 동작 줄이기면 열린 모습(style(1))에 머문 채 투명도만 짧게 바꾼다.
  *  - 모습 · 스프링 값은 소비처(템플릿)의 몫이다 — 여기엔 값이 없다.
@@ -112,18 +113,6 @@ function usePresenceAnimation<T extends Element = HTMLElement>(
     const animation = node.animate(keyframes, { duration: total, easing: 'linear', fill: 'both' })
     runRef.current = { animation, frames }
 
-    // 첫 열림은 한 번 그려진 뒤에 출발한다(닫힌 모습으로 멈춰 있다가). 뒤집힌 재생은 바로 이어간다.
-    let hold = 0
-    if (!previous) {
-      animation.pause()
-      const view = node.ownerDocument.defaultView ?? window
-      hold = view.requestAnimationFrame(() => {
-        hold = view.requestAnimationFrame(() => {
-          if (runRef.current?.animation === animation) animation.play()
-        })
-      })
-    }
-
     if (!present) {
       animation.finished.then(
         () => {
@@ -131,9 +120,6 @@ function usePresenceAnimation<T extends Element = HTMLElement>(
         },
         () => {} // 다시 열려서 취소됐다 — 새 재생이 이어받는다.
       )
-    }
-    return () => {
-      if (hold) (node.ownerDocument.defaultView ?? window).cancelAnimationFrame(hold)
     }
   }, [node, present])
 

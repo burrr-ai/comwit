@@ -194,6 +194,13 @@ const DropdownMenuContent = React.forwardRef<DropdownMenuContentElement, Dropdow
           event.preventDefault()
         })}
         onInteractOutside={composeEventHandlers(props.onInteractOutside, (event) => {
+          // 트리거 누름은 바깥이 아니다 — 트리거가 스스로 열고 닫는다. 닫히는 애니메이션 도중 다시 누르면
+          // 트리거가 연 것을 이 레이어가 곧바로 다시 닫아 버리지 않게(열려 있을 땐 바깥 포인터가 막혀 여기까지 오지 않는다).
+          const target = event.target as Node | null
+          if (target && context.triggerRef.current?.contains(target)) {
+            event.preventDefault()
+            return
+          }
           const originalEvent = event.detail.originalEvent as PointerEvent
           const ctrlLeftClick = originalEvent.button === 0 && originalEvent.ctrlKey === true
           const isRightClick = originalEvent.button === 2 || ctrlLeftClick

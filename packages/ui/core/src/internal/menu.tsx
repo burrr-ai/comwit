@@ -270,11 +270,24 @@ interface MenuRootContentTypeProps extends Omit<
   keyof MenuContentImplPrivateProps
 > {}
 
+/**
+ * 닫히는 애니메이션 도중 다시 열리면 파트는 새로 마운트되지 않는다 — 마운트 때(onMountAutoFocus)처럼
+ * 콘텐츠에 포커스를 돌려 키보드가 다시 메뉴 안에서 움직이게 한다.
+ */
+function useFocusOnReopen(ref: React.RefObject<HTMLElement | null>, open: boolean) {
+  const wasOpenRef = React.useRef(open)
+  React.useEffect(() => {
+    if (open && !wasOpenRef.current) ref.current?.focus({ preventScroll: true })
+    wasOpenRef.current = open
+  }, [ref, open])
+}
+
 const MenuRootContentModal = React.forwardRef<MenuRootContentTypeElement, MenuRootContentTypeProps>(
   (props: ScopedProps<MenuRootContentTypeProps>, forwardedRef) => {
     const context = useMenuContext(CONTENT_NAME, props.__scopeMenu)
     const ref = React.useRef<MenuRootContentTypeElement>(null)
     const composedRefs = useComposedRefs(forwardedRef, ref)
+    useFocusOnReopen(ref, context.open)
 
     // Hide everything from ARIA except the `MenuContent`
     React.useEffect(() => {
@@ -311,10 +324,13 @@ const MenuRootContentNonModal = React.forwardRef<
   MenuRootContentTypeProps
 >((props: ScopedProps<MenuRootContentTypeProps>, forwardedRef) => {
   const context = useMenuContext(CONTENT_NAME, props.__scopeMenu)
+  const ref = React.useRef<MenuRootContentTypeElement>(null)
+  const composedRefs = useComposedRefs(forwardedRef, ref)
+  useFocusOnReopen(ref, context.open)
   return (
     <MenuContentImpl
       {...props}
-      ref={forwardedRef}
+      ref={composedRefs}
       trapFocus={false}
       disableOutsidePointerEvents={false}
       disableOutsideScroll={false}
