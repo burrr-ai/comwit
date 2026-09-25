@@ -7,6 +7,11 @@ Tailwind 토큰 + `cva` variant 로 **시각만** 입힌 컴포넌트.
 소스를 내 프로젝트로 가져와 **소유·수정**한다". 단 **shadcn 툴엔 의존하지 않는다**. 설치는 comwit 자체 CLI
 **[`comwit-ui`](../cli)** 로 한다(수동 복붙 아님 — shadcn 처럼 CLI 를 배포한다).
 
+핵심은 **큐레이션 킷**이다 — UI 구성에 필요한 역할마다 최적화된 라이브러리를 고르고(페이지 전환 ssgoi ·
+토스트 sonner · 팝업 overlay-kit · 스프링 motion · 에디터 tiptap · 테이블 TanStack Table · 달력 react-day-picker ·
+폼 react-hook-form), **중성 이름**과 한 벌의 토큰으로 감싸 소스로 설치한다. 라이브러리 자체는 npm 의존성으로
+깔리고, 래퍼는 내 코드가 된다. docs 의 컴포넌트 카드마다 "Built on …" 으로 원 라이브러리에 링크한다.
+
 ## 설치
 
 ```bash

@@ -1,6 +1,6 @@
 # Comwit UI — implementation guide
 
-Comwit UI provides headless behavior (@comwit/ui) and editable component source installed into a React project by the comwit-ui CLI. The default look is the Comwit design system: warm white, deep ink, a blue brand (#3182f6), Pretendard, and refractive glass. It is independent of Comwit State.
+Comwit UI provides headless behavior (@comwit/ui) and editable component source installed into a React project by the comwit-ui CLI. It is a curated kit: for each job it wraps a proven library under a neutral name (page transitions on SSGOI, toasts on Sonner, popups on overlay-kit, springs on Motion, rich text on Tiptap, tables on TanStack Table, dates on React DayPicker, forms on React Hook Form) and installs the wrapper as source the project owns; the library itself is an npm dependency. The default look is the Comwit design system: warm white, deep ink, a blue brand (#3182f6), Pretendard, and refractive glass. It is independent of Comwit State.
 
 ## Install
 
