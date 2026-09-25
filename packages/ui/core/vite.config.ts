@@ -10,8 +10,9 @@ import dts from 'vite-plugin-dts'
 // and @floating-ui/react-dom is a real dependency used by our ported popper.
 // @tiptap/* powers the rich-text engine (useRichTextEditor) — keep it external
 // so tiptap is not bundled into @comwit/ui dist (consumers/templates own it).
+// react-virtuoso powers Chat.List the same way.
 const external =
-  /^react($|\/)|^react-dom($|\/)|^@floating-ui\/|^react-aria($|\/)|^react-stately($|\/)|^@react-aria\/|^@tiptap\//
+  /^react($|\/)|^react-dom($|\/)|^@floating-ui\/|^react-aria($|\/)|^react-stately($|\/)|^@react-aria\/|^@tiptap\/|^react-virtuoso($|\/)/
 
 export default defineConfig({
   plugins: [react(), dts({ insertTypesEntry: true })],

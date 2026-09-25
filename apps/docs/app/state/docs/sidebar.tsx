@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useId, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useId, useRef, useState } from 'react'
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
 import { BookOpenTextIcon } from '@phosphor-icons/react/dist/csr/BookOpenText'
 import { BracketsCurlyIcon } from '@phosphor-icons/react/dist/csr/BracketsCurly'
 import { FileCodeIcon } from '@phosphor-icons/react/dist/csr/FileCode'
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight'
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
+import { ListIcon } from '@phosphor-icons/react/dist/csr/List'
 import { RobotIcon } from '@phosphor-icons/react/dist/csr/Robot'
 import { CompassIcon } from '@phosphor-icons/react/dist/csr/Compass'
 import type { DocMeta } from '@/lib/mdx'
@@ -135,7 +136,7 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
             <div className="docs-nav-intro">{intro.map((doc) => docLink(doc, true))}</div>
           )}
           {sections.map(({ title, docs }) => {
-            const SectionIcon = title === 'API' ? BracketsCurlyIcon : CompassIcon
+            const SectionIcon = title === 'Guide' ? CompassIcon : BracketsCurlyIcon
             return (
               <section className="docs-nav-section" key={title}>
                 <h3>
@@ -161,19 +162,40 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
   )
 }
 
+/** 좁은 화면의 내비 — 헤더의 메뉴 버튼이 열고, 헤더 바로 아래 패널로 뜬다. */
+const MobileNavContext = createContext<{ open: boolean; setOpen: (open: boolean) => void }>({
+  open: false,
+  setOpen: () => undefined,
+})
+
+export function MobileNavProvider({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return <MobileNavContext.Provider value={{ open, setOpen }}>{children}</MobileNavContext.Provider>
+}
+
+export function MobileNavButton() {
+  const { open, setOpen } = useContext(MobileNavContext)
+  return (
+    <button
+      type="button"
+      className="docs-menu-button"
+      aria-label={open ? 'Close documentation menu' : 'Open documentation menu'}
+      aria-expanded={open}
+      aria-controls="docs-mobile-nav"
+      onClick={() => setOpen(!open)}
+    >
+      {open ? <XIcon size={22} aria-hidden="true" /> : <ListIcon size={22} aria-hidden="true" />}
+    </button>
+  )
+}
+
 export function DocsSidebar(props: SidebarProps) {
-  const mobileMenu = useRef<HTMLDetailsElement>(null)
+  const { open, setOpen } = useContext(MobileNavContext)
   return (
     <>
-      <details className="docs-mobile-nav" ref={mobileMenu}>
-        <summary>Browse documentation</summary>
-        <Navigation
-          {...props}
-          onNavigate={() => {
-            if (mobileMenu.current) mobileMenu.current.open = false
-          }}
-        />
-      </details>
+      <div id="docs-mobile-nav" className="docs-mobile-nav" hidden={!open}>
+        <Navigation {...props} onNavigate={() => setOpen(false)} />
+      </div>
       <aside className="docs-sidebar">
         <div className="docs-sidebar-inner">
           <Navigation {...props} />

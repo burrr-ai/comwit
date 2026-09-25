@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Dialog as DialogPrimitive } from '@comwit/ui'
 import { XIcon } from 'lucide-react'
 
+import { GlassSurface } from './glass'
 import { cn } from '../../lib/utils'
 import { focusRing } from '../../lib/interaction'
 
@@ -50,28 +51,31 @@ function DialogContent({
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
-      <DialogPrimitive.Content
-        data-slot="dialog-content"
-        className={cn(
-          'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-modal grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-card border border-border p-6 shadow-card-hover duration-base sm:max-w-lg',
-          className
-        )}
-        {...props}
-      >
-        {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            className={cn(
-              focusRing,
-              "absolute top-4 right-4 rounded-lg p-1 opacity-60 transition hover:bg-accent hover:opacity-100 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
-            )}
-          >
-            <XIcon />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        )}
-      </DialogPrimitive.Content>
+      {/* 스크림 위의 굴절 유리(dense) — 면·보더·그림자는 .glass 가 갖는다. 색만 유틸로 덮으면 유리가 사라진다. */}
+      <GlassSurface variant="morphing" shape="panel" dense>
+        <DialogPrimitive.Content
+          data-slot="dialog-content"
+          className={cn(
+            'text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-modal grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-card p-6 duration-base sm:max-w-lg',
+            className
+          )}
+          {...props}
+        >
+          {children}
+          {showCloseButton && (
+            <DialogPrimitive.Close
+              data-slot="dialog-close"
+              className={cn(
+                focusRing,
+                "absolute top-4 right-4 rounded-lg p-1 opacity-60 transition hover:bg-accent hover:opacity-100 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+              )}
+            >
+              <XIcon />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
+        </DialogPrimitive.Content>
+      </GlassSurface>
     </DialogPortal>
   )
 }

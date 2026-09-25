@@ -1,6 +1,6 @@
 # Comwit UI — implementation guide
 
-Comwit UI provides headless behavior (@comwit/ui) and editable component source installed into a React project by the comwit-ui CLI. The default look is the Comwit design system: warm white, deep ink, a blue brand (#3182f6), Pretendard, and refractive glass. It is independent of Comwit State.
+Comwit UI provides headless behavior (@comwit/ui) and editable component source installed into a React project by the comwit-ui CLI. Behavior lives in the engine: scroll rules, gestures, virtualization, keyboard and IME handling are @comwit/ui primitives driven by props and data-* attributes; the copied component files only compose those parts and apply the tokens, so restyling a file never touches behavior. It is a curated kit: for each job it wraps a proven library under a neutral name (page transitions on SSGOI, toasts on Sonner, popups on overlay-kit, springs on Motion, rich text on Tiptap, tables on TanStack Table, dates on React DayPicker, forms on React Hook Form, chat lists on React Virtuoso) and installs the wrapper as source the project owns; the library itself is an npm dependency. The default look is the Comwit design system: warm white, deep ink, a blue brand (#3182f6), Pretendard, and refractive glass. It is independent of Comwit State.
 
 ## Install
 
@@ -22,22 +22,131 @@ Put the font variable --font-pretendard on <html> (for example with next/font/lo
 
 ## Components
 
-- Mobile app: app-bar, bottom-nav, pull-to-refresh, drag-scroller
+- Mobile app: app-bar, bottom-nav, page-transition (with route-boundary), bottom-sheet, pull-to-refresh, drag-scroller
+- Chat: chat (Chat, ChatHeader, ChatTitle, ChatDescription, ChatHeaderActions, ChatMessages, ChatScrollToBottom, ChatMessage, ChatBubble, ChatMessageMeta, ChatTyping, ChatDivider, ChatComposer, ChatComposerInput, ChatComposerActions, ChatComposerSubmit)
 - Glass: glass (Glass, GlassSurface, GlassButton), dropdown-menu, popover
-- Notifications: sonner (Toaster), popup (popup.confirm / alert / sheet), alert, empty-state
+- Notifications: toast (Toaster, toast(), Toast; formerly sonner), popup (popup.confirm / alert / sheet; sheet renders the bottom-sheet template), alert, empty-state
 - Pickers: date-picker, time-picker, month-picker (popover on desktop, bottom sheet on phones), calendar
 - Selection: segmented-control, chip, checkbox, radio-group, pager
 - Forms and data: text-field, autocomplete, select, form, data-table, editor
 - Basics: button, badge, input, input-group, textarea, label, switch, tabs, accordion, collapsible, dialog, sheet, card, table, avatar, separator, skeleton, pagination
 
+Dialog, sheet, bottom sheet, popup and toast surfaces are refractive glass (the same material as menus and the app bar), denser over the modal scrim so text stays readable. Do not add bg-* classes to their content parts; that removes the glass.
+
 ## App shell
 
-AppBar (behavior: flow | pinned | reveal) and BottomNav read one shared scroll intent. Wrap the scroller once:
+AppBar (behavior: flow | pinned | reveal) and BottomNav read one shared scroll intent that the engine provides. Wrap the scroller once:
 
-import { ScrollChromeProvider } from '@/hooks/use-scroll-chrome'
+import { ScrollChromeProvider } from '@comwit/ui'
 <ScrollChromeProvider scrollRef={mainRef} resetKey={pathname}>…</ScrollChromeProvider>
 
-Omit scrollRef to follow window scroll. PullToRefresh renders its own scroller and forwards ref to it, so pass that ref to ScrollChromeProvider. Routing is yours: pass onClick={() => router.back()} to AppBarBackButton or FloatingBackButton, and use BottomNavItem asChild with your Link.
+Omit scrollRef to follow window scroll. useScrollChrome() (also from @comwit/ui) returns { compact, expand } for your own chrome. PullToRefresh renders its own scroller and forwards ref to it, so pass that ref to ScrollChromeProvider. Routing is yours: pass onClick={() => router.back()} to AppBarBackButton or FloatingBackButton, and use BottomNavItem asChild with your Link. The templates style the engine's data-state (app bar hidden/visible, bottom nav compact/expanded, item active/inactive); the reveal, expand-on-touch and selection logic is AppBar.Root / BottomNav.Root in @comwit/ui. useMobile(breakpoint) and useMobileDevice() come from @comwit/ui as well (there are no hooks/ files to install).
+
+## Page transitions
+
+npx comwit-ui add page-transition
+
+Installs components/ui/page-transition.tsx (PageTransition provider, generic PageBoundary, presets drill / sheet / slide / axis / zoom / hero / fade) and components/ui/route-boundary.tsx (RouteBoundary bound to the detected router: next, react-router or react-router-dom, @tanstack/react-router; otherwise a generic one that takes a path prop). Force one with --router nextjs|react-router|tanstack-router|generic. The engine (@ssgoi/react) is installed as a dependency; the copied files wrap it under these neutral names, so import from the copied files.
+
+Mount the provider once around the routed region and mark that region with RouteBoundary. In Next.js this goes in app/layout.tsx around children:
+
+'use client'
+import { PageTransition, drill, sheet } from '@/components/ui/page-transition'
+import { RouteBoundary } from '@/components/ui/route-boundary'
+
+const transitions = {
+  transitions: [
+    { on: '/posts/**', except: '/posts', transition: drill() },
+    { on: '/compose', transition: sheet({ type: 'blur' }) },
+  ],
+}
+
+<PageTransition config={transitions}>
+  <RouteBoundary>{children}</RouteBoundary>
+</PageTransition>
+
+How it works: the boundary is a keyed DOM element (key = routeKey ?? path, data-ssgoi-transition = path). When the key changes React unmounts the old page and mounts the new one; the engine keeps the detached node, reinserts it position:absolute over the new page and animates both. So it needs no router at all: any state that changes path works.
+
+'use client'
+const [path, setPath] = React.useState('/notes')
+<PageTransition config={transitions}>
+  <PageBoundary path={path}>{path === '/notes' ? <Notes open={(id) => setPath('/notes/' + id)} /> : <Note back={() => setPath('/notes')} />}</PageBoundary>
+</PageTransition>
+
+PageTransition renders the shell the outgoing page needs (relative, z-0, min-h-dvh, overflow-x-clip); inside your own scroller pass className="min-h-full". Use overflow-x clip, never hidden: hidden turns the shell into a scroll container and scroll restoration targets the wrong element. Give every page a background so the page underneath does not show through. PageBoundary is min-h-full by default, so a short page stays as tall as the shell while it leaves and its sticky bottom nav or action bar does not ride up. Reduced motion swaps pages without animating unless reducedMotion="keep".
+
+The app bar belongs to the page: render it inside the boundary so it moves with the page. A persistent shell keeps only what sits below the page (the bottom nav): an outer boundary with a fixed routeKey, an inner boundary that swaps the page.
+
+<RouteBoundary routeKey="tabs" className="flex min-h-full flex-col">
+  <RouteBoundary className="flex-1">{children}</RouteBoundary>   {/* the page, app bar included */}
+  <BottomNav … />
+</RouteBoundary>
+
+The leaving page is placed position:absolute at the top of the nearest positioned ancestor, so if you do put chrome above a nested boundary, wrap that boundary in a position:relative element or it jumps up by the chrome's height.
+
+hero() carries one element between two pages: put data-hero-exit-key={id} on the element in the page you leave and data-hero-enter-key={id} on its counterpart in the page you enter (same value, unique per page), with a from/to rule such as { from: '/photos', to: '/photos/*', transition: hero({ type: 'fade' }) }. Also give each end data-hero-radius (its corner radius in px, e.g. 16 on a rounded thumbnail and 0 on the full-bleed photo): the engine does not read the CSS radius, and without it the corners do not morph with the box. Unmatched keys are a no-op.
+
+Route rules (on/except, from/to, ordered, priority), every preset and its options, persistent layouts, scroll restoration and troubleshooting are SSGOI's and are documented at https://ssgoi.dev/llms.txt (config shape is identical; only the component names differ).
+
+## Bottom sheet
+
+npx comwit-ui add bottom-sheet
+
+A sheet that rises from the bottom with a grab handle. Drag the handle (or the sheet body while its scroller is at the top) down to dismiss; release past 25% of the sheet height or a fast flick closes it, otherwise it springs back. Tapping the handle, the scrim, Escape and BottomSheetClose also close it. The gesture, thresholds, inner-scroll yielding, focus trap and scroll lock are BottomSheet.Root / Content / Handle in @comwit/ui; the copied file styles the glass surface, the handle and the data-dragging / --sheet-drag / --sheet-drag-progress values the primitive emits.
+
+'use client'
+import { BottomSheet, BottomSheetTrigger, BottomSheetContent, BottomSheetHeader, BottomSheetTitle, BottomSheetDescription, BottomSheetFooter, BottomSheetClose } from '@/components/ui/bottom-sheet'
+
+<BottomSheet>
+  <BottomSheetTrigger asChild><Button>Filters</Button></BottomSheetTrigger>
+  <BottomSheetContent>
+    <BottomSheetHeader>
+      <BottomSheetTitle>Filters</BottomSheetTitle>
+      <BottomSheetDescription>Drag the handle down to dismiss.</BottomSheetDescription>
+    </BottomSheetHeader>
+    <div className="min-h-0 flex-1 overflow-y-auto px-5">…</div>
+    <BottomSheetFooter><BottomSheetClose asChild><Button>Apply</Button></BottomSheetClose></BottomSheetFooter>
+  </BottomSheetContent>
+</BottomSheet>
+
+Props: open / defaultOpen / onOpenChange (like Dialog); on BottomSheetContent drag ('sheet' | 'handle' | false, default 'sheet'), closeThreshold (fraction of the sheet height, default 0.25), velocityThreshold (px/ms, default 0.4), showHandle (default true), showCloseButton (default false), container (portal target, for rendering inside an app shell). A long body needs min-h-0 flex-1 overflow-y-auto on the middle region. popup.sheet() (lib/popup) opens this component imperatively and resolves with the value you pass to resolve().
+
+## Chat
+
+npx comwit-ui add chat
+
+One file, compound parts, no data shape imposed. Chat is a vertical flex column that fills its parent (the parent needs a height: h-dvh, or flex-1 min-h-0); ChatHeader and ChatComposer are fixed rows and ChatMessages takes the rest. Every behavior below is the Chat primitive in @comwit/ui (Chat.Root / List / ScrollToBottom / Message / MessageContent / Bubble / Composer / ComposerInput / ComposerSubmit / ComposerStop); the list is virtualized with react-virtuoso inside the engine. The copied chat.tsx only composes those parts and styles the data-tone / data-align / data-state attributes they emit.
+
+'use client'
+import { Chat, ChatHeader, ChatTitle, ChatMessages, ChatMessage, ChatBubble, ChatMessageMeta, ChatTyping, ChatComposer } from '@/components/ui/chat'
+
+<div className="h-dvh">
+  <Chat mode="messenger">
+    <ChatHeader><ChatTitle>Ava Chen</ChatTitle></ChatHeader>
+    <ChatMessages items={messages} isOwn={(m) => m.mine} footer={typing ? <ChatMessage><ChatTyping /></ChatMessage> : null}>
+      {(m) => (
+        <ChatMessage align={m.mine ? 'end' : 'start'} avatar={m.mine ? undefined : <Avatar>…</Avatar>}>
+          <ChatBubble>{m.text}</ChatBubble>
+          <ChatMessageMeta>{m.time}</ChatMessageMeta>
+        </ChatMessage>
+      )}
+    </ChatMessages>
+    <ChatComposer onSend={(text) => send(text)} />
+  </Chat>
+</div>
+
+mode (on Chat, or per ChatMessages) selects the scroll behavior:
+- messenger (people): an own message always scrolls to the bottom; another person's message follows only while the list is already at the bottom, otherwise the unread count accumulates on the ChatScrollToBottom pill (rendered by ChatMessages; scrollToBottomButton={false} to place it yourself).
+- assistant (AI): an own message is pinned to the top of the viewport (the space below is filled and shrinks as the answer grows, so nothing jumps) and the answer streams under it; once it overflows, the list follows only while at the bottom. Bubbles on the start side default to the plain tone (no surface, full width).
+Both modes open at the last message. Mount ChatMessages with a key per conversation.
+
+ChatMessages props: items (readonly array), children (item, index) => node, itemKey (default item.id), isOwn (default item.role === 'user'), empty (node shown when there are no items), footer (node under the last message, outside virtualization; put ChatTyping there), labels ({ scrollToBottom, newMessages(count) }).
+
+ChatMessage takes align ('start' | 'end') and avatar. ChatBubble takes tone ('primary' | 'muted' | 'plain'); the default is primary for end, muted for start, plain for start in assistant mode. ChatMessageMeta is the time/status line, ChatDivider a centered caption (dates, system notes) that can be rendered as an item.
+
+ChatComposer: onSend(text) receives the trimmed text and clears the input; value/onValueChange for a controlled value; pending + onStop turns the send button into a stop button; disabled, placeholder, submitOnEnter (default true: Enter sends, Shift+Enter breaks a line; Cmd/Ctrl+Enter always sends; Enter during IME composition never sends), labels ({ send, stop }). Without children it renders ChatComposerInput plus ChatComposerSubmit; with children compose ChatComposerInput, ChatComposerActions (a row for attachment or tool buttons) and ChatComposerSubmit yourself. The input grows with its content up to max-h-40.
+
+Tones are tokens: own bubbles bg-primary/text-primary-foreground, theirs bg-muted, the composer surface rounded-sheet with shadow-message and the field focus ring. Override in the copied file or through the tokens; the scroll rules, pinning, IME guard and auto-grow stay in the engine.
 
 ## Ownership
 
@@ -54,6 +163,7 @@ Use the shipped semantic utilities, not hardcoded colors:
 - Radius: rounded-control (inputs), rounded-card, rounded-sheet, rounded-pill (buttons, chips); rounded-full is always a circle
 - Type: text-display-xl…sm, text-title-lg…sm, text-body, text-body-sm, text-label, text-caption, text-micro
 - Motion and layers: duration-fast/base/slow, z-appbar < z-overlay < z-modal < z-dropdown < z-toast
+- Glass: the .glass material reads --glass-tint, --glass-opacity, --glass-edge, --glass-sheen, --glass-glow, --glass-shade and --glass-shadow; .glass-dense (dialogs, sheets, popups) tints with --popover at higher opacity
 
 Theme by overriding primitives after the token import, for example :root { --brand: #0b68ba; --brand-strong: #08528f; --radius-scale: 0.6; --pill-radius: 12px }. Dark mode is the .dark class. There is no named-theme preset.
 
@@ -63,18 +173,20 @@ Keep a consumer's own global element rules (button, a, :focus-visible, h1–h3) 
 
 ## Composition
 
-Primitives use namespace exports such as Dialog.Root / Trigger / Portal / Overlay / Content / Title / Description / Close. Button, Input and Textarea are flat exports. Preserve labels, focus behavior and keyboard interactions when modifying a component. Use the actual component source for supported props; do not assume every shadcn or Radix API is interchangeable.
+Primitives use namespace exports such as Dialog.Root / Trigger / Portal / Overlay / Content / Title / Description / Close, BottomSheet.Root / Trigger / Portal / Overlay / Content / Handle / Title / Description / Close, and for app shells and gestures AppBar.Root, BottomNav.Root / Item, DragScroller.Root / Track, PullToRefresh.Root / Scroller / Indicator and Chat.Root / List / Message / Bubble / Composer. Button, Input and Textarea are flat exports, as are the hooks ScrollChromeProvider / useScrollChrome, useMobile / useMobileDevice and useGlassLens. Preserve labels, focus behavior and keyboard interactions when modifying a component. Use the actual component source for supported props; do not assume every shadcn or Radix API is interchangeable.
 
 Default copy is English. Pickers take locale (Intl, for example 'ko-KR') and labels; Pager and DataTable take labels.
 
 For direct unstyled use, install @comwit/ui and import primitives from that package. For styled UI, prefer the CLI installation flow above.
 
-For imperative popup helpers mount OverlayProvider from overlay-kit once. For toast notifications install the sonner template and mount its Toaster once. Basic controls do not require these providers.
+For imperative popup helpers mount OverlayProvider from overlay-kit once. For toast notifications install the toast template, mount its Toaster once, and call toast() from '@/components/ui/toast' (it renders the glass Toast component through sonner; sonner's own toast() would show sonner's default skin). Basic controls do not require these providers.
 
 ## References
 
 - Components (live gallery): https://library.comwit.io/ui/components
 - Installation: https://library.comwit.io/ui/docs/installation
+- Page transitions engine (SSGOI): https://ssgoi.dev/llms.txt
+- Chat list engine (React Virtuoso): https://virtuoso.dev
 - Headless primitives: https://library.comwit.io/ui/docs/primitives
 - Tokens and theming: https://library.comwit.io/ui/theming
 - State (separate library): https://library.comwit.io/state/llms.txt

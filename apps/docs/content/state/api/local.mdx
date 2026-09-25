@@ -1,8 +1,8 @@
 ---
 title: 'local()'
-group: 'API'
+group: 'Model'
 slug: 'api/local'
-order: 7
+order: 24
 ---
 
 # local()
@@ -181,7 +181,7 @@ function ProductDetail() {
 Standalone `local()` is restore-only and is not a `hydrate()` target. Keep `.restore(arg)` for an
 exact, non-suspending cached fallback. Experimental `.suspend(arg)` remains available on query-backed
 local resources with isomorphic query functions. Do not call a render-body action that writes a
-resolved server value through `.set()` or deprecated `silent()`.
+resolved server value through `.set()`.
 
 ### Standalone methods
 

@@ -36,8 +36,8 @@
 }
 .ui-sidebar {
   position: sticky;
-  top: 88px;
-  height: calc(100svh - 88px);
+  top: var(--site-header-height);
+  height: calc(100svh - var(--site-header-height));
   border-right: 1px solid var(--border);
 }
 .ui-main {
@@ -48,7 +48,7 @@
 /* Anchored items clear the sticky site header. */
 .ui-product [data-gallery-item],
 .ui-product [data-gallery-group] {
-  scroll-margin-top: 112px;
+  scroll-margin-top: calc(var(--site-header-height) + 24px);
 }
 
 @media (max-width: 900px) {
@@ -61,14 +61,10 @@
   .ui-main {
     padding-top: 24px;
   }
-  .ui-product [data-gallery-item],
-  .ui-product [data-gallery-group] {
-    scroll-margin-top: 136px;
-  }
 }
 
-/* ── Phone frame — a transformed box, so position:fixed children (floating back button)
-   stay inside the device instead of escaping to the viewport. ── */
+/* ── Phone frame. The screen is a transformed box, so position:fixed children (floating back
+   button, bottom sheet, its scrim) stay inside the device and clip to its corners. ── */
 .phone {
   position: relative;
   width: 300px;
@@ -92,6 +88,9 @@
   border-radius: 38px;
   background: var(--background);
   isolation: isolate;
+  transform: translateZ(0);
+  /* backdrop-filter 레이어(시트 전환의 블러·유리)는 overflow:hidden 의 둥근 모서리를 무시할 수 있다 — clip-path 가 확실히 자른다. */
+  clip-path: inset(0 round 38px);
 }
 .phone-status {
   position: relative;
@@ -130,10 +129,14 @@
   pointer-events: none;
 }
 /* The scroller inside the phone hides its scrollbar like a real device. */
-.phone-screen [data-slot='pull-to-refresh'] > div:last-child {
+.phone-screen [data-slot='pull-to-refresh'] > div:last-child,
+.phone-screen [data-slot='chat-messages'] [data-virtuoso-scroller],
+.phone-screen [data-slot='bottom-sheet-content'] .phone-scroll {
   scrollbar-width: none;
 }
-.phone-screen [data-slot='pull-to-refresh'] > div:last-child::-webkit-scrollbar {
+.phone-screen [data-slot='pull-to-refresh'] > div:last-child::-webkit-scrollbar,
+.phone-screen [data-slot='chat-messages'] [data-virtuoso-scroller]::-webkit-scrollbar,
+.phone-screen [data-slot='bottom-sheet-content'] .phone-scroll::-webkit-scrollbar {
   display: none;
 }
 
@@ -186,6 +189,20 @@
   --p4: #f0abfc;
   --p5: #312e81;
 }
+.ui-photo[data-tone='sand'] {
+  --p1: #fff1c7;
+  --p2: #f6b26b;
+  --p3: #9a6b3c;
+  --p4: #f9d99a;
+  --p5: #c2794a;
+}
+.ui-photo[data-tone='lava'] {
+  --p1: #9fb7c9;
+  --p2: #4b5a6b;
+  --p3: #0b1220;
+  --p4: #6b7c8c;
+  --p5: #1f2a37;
+}
 
 /* Code blocks share one dark surface; highlight.js colors ride on top. */
 .ui-code {
@@ -203,21 +220,14 @@
   }
 }
 
-/* Narrow screens: a sticky bar opens the same navigation in a sheet. */
-.ui-mobile-bar {
+/* Narrow screens: the header's menu button opens the same navigation in a sheet. */
+.ui-menu-button {
   display: none;
 }
 @media (max-width: 900px) {
-  .ui-mobile-bar {
-    position: sticky;
-    top: 72px; /* 좁은 화면의 사이트 헤더 높이 */
-    z-index: 30;
-    display: flex;
-    margin: -24px calc(-1 * clamp(20px, 4vw, 64px)) 24px;
-    padding: 10px clamp(20px, 4vw, 64px);
-    background: color-mix(in srgb, var(--background) 88%, transparent);
-    backdrop-filter: blur(12px) saturate(160%);
-    border-bottom: 1px solid var(--border);
+  .ui-menu-button {
+    display: inline-flex;
+    margin-right: -8px;
   }
 }
 

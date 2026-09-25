@@ -206,6 +206,35 @@ Staging a new key does not mutate the active observable resource. An abandoned r
 replace the value used by the currently committed screen. Existing successful keys stay visible;
 freshness revalidation starts after commit.
 
+### Streaming from Next.js SSR
+
+Server and browser providers have separate caches. Pass Next.js `useServerInsertedHTML` to the
+provider to carry render-resolved results across:
+
+```tsx
+import { useServerInsertedHTML } from 'next/navigation'
+
+<ComwitProvider useServerInsertedHTML={useServerInsertedHTML}>{children}</ComwitProvider>
+```
+
+```text
+server: suspend(arg) → queryFn → boundary HTML, preceded by
+        <script type="application/json" data-comwit-suspend="…">[{ hook id, path, key, fetchedAt, result }]</script>
+browser: hydrating suspend(arg) reads that script → identical snapshot, no queryFn
+         → entry becomes active after commit with the server's fetch time
+```
+
+- Each result is keyed by the selecting hook's `useId()`, its field path, and the serialized
+  argument, so nested providers and repeated components cannot cross-hydrate. The server and
+  browser trees must match, as hydration already requires.
+- The inserted script is inert JSON (no executable inline script, no nonce needed). Scripts stay in
+  the document; the provider reads them lazily on the first cache miss.
+- `queryFn` runs in the Client Component bundle on both sides: no Server Functions, no database
+  imports, and an absolute URL for `fetch` on the server. Results must survive `JSON.stringify`.
+- A server-side rejection renders the boundary fallback; the browser retries the request itself.
+- Without the prop, hydration calls `queryFn` again. `renderToString`, the Pages Router, and
+  frameworks without an equivalent insertion hook are not covered.
+
 The descriptor option `{ suspense: true }` and `Query.Suspense*` aliases are deprecated. They retain
 legacy behavior for compatibility. Default new code uses `.load(arg)` for client fetching and the
 generated domain hook's `.hydrate(entries)` for resolved Server Component data. `.suspend(arg)` is
@@ -252,6 +281,8 @@ const post = usePost((state) => state.post.suspend(postId))
   without throwing.
 - The `queryFn` must work in every environment where the Client Component renders, including the
   Next.js server-rendered pass when used for SSR.
+- With `useServerInsertedHTML` on the provider, a result resolved on the server streams to the
+  browser and the hydrating selector returns it without a second request.
 - Promise- or value-returning single and infinite queries are supported, including `local.query()`
   and `local.infinite()` adapters. Local storage reconciliation waits until commit. Realtime
   queries and async-iterable fetchers are not supported.
@@ -470,12 +501,12 @@ function ProductDetail() {
 
 The route adapter calls `hydrate()` before the actual UI takes its first domain snapshot. No
 business-data prop reaches the UI, and `queryFn` is not called again for the hydrated entry. Do not
-initialize the same store by invoking a mutating action during render, even through deprecated
-`silent()`.
+initialize the same store by invoking a mutating action during render.
 
-Experimental `.suspend(routeArg)` can still block rendering for an isomorphic `queryFn`. It cannot
-call a Next.js Server Function from a Client Component's initial render, and server/browser caches
-remain separate without explicit hydration.
+Experimental `.suspend(routeArg)` blocks a `<Suspense>` boundary for an isomorphic `queryFn`. It
+cannot call a Next.js Server Function during render. Pass `useServerInsertedHTML` to the provider so
+the server-resolved result streams to the browser (see "Streaming from Next.js SSR" above); without
+it, the browser fetches again while hydrating.
 
 ## Slow initial loading
 

@@ -4,6 +4,26 @@
 //
 // exhibit: 'phone' renders inside a device frame, 'wide' spans the row, default is a card.
 
+// Comwit UI curates libraries rather than reinventing them. When a component's npm dependencies
+// include one of these, the gallery links to it ("Built on …"). Keyed by package name.
+export const credits = {
+  '@ssgoi/react': { label: 'SSGOI', href: 'https://ssgoi.dev' },
+  sonner: { label: 'Sonner', href: 'https://sonner.emilkowal.ski' },
+  'overlay-kit': { label: 'overlay-kit', href: 'https://overlay-kit.slash.page' },
+  motion: { label: 'Motion', href: 'https://motion.dev' },
+  '@tiptap/react': { label: 'Tiptap', href: 'https://tiptap.dev' },
+  '@tanstack/react-table': { label: 'TanStack Table', href: 'https://tanstack.com/table' },
+  'react-day-picker': { label: 'React DayPicker', href: 'https://daypicker.dev' },
+  'react-hook-form': { label: 'React Hook Form', href: 'https://react-hook-form.com' },
+  'react-virtuoso': { label: 'React Virtuoso', href: 'https://virtuoso.dev' },
+}
+
+// Libraries the headless engine (@comwit/ui) wraps on a component's behalf. The template itself only
+// depends on @comwit/ui, so these are credited by component name instead of by npm dependency.
+export const engineCredits = {
+  chat: ['react-virtuoso'],
+}
+
 export const groups = [
   {
     id: 'mobile',
@@ -24,6 +44,20 @@ export const groups = [
           'Floating tab capsule. The indicator springs between tabs; the bar shrinks as you scroll.',
       },
       {
+        name: 'page-transition',
+        title: 'Page transition',
+        exhibit: 'phone',
+        summary:
+          'Hero, zoom, drill or fade from the photo grid into the photo. One keyed boundary marks the page; your router or plain state drives it.',
+      },
+      {
+        name: 'bottom-sheet',
+        title: 'Bottom sheet',
+        exhibit: 'phone',
+        summary:
+          'Rises from the bottom. Drag the handle down to dismiss; the scrim fades as you pull.',
+      },
+      {
         name: 'pull-to-refresh',
         title: 'Pull to refresh',
         exhibit: 'phone',
@@ -35,6 +69,21 @@ export const groups = [
         exhibit: 'wide',
         summary:
           'Horizontal rail with drag, flick momentum, wheel and arrow keys. Taps still click.',
+      },
+    ],
+  },
+  {
+    id: 'chat',
+    title: 'Chat',
+    blurb:
+      'Header, messages and composer that fill their parent. The list is virtualized and scrolls the way each kind of conversation expects.',
+    items: [
+      {
+        name: 'chat',
+        title: 'Chat',
+        exhibit: 'phone',
+        summary:
+          'Messenger mode keeps you at the bottom; assistant mode lifts your message to the top and streams the answer under it.',
       },
     ],
   },
@@ -68,7 +117,7 @@ export const groups = [
     blurb: 'Tell people what happened and what to do next.',
     items: [
       {
-        name: 'sonner',
+        name: 'toast',
         title: 'Toast',
         summary: 'Glass toasts. Top of the screen on phones, bottom right on desktop.',
       },

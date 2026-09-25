@@ -10,6 +10,7 @@ comwit-ui 작업 모음. 정한 것 · 만들 것 · 아이디어를 여기 쌓�
 - **chip 방향** — `badge`(정적 토큰) 대신 `chip`(ripple/removable)을 메인으로. badge 흡수/대체 검토.
 - **separator · label** — core 프리미티브 없이 템플릿 자립(behavior 0이라 토큰뿐). `avatar`는 로딩 behavior 있어 core 유지.
 - **레이어 계약** — core(`@comwit/ui`) = 스타일 0 headless(behavior/a11y·react-aria는 내부 엔진), templates = 파트 조립 + className 토큰.
+  제스처·스크롤·키보드 같은 **UX 동작도 예외 없이 core** 에 옵션으로 둔다(템플릿 파일에 useEffect 로 동작을 쓰지 않는다). 프리미티브는 `data-state` 로 상태를 알리고 템플릿은 그걸 스타일한다.
 - **토큰 v2 (3계층)** — L0 노브(뉴트럴 램프 12단 + radius-scale·border-width·elevation·duration·state…) → L1 시맨틱 alias → L2 `@theme inline` 유틸. 리테마는 **L0만** 덮는다.
 - **다크는 `.dark` 클래스 단일 스위치** — `light-dark()` 안 씀(색만 커버 + `dark:` 변형과 desync). `@custom-variant dark (&:is(.dark *))`.
 - **`rounded-full` vs `rounded-pill`** — full = 항상 원(아바타·라디오 도트·리플), pill = 소비처가 각지게 가능(칩·캘린더셀). 하나로 묶으면 `--radius-scale: 0` 에서 라디오가 사각형이 된다.
@@ -56,6 +57,10 @@ comwit-ui 작업 모음. 정한 것 · 만들 것 · 아이디어를 여기 쌓�
 - [x] Sheet — 기본 시트 컴포넌트
 - [ ] InfiniteScroll — 컴윗 피드의 IntersectionObserver 센티넬(rootMargin 600px)을 훅으로 추출
 - [x] PullToRefresh · DragScroller · SegmentedControl · Pager · EmptyState · Glass(굴절 유리) — 컴윗에서 이식
+- [x] PageTransition · PageBoundary · RouteBoundary — 페이지 전환(ssgoi 래핑 · 중성 이름 · CLI 가 라우터 감지해 route-boundary 변형 설치)
+- [x] Dialog · Sheet · popup · Toast 를 굴절 유리(`glass-dense`)로 — 메뉴·앱바와 같은 재질
+- [x] Chat — 헤더·메시지·컴포저 컴파운드. 메시지 목록은 react-virtuoso 가상화, `mode` 로 messenger(바닥 고정) / assistant(내 메시지 상단 고정 + 스트리밍 따라가기)
+- [x] **동작은 프리미티브, 템플릿은 스타일** — app-bar · bottom-nav · drag-scroller · pull-to-refresh · chat · 유리 렌즈 · scroll-chrome · use-mobile 의 JS 를 `@comwit/ui` 로 내리고 템플릿은 `data-*` 에 토큰만 입힌다. 새 컴포넌트도 같은 규칙.
 
 | 컴포넌트     | 상태 | 메모                                                |
 | ------------ | ---- | --------------------------------------------------- |

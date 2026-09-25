@@ -1,0 +1,92 @@
+---
+title: 'comwit v2.5.0-beta.0 — Streaming Suspense for Next.js'
+date: '2026-09-25'
+description: 'The 2.5 beta streams query results resolved by .suspend() during the Next.js server render into the browser cache, so a Suspense boundary hydrates without a second request.'
+author: 'Claude'
+---
+
+```bash
+npm install @comwit/state@beta
+```
+
+## A Suspense boundary that hydrates with its data
+
+Experimental `.suspend(arg)` runs a query during render and throws the pending Promise, so a
+`<Suspense>` boundary streams its fallback and then its content. Until now the browser had a
+separate cache and ran `queryFn` again while hydrating. In 2.5.0-beta.0 the provider carries each
+result resolved on the server into the browser cache.
+
+Pass the Next.js hook to the provider. Nothing else changes:
+
+```tsx
+'use client'
+
+import { ComwitProvider } from '@comwit/state'
+import { useRouter, useServerInsertedHTML } from 'next/navigation'
+import { getServerSearchParams } from './get-server-search-params'
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  return (
+    <ComwitProvider
+      context={{ router }}
+      getServerSearchParams={getServerSearchParams}
+      useServerInsertedHTML={useServerInsertedHTML}
+    >
+      {children}
+    </ComwitProvider>
+  )
+}
+```
+
+```tsx
+// Server Component
+export default function ProductPage({ id }: { id: string }) {
+  return (
+    <Suspense fallback={<ProductSkeleton />}>
+      <ProductDetail id={id} />
+    </Suspense>
+  )
+}
+
+// Client Component
+function ProductDetail({ id }: { id: string }) {
+  const product = useProduct((s) => s.detail.suspend(id))
+  return product.data ? <ProductView product={product.data} /> : <NotFound />
+}
+```
+
+```text
+server: suspend(id) → queryFn → boundary HTML, preceded by an inert JSON script
+browser: hydrating suspend(id) reads the script → same snapshot, no queryFn → active after commit
+```
+
+The provider follows the same rule as `getServerSearchParams`: the framework function is injected,
+and there is no Next.js-specific provider. On the server, `useServerInsertedHTML` inserts a
+`<script type="application/json" data-comwit-suspend>` ahead of each flushed chunk with the results
+resolved since the previous flush. In the browser the hydrating selector reads that script before
+its first snapshot, so the markup matches, the entry becomes active after commit with the server's
+fetch time, and `staleTime` applies as if the browser had fetched it. Each result is keyed by the
+selecting hook's tree position, so nested providers and repeated components cannot cross-hydrate,
+and no executable inline script is emitted.
+
+Verified with Next.js 16.3 and `cacheComponents: true`: the static shell prerenders, the boundary
+resolves at request time, and the browser hydrates with the streamed result. See the
+[Next.js guide](/state/docs/guide/nextjs#streaming-suspense-experimental) for the provider setup and
+the requirements. In short, `queryFn` must run in both environments (no Server Functions, absolute
+`fetch` URLs on the server), results must be JSON-serializable, and `hydrate()` remains the default
+for data that must stay on the server.
+
+## Documentation
+
+- The API sidebar is grouped by concept: Setup (`ComwitProvider`, `create()`, utilities), Model
+  (`model()`, `query()`, `searchParam()`, `local()`, `persist()`, `computed()`, `$history`), and
+  Action (`action()`, decorators).
+- The deprecated `silent()` page was removed from the docs and agent guides. The export is still
+  available for compatibility; use `hydrate()` or a streamed `.suspend()` for server data.
+- `llms.txt` shows the provider with both framework functions and the streaming requirements.
+
+## Compatibility
+
+Every existing API keeps its behavior. Without `useServerInsertedHTML`, `.suspend()` works as in
+2.4: the server and browser caches stay separate and the browser fetches again while hydrating.

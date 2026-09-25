@@ -1,15 +1,21 @@
 'use client'
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from 'react'
+/**
+ * comwit-ui — scroll-chrome (헤드리스 · 스타일 0).
+ *
+ * 모바일 앱 크롬(앱바·바텀내비)의 **스크롤 의도**를 한 번만 판정해 공유한다.
+ * 앱바와 탭바가 각자 리스너를 달면 감도와 전환 시점이 어긋나므로, 누적 이동량에 히스테리시스를
+ * 적용해 `compact` 하나로 묶는다. 라우팅의 스크롤 복원처럼 브라우저가 직접 바꾼 위치는 무시하고,
+ * 실제 세로 터치 제스처·휠·키보드 입력이 선행된 스크롤만 반영한다.
+ *
+ *   <ScrollChromeProvider scrollRef={mainRef} resetKey={pathname}>…</ScrollChromeProvider>
+ *   const { compact, expand } = useScrollChrome()
+ *
+ * scrollRef 를 생략하면 문서(window) 스크롤을 본다. resetKey 가 바뀌면(라우트 전환) 펼친다.
+ * 프로바이더 아래 `[data-scroll-chrome="compact" | "expanded"]` 요소가 상태를 CSS 에도 알린다.
+ */
+
+import * as React from 'react'
 
 const TOP_EDGE = 12
 const COLLAPSE_AFTER = 72
@@ -25,39 +31,29 @@ type ScrollChromeValue = {
   expand: () => void
 }
 
-const ScrollChromeContext = createContext<ScrollChromeValue>({
+const ScrollChromeContext = React.createContext<ScrollChromeValue>({
   compact: false,
   expand: () => undefined,
 })
+ScrollChromeContext.displayName = 'ScrollChromeContext'
 
-/**
- * 모바일 앱 크롬(앱바·바텀내비)의 스크롤 의도를 한 번만 판정해 공유한다.
- *
- * 앱바와 탭바가 각자 리스너를 달면 감도와 전환 시점이 어긋나므로, 누적 이동량에 히스테리시스를
- * 적용해 compact 하나로 묶는다. 라우팅의 스크롤 복원처럼 브라우저가 직접 바꾼 위치는 무시하고,
- * 실제 세로 터치 제스처나 휠 입력이 선행된 스크롤만 반영한다.
- *
- *   <ScrollChromeProvider scrollRef={mainRef} resetKey={pathname}>…</ScrollChromeProvider>
- *
- * scrollRef 를 생략하면 문서(window) 스크롤을 본다. resetKey 가 바뀌면(라우트 전환) 펼친다.
- */
-export function ScrollChromeProvider({
-  scrollRef,
-  resetKey,
-  children,
-}: {
-  scrollRef?: RefObject<HTMLElement | null>
+interface ScrollChromeProviderProps {
+  /** 관찰할 스크롤러. 생략하면 window. */
+  scrollRef?: React.RefObject<HTMLElement | null>
+  /** 바뀌면(라우트 전환) 펼친다. */
   resetKey?: unknown
-  children: ReactNode
-}) {
-  const [compact, setCompact] = useState(false)
-  const expand = useCallback(() => setCompact(false), [])
+  children: React.ReactNode
+}
 
-  useEffect(() => {
+function ScrollChromeProvider({ scrollRef, resetKey, children }: ScrollChromeProviderProps) {
+  const [compact, setCompact] = React.useState(false)
+  const expand = React.useCallback(() => setCompact(false), [])
+
+  React.useEffect(() => {
     setCompact(false)
   }, [resetKey])
 
-  useEffect(() => {
+  React.useEffect(() => {
     const element = scrollRef ? scrollRef.current : null
     if (scrollRef && !element) return
     const target: HTMLElement | Window = element ?? window
@@ -205,17 +201,21 @@ export function ScrollChromeProvider({
     }
   }, [scrollRef])
 
-  const value = useMemo(() => ({ compact, expand }), [compact, expand])
+  const value = React.useMemo(() => ({ compact, expand }), [compact, expand])
   return (
     <ScrollChromeContext.Provider value={value}>
-      <div className="contents" data-scroll-chrome={compact ? 'compact' : 'expanded'}>
+      <div style={{ display: 'contents' }} data-scroll-chrome={compact ? 'compact' : 'expanded'}>
         {children}
       </div>
     </ScrollChromeContext.Provider>
   )
 }
+ScrollChromeProvider.displayName = 'ScrollChromeProvider'
 
 /** 가장 가까운 ScrollChromeProvider 의 상태. 프로바이더가 없으면 항상 펼쳐진 상태다. */
-export function useScrollChrome() {
-  return useContext(ScrollChromeContext)
+function useScrollChrome(): ScrollChromeValue {
+  return React.useContext(ScrollChromeContext)
 }
+
+export { ScrollChromeProvider, useScrollChrome }
+export type { ScrollChromeProviderProps, ScrollChromeValue }

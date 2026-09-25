@@ -5,7 +5,7 @@
 //   <name>.json     — 아이템 전체(파일 content 포함)
 // comwit-ui 가 이걸 번들로 싣고 `comwit-ui add <name>` 시 소비한다. shadcn CLI/스키마/components.json 안 씀.
 // ─────────────────────────────────────────────────────────────────────────
-import { readFileSync, writeFileSync, readdirSync, mkdirSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, basename } from 'node:path'
 
@@ -15,15 +15,35 @@ const outDir = join(here, '..', 'registry') // packages/ui/cli/registry
 
 const IGNORE_NPM = new Set(['react', 'react-dom'])
 
+// 라우터 변형(src/routers/route-boundary.<variant>.tsx)이 의존하는 프레임워크 패키지.
+// 소비 프로젝트에 이미 있어서 감지된 것이므로 설치 목록에 넣지 않고 `framework` 로만 기록한다.
+const ROUTER_VARIANTS = {
+  nextjs: 'next',
+  'react-router': 'react-router',
+  'tanstack-router': '@tanstack/react-router',
+  generic: null,
+}
+
+// import 로 드러나지 않는 짝 — 함께 설치돼야 완성되는 아이템.
+//   page-transition 은 라우터에 맞는 route-boundary(감지형 변형)와 함께 설치된다.
+const EXTRA_REGISTRY_DEPS = {
+  'page-transition': ['route-boundary'],
+}
+
 function pkgName(spec) {
   if (spec.startsWith('@')) return spec.split('/').slice(0, 2).join('/')
   return spec.split('/')[0]
 }
+// 실제 import/export 문(행 머리에서 시작)만 본다 — 파일 상단 주석의 사용 예시(`import … from '@/components/ui/toast'`)를
+// 의존성으로 긁으면 `pnpm add @/components` 로 소비 프로젝트의 설치가 통째로 실패한다.
 function parseImports(content) {
+  const code = content
+    .replace(/\/\*[\s\S]*?\*\//g, '') // 블록 주석
+    .replace(/^[ \t]*\/\/.*$/gm, '') // 행 주석
   const specs = []
-  const re = /from\s+["']([^"']+)["']/g
+  const re = /^[ \t]*(?:import|export)\b[^;]*?from\s+["']([^"']+)["']/gm
   let m
-  while ((m = re.exec(content))) specs.push(m[1])
+  while ((m = re.exec(code))) if (!m[1].startsWith('@/')) specs.push(m[1])
   return specs
 }
 
@@ -41,19 +61,63 @@ for (const file of readdirSync(uiDir).filter((f) => f.endsWith('.tsx'))) {
       registryDeps.add(s.slice(2)) // 형제 ui 컴포넌트
     else if (s.startsWith('../../lib/')) registryDeps.add(basename(s))
     else if (s.startsWith('../../hooks/')) registryDeps.add(basename(s))
-    else if (s === '../../hooks') registryDeps.add('use-mobile')
     else if (s.startsWith('.')) continue
     else {
       const p = pkgName(s)
       if (!IGNORE_NPM.has(p)) deps.add(p)
     }
   }
+  for (const extra of EXTRA_REGISTRY_DEPS[name] ?? []) registryDeps.add(extra)
   items.push({
     name,
     type: 'ui',
     dependencies: [...deps].sort(),
     registryDependencies: [...registryDeps].sort(),
     files: [{ path: `components/ui/${file}`, content }],
+  })
+}
+
+// 1b) routers/route-boundary.<variant>.tsx → 하나의 "route-boundary" 아이템 + variants.
+//     files[0] 은 라우터를 못 찾았을 때의 generic 구현이고, comwit-ui add 가 package.json 에서
+//     next / react-router / @tanstack/react-router 를 감지해(또는 --router 로) 변형 content 를 대신 쓴다.
+function routerVariant(file) {
+  const content = readFileSync(join(tplSrc, 'routers', file), 'utf8')
+  const deps = new Set()
+  const registryDeps = new Set()
+  let framework = null
+  for (const s of parseImports(content)) {
+    if (s.startsWith('../components/ui/')) registryDeps.add(s.split('/').pop())
+    else if (s.startsWith('.')) continue
+    else {
+      const p = pkgName(s)
+      if (IGNORE_NPM.has(p)) continue
+      if (Object.values(ROUTER_VARIANTS).includes(p)) framework = p
+      else deps.add(p)
+    }
+  }
+  return {
+    framework,
+    dependencies: [...deps].sort(),
+    registryDependencies: [...registryDeps].sort(),
+    content,
+  }
+}
+{
+  const variants = {}
+  for (const name of Object.keys(ROUTER_VARIANTS)) {
+    const file = `route-boundary.${name}.tsx`
+    variants[name] = routerVariant(file)
+    if (variants[name].framework !== ROUTER_VARIANTS[name])
+      throw new Error(`routers/${file}: expected to import ${ROUTER_VARIANTS[name]}`)
+  }
+  const generic = variants.generic
+  items.push({
+    name: 'route-boundary',
+    type: 'ui',
+    dependencies: generic.dependencies,
+    registryDependencies: generic.registryDependencies,
+    files: [{ path: 'components/ui/route-boundary.tsx', content: generic.content }],
+    variants,
   })
 }
 
@@ -80,11 +144,13 @@ function fileItem(name, relPath, type) {
     files: [{ path: relPath, content }],
   }
 }
-// lib/* 와 hooks/* 는 파일 하나 = 아이템 하나 (hooks/index.ts 배럴은 패키지 전용이라 제외)
+// lib/* 와 hooks/* 는 파일 하나 = 아이템 하나 (index.ts 배럴은 패키지 전용이라 제외).
+// 동작 훅(useMobile · ScrollChrome)은 엔진(@comwit/ui)으로 옮겨져 hooks/ 는 비어 있을 수 있다.
 for (const [dir, type] of [
   ['lib', 'lib'],
   ['hooks', 'hook'],
 ]) {
+  if (!existsSync(join(tplSrc, dir))) continue
   for (const file of readdirSync(join(tplSrc, dir))
     .filter((f) => /\.tsx?$/.test(f))
     .sort()) {
@@ -125,8 +191,10 @@ for (const it of items) {
 }
 const index = {
   name: 'comwit',
-  homepage: 'https://github.com/meursyphus/comwit-ui',
-  items: items.map(({ files, ...meta }) => meta),
+  homepage: 'https://github.com/burrr-ai/comwit',
+  items: items.map(({ files, variants, ...meta }) =>
+    variants ? { ...meta, variants: Object.keys(variants) } : meta
+  ),
 }
 writeFileSync(join(outDir, 'index.json'), JSON.stringify(index, null, 2))
 console.log(

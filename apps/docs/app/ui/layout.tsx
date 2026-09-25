@@ -17,11 +17,10 @@ export default function UiLayout({ children }: { children: React.ReactNode }) {
         <a href="#ui-content" className="skip-link">
           Skip to content
         </a>
-        <SiteHeader />
+        <SiteHeader product="ui" menu={<MobileNav />} />
         <div className="ui-shell">
           <Sidebar />
           <main id="ui-content" className="ui-main">
-            <MobileNav />
             {children}
           </main>
         </div>

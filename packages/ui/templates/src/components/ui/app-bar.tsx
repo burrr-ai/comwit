@@ -3,13 +3,13 @@
 /**
  * AppBar — 모바일 상단 앱바. 화면의 의미(무엇을 보여줄지)와 스크롤 동작(어떻게 붙어 있을지)을 분리한다.
  *
- * behavior
+ * behavior (동작은 @comwit/ui 의 AppBar.Root 가 갖고, 여기서는 data-state 로 시각만 입힌다)
  *  - flow   : 문서 흐름대로 스크롤되어 올라간다. 탭 루트처럼 앱바가 거의 필요 없을 때.
  *  - pinned : 항상 상단에 붙는다(sticky). 시트·즉시 작업이 있는 목록.
  *  - reveal : 아래로 스크롤하면 숨고, 조금만 올려도 다시 나온다. 상세 화면의 기본.
  *
  * 배경은 노치까지 이어지고 실제 컨트롤만 safe-area 안쪽에 놓인다. 면은 아래로 사라지는 fade 유리라
- * 경계선이 없다. reveal 은 가장 가까운 <ScrollChromeProvider> 의 스크롤 의도를 따른다.
+ * 경계선이 없다. reveal 은 가장 가까운 <ScrollChromeProvider>(@comwit/ui) 의 스크롤 의도를 따른다.
  *
  *   <AppBar behavior="reveal">
  *     <AppBarBackButton onClick={() => router.back()} />
@@ -20,16 +20,17 @@
 
 import * as React from 'react'
 import { ChevronLeft, X } from 'lucide-react'
+import { AppBar as AppBarPrimitive } from '@comwit/ui'
 
 import { Button } from './button'
 import { Glass, GlassButton, type GlassVariant } from './glass'
-import { useScrollChrome } from '../../hooks/use-scroll-chrome'
 import { cn } from '../../lib/utils'
 
-export type AppBarBehavior = 'flow' | 'pinned' | 'reveal'
+export type AppBarBehavior = NonNullable<
+  React.ComponentProps<typeof AppBarPrimitive.Root>['behavior']
+>
 
-type AppBarProps = React.ComponentProps<'header'> & {
-  behavior?: AppBarBehavior
+type AppBarProps = React.ComponentProps<typeof AppBarPrimitive.Root> & {
   /** 면 재질. false 면 투명(콘텐츠 위에 컨트롤만). 기본 fade 유리. */
   glass?: GlassVariant | false
 }
@@ -41,21 +42,19 @@ function AppBar({
   children,
   ...props
 }: AppBarProps) {
-  const { compact } = useScrollChrome()
-  const hidden = behavior === 'reveal' && compact
-
   return (
-    <header
+    <AppBarPrimitive.Root
+      behavior={behavior}
       data-slot="app-bar"
-      data-behavior={behavior}
-      data-hidden={hidden || undefined}
       className={cn(
-        'box-content isolate z-appbar flex h-appbar items-center bg-transparent',
+        // shrink-0: 페이지가 높이가 정해진 flex 열이면 앱바가 콘텐츠 높이(36px)까지 눌린다 — 그러면 나가는 페이지가
+        // absolute 가 되는 순간 56px 로 돌아와 그 차이만큼 내용이 튄다. 크롬은 절대 눌리지 않는다.
+        'box-content isolate z-appbar flex h-appbar shrink-0 items-center bg-transparent',
         'pt-[env(safe-area-inset-top)] pr-[max(0.75rem,env(safe-area-inset-right))] pl-[max(0.75rem,env(safe-area-inset-left))]',
         behavior === 'flow' ? 'relative' : 'sticky top-0',
         behavior === 'reveal' &&
           'transform-gpu transition-transform duration-slow ease-out focus-within:pointer-events-auto focus-within:translate-y-0 motion-reduce:transition-none',
-        hidden && 'pointer-events-none -translate-y-full',
+        'data-[state=hidden]:pointer-events-none data-[state=hidden]:-translate-y-full',
         className
       )}
       {...props}
@@ -65,7 +64,7 @@ function AppBar({
       <div className="relative z-raised flex w-full min-w-0 transform-gpu items-center gap-1">
         {children}
       </div>
-    </header>
+    </AppBarPrimitive.Root>
   )
 }
 
@@ -149,26 +148,24 @@ function FloatingBackButton({
   style,
   ...props
 }: React.ComponentProps<typeof AppBarBackButton>) {
-  const { compact } = useScrollChrome()
   return (
-    <div
-      data-slot="floating-back-button"
-      className={cn(
-        'fixed z-appbar transition-[transform,opacity] duration-slow ease-out motion-reduce:transition-none',
-        compact && 'pointer-events-none opacity-0',
-        className
-      )}
-      style={{
-        left: 'max(12px, env(safe-area-inset-left))',
-        top: 'calc(env(safe-area-inset-top) + 12px)',
-        transform: compact
-          ? 'translateY(calc(-100% - env(safe-area-inset-top) - 16px))'
-          : 'translateY(0)',
-        ...style,
-      }}
-    >
-      <AppBarBackButton {...props} />
-    </div>
+    <AppBarPrimitive.Root asChild behavior="reveal">
+      <div
+        data-slot="floating-back-button"
+        className={cn(
+          'fixed z-appbar transition-[transform,opacity] duration-slow ease-out motion-reduce:transition-none',
+          'data-[state=hidden]:pointer-events-none data-[state=hidden]:opacity-0 data-[state=hidden]:[transform:translateY(calc(-100%-env(safe-area-inset-top)-16px))]',
+          className
+        )}
+        style={{
+          left: 'max(12px, env(safe-area-inset-left))',
+          top: 'calc(env(safe-area-inset-top) + 12px)',
+          ...style,
+        }}
+      >
+        <AppBarBackButton {...props} />
+      </div>
+    </AppBarPrimitive.Root>
   )
 }
 

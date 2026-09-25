@@ -1,8 +1,8 @@
 ---
 title: '$history'
-group: 'API'
+group: 'Model'
 slug: 'api/history'
-order: 8
+order: 27
 ---
 
 # $history
@@ -115,9 +115,8 @@ const editorActions = action(({ state }) => {
 })
 ```
 
-This is different from deprecated [`silent()`](/state/docs/api/silent). `silent()` suppresses subscriber
-notifications during a synchronous mutation scope. `$history.ignore()` only skips history
-recording and is the correct API for history control.
+`$history.ignore()` only skips history recording. Every change inside it still notifies subscribers
+and rerenders normally; it is the correct API for history control.
 
 ## Manual Transactions
 

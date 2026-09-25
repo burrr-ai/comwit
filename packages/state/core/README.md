@@ -117,9 +117,11 @@ Hydration is idempotent, never calls `queryFn`, and applies changes to already o
 after the requesting render commits. See the [Next.js guide](https://library.comwit.io/state/docs/guide/nextjs).
 
 Selector `.suspend(arg)` is experimental and requires query functions that can run during render
-on both server and client. Next.js Server Functions must use the server-fetch-and-hydrate flow above.
-The descriptor-level `suspense` option and `silent()` are deprecated; do not hydrate through a
-mutating action during render.
+on both server and client. Pass Next.js `useServerInsertedHTML` to `ComwitProvider` and a result
+resolved during the server render streams to the browser, so hydration renders it without a second
+request. Next.js Server Functions must use the server-fetch-and-hydrate flow above. The
+descriptor-level `suspense` option is deprecated; do not hydrate through a mutating action during
+render.
 
 ### Slow initial loading
 

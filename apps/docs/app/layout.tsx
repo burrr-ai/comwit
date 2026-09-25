@@ -39,7 +39,15 @@ export const metadata: Metadata = {
     images: ['/og/libraries'],
   },
   twitter: { card: 'summary_large_image', images: ['/og/libraries'] },
-  icons: { icon: '/logo.svg' },
+  // 마크는 public/icon.svg 하나 — 래스터는 scripts/gen-icons.mjs 가 뽑는다. ico 의 sizes 를 32 로 적어야
+  // 크롬이 ico 대신 SVG 를 고른다. State 는 판다 아이콘으로 덮어쓴다(state/layout.tsx).
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export default function RootLayout({
