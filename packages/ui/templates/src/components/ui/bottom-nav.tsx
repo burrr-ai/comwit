@@ -100,10 +100,13 @@ function BottomNav({
       style={{ ...SPRING, ...style }}
       {...props}
     >
-      {/* 유리 캡슐 — 프리미티브가 compact 를 알리면(data-state) 0.86 으로 줄어든다. */}
+      {/* 유리 캡슐 — 프리미티브가 compact 를 알리면(data-state) 0.86 으로 줄어든다.
+          AppBar 와 같은 규칙: 부모 페이지가 transform 중(드릴 전환)이면 WebKit 은 z-index 만으로
+          backdrop-filter 레이어와 전경을 분리하지 못해 블러가 빠진다 — 캡슐은 isolate,
+          인디케이터·탭은 각자 합성 레이어(transform-gpu)에 둔다. */}
       <div
         className={cn(
-          'relative mx-auto grid h-14 w-full max-w-[336px] origin-bottom rounded-pill p-1',
+          'relative isolate mx-auto grid h-14 w-full max-w-[336px] origin-bottom rounded-pill p-1',
           'transition-[scale] duration-(--nav-scale-duration) ease-(--nav-scale-ease) motion-reduce:transition-none',
           'group-data-[state=compact]/nav:scale-[0.86]'
         )}
@@ -111,7 +114,7 @@ function BottomNav({
       >
         <Glass />
         {activeIndex >= 0 ? (
-          <div aria-hidden="true" className="pointer-events-none absolute inset-1">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-1 transform-gpu">
             <span
               className="absolute inset-y-0 left-0 flex justify-center transition-[translate] duration-(--nav-slide-duration) ease-(--nav-slide-ease) motion-reduce:transition-none"
               style={{ width: `${100 / count}%`, translate: `${activeIndex * 100}% 0` }}
@@ -159,7 +162,7 @@ function BottomNavItem({
       data-slot="bottom-nav-item"
       aria-label={label}
       className={cn(
-        'relative z-raised flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-pill',
+        'relative z-raised flex min-w-0 transform-gpu flex-col items-center justify-center gap-0.5 rounded-pill',
         focusRing,
         pressable,
         'motion-reduce:transition-none motion-reduce:active:scale-100',
