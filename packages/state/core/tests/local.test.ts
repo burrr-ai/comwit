@@ -847,6 +847,64 @@ describe('local()', () => {
     expect(userTwo.list.data[0].title).toBe('Fresh user two')
   })
 
+  test('keeps an in-flight result when its model-derived scope resolves for the first time', async () => {
+    const factory = new IDBFactory()
+    const database = `local-scope-adopt-${crypto.randomUUID()}`
+    const identityModel = model<{ me: { id: string } | null }>({ me: null })
+    const identityStore = identityModel.instance()
+    const source = local.collection<TodoEntity>({
+      key: 'scope-adopt-todos',
+      version: 1,
+      scope: ({ state }) => {
+        const id = state(identityModel).me?.id
+        return id ? `user:${id}` : null
+      },
+    })
+    const pending = deferred<TodoListItem[]>()
+    const listFn = vi.fn<() => Promise<TodoListItem[]>>(() => pending.promise)
+    const createBound = () => {
+      const todoModel = model({
+        list: local.query<TodoListItem[]>({
+          source,
+          initialData: [],
+          staleTime: 60_000,
+          queryFn: listFn,
+        }),
+      })
+      const registry = createQueryBindingRegistry({ local: { indexedDB: factory, database } })
+      registry.getModelState = () => identityStore.proxy
+      return bindResourceState(
+        todoModel.instance().proxy,
+        todoModel.pluginBags.get('query')!,
+        undefined,
+        registry,
+        todoModel.key
+      ) as any
+    }
+    const bound = createBound()
+
+    // The request starts while identity is still unknown, then identity resolves before it lands.
+    const request = bound.list.query()
+    identityStore.proxy.me = { id: '1' }
+    pending.resolve([{ id: '1', title: 'First load', status: 'open' as const, updatedAt: 1 }])
+    await request
+
+    expect(bound.list.data[0].title).toBe('First load')
+    expect(bound.list.isSuccess).toBe(true)
+    expect(bound.list.isLoading).toBe(false)
+    expect(bound.list.isFetching).toBe(false)
+
+    // The finished request still owns a cache entry, so a fresh query inside staleTime reuses it.
+    await bound.list.query()
+    expect(listFn).toHaveBeenCalledOnce()
+
+    // The response was persisted under the adopted scope.
+    const restored = createBound()
+    await restored.list.query()
+    expect(listFn).toHaveBeenCalledOnce()
+    expect(restored.list.data[0].title).toBe('First load')
+  })
+
   test('normalizes and restores response envelopes with map.split/join', async () => {
     const factory = new IDBFactory()
     const database = `local-envelope-${crypto.randomUUID()}`

@@ -1290,7 +1290,12 @@ export class LocalResourceBinding {
   }
 
   private setScope(scope: string | undefined, resetOnChange: boolean): void {
-    const changed = this.scopeInitialized && this.activeScope !== scope
+    // Resolving a scope that was still unknown adopts it instead of switching: whatever was fetched
+    // meanwhile came from the same session the scope now names. Invalidating here would also orphan
+    // a request that is committing right now, leaving its data applied but the query loading forever.
+    // Only leaving a resolved scope (another identity, or back to unknown) is a real change.
+    const changed =
+      this.scopeInitialized && this.activeScope !== undefined && this.activeScope !== scope
     this.scopeInitialized = true
     this.activeScope = scope
 
