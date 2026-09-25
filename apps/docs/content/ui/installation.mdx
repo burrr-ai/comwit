@@ -6,7 +6,7 @@ title: Installation
 
 Bring the component source into your project. Edit it like the rest of your code.
 
-Comwit UI is a curated kit: for each job in an app's UI it picks a proven library (page transitions, toasts, overlays, rich text, tables, dates, forms), wraps it under a neutral name and one design system, and installs the wrapper as source you own. Every component card in the [gallery](/ui/components) links to the library behind it.
+Comwit UI is a curated kit: for each job in an app's UI it picks a proven library (page transitions, toasts, overlays, rich text, tables, dates, forms, chat lists), wraps it under a neutral name and one design system, and installs the wrapper as source you own. Every component card in the [gallery](/ui/components) links to the library behind it.
 
 ## Set up
 
@@ -64,6 +64,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 ```
 
 The CLI reads `package.json` and installs the `RouteBoundary` for Next.js, React Router or TanStack Router; pass `--router` to choose, or use the generic one and hand it your router's pathname. Rules, every preset, persistent layouts and troubleshooting are documented by [SSGOI](https://ssgoi.dev/docs), the engine behind it. The [gallery](/ui/components#page-transition) shows drill, sheet and tab slides live.
+
+## Chat
+
+`chat` installs one file with the whole conversation screen as compound parts: `Chat` fills its parent, `ChatHeader` sits on top, `ChatMessages` is a virtualized list (built on [React Virtuoso](https://virtuoso.dev)) and `ChatComposer` is the input. Give the parent a height, then compose:
+
+```tsx
+'use client'
+
+import {
+  Chat,
+  ChatBubble,
+  ChatComposer,
+  ChatHeader,
+  ChatMessage,
+  ChatMessages,
+  ChatTitle,
+} from '@/components/ui/chat'
+
+export function Thread({ messages, send }: Props) {
+  return (
+    <div className="h-dvh">
+      <Chat mode="messenger">
+        <ChatHeader>
+          <ChatTitle>Ava Chen</ChatTitle>
+        </ChatHeader>
+        <ChatMessages items={messages} isOwn={(m) => m.mine}>
+          {(m) => (
+            <ChatMessage align={m.mine ? 'end' : 'start'}>
+              <ChatBubble>{m.text}</ChatBubble>
+            </ChatMessage>
+          )}
+        </ChatMessages>
+        <ChatComposer onSend={send} />
+      </Chat>
+    </div>
+  )
+}
+```
+
+`mode` chooses the scroll rules. `messenger` (people) lands your messages at the bottom and follows theirs only while you are already there; scrolled up, a glass pill counts the new ones. `assistant` (AI) lifts the message you send to the top and streams the answer under it, the way chat assistants do. Both open at the last message. Pass `footer={<ChatTyping />}` while the other side is typing, `pending` and `onStop` to the composer while an answer streams, and give `ChatMessages` a `key` per conversation so a new thread starts at its own end. The data shape is yours: `items` can be anything, `isOwn` tells the list which messages are yours (the default reads `role === 'user'`).
 
 ## Customize
 

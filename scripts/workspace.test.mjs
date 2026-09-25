@@ -102,16 +102,51 @@ test('page-transition installs the route boundary that matches the detected rout
   }
 })
 
+test('chat installs its compound parts with the virtualization engine as a dependency', () => {
+  execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
+  const index = JSON.parse(readFileSync(join(root, 'packages/ui/cli/registry/index.json'), 'utf8'))
+  const chat = index.items.find((i) => i.name === 'chat')
+  assert.ok(chat, 'chat is in the registry')
+  assert.ok(chat.dependencies.includes('react-virtuoso'))
+  for (const dep of ['button', 'glass', 'textarea', 'utils', 'interaction'])
+    assert.ok(chat.registryDependencies.includes(dep), `chat depends on ${dep}`)
+
+  const fixture = mkdtempSync(join(tmpdir(), 'comwit-cli-chat-'))
+  try {
+    mkdirSync(join(fixture, 'app'))
+    writeFileSync(join(fixture, 'package.json'), '{"private":true}')
+    writeFileSync(join(fixture, 'app/globals.css'), '@import "tailwindcss";\n')
+    const run = (...args) =>
+      execFileSync(process.execPath, [cli, ...args, '--cwd', fixture, '--no-install'], {
+        encoding: 'utf8',
+      })
+    run('init')
+    run('add', 'chat')
+    const source = readFileSync(join(fixture, 'components/ui/chat.tsx'), 'utf8')
+    assert.match(source, /from ['"]react-virtuoso['"]/)
+    assert.match(source, /from ['"]@\/components\/ui\/glass['"]/)
+    assert.match(source, /from ['"]@\/lib\/interaction['"]/)
+    for (const part of ['ChatMessages', 'ChatBubble', 'ChatComposer', 'ChatScrollToBottom'])
+      assert.match(source, new RegExp(`\\b${part}\\b`))
+    for (const file of ['button', 'glass', 'textarea'])
+      assert.ok(readFileSync(join(fixture, `components/ui/${file}.tsx`), 'utf8').length)
+  } finally {
+    rmSync(fixture, { recursive: true, force: true })
+  }
+})
+
 test('generated docs consume the moved registry and expose separate agent guides', () => {
   execFileSync(process.execPath, [join(root, 'apps/docs/scripts/gen-ui.mjs')])
   const catalog = readFileSync(join(root, 'apps/docs/app/ui/_generated/catalog.ts'), 'utf8')
   assert.match(catalog, /@\/components\/ui\/button/)
   assert.match(catalog, /npx comwit-ui add dialog/)
   assert.match(catalog, /npx comwit-ui add page-transition/)
+  assert.match(catalog, /npx comwit-ui add chat/)
   const ui = readFileSync(join(root, 'apps/docs/public/ui/llms.txt'), 'utf8')
   const state = readFileSync(join(root, 'apps/docs/public/state/llms.txt'), 'utf8')
   assert.match(ui, /comwit-ui@latest init/)
   assert.match(ui, /page-transition/)
+  assert.match(ui, /comwit-ui add chat/)
   assert.match(state, /@comwit\/state/)
   assert.doesNotMatch(state, /library\.comwit\.io\/(docs|llm)\//)
 })
