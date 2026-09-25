@@ -10,8 +10,8 @@
  *   const ref = usePresenceAnimation<HTMLDivElement>({
  *     // 진행도 t: 0 = 닫힘, 1 = 열림. 스프링이 t 를 움직이고, 매 프레임의 모습이 키프레임이 된다.
  *     style: (t) => ({ opacity: t, transform: `scale(${0.6 + 0.4 * t})` }),
- *     enter: { duration: 0.35, bounce: 0.1 },
- *     exit: { duration: 0.25 },
+ *     enter: { duration: 0.28, bounce: 0.1 },
+ *     exit: { duration: 0.2 },
  *   })
  *   <Popover.Content asChild><div ref={ref}>…</div></Popover.Content>
  *
@@ -39,16 +39,16 @@ import { useLayoutEffect } from './internal/use-layout-effect'
 interface PresenceAnimationOptions {
   /** 진행도 t(0 = 닫힘, 1 = 열림)에서의 모습. 튕기는 스프링이면 t 가 잠깐 1 을 넘는다. */
   style: (t: number) => Keyframe
-  /** 열릴 때의 스프링. 기본 `{ duration: 0.35 }`. */
+  /** 열릴 때의 스프링. 기본 `{ duration: 0.28 }`. */
   enter?: SpringConfig
-  /** 닫힐 때의 스프링. 기본 `{ duration: 0.25 }`. */
+  /** 닫힐 때의 스프링. 기본 `{ duration: 0.2 }`. */
   exit?: SpringConfig
   /** 닫힘이 멎어 파트가 사라지기 직전에 불린다(overlay-kit 의 unmount 등). */
   onExitComplete?: () => void
 }
 
-const ENTER: SpringConfig = { duration: 0.35 }
-const EXIT: SpringConfig = { duration: 0.25 }
+const ENTER: SpringConfig = { duration: 0.28 }
+const EXIT: SpringConfig = { duration: 0.2 }
 /** 동작 줄이기 — 투명도만 이 시간(ms)에 선형으로. */
 const REDUCED_MS = 120
 

@@ -59,8 +59,8 @@ const PRESETS: Record<OverlayMotionPreset, (side: OverlayMotionSide | undefined)
         opacity: fadeIn(t),
         transform: `translate3d(${x * (1 - t)}rem, ${y * (1 - t)}rem, 0) scale(${0.6 + 0.4 * t})`,
       }),
-      enter: { duration: 0.35, bounce: 0.12 },
-      exit: { duration: 0.22 },
+      enter: { duration: 0.27, bounce: 0.12 },
+      exit: { duration: 0.17 },
     }
   },
   dialog: () => ({
@@ -68,8 +68,8 @@ const PRESETS: Record<OverlayMotionPreset, (side: OverlayMotionSide | undefined)
       opacity: fadeIn(t),
       transform: `translate3d(0, 0, 0) scale(${0.9 + 0.1 * t})`,
     }),
-    enter: { duration: 0.35, bounce: 0.08 },
-    exit: { duration: 0.2 },
+    enter: { duration: 0.27, bounce: 0.08 },
+    exit: { duration: 0.16 },
   }),
   sheet: (side = 'bottom') => {
     const [x, y] = SHEET_FROM[side]
@@ -78,14 +78,14 @@ const PRESETS: Record<OverlayMotionPreset, (side: OverlayMotionSide | undefined)
         const hidden = 1 - clamp(t)
         return { transform: `translate3d(${x * hidden}%, ${y * hidden}%, 0)` }
       },
-      enter: { duration: 0.45 },
-      exit: { duration: 0.26 },
+      enter: { duration: 0.35 },
+      exit: { duration: 0.21 },
     }
   },
   scrim: () => ({
     style: (t) => ({ opacity: clamp(t) }),
-    enter: { duration: 0.4 },
-    exit: { duration: 0.26 },
+    enter: { duration: 0.3 },
+    exit: { duration: 0.21 },
   }),
 }
 
