@@ -9,7 +9,7 @@ export const specs = [
     imports: [
       {
         from: '@comwit/ui-templates/page-transition',
-        names: ['PageTransition', 'PageBoundary', 'drill', 'sheet', 'hero', 'slide'],
+        names: ['PageTransition', 'PageBoundary', 'drill', 'sheet', 'slide'],
       },
       {
         from: '@comwit/ui-templates/app-bar',
@@ -27,12 +27,6 @@ export const specs = [
   { id: 2, title: 'Places to eat', body: 'Black pork near the harbor. The noodle stand opens at eleven.' },
   { id: 3, title: 'Day three', body: 'Sunrise peak at six, then the coast road with the windows down.' },
 ]`,
-      `const PHOTOS = [
-  { id: 'peak', title: 'Sunrise peak', tone: 'from-amber-300 to-rose-500' },
-  { id: 'beach', title: 'Hyeopjae beach', tone: 'from-sky-300 to-blue-700' },
-  { id: 'forest', title: 'Bijarim forest', tone: 'from-lime-300 to-teal-700' },
-  { id: 'market', title: 'Night market', tone: 'from-pink-300 to-indigo-800' },
-]`,
       `// Rules describe navigation pairs; presets describe the motion. Back replays the pair in reverse.
 const transitions = {
   transitions: [
@@ -40,8 +34,6 @@ const transitions = {
     { on: '/notes/**', except: '/notes', transition: drill() },
     // a temporary task rises over the page and blurs it
     { on: '/compose', transition: sheet({ type: 'blur' }) },
-    // the photo marked with the same key on both pages travels between them
-    { from: '/photos', to: '/photos/*', transition: hero({ type: 'fade' }) },
     // tabs slide by their order; the shell around them stays put
     { ordered: ['/home', '/explore', '/me'], transition: slide() },
   ],
@@ -133,61 +125,6 @@ return (
                 </li>
               ))}
             </ul>
-          </>
-        )}
-      </PageBoundary>
-    </PageTransition>
-  </div>
-)`,
-      },
-      {
-        name: 'Hero',
-        description:
-          'hero(): mark the shared element with data-hero-exit-key on the page you leave and data-hero-enter-key on the page you enter, same value on both, plus data-hero-radius (px) on each end so the corner radius morphs with the box. The engine morphs it across; type: "fade" crossfades the rest.',
-        renderFn: `const [path, setPath] = React.useState('/photos')
-const photo = PHOTOS.find((p) => '/photos/' + p.id === path)
-return (
-  <div className="h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
-    <PageTransition config={transitions} className="min-h-full">
-      <PageBoundary path={path} className="min-h-full bg-background">
-        {photo ? (
-          <>
-            <div
-              data-hero-enter-key={photo.id}
-              data-hero-radius={0}
-              className={'h-56 w-full bg-linear-to-br ' + photo.tone}
-            />
-            <div className="flex items-center gap-2 px-4 py-3">
-              <AppBarBackButton onClick={() => setPath('/photos')} />
-              <h4 className="text-title-md text-foreground">{photo.title}</h4>
-            </div>
-            <p className="px-5 pb-6 text-body-sm text-soft-foreground">
-              The photo travelled from the grid. Go back and it settles into its tile again.
-            </p>
-          </>
-        ) : (
-          <>
-            <AppBar behavior="pinned">
-              <AppBarTitle size="lg">Photos</AppBarTitle>
-            </AppBar>
-            <div className="grid grid-cols-2 gap-3 px-4 pb-4">
-              {PHOTOS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  aria-label={'Open ' + p.title}
-                  onClick={() => setPath('/photos/' + p.id)}
-                  className="overflow-hidden rounded-card text-left"
-                >
-                  <div
-                    data-hero-exit-key={p.id}
-                    data-hero-radius={16}
-                    className={'h-32 w-full bg-linear-to-br ' + p.tone}
-                  />
-                  <span className="block px-1 pt-2 text-label font-medium text-foreground">{p.title}</span>
-                </button>
-              ))}
-            </div>
           </>
         )}
       </PageBoundary>

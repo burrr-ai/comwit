@@ -48,7 +48,7 @@ export const groups = [
         title: 'Page transition',
         exhibit: 'phone',
         summary:
-          'Drill, sheet and hero between the same two screens. One keyed boundary marks the page; your router or plain state drives it.',
+          'Drill or sheet between the same two screens. One keyed boundary marks the page; your router or plain state drives it.',
       },
       {
         name: 'bottom-sheet',

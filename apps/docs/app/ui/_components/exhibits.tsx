@@ -37,7 +37,6 @@ import {
   PageBoundary,
   PageTransition,
   drill,
-  hero,
   sheet,
   slide,
   type PageTransitionConfig,
@@ -153,13 +152,14 @@ function PhoneScreen({
   React.useEffect(() => {
     if (resetScroll) scrollRef.current?.scrollTo({ top: 0 })
   }, [resetKey, resetScroll])
+  // 스크롤러는 flex 컨테이너가 아니다 — 안의 페이지가 콘텐츠만큼 자라야 sticky 앱바·탭바가 제 흐름 위치를 갖는다.
+  // (flex-1 · basis 0 체인은 페이지 상자를 뷰포트 높이에 고정해 콘텐츠가 넘치고, 탭바가 콘텐츠 중간에 남는다.)
   return (
     <ScrollChromeProvider scrollRef={scrollRef} resetKey={resetKey}>
       <PullToRefresh
         ref={scrollRef}
         enabled={Boolean(onRefresh)}
         onRefresh={onRefresh ?? (() => undefined)}
-        className="flex flex-col"
       >
         {children}
       </PullToRefresh>
@@ -207,11 +207,12 @@ function MobileShell({
   return (
     <PhoneStage label={label} footer={footer}>
       <PhoneScreen resetKey={path} resetScroll={false} onRefresh={onRefresh}>
-        <PageTransition config={config} className="flex min-h-full flex-1 flex-col">
+        {/* 쉘은 최소 화면 높이(min-h-full)에서 콘텐츠만큼 자란다. 페이지는 flex-1 로 짧을 때만 화면을 채운다. */}
+        <PageTransition config={config} className="flex min-h-full flex-col">
           <PageBoundary
             path={path}
             routeKey={routeKey}
-            className="flex min-h-full flex-1 flex-col bg-background"
+            className="flex flex-1 flex-col bg-background"
           >
             {children}
           </PageBoundary>
@@ -266,19 +267,13 @@ function PlaceRow({ place }: { place: (typeof PLACES)[number] }) {
   )
 }
 
-// hero 양 끝의 모서리 반경(px). 엔진은 CSS 반경을 읽지 않으므로 명시해야 전환 중 반경이 보정된다.
-const CONTROL_RADIUS = 10 // rounded-control (--radius)
-const CARD_RADIUS = 16 // rounded-card (--card-radius)
-
-/** 목록 행 — 누르면 어디로든 간다. heroKey 를 주면 썸네일이 상세로 이어진다. */
+/** 목록 행 — 누르면 어디로든 간다. */
 function PlaceRowButton({
   place,
   onClick,
-  heroKey,
 }: {
   place: (typeof PLACES)[number]
   onClick: () => void
-  heroKey?: string
 }) {
   return (
     <button
@@ -286,12 +281,7 @@ function PlaceRowButton({
       onClick={onClick}
       className="flex w-full items-center gap-3 rounded-card px-2 py-2 text-left transition-colors duration-fast hover:bg-accent"
     >
-      <Photo
-        tone={place.tone}
-        className="size-14 shrink-0 rounded-control"
-        data-hero-exit-key={heroKey}
-        data-hero-radius={heroKey ? CONTROL_RADIUS : undefined}
-      />
+      <Photo tone={place.tone} className="size-14 shrink-0 rounded-control" />
       <PlaceRowText place={place} />
       <ChevronRight className="size-4 shrink-0 text-subtle-foreground" />
     </button>
@@ -414,17 +404,11 @@ export function BottomNavExhibit() {
 
 /* ── Page transition ────────────────────────────────────────────────── */
 
-// 같은 두 페이지(목록 ↔ 상세)에 규칙만 바꿔 끼운다 — 세 효과가 그대로 비교된다.
-const EFFECTS = { drill: 'Drill', sheet: 'Sheet', hero: 'Hero' } as const
+// 같은 두 페이지(목록 ↔ 상세)에 규칙만 바꿔 끼운다 — 두 효과가 그대로 비교된다.
+const EFFECTS = { drill: 'Drill', sheet: 'Sheet' } as const
 type Effect = keyof typeof EFFECTS
 
-function PlaceListPage({
-  onOpen,
-  heroKeys,
-}: {
-  onOpen: (index: number) => void
-  heroKeys?: boolean
-}) {
+function PlaceListPage({ onOpen }: { onOpen: (index: number) => void }) {
   return (
     <>
       <AppBar behavior="reveal">
@@ -433,11 +417,7 @@ function PlaceListPage({
       <ul className="px-3 pb-6">
         {PLACE_ROWS.map((p, i) => (
           <li key={i}>
-            <PlaceRowButton
-              place={p}
-              onClick={() => onOpen(i)}
-              heroKey={heroKeys ? `place-${i}` : undefined}
-            />
+            <PlaceRowButton place={p} onClick={() => onOpen(i)} />
           </li>
         ))}
       </ul>
@@ -480,12 +460,7 @@ function PlaceDetailPage({
           </AppBarActions>
         </AppBar>
       )}
-      <Photo
-        tone={place.tone}
-        className="h-56 shrink-0"
-        data-hero-enter-key={variant === 'hero' ? `place-${index}` : undefined}
-        data-hero-radius={variant === 'hero' ? 0 : undefined}
-      />
+      <Photo tone={place.tone} className="h-56 shrink-0" />
       <div className="space-y-4 px-5 pt-4 pb-8">
         <div>
           <h4 className="text-title-lg text-foreground">{place.name}</h4>
@@ -494,11 +469,9 @@ function PlaceDetailPage({
           </p>
         </div>
         <p className="text-body-sm text-soft-foreground">
-          {variant === 'hero'
-            ? 'The photo came along from the row. Everything else faded in around it.'
-            : variant === 'sheet'
-              ? 'The list is still underneath, dimmed and blurred. Close this and it is exactly where you left it.'
-              : 'The list you came from is still there underneath. Go back and it is exactly where you left it.'}
+          {variant === 'sheet'
+            ? 'The list is still underneath, dimmed and blurred. Close this and it is exactly where you left it.'
+            : 'The list you came from is still there underneath. Go back and it is exactly where you left it.'}
         </p>
         {PLACES.filter((p) => p !== place)
           .slice(0, 3)
@@ -520,19 +493,12 @@ export function PageTransitionExhibit() {
   const config = React.useMemo<PageTransitionConfig>(
     () => ({
       transitions: [
-        effect === 'hero'
-          ? // the element keyed data-hero-exit-key on the list and data-hero-enter-key on the detail morphs across
-            {
-              from: '/places',
-              to: '/places/*',
-              transition: hero({ type: 'fade', variant: 'smooth' }),
-            }
-          : // list → detail: entering /places/* is forward, leaving is backward
-            {
-              on: '/places/**',
-              except: '/places',
-              transition: effect === 'sheet' ? sheet({ type: 'blur' }) : drill(),
-            },
+        // list → detail: entering /places/* is forward, leaving is backward
+        {
+          on: '/places/**',
+          except: '/places',
+          transition: effect === 'sheet' ? sheet({ type: 'blur' }) : drill(),
+        },
       ],
     }),
     [effect]
@@ -556,7 +522,7 @@ export function PageTransitionExhibit() {
       }
     >
       {index === null ? (
-        <PlaceListPage onOpen={(i) => router.push(`/places/${i}`)} heroKeys={effect === 'hero'} />
+        <PlaceListPage onOpen={(i) => router.push(`/places/${i}`)} />
       ) : (
         <PlaceDetailPage index={index} onBack={router.back} variant={effect} />
       )}
@@ -870,12 +836,11 @@ export function GlassExhibit() {
 
 /* ── Overview hero — the whole shell in one phone ──────────────────── */
 
-// 쉘의 전환 규칙 — 탭은 순서대로 슬라이드, 행을 열면 상세가 쉘 전체 위로 드릴인, 홈의 사진은 hero 로 이어지고,
-// 글쓰기는 시트로 뜬다. 뒤로가기는 각각을 거꾸로 돈다.
+// 쉘의 전환 규칙 — 탭은 순서대로 슬라이드, 카드를 열면 상세가 쉘 전체 위로 드릴인, 글쓰기는 시트로 뜬다.
+// 뒤로가기는 각각을 거꾸로 돈다.
 const SHELL_TRANSITIONS: PageTransitionConfig = {
   transitions: [
     { on: '/p/**', transition: drill() },
-    { from: '/home', to: '/photo/*', transition: hero({ type: 'fade', variant: 'smooth' }) },
     { on: '/compose', transition: sheet({ type: 'blur' }) },
     { ordered: TABS.map((t) => t.value), transition: slide() },
   ],
@@ -887,7 +852,7 @@ export function AppShellExhibit() {
   const router = useMiniRouter('/home')
   const { path } = router
   const [liked, setLiked] = React.useState(false)
-  const placeIndex = /^\/(p|photo)\//.test(path) ? Number(path.split('/')[2]) : null
+  const placeIndex = path.startsWith('/p/') ? Number(path.split('/')[2]) : null
   const place = placeIndex === null ? null : PLACES[placeIndex % PLACES.length]
   const refresh = () =>
     new Promise<void>((done) =>
@@ -899,7 +864,7 @@ export function AppShellExhibit() {
 
   return (
     <MobileShell
-      label="Comwit UI app shell — scroll, pull, switch tabs, open a photo, write a post"
+      label="Comwit UI app shell — scroll, pull, switch tabs, open a card, write a post"
       path={path}
       // 탭들은 한 쉘(고정 키)을 공유한다 — 앱바·탭바가 살아남고 안쪽 경계만 슬라이드한다.
       routeKey={isTab(path) ? 'tabs' : undefined}
@@ -908,8 +873,6 @@ export function AppShellExhibit() {
     >
       {path === '/compose' ? (
         <ComposePage onClose={router.back} />
-      ) : place && placeIndex !== null && path.startsWith('/photo/') ? (
-        <PhotoPage place={place} index={placeIndex} onBack={router.back} />
       ) : place ? (
         <PlacePage place={place} onBack={router.back} />
       ) : (
@@ -917,7 +880,6 @@ export function AppShellExhibit() {
           tab={path}
           onTabChange={router.replace}
           onOpenPlace={(i) => router.push(`/p/${i}`)}
-          onOpenPhoto={(i) => router.push(`/photo/${i}`)}
           onCompose={() => router.push('/compose')}
           liked={liked}
           onLike={() => setLiked((v) => !v)}
@@ -947,52 +909,6 @@ function ComposePage({ onClose }: { onClose: () => void }) {
         >
           Post
         </Button>
-      </div>
-    </>
-  )
-}
-
-// 홈 카드의 사진이 그대로 이어진다(hero) — 같은 키를 단 요소가 두 페이지를 잇고 나머지는 페이드한다.
-function PhotoPage({
-  place,
-  index,
-  onBack,
-}: {
-  place: (typeof PLACES)[number]
-  index: number
-  onBack: () => void
-}) {
-  return (
-    <>
-      <FloatingBackButton onClick={onBack} style={{ left: 12, top: 46 }} />
-      <Photo
-        tone={place.tone}
-        className="h-72 shrink-0"
-        data-hero-enter-key={`photo-${index}`}
-        data-hero-radius={0}
-      />
-      <div className="space-y-4 px-5 pt-4 pb-8">
-        <div>
-          <h4 className="text-title-lg text-foreground">{place.name}</h4>
-          <p className="mt-1 flex items-center gap-1 text-caption text-muted-foreground">
-            <MapPin className="size-3" /> {place.area}
-          </p>
-        </div>
-        <p className="text-body-sm text-soft-foreground">
-          The photo travelled here from its card. Go back and it settles into the feed again.
-        </p>
-        <div className="flex gap-2">
-          {['Save', 'Directions', 'Hours'].map((c) => (
-            <Chip key={c} size="sm" onClick={() => toast(c)}>
-              {c}
-            </Chip>
-          ))}
-        </div>
-        {PLACES.filter((p) => p !== place)
-          .slice(0, 3)
-          .map((p) => (
-            <PlaceRow key={p.name} place={p} />
-          ))}
       </div>
     </>
   )
@@ -1050,7 +966,6 @@ function TabsLayout({
   tab,
   onTabChange,
   onOpenPlace,
-  onOpenPhoto,
   onCompose,
   liked,
   onLike,
@@ -1058,7 +973,6 @@ function TabsLayout({
   tab: string
   onTabChange: (tab: string) => void
   onOpenPlace: (index: number) => void
-  onOpenPhoto: (index: number) => void
   onCompose: () => void
   liked: boolean
   onLike: () => void
@@ -1095,22 +1009,16 @@ function TabsLayout({
               </div>
               {PLACES.map((p, i) => (
                 <div key={i} className="overflow-hidden rounded-card bg-card shadow-card">
-                  {/* 사진을 누르면 hero — 이 요소가 상세의 사진으로 이어진다 */}
+                  {/* 카드를 누르면 drill — 상세가 쉘 전체 위로 밀려 들어온다 */}
                   <button
                     type="button"
-                    aria-label={`Open photo of ${p.name}`}
-                    onClick={() => onOpenPhoto(i)}
+                    aria-label={`Open ${p.name}`}
+                    onClick={() => onOpenPlace(i)}
                     className="block w-full text-left"
                   >
-                    <Photo
-                      tone={p.tone}
-                      className="h-40"
-                      data-hero-exit-key={`photo-${i}`}
-                      data-hero-radius={CARD_RADIUS}
-                    />
+                    <Photo tone={p.tone} className="h-40" />
                   </button>
                   <div className="flex items-center justify-between gap-3 p-3">
-                    {/* 제목을 누르면 drill — 상세가 쉘 위로 밀려 들어온다 */}
                     <button
                       type="button"
                       onClick={() => onOpenPlace(i)}
