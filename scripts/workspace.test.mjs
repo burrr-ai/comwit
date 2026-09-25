@@ -41,6 +41,18 @@ test('moved UI CLI installs usable sources and preserves consumer edits', () => 
   }
 })
 
+test('registry dependencies are real npm package names, never import examples from comments', () => {
+  execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
+  const index = JSON.parse(readFileSync(join(root, 'packages/ui/cli/registry/index.json'), 'utf8'))
+  const npmName = /^(@[a-z0-9-]+\/)?[a-z0-9][a-z0-9._-]*$/
+  for (const item of index.items)
+    for (const dep of item.dependencies)
+      assert.match(dep, npmName, `${item.name} lists a bogus dependency: ${dep}`)
+  const toast = index.items.find((i) => i.name === 'toast')
+  assert.ok(toast.dependencies.includes('sonner'))
+  assert.ok(!toast.dependencies.some((d) => d.startsWith('@/')))
+})
+
 test('page-transition installs the route boundary that matches the detected router', () => {
   execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
   const fixture = mkdtempSync(join(tmpdir(), 'comwit-cli-router-'))

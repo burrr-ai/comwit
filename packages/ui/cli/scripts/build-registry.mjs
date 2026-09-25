@@ -34,11 +34,16 @@ function pkgName(spec) {
   if (spec.startsWith('@')) return spec.split('/').slice(0, 2).join('/')
   return spec.split('/')[0]
 }
+// 실제 import/export 문(행 머리에서 시작)만 본다 — 파일 상단 주석의 사용 예시(`import … from '@/components/ui/toast'`)를
+// 의존성으로 긁으면 `pnpm add @/components` 로 소비 프로젝트의 설치가 통째로 실패한다.
 function parseImports(content) {
+  const code = content
+    .replace(/\/\*[\s\S]*?\*\//g, '') // 블록 주석
+    .replace(/^[ \t]*\/\/.*$/gm, '') // 행 주석
   const specs = []
-  const re = /from\s+["']([^"']+)["']/g
+  const re = /^[ \t]*(?:import|export)\b[^;]*?from\s+["']([^"']+)["']/gm
   let m
-  while ((m = re.exec(content))) specs.push(m[1])
+  while ((m = re.exec(code))) if (!m[1].startsWith('@/')) specs.push(m[1])
   return specs
 }
 
