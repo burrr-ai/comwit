@@ -75,6 +75,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 `chat` 은 헤더 · 메시지 · 컴포저 세로 3단을 컴파운드 파트로 싣는다. `Chat` 이 부모를 채우고(부모에 높이가 있어야
 한다: `h-dvh` · `flex-1 min-h-0`), `ChatMessages` 가 [react-virtuoso](https://virtuoso.dev) 로 가상화한 목록이다.
+동작(가상화 · 스크롤 규칙 · 안 읽음 카운트 · Enter/IME · 자동 높이)은 전부 `@comwit/ui` 의 `Chat` 프리미티브가 갖고,
+템플릿 파일은 파트를 조립해 `data-tone` · `data-align` 에 토큰을 입힐 뿐이다 — 스타일을 바꿔도 동작은 안 깨진다.
 데이터 모양은 강제하지 않는다 — `items` 는 무엇이든, `isOwn` 이 "내 메시지" 를 가른다(기본 `role === 'user'`).
 
 `mode` 가 스크롤 규칙을 정한다:
@@ -144,8 +146,15 @@ docs 갤러리와 같은 묶음 — 컴윗 특화 UX 가 먼저, 기본형이 �
 - **기본형** — button · badge · input · input-group · textarea · label · switch · tabs · accordion · collapsible ·
   dialog · sheet · card · table · avatar · separator · skeleton · pagination
 
-공용: `lib/utils`(토큰을 아는 `cn`) · `lib/interaction`(focusRing 등) · `lib/popup`(overlay-kit 래퍼) ·
-`hooks/use-mobile` · `hooks/use-scroll-chrome`(앱바 reveal · 바텀내비 compact 가 공유하는 스크롤 의도)
+공용: `lib/utils`(토큰을 아는 `cn`) · `lib/interaction`(focusRing 등) · `lib/popup`(overlay-kit 래퍼).
+동작 훅은 엔진이 내보낸다 — `import { ScrollChromeProvider, useScrollChrome, useMobile } from '@comwit/ui'`
+(앱바 reveal · 바텀내비 compact 가 공유하는 스크롤 의도, 모바일 감지). 복사할 `hooks/` 파일은 없다.
+
+**동작은 프리미티브, 템플릿은 스타일.** 앱바(`AppBar.Root`) · 바텀내비(`BottomNav.Root/Item`) · 드래그 스크롤러
+(`DragScroller.Root/Track`) · 당겨서 새로고침(`PullToRefresh.Root/Scroller/Indicator`) · 채팅(`Chat.*`) · 유리 렌즈
+(`useGlassLens`)의 JS 는 `@comwit/ui` 에 있고, 템플릿은 프리미티브가 방출하는 `data-state` · `data-tone` 같은
+속성에 토큰을 입힌다. 새 컴포넌트를 짤 때도 같은 규칙이다: 제스처·스크롤·키보드 같은 동작은 코어에 옵션으로,
+템플릿에는 className 과 슬롯 조립만.
 
 피커·페이저·데이터 테이블의 표시 문구는 영어가 기본이고 `locale`·`labels` 로 바꾼다
 (예: `<DatePicker locale="ko-KR" labels={{ today: '오늘', clear: '지우기' }} />`).

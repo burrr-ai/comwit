@@ -18,6 +18,12 @@ export const credits = {
   'react-virtuoso': { label: 'React Virtuoso', href: 'https://virtuoso.dev' },
 }
 
+// Libraries the headless engine (@comwit/ui) wraps on a component's behalf. The template itself only
+// depends on @comwit/ui, so these are credited by component name instead of by npm dependency.
+export const engineCredits = {
+  chat: ['react-virtuoso'],
+}
+
 export const groups = [
   {
     id: 'mobile',

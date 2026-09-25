@@ -49,9 +49,10 @@ export * from './components/ui/textarea'
 export * from './components/ui/time-picker'
 export * from './components/ui/toast'
 
-// ── lib / hooks ──────────────────────────────────────────────
+// ── lib ────────────────────────────────────────────────────
 export { cn } from './lib/utils'
 export { popup } from './lib/popup'
 export type { SheetApi } from './lib/popup'
-export { useMobile, useMobileDevice, ScrollChromeProvider, useScrollChrome } from './hooks'
-export type { UseMobileResult } from './hooks'
+// 훅은 이제 엔진(@comwit/ui)에 산다 — 패키지 소비처 호환을 위해 다시 내보낸다.
+export { useMobile, useMobileDevice, ScrollChromeProvider, useScrollChrome } from '@comwit/ui'
+export type { UseMobileResult } from '@comwit/ui'

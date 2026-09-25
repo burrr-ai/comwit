@@ -19,6 +19,13 @@ npm i @comwit/ui
 - **엔진 선택 기준**: overlay/disclosure/form-control 동작 = Radix 어댑터(교체 가능), a11y 배선 = React Aria
   (`text-field`/`autocomplete` 는 `react-aria`/`react-stately` 사용 — 검증된 ARIA 를 자체 구현하지 않는다).
 - **자체 헤드리스**: `Button`(press/ripple/asChild) · `Input`/`Textarea`(IME-safe) · `TextField`(MUI식 compound) · `Autocomplete`(combobox).
+- **앱 셸·제스처·대화**(동작은 여기, 시각은 templates): `AppBar.Root`(flow/pinned/reveal → `data-state`) ·
+  `BottomNav.Root/Item`(선택 · compact · 펼치기) · `DragScroller.Root/Track`(드래그 · 관성 · 휠 · 키보드) ·
+  `PullToRefresh.Root/Scroller/Indicator`(당김 제스처, `--ptr-pull` · `data-state`) ·
+  `Chat.Root/List/ScrollToBottom/Message/MessageContent/Bubble/Composer/ComposerInput/ComposerSubmit/ComposerStop`
+  (react-virtuoso 가상화 · messenger/assistant 스크롤 규칙 · Enter/IME · 자동 높이).
+- **훅(flat)**: `ScrollChromeProvider`/`useScrollChrome`(앱바·바텀내비가 공유하는 스크롤 의도) · `useMobile`/`useMobileDevice` ·
+  `useGlassLens`(굴절 유리 변위 맵).
 - **Radix 어댑터**: accordion · avatar · collapsible · dialog · dropdown-menu · label · popover · select · separator · tabs · checkbox · radio-group · switch.
 
 ## ⚠️ Tailwind 토큰 결합 (오버라이드 지점)

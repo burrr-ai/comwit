@@ -42,6 +42,20 @@ export * as TextField from './text-field'
 //   Autocomplete.Root(collection)/Label/Control/Input/Trigger/Content + 컬렉션 마커 Item/Section
 export * as Autocomplete from './autocomplete'
 
+// ── 앱 셸·제스처·대화 (자체 헤드리스 — 동작은 여기, 시각은 templates) ────────────────
+//   AppBar.Root(behavior → data-state) · BottomNav.Root/Item(선택·compact·펼치기)
+//   DragScroller.Root/Track(드래그·관성·휠·키보드 가로 스크롤) · PullToRefresh.Root/Scroller/Indicator(당김 제스처)
+//   Chat.Root/Title/Description/List/ScrollToBottom/Message/MessageContent/Bubble/Composer/… (가상화 목록·스크롤 규칙·컴포저)
+export * as AppBar from './app-bar'
+export * as BottomNav from './bottom-nav'
+export * as DragScroller from './drag-scroller'
+export * as PullToRefresh from './pull-to-refresh'
+export * as Chat from './chat'
+// 훅은 flat: 앱바·바텀내비가 공유하는 스크롤 의도, 모바일 감지, 유리 렌즈 엔진
+export * from './scroll-chrome'
+export * from './use-mobile'
+export * from './glass-lens'
+
 // ── Utils (라이브러리 내부 유틸: ripple — 위치/타이밍만, 시각은 소비 레이어가 className 으로 입힌다) ──────────
 export * from './utils/ripple'
 

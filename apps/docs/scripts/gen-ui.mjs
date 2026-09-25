@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, rmSync, existsSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, join } from 'node:path'
-import { groups, credits } from '../content/ui/gallery.mjs'
+import { groups, credits, engineCredits } from '../content/ui/gallery.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url)) // apps/docs/scripts
 const docsRoot = join(here, '..')
@@ -171,7 +171,6 @@ function codeOf(story, spec = {}) {
       (im) =>
         `import { ${im.names.join(', ')} } from '${im.from
           .replace('@comwit/ui-templates/lib/', '@/lib/')
-          .replace('@comwit/ui-templates/hooks', '@/hooks/use-scroll-chrome')
           .replace('@comwit/ui-templates/', '@/components/ui/')}'`
     )
     .join('\n')
@@ -248,8 +247,14 @@ for (const group of groups) {
       ...tokensUsed(reg.source),
       npmDeps: reg.npmDeps,
       registryDeps: reg.registryDeps,
-      // 큐레이팅 크레딧 — 이 컴포넌트가 직접 의존하는 라이브러리 중 알려진 것에 링크한다.
-      credits: [...new Set(reg.npmDeps.map((d) => credits[d]).filter(Boolean))],
+      // 큐레이팅 크레딧 — 이 컴포넌트가 직접 의존하는 라이브러리 + 엔진(@comwit/ui)이 대신 감싼 라이브러리.
+      credits: [
+        ...new Set(
+          [...reg.npmDeps, ...(engineCredits[item.name] ?? [])]
+            .map((d) => credits[d])
+            .filter(Boolean)
+        ),
+      ],
       source: reg.source,
       galleryIndex,
       examples: stories.map((s) => ({

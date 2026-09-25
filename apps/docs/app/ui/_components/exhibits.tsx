@@ -61,7 +61,7 @@ import { SegmentedControl } from '@comwit/ui-templates/segmented-control'
 import { Button } from '@comwit/ui-templates/button'
 import { Chip } from '@comwit/ui-templates/chip'
 import { Textarea } from '@comwit/ui-templates/textarea'
-import { ScrollChromeProvider } from '@comwit/ui-templates/hooks'
+import { ScrollChromeProvider } from '@comwit/ui'
 import { cn } from '@comwit/ui-templates/lib/utils'
 
 /* ── Device ─────────────────────────────────────────────────────────── */

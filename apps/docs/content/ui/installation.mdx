@@ -31,7 +31,7 @@ export default function SaveButton() {
 }
 ```
 
-The copied files belong to your project. `@comwit/ui` supplies the underlying behavior. You do not need to install `@comwit/ui-templates` separately for this workflow.
+The copied files belong to your project. `@comwit/ui` supplies the underlying behavior, including the app-shell hooks: `ScrollChromeProvider` and `useScrollChrome` (the scroll intent the app bar and bottom nav share) and `useMobile` come from `@comwit/ui`, not from copied files. You do not need to install `@comwit/ui-templates` separately for this workflow.
 
 ## Providers
 
@@ -67,7 +67,7 @@ The CLI reads `package.json` and installs the `RouteBoundary` for Next.js, React
 
 ## Chat
 
-`chat` installs one file with the whole conversation screen as compound parts: `Chat` fills its parent, `ChatHeader` sits on top, `ChatMessages` is a virtualized list (built on [React Virtuoso](https://virtuoso.dev)) and `ChatComposer` is the input. Give the parent a height, then compose:
+`chat` installs one file with the whole conversation screen as compound parts: `Chat` fills its parent, `ChatHeader` sits on top, `ChatMessages` is a virtualized list (built on [React Virtuoso](https://virtuoso.dev) inside `@comwit/ui`) and `ChatComposer` is the input. The file is styling only: the scroll rules, virtualization, Enter/IME handling and auto-grow are the `Chat` primitive in the engine, so you can restyle every part without touching behavior. Give the parent a height, then compose:
 
 ```tsx
 'use client'

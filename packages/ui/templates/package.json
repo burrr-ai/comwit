@@ -1,7 +1,7 @@
 {
   "name": "@comwit/ui-templates",
   "version": "0.2.0",
-  "description": "Comwit UI templates \u2014 copy-paste styled components (shadcn-inspired ownership model, no shadcn tooling) built on the @comwit/ui headless engine.",
+  "description": "Comwit UI templates — copy-paste styled components (shadcn-inspired ownership model, no shadcn tooling) built on the @comwit/ui headless engine.",
   "keywords": [
     "react",
     "ui",
@@ -28,7 +28,6 @@
     "./lib/utils": "./src/lib/utils.ts",
     "./lib/popup": "./src/lib/popup.tsx",
     "./lib/interaction": "./src/lib/interaction.ts",
-    "./hooks": "./src/hooks/index.ts",
     "./*": "./src/components/ui/*.tsx"
   },
   "files": [
@@ -59,7 +58,6 @@
     "overlay-kit": "^1.9.0",
     "react-day-picker": "^9.14.0",
     "react-hook-form": "^7.63.0",
-    "react-virtuoso": "^4.18.15",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1"
   },

@@ -26,7 +26,8 @@ npx comwit-ui@latest add button    # 컴포넌트 + 의존 설치
 1. **컴포넌트 파일 복사** — `components/ui/<name>.tsx` 를 내 프로젝트로. 이제 내 코드, 자유 수정.
 2. **`registryDependencies` 재귀 해석** — 예: `add date-picker` → `popover`·`popup`·`use-mobile`·`interaction`·`utils` 까지 자동.
 3. **import 경로 재작성** — 템플릿의 상대 import(`../../lib/utils` · `./popover` · `../../hooks` …)를 내
-   `comwit.json` 의 `importAlias`+`aliases` 로 치환(`@/lib/utils` · `@/components/ui/popover` · `@/hooks/use-mobile`).
+   `comwit.json` 의 `importAlias`+`aliases` 로 치환(`@/lib/utils` · `@/components/ui/popover`).
+   동작 훅(`useMobile` · `ScrollChromeProvider`)은 `@comwit/ui` 가 내보내므로 복사하지 않는다.
    `@comwit/ui`(엔진)는 그대로 npm 참조.
 4. **npm `dependencies` 설치** — `@comwit/ui` 및 `class-variance-authority`·`lucide-react`·(해당 시)
    `react-hook-form`·`@tiptap/*`·`sonner`·`@ssgoi/react`·`react-virtuoso` 등. 패키지 매니저(pnpm/yarn/bun/npm) 자동 감지.
