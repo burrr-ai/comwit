@@ -17,7 +17,8 @@
 @layer base {
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 110px;
+    /* 앵커는 고정 헤더 바로 아래에 선다. 여백이 필요한 대상은 자기 scroll-margin-top 으로 더한다. */
+    scroll-padding-top: var(--site-header-height);
   }
   body {
     margin: 0;
@@ -498,7 +499,7 @@
 .docs-nav a {
   display: flex;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
   padding: 6px 11px;
   border-radius: 6px;
   color: #cfbfd8;
@@ -554,7 +555,7 @@
 }
 .toc-title {
   text-transform: uppercase;
-  font-size: 9px;
+  font-size: 12px;
   color: var(--site-muted);
   letter-spacing: 0.12em;
   font-weight: 600;
@@ -562,8 +563,8 @@
 }
 .toc-link {
   display: block;
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.6;
   padding: 5px 0;
   color: #82788a;
 }
@@ -661,7 +662,7 @@
   white-space: nowrap;
 }
 .prose :where(h2, h3) {
-  scroll-margin-top: 100px;
+  scroll-margin-top: 24px;
 }
 .prose hr {
   border-color: var(--site-border);
@@ -1491,7 +1492,7 @@
 
 .docs-nav .docs-link-code {
   font-family: var(--font-geist-mono), monospace;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .docs-nav-items {
@@ -1512,7 +1513,7 @@
 }
 
 .sidebar-empty {
-  font-size: 14px;
+  font-size: 13px;
   color: #cebfd7;
   padding: 12px 10px;
 }
@@ -1868,8 +1869,10 @@
   color: #f9f6ed;
 }
 
+/* 사이드바 글자는 UI 사이드바의 척도를 따른다 — 13px 본문, 12px 캡션. */
 .state-version {
-  font: 10px var(--font-geist-mono);
+  font: 12px var(--font-geist-mono);
+  white-space: nowrap;
   color: #85788e;
   margin-left: 4px;
 }
@@ -2187,6 +2190,8 @@ html {
 
 /* Inside a library the header belongs to it: `comwit. / State` or `comwit. / UI`. The wordmark is
    the way back out; narrow screens put the navigation button here instead of a second bar. */
+/* :root 에도 건다 — html 의 scroll-padding-top 이 이 높이를 읽어야 앵커가 헤더 바로 아래에 선다. */
+:root:has(.ui-product, .state-docs-frame),
 .ui-product,
 .state-docs-frame {
   --site-header-height: 64px;

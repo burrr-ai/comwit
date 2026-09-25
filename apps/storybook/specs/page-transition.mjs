@@ -106,7 +106,7 @@ return (
       <PageBoundary path={path} className="flex min-h-full flex-col bg-background">
         {path === '/compose' ? (
           <>
-            <AppBar behavior="pinned" glass={false}>
+            <AppBar behavior="pinned">
               <AppBarTitle>New note</AppBarTitle>
               <AppBarActions>
                 <AppBarBackButton icon="close" onClick={() => setPath('/notes')} />
@@ -201,7 +201,7 @@ return (
     <PageTransition config={transitions} className="flex min-h-full flex-col">
       <PageBoundary path={tab} routeKey="tabs" className="flex min-h-full flex-1 flex-col bg-background">
         <PageBoundary path={tab} className="flex-1 bg-background">
-          <AppBar behavior="flow" glass={false}>
+          <AppBar behavior="flow">
             <AppBarTitle size="lg">{current.label}</AppBarTitle>
           </AppBar>
           <div className="space-y-3 px-4 pb-4">

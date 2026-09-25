@@ -255,11 +255,14 @@ function Pinwheel({ className }: { className?: string }) {
 }
 
 const TABS = [
-  { value: '/', label: 'Photos' },
-  { value: '/collections', label: 'Collections' },
-  { value: '/create', label: 'Create' },
+  { value: '/', label: 'Photos', icon: <ImageIcon /> },
+  { value: '/collections', label: 'Collections', icon: <LayoutGrid /> },
+  { value: '/create', label: 'Create', icon: <Sparkles /> },
 ]
 const isTab = (path: string) => TABS.some((t) => t.value === path)
+/** 탭바의 네 번째 칸. 앱 쉘에서는 페이지가 아니라 검색 시트를 연다. */
+const SEARCH_TAB = { value: '/search', label: 'Search', icon: <Search /> }
+const NAV_TABS = [...TABS, SEARCH_TAB]
 
 /** 탭 쉘의 상단 바 — 로고 · 추가 · 알림 · 프로필. */
 function TopAppBar({
@@ -270,7 +273,7 @@ function TopAppBar({
   behavior?: AppBarBehavior
 }) {
   return (
-    <AppBar behavior={behavior} glass={false}>
+    <AppBar behavior={behavior}>
       <Pinwheel className="ml-1 size-7 shrink-0" />
       <AppBarTitle className="text-label font-medium text-soft-foreground">Photos</AppBarTitle>
       <AppBarActions>
@@ -305,11 +308,8 @@ function TopAppBar({
   )
 }
 
-/**
- * 떠 있는 알약 탭바 + 검색 원. 래퍼는 `sticky bottom-0 h-0` 이라 흐름 공간을 갖지 않고(콘텐츠가 뒤로 지나간다),
- * 안쪽 absolute 층이 스크롤 뷰포트 바닥에 붙는다.
- */
-function FloatingNav({
+/** 유리 캡슐 탭바(BottomNav) — 세 탭 + 검색. 검색은 선택 값을 바꾸지 않고 시트를 연다. */
+function PhotosNav({
   value,
   onChange,
   onSearch,
@@ -319,40 +319,15 @@ function FloatingNav({
   onSearch: () => void
 }) {
   return (
-    <div className="sticky bottom-0 z-appbar h-0 shrink-0">
-      <div className="pointer-events-none absolute inset-x-0 bottom-5 flex items-center justify-center gap-2 px-4">
-        <nav
-          aria-label="Sections"
-          className="pointer-events-auto flex items-center rounded-pill bg-card p-1 shadow-raised ring-1 ring-border"
-        >
-          {TABS.map((t) => {
-            const active = t.value === value
-            return (
-              <button
-                key={t.value}
-                type="button"
-                aria-current={active ? 'page' : undefined}
-                onClick={() => onChange(t.value)}
-                className={cn(
-                  'flex h-9 min-w-[74px] items-center justify-center rounded-pill px-3 text-caption font-medium transition-colors duration-fast',
-                  active ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent'
-                )}
-              >
-                {t.label}
-              </button>
-            )
-          })}
-        </nav>
-        <button
-          type="button"
-          aria-label="Search"
-          onClick={onSearch}
-          className="pointer-events-auto flex size-11 items-center justify-center rounded-full bg-card text-foreground shadow-raised ring-1 ring-border transition-colors duration-fast hover:bg-accent"
-        >
-          <Search className="size-5" />
-        </button>
-      </div>
-    </div>
+    <BottomNav
+      aria-label="Sections"
+      value={value}
+      onValueChange={(next) => (next === SEARCH_TAB.value ? onSearch() : onChange(next))}
+    >
+      {NAV_TABS.map((t) => (
+        <BottomNavItem key={t.value} value={t.value} label={t.label} icon={t.icon} />
+      ))}
+    </BottomNav>
   )
 }
 
@@ -580,7 +555,7 @@ function CollectionDetailPage({
   const photos = collectionPhotos(collection)
   return (
     <>
-      <AppBar behavior={behavior} glass={false}>
+      <AppBar behavior={behavior}>
         <AppBarBackButton onClick={onBack} />
         <AppBarActions>
           <Button variant="ghost" size="icon" aria-label="More" onClick={() => toast('More')}>
@@ -612,13 +587,12 @@ function CollagePage({ onClose }: { onClose: () => void }) {
   }))
   return (
     <div className="relative flex flex-1 flex-col bg-background">
-      <header className="sticky top-0 z-appbar bg-background pt-3 pb-2">
-        <p className="text-center text-caption text-muted-foreground">Select 1–6 photos</p>
-        <div className="mt-2 flex items-center justify-between px-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <span className="text-title-sm text-foreground">New collage</span>
+      <AppBar behavior="pinned">
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          Cancel
+        </Button>
+        <AppBarTitle className="flex-1 text-center">New collage</AppBarTitle>
+        <AppBarActions className="pl-0">
           <Button
             variant="ghost"
             size="sm"
@@ -630,14 +604,15 @@ function CollagePage({ onClose }: { onClose: () => void }) {
           >
             Create
           </Button>
+        </AppBarActions>
+      </AppBar>
+      <div className="px-4">
+        <p className="text-center text-caption text-muted-foreground">Select 1–6 photos</p>
+        <div className="mt-3 flex h-11 items-center gap-2 rounded-pill bg-muted px-4 text-label text-muted-foreground">
+          <Search className="size-4" aria-hidden="true" />
+          Search your photos
         </div>
-        <div className="px-4 pt-3">
-          <div className="flex h-11 items-center gap-2 rounded-pill bg-muted px-4 text-label text-muted-foreground">
-            <Search className="size-4" aria-hidden="true" />
-            Search your photos
-          </div>
-        </div>
-      </header>
+      </div>
       <div className="flex-1 pb-24">
         {sections.map(({ label, photos }) => (
           <section key={label} className="mt-5">
@@ -859,7 +834,7 @@ export function AppShellExhibit() {
         <>
           <TopAppBar onAdd={() => setCreate(true)} />
           <div className="relative flex flex-1 flex-col">
-            <PageBoundary path={path} className="flex-1 bg-background pb-24">
+            <PageBoundary path={path} className="flex-1 bg-background">
               {path === '/' ? (
                 <PhotosTab onOpen={openPhoto} />
               ) : path === '/collections' ? (
@@ -869,7 +844,7 @@ export function AppShellExhibit() {
               )}
             </PageBoundary>
           </div>
-          <FloatingNav value={path} onChange={router.replace} onSearch={() => setSearch(true)} />
+          <PhotosNav value={path} onChange={router.replace} onSearch={() => setSearch(true)} />
           <CreateSheet
             open={create}
             onOpenChange={setCreate}
@@ -943,14 +918,14 @@ export function BottomSheetExhibit() {
       footer="Tap + or Search. Drag the handle down, or tap it, to close."
     >
       <TopAppBar onAdd={() => setCreate(true)} />
-      <div className="flex-1 pb-24">
+      <div className="flex-1">
         <PhotoGrid
           photos={PHOTOS}
           keyed={false}
           onOpen={(p) => toast(p.description ?? p.takenAt)}
         />
       </div>
-      <FloatingNav value="/" onChange={() => undefined} onSearch={() => setSearch(true)} />
+      <PhotosNav value="/" onChange={() => undefined} onSearch={() => setSearch(true)} />
       <CreateSheet open={create} onOpenChange={setCreate} />
       <SearchSheet open={search} onOpenChange={setSearch} />
     </MobileShell>
@@ -999,15 +974,8 @@ export function AppBarExhibit() {
 
 /* ── Bottom nav ─────────────────────────────────────────────────────── */
 
-const NAV_TABS = [
-  { value: 'photos', label: 'Photos', icon: <ImageIcon /> },
-  { value: 'collections', label: 'Collections', icon: <LayoutGrid /> },
-  { value: 'create', label: 'Create', icon: <Sparkles /> },
-  { value: 'search', label: 'Search', icon: <Search /> },
-]
-
 export function BottomNavExhibit() {
-  const [tab, setTab] = React.useState('photos')
+  const [tab, setTab] = React.useState('/')
   return (
     <PhoneStage
       label="Bottom nav demo — tap a tab, scroll to shrink the bar"
@@ -1016,15 +984,15 @@ export function BottomNavExhibit() {
       <PhoneScreen resetKey={tab}>
         <TopAppBar behavior="flow" />
         <div className="flex-1 pb-4">
-          {tab === 'photos' ? (
+          {tab === '/' ? (
             <PhotoGrid
               photos={PHOTOS}
               keyed={false}
               onOpen={(p) => toast(p.description ?? p.takenAt)}
             />
-          ) : tab === 'collections' ? (
+          ) : tab === '/collections' ? (
             <CollectionsTab onOpen={(c) => toast(c.name)} />
-          ) : tab === 'create' ? (
+          ) : tab === '/create' ? (
             <CreateTab onCollage={() => toast('Collage')} />
           ) : (
             <div className="space-y-4 px-4 py-4">
@@ -1081,7 +1049,7 @@ export function PullToRefreshExhibit() {
       footer="Drag down from the top with a finger or the mouse."
     >
       <PhoneScreen onRefresh={refresh}>
-        <AppBar behavior="pinned" glass={false}>
+        <AppBar behavior="pinned">
           <Pinwheel className="ml-1 size-7 shrink-0" />
           <AppBarTitle className="text-label font-medium text-soft-foreground">Photos</AppBarTitle>
           <AppBarActions>
