@@ -1,4 +1,9 @@
-# Comwit
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/docs/public/brand/comwit-wordmark-dark.svg">
+    <img src="apps/docs/public/brand/comwit-wordmark.svg" alt="Comwit" height="40">
+  </picture>
+</h1>
 
 **The building blocks behind [comwit.io](https://comwit.io).**
 
