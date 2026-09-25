@@ -192,7 +192,11 @@ providers have separate memory; the explicit seed is what connects their initial
 `.suspend(arg)` runs `queryFn` during render and throws the pending Promise, so a `<Suspense>`
 boundary shows its fallback while the server waits for the data. With `useServerInsertedHTML` on
 the provider, the resolved result travels with the boundary's HTML and the browser hydrates the
-same data without calling `queryFn` again.
+same data without calling `queryFn` again. Available in `@comwit/state@2.5.0-beta.0`:
+
+```sh
+npm install @comwit/state@beta
+```
 
 ```tsx
 // app/products/[id]/page.tsx

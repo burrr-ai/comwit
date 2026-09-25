@@ -165,8 +165,8 @@ function ProductDetail({ id }: { id: string }) {
 }
 ```
 
-With `useServerInsertedHTML` on the provider, a result resolved during the Next.js server render is
-inserted as an inert JSON script before that boundary's HTML. The hydrating `.suspend()` reads it,
+With `useServerInsertedHTML` on the provider (available in `@comwit/state@2.5.0-beta.0`), a result
+resolved during the Next.js server render is inserted as an inert JSON script before that boundary's HTML. The hydrating `.suspend()` reads it,
 renders the identical snapshot, activates the entry after commit with the server's fetch time, and
 never calls `queryFn` again. Without the prop, the browser fetches again while hydrating.
 
