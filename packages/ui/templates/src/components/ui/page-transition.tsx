@@ -49,7 +49,6 @@
 
 import * as React from 'react'
 import { Ssgoi, type SsgoiConfig } from '@ssgoi/react'
-import { useReducedMotion } from 'motion/react'
 
 import { cn } from '../../lib/utils'
 
@@ -57,6 +56,23 @@ import { cn } from '../../lib/utils'
 export type PageTransitionConfig = SsgoiConfig
 
 const NO_TRANSITIONS: PageTransitionConfig = { transitions: [] }
+
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
+
+function subscribeReducedMotion(onChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION)
+  query.addEventListener('change', onChange)
+  return () => query.removeEventListener('change', onChange)
+}
+
+/** 모션 축소 선호. 서버 렌더와 하이드레이션 중에는 false(전환 켜짐)로 둔다. */
+function useReducedMotion() {
+  return React.useSyncExternalStore(
+    subscribeReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION).matches,
+    () => false
+  )
+}
 
 type PageTransitionProps = React.ComponentProps<'div'> & {
   config: PageTransitionConfig
@@ -79,7 +95,7 @@ function PageTransition({
   children,
   ...props
 }: PageTransitionProps) {
-  const reduce = Boolean(useReducedMotion())
+  const reduce = useReducedMotion()
   const resolved = reduce && reducedMotion === 'none' ? NO_TRANSITIONS : config
 
   return (
