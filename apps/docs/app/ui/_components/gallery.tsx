@@ -40,6 +40,29 @@ function Preview({ name }: { name: string }) {
   return <example.Render />
 }
 
+/** "Built on Sonner" — the curated library behind a component, linked. Nothing when there is none. */
+function Credits({ component: c, className }: { component: Component; className?: string }) {
+  if (!c.credits.length) return null
+  return (
+    <p className={cn('text-caption text-muted-foreground', className)}>
+      Built on{' '}
+      {c.credits.map((credit, i) => (
+        <React.Fragment key={credit.href}>
+          {i > 0 && (i === c.credits.length - 1 ? ' and ' : ', ')}
+          <a
+            href={credit.href}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-soft-foreground underline decoration-border underline-offset-[3px] transition-colors duration-fast hover:text-primary hover:decoration-primary"
+          >
+            {credit.label}
+          </a>
+        </React.Fragment>
+      ))}
+    </p>
+  )
+}
+
 function CodeButton({ name, className }: { name: string; className?: string }) {
   const openCode = React.useContext(CodeContext)
   return (
@@ -80,6 +103,7 @@ function GalleryCard({ component: c }: { component: Component }) {
             {c.title}
           </h3>
           <p className="mt-0.5 max-w-prose text-body-sm text-soft-foreground">{c.summary}</p>
+          <Credits component={c} className="mt-1" />
         </div>
         <CodeButton name={c.name} className="-mt-1" />
       </div>
@@ -99,6 +123,7 @@ function SpecimenRow({ component: c }: { component: Component }) {
         <div>
           <h3 className="text-title-sm text-foreground">{c.title}</h3>
           <p className="mt-0.5 text-caption text-muted-foreground">{c.summary}</p>
+          <Credits component={c} className="mt-1" />
         </div>
         <CodeButton name={c.name} className="md:mt-2 md:-ml-3" />
       </div>
@@ -127,6 +152,7 @@ function ComponentSheet({ name, onClose }: { name: string | null; onClose: () =>
             <SheetHeader className="border-b border-border px-6 pt-6 pb-5">
               <SheetTitle className="text-title-lg">{c.title}</SheetTitle>
               <SheetDescription>{c.summary}</SheetDescription>
+              <Credits component={c} />
             </SheetHeader>
             <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-6 py-6">
               <section className="space-y-2">

@@ -22,13 +22,15 @@ Put the font variable --font-pretendard on <html> (for example with next/font/lo
 
 ## Components
 
-- Mobile app: app-bar, bottom-nav, pull-to-refresh, drag-scroller
+- Mobile app: app-bar, bottom-nav, page-transition (with route-boundary), pull-to-refresh, drag-scroller
 - Glass: glass (Glass, GlassSurface, GlassButton), dropdown-menu, popover
-- Notifications: sonner (Toaster), popup (popup.confirm / alert / sheet), alert, empty-state
+- Notifications: toast (Toaster, toast(), Toast; formerly sonner), popup (popup.confirm / alert / sheet), alert, empty-state
 - Pickers: date-picker, time-picker, month-picker (popover on desktop, bottom sheet on phones), calendar
 - Selection: segmented-control, chip, checkbox, radio-group, pager
 - Forms and data: text-field, autocomplete, select, form, data-table, editor
 - Basics: button, badge, input, input-group, textarea, label, switch, tabs, accordion, collapsible, dialog, sheet, card, table, avatar, separator, skeleton, pagination
+
+Dialog, sheet, popup and toast surfaces are refractive glass (the same material as menus and the app bar), denser over the modal scrim so text stays readable. Do not add bg-* classes to their content parts; that removes the glass.
 
 ## App shell
 
@@ -38,6 +40,33 @@ import { ScrollChromeProvider } from '@/hooks/use-scroll-chrome'
 <ScrollChromeProvider scrollRef={mainRef} resetKey={pathname}>…</ScrollChromeProvider>
 
 Omit scrollRef to follow window scroll. PullToRefresh renders its own scroller and forwards ref to it, so pass that ref to ScrollChromeProvider. Routing is yours: pass onClick={() => router.back()} to AppBarBackButton or FloatingBackButton, and use BottomNavItem asChild with your Link.
+
+## Page transitions
+
+npx comwit-ui add page-transition
+
+Installs components/ui/page-transition.tsx (PageTransition provider, generic PageBoundary, presets drill / sheet / slide / axis / zoom / hero / fade) and components/ui/route-boundary.tsx (RouteBoundary bound to the detected router: next, react-router or react-router-dom, @tanstack/react-router; otherwise a generic one that takes a path prop). Force one with --router nextjs|react-router|tanstack-router|generic. The engine (@ssgoi/react) is installed as a dependency; the copied files wrap it under these neutral names, so import from the copied files.
+
+Mount the provider once around the routed region and mark that region with RouteBoundary. In Next.js this goes in app/layout.tsx around children:
+
+'use client'
+import { PageTransition, drill, sheet } from '@/components/ui/page-transition'
+import { RouteBoundary } from '@/components/ui/route-boundary'
+
+const transitions = {
+  transitions: [
+    { on: '/posts/**', except: '/posts', transition: drill() },
+    { on: '/compose', transition: sheet({ type: 'blur' }) },
+  ],
+}
+
+<PageTransition config={transitions}>
+  <RouteBoundary>{children}</RouteBoundary>
+</PageTransition>
+
+PageTransition renders the shell the outgoing page needs (relative, z-0, min-h-dvh, overflow-x-clip); inside your own scroller pass className="min-h-full". Give every page a background. Persistent shells use an outer RouteBoundary with a fixed routeKey around an inner one. Without a router, PageBoundary takes path and routeKey directly. Reduced motion swaps pages without animating unless reducedMotion="keep".
+
+Route rules (on/except, from/to, ordered, priority), every preset and its options, persistent layouts, scroll restoration and troubleshooting are SSGOI's and are documented at https://ssgoi.dev/llms.txt (config shape is identical; only the component names differ).
 
 ## Ownership
 
@@ -54,6 +83,7 @@ Use the shipped semantic utilities, not hardcoded colors:
 - Radius: rounded-control (inputs), rounded-card, rounded-sheet, rounded-pill (buttons, chips); rounded-full is always a circle
 - Type: text-display-xl…sm, text-title-lg…sm, text-body, text-body-sm, text-label, text-caption, text-micro
 - Motion and layers: duration-fast/base/slow, z-appbar < z-overlay < z-modal < z-dropdown < z-toast
+- Glass: the .glass material reads --glass-tint, --glass-opacity, --glass-edge, --glass-sheen, --glass-glow, --glass-shade and --glass-shadow; .glass-dense (dialogs, sheets, popups) tints with --popover at higher opacity
 
 Theme by overriding primitives after the token import, for example :root { --brand: #0b68ba; --brand-strong: #08528f; --radius-scale: 0.6; --pill-radius: 12px }. Dark mode is the .dark class. There is no named-theme preset.
 
@@ -69,12 +99,13 @@ Default copy is English. Pickers take locale (Intl, for example 'ko-KR') and lab
 
 For direct unstyled use, install @comwit/ui and import primitives from that package. For styled UI, prefer the CLI installation flow above.
 
-For imperative popup helpers mount OverlayProvider from overlay-kit once. For toast notifications install the sonner template and mount its Toaster once. Basic controls do not require these providers.
+For imperative popup helpers mount OverlayProvider from overlay-kit once. For toast notifications install the toast template, mount its Toaster once, and call toast() from '@/components/ui/toast' (it renders the glass Toast component through sonner; sonner's own toast() would show sonner's default skin). Basic controls do not require these providers.
 
 ## References
 
 - Components (live gallery): https://library.comwit.io/ui/components
 - Installation: https://library.comwit.io/ui/docs/installation
+- Page transitions engine (SSGOI): https://ssgoi.dev/llms.txt
 - Headless primitives: https://library.comwit.io/ui/docs/primitives
 - Tokens and theming: https://library.comwit.io/ui/theming
 - State (separate library): https://library.comwit.io/state/llms.txt

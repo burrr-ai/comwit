@@ -56,6 +56,8 @@ comwit-ui 작업 모음. 정한 것 · 만들 것 · 아이디어를 여기 쌓�
 - [x] Sheet — 기본 시트 컴포넌트
 - [ ] InfiniteScroll — 컴윗 피드의 IntersectionObserver 센티넬(rootMargin 600px)을 훅으로 추출
 - [x] PullToRefresh · DragScroller · SegmentedControl · Pager · EmptyState · Glass(굴절 유리) — 컴윗에서 이식
+- [x] PageTransition · PageBoundary · RouteBoundary — 페이지 전환(ssgoi 래핑 · 중성 이름 · CLI 가 라우터 감지해 route-boundary 변형 설치)
+- [x] Dialog · Sheet · popup · Toast 를 굴절 유리(`glass-dense`)로 — 메뉴·앱바와 같은 재질
 
 | 컴포넌트     | 상태 | 메모                                                |
 | ------------ | ---- | --------------------------------------------------- |

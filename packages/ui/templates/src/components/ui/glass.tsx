@@ -20,8 +20,11 @@ import {
   useState,
   type ComponentProps,
   type CSSProperties,
+  type MutableRefObject,
   type ReactElement,
   type ReactNode,
+  type Ref,
+  type RefCallback,
 } from 'react'
 import { Button } from './button'
 import { cn } from '../../lib/utils'
@@ -38,6 +41,11 @@ type GlassOptions = {
   pressed?: boolean
   /** 유리 레이어의 그림자. 앱바에 붙는 버튼에서는 끈다. */
   shadow?: boolean
+  /**
+   * 스크림 위에 뜨는 면(다이얼로그·시트·팝업). 뒤가 어두워지므로 틴트를 오버레이 면 색(--popover)으로,
+   * 불투명도를 올려 본문이 읽히게 한다(`.glass-dense`). 가장자리 굴절과 블러는 그대로다.
+   */
+  dense?: boolean
   shape?: GlassShape
   variant?: GlassVariant
 }
@@ -56,6 +64,7 @@ function Glass({
   opacity,
   pressed,
   shadow = true,
+  dense,
   shape = 'pill',
   variant = 'morphing',
 }: GlassOptions) {
@@ -63,6 +72,7 @@ function Glass({
 
   return (
     <span
+      ref={visual.ref}
       aria-hidden="true"
       data-slot="glass"
       data-glass={variant}
@@ -72,6 +82,7 @@ function Glass({
         visual.hasLens && 'glass-lens',
         pressed && 'glass-pressed',
         !shadow && 'glass-shadowless',
+        dense && 'glass-dense',
         className
       )}
       style={visual.style}
@@ -100,6 +111,7 @@ function GlassSurface({
   opacity,
   pressed,
   shadow = true,
+  dense,
   shape = 'panel',
   variant = 'morphing',
 }: GlassSurfaceProps) {
@@ -108,6 +120,8 @@ function GlassSurface({
   return cloneElement(
     children,
     {
+      // 자식의 ref 를 유지하면서 우리도 DOM 을 본다 — 열릴 때마다 마운트되는 팝오버·다이얼로그 콘텐츠의 렌즈를 그때 만든다.
+      ref: composeRefs(getElementRef(children), visual.ref),
       'data-glass': variant,
       className: cn(
         'glass',
@@ -115,6 +129,7 @@ function GlassSurface({
         visual.hasLens && 'glass-lens',
         pressed && 'glass-pressed',
         !shadow && 'glass-shadowless',
+        dense && 'glass-dense',
         children.props.className,
         className
       ),
@@ -194,7 +209,9 @@ function useGlassVisual({
 }: Required<Pick<GlassOptions, 'shape' | 'variant'>> & Pick<GlassOptions, 'opacity' | 'tint'>) {
   const hasLens = useLensSupport()
   const filterId = `glass-${variant}-${useId().replace(/:/g, '')}`
-  const lensMap = useLensMap(filterId, hasLens && variant === 'morphing', shape)
+  // 유리 면 DOM 은 콜백 ref 로 받는다 — 프레즌스로 열고 닫히는 콘텐츠는 마운트 시점이 매번 다르다.
+  const [element, setElement] = useState<HTMLElement | null>(null)
+  const lensMap = useLensMap(element, hasLens && variant === 'morphing', shape)
   const clamped = opacity === undefined ? undefined : Math.min(1, Math.max(0, opacity))
   const style = {
     '--glass-filter': `url(#${filterId})`,
@@ -202,7 +219,36 @@ function useGlassVisual({
     ...(clamped === undefined ? {} : { '--glass-opacity': String(clamped) }),
   } as CSSProperties
 
-  return { filterId, hasLens, style, lensMap }
+  return { filterId, hasLens, style, lensMap, ref: setElement as Ref<HTMLElement> }
+}
+
+type PossibleRef<T> = Ref<T> | undefined
+
+function setRef<T>(ref: PossibleRef<T>, value: T) {
+  if (typeof ref === 'function') ref(value)
+  else if (ref !== null && ref !== undefined) (ref as MutableRefObject<T>).current = value
+}
+
+/** 콜백 ref 와 RefObject 를 하나로 합친다. */
+function composeRefs<T>(...refs: PossibleRef<T>[]): RefCallback<T> {
+  return (node) => {
+    for (const ref of refs) setRef(ref, node)
+  }
+}
+
+// React 18 은 element.ref, React 19 는 element.props.ref 가 정본이고 반대쪽을 읽으면 경고한다.
+// 경고를 내는 getter(isReactWarning)를 피해 다른 쪽을 읽는다. (@comwit/ui slot 과 같은 방식)
+function getElementRef(element: ReactElement): Ref<HTMLElement> | undefined {
+  let getter = Object.getOwnPropertyDescriptor(element.props, 'ref')?.get
+  let mayWarn = getter && 'isReactWarning' in getter && getter.isReactWarning
+  if (mayWarn) return (element as unknown as { ref?: Ref<HTMLElement> }).ref
+  getter = Object.getOwnPropertyDescriptor(element, 'ref')?.get
+  mayWarn = getter && 'isReactWarning' in getter && getter.isReactWarning
+  if (mayWarn) return (element.props as { ref?: Ref<HTMLElement> }).ref
+  return (
+    (element.props as { ref?: Ref<HTMLElement> }).ref ||
+    (element as unknown as { ref?: Ref<HTMLElement> }).ref
+  )
 }
 
 /** SVG backdrop-filter 가 안정적으로 동작하는 Chromium 계열에서만 굴절 렌즈를 켠다. */
@@ -217,14 +263,10 @@ function useLensSupport() {
 type LensTexture = { url: string; width: number; height: number; scale: number }
 
 /** 크기가 바뀔 때만 렌즈 맵을 다시 만든다. 스크롤·이동에는 캡처 비용이 없다. */
-function useLensMap(filterId: string, enabled: boolean, shape: GlassShape) {
+function useLensMap(element: HTMLElement | null, enabled: boolean, shape: GlassShape) {
   const [texture, setTexture] = useState<LensTexture>()
   useEffect(() => {
-    if (!enabled) return
-    const element = document
-      .getElementById(filterId)
-      ?.closest<HTMLElement>('[data-glass="morphing"]')
-    if (!element) return
+    if (!enabled || !element) return
     const update = () => {
       const width = element.offsetWidth
       const height = element.offsetHeight
@@ -242,7 +284,7 @@ function useLensMap(filterId: string, enabled: boolean, shape: GlassShape) {
     const observer = new ResizeObserver(update)
     observer.observe(element)
     return () => observer.disconnect()
-  }, [enabled, filterId, shape])
+  }, [element, enabled, shape])
   return texture
 }
 

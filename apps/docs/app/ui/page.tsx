@@ -15,7 +15,7 @@ export default function UiOverview() {
           </p>
           <div className="mt-8 space-y-2">
             <CliCommand command="npx comwit-ui@latest init" />
-            <CliCommand command="npx comwit-ui@latest add app-bar bottom-nav" />
+            <CliCommand command="npx comwit-ui@latest add app-bar bottom-nav page-transition" />
           </div>
           <div className="mt-6 flex flex-wrap gap-2">
             <Button size="lg" asChild>

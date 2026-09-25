@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { toast } from 'sonner'
+import { toast } from '@comwit/ui-templates/toast'
 import { CheckCircle2, AlertTriangle, XCircle, Info, Search, Plus } from 'lucide-react'
 
 import { popup } from '@comwit/ui-templates/lib/popup'

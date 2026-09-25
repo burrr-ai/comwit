@@ -15,6 +15,21 @@ const outDir = join(here, '..', 'registry') // packages/ui/cli/registry
 
 const IGNORE_NPM = new Set(['react', 'react-dom'])
 
+// 라우터 변형(src/routers/route-boundary.<variant>.tsx)이 의존하는 프레임워크 패키지.
+// 소비 프로젝트에 이미 있어서 감지된 것이므로 설치 목록에 넣지 않고 `framework` 로만 기록한다.
+const ROUTER_VARIANTS = {
+  nextjs: 'next',
+  'react-router': 'react-router',
+  'tanstack-router': '@tanstack/react-router',
+  generic: null,
+}
+
+// import 로 드러나지 않는 짝 — 함께 설치돼야 완성되는 아이템.
+//   page-transition 은 라우터에 맞는 route-boundary(감지형 변형)와 함께 설치된다.
+const EXTRA_REGISTRY_DEPS = {
+  'page-transition': ['route-boundary'],
+}
+
 function pkgName(spec) {
   if (spec.startsWith('@')) return spec.split('/').slice(0, 2).join('/')
   return spec.split('/')[0]
@@ -48,12 +63,57 @@ for (const file of readdirSync(uiDir).filter((f) => f.endsWith('.tsx'))) {
       if (!IGNORE_NPM.has(p)) deps.add(p)
     }
   }
+  for (const extra of EXTRA_REGISTRY_DEPS[name] ?? []) registryDeps.add(extra)
   items.push({
     name,
     type: 'ui',
     dependencies: [...deps].sort(),
     registryDependencies: [...registryDeps].sort(),
     files: [{ path: `components/ui/${file}`, content }],
+  })
+}
+
+// 1b) routers/route-boundary.<variant>.tsx → 하나의 "route-boundary" 아이템 + variants.
+//     files[0] 은 라우터를 못 찾았을 때의 generic 구현이고, comwit-ui add 가 package.json 에서
+//     next / react-router / @tanstack/react-router 를 감지해(또는 --router 로) 변형 content 를 대신 쓴다.
+function routerVariant(file) {
+  const content = readFileSync(join(tplSrc, 'routers', file), 'utf8')
+  const deps = new Set()
+  const registryDeps = new Set()
+  let framework = null
+  for (const s of parseImports(content)) {
+    if (s.startsWith('../components/ui/')) registryDeps.add(s.split('/').pop())
+    else if (s.startsWith('.')) continue
+    else {
+      const p = pkgName(s)
+      if (IGNORE_NPM.has(p)) continue
+      if (Object.values(ROUTER_VARIANTS).includes(p)) framework = p
+      else deps.add(p)
+    }
+  }
+  return {
+    framework,
+    dependencies: [...deps].sort(),
+    registryDependencies: [...registryDeps].sort(),
+    content,
+  }
+}
+{
+  const variants = {}
+  for (const name of Object.keys(ROUTER_VARIANTS)) {
+    const file = `route-boundary.${name}.tsx`
+    variants[name] = routerVariant(file)
+    if (variants[name].framework !== ROUTER_VARIANTS[name])
+      throw new Error(`routers/${file}: expected to import ${ROUTER_VARIANTS[name]}`)
+  }
+  const generic = variants.generic
+  items.push({
+    name: 'route-boundary',
+    type: 'ui',
+    dependencies: generic.dependencies,
+    registryDependencies: generic.registryDependencies,
+    files: [{ path: 'components/ui/route-boundary.tsx', content: generic.content }],
+    variants,
   })
 }
 
@@ -125,8 +185,10 @@ for (const it of items) {
 }
 const index = {
   name: 'comwit',
-  homepage: 'https://github.com/meursyphus/comwit-ui',
-  items: items.map(({ files, ...meta }) => meta),
+  homepage: 'https://github.com/burrr-ai/comwit',
+  items: items.map(({ files, variants, ...meta }) =>
+    variants ? { ...meta, variants: Object.keys(variants) } : meta
+  ),
 }
 writeFileSync(join(outDir, 'index.json'), JSON.stringify(index, null, 2))
 console.log(
