@@ -21,6 +21,7 @@ import { EXAMPLES } from '../_generated/examples'
 import { CliCommand } from './cli-command'
 import { CodeBlock } from './code-block'
 import { EXHIBITS } from './exhibits'
+import { markArrived } from './gallery-nav'
 
 const CodeContext = React.createContext<(name: string) => void>(() => undefined)
 
@@ -78,6 +79,34 @@ function CodeButton({ name, className }: { name: string; className?: string }) {
   )
 }
 
+/**
+ * 한 항목에 한 줄 — 왼쪽 이름 칸, 오른쪽 라이브 전시물. 항목마다 세로 위치가 달라서 사이드바에서 고르면
+ * 언제나 그 항목이 맨 위로 올라온다(나란히 놓인 이웃과 같은 자리를 나눠 갖지 않는다).
+ */
+function ItemInfo({ component: c, sticky }: { component: Component; sticky?: boolean }) {
+  return (
+    <div
+      className={cn(
+        'flex items-start justify-between gap-2 md:block',
+        // 폰처럼 긴 전시물 옆에서는 이름 칸이 헤더 아래에 붙어 따라온다.
+        sticky && 'md:sticky md:top-[calc(var(--site-header-height)+24px)] md:self-start'
+      )}
+    >
+      <div className="min-w-0">
+        <h3 id={`${c.name}-title`} className="text-title-sm text-foreground">
+          {c.title}
+        </h3>
+        <p className="mt-0.5 text-caption text-muted-foreground">{c.summary}</p>
+        <Credits component={c} className="mt-1" />
+      </div>
+      <CodeButton name={c.name} className="md:mt-2 md:-ml-3" />
+    </div>
+  )
+}
+
+const ROW = 'grid gap-4 md:grid-cols-[200px_minmax(0,1fr)] md:gap-8'
+
+/** 전시형 — 이름 칸 + 회색 무대 위의 전시물(폰·넓은 판·카드). */
 function GalleryCard({ component: c }: { component: Component }) {
   const tall = c.exhibit === 'phone'
   return (
@@ -85,12 +114,14 @@ function GalleryCard({ component: c }: { component: Component }) {
       id={c.name}
       data-gallery-item
       aria-labelledby={`${c.name}-title`}
-      className={cn('min-w-0', c.exhibit === 'wide' && 'col-span-full')}
+      className={cn(ROW, 'border-t border-border py-8')}
     >
+      <ItemInfo component={c} sticky={tall} />
       <div
+        data-gallery-stage="card"
         className={cn(
-          'flex items-center justify-center overflow-hidden rounded-card bg-muted',
-          // 폰 카드는 높이를 고정한다(폰 612 + 아래 줄 36 + 여백). 전시물이 무엇을 두든 카드 사각형이 같다.
+          'flex min-w-0 items-center justify-center overflow-hidden rounded-card bg-muted',
+          // 폰 무대는 높이를 고정한다(폰 612 + 아래 줄 36 + 여백). 전시물이 무엇을 두든 사각형이 같다.
           tall
             ? 'h-[732px] px-4 py-8'
             : c.exhibit === 'wide'
@@ -102,16 +133,6 @@ function GalleryCard({ component: c }: { component: Component }) {
           <Preview name={c.name} />
         </div>
       </div>
-      <div className="mt-3 flex items-start justify-between gap-3 px-1">
-        <div className="min-w-0">
-          <h3 id={`${c.name}-title`} className="text-title-sm text-foreground">
-            {c.title}
-          </h3>
-          <p className="mt-0.5 max-w-prose text-body-sm text-soft-foreground">{c.summary}</p>
-          <Credits component={c} className="mt-1" />
-        </div>
-        <CodeButton name={c.name} className="-mt-1" />
-      </div>
     </article>
   )
 }
@@ -122,16 +143,10 @@ function SpecimenRow({ component: c }: { component: Component }) {
     <div
       id={c.name}
       data-gallery-item
-      className="grid gap-4 border-t border-border py-7 md:grid-cols-[200px_minmax(0,1fr)] md:gap-8"
+      data-gallery-stage="row"
+      className={cn(ROW, 'border-t border-border py-7')}
     >
-      <div className="flex items-start justify-between gap-2 md:block">
-        <div>
-          <h3 className="text-title-sm text-foreground">{c.title}</h3>
-          <p className="mt-0.5 text-caption text-muted-foreground">{c.summary}</p>
-          <Credits component={c} className="mt-1" />
-        </div>
-        <CodeButton name={c.name} className="md:mt-2 md:-ml-3" />
-      </div>
+      <ItemInfo component={c} />
       <div className="flex min-w-0 items-center overflow-x-auto py-1">
         <Preview name={c.name} />
       </div>
@@ -233,6 +248,11 @@ function ComponentSheet({ name, onClose }: { name: string | null; onClose: () =>
 
 export function Gallery() {
   const [open, setOpen] = React.useState<string | null>(null)
+  // 다른 페이지의 링크(/ui/components#toast)로 들어왔을 때도 도착한 항목을 표시한다.
+  React.useEffect(() => {
+    const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)))
+    if (target?.hasAttribute('data-gallery-item')) markArrived(target)
+  }, [])
   return (
     <CodeContext.Provider value={setOpen}>
       {groups.map((g) => {
@@ -251,24 +271,15 @@ export function Gallery() {
               </h2>
               <p className="mt-2 text-body text-soft-foreground">{g.blurb}</p>
             </div>
-            {g.specimen ? (
-              <div className="border-b border-border">
-                {items.map((c) => (
+            <div className="border-b border-border">
+              {items.map((c) =>
+                g.specimen ? (
                   <SpecimenRow key={c.name} component={c} />
-                ))}
-              </div>
-            ) : (
-              <div
-                className={cn(
-                  'grid gap-x-6 gap-y-12 md:grid-cols-2',
-                  items.some((c) => c.exhibit === 'phone') && '2xl:grid-cols-3'
-                )}
-              >
-                {items.map((c) => (
+                ) : (
                   <GalleryCard key={c.name} component={c} />
-                ))}
-              </div>
-            )}
+                )
+              )}
+            </div>
           </section>
         )
       })}

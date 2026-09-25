@@ -36,7 +36,7 @@ export const specs = [
         name: 'Sheet',
         description: 'Close icon for sheets — pinned, no glass circle',
         render: `<div className="w-full max-w-sm overflow-hidden rounded-card bg-card shadow-card">
-  <AppBar behavior="flow" glass={false}>
+  <AppBar behavior="flow">
     <AppBarTitle>Filters</AppBarTitle>
     <AppBarActions>
       <AppBarBackButton icon="close" onClick={() => {}} />
@@ -48,7 +48,7 @@ export const specs = [
         name: 'TabRoot',
         description: 'Large title for a tab root',
         render: `<div className="w-full max-w-sm overflow-hidden rounded-card bg-card shadow-card">
-  <AppBar behavior="flow" glass={false}>
+  <AppBar behavior="flow">
     <AppBarTitle size="lg">Projects</AppBarTitle>
     <AppBarActions>
       <Button variant="ghost" size="icon" aria-label="More"><MoreHorizontal /></Button>
