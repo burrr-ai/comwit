@@ -85,7 +85,7 @@ Persistent shells (app bar and bottom nav that survive tab changes) use an outer
   <BottomNav … />
 </RouteBoundary>
 
-hero() carries one element between two pages: put data-hero-exit-key={id} on the element in the page you leave and data-hero-enter-key={id} on its counterpart in the page you enter (same value, unique per page), with a from/to rule such as { from: '/photos', to: '/photos/*', transition: hero({ type: 'fade' }) }. Unmatched keys are a no-op.
+hero() carries one element between two pages: put data-hero-exit-key={id} on the element in the page you leave and data-hero-enter-key={id} on its counterpart in the page you enter (same value, unique per page), with a from/to rule such as { from: '/photos', to: '/photos/*', transition: hero({ type: 'fade' }) }. Also give each end data-hero-radius (its corner radius in px, e.g. 16 on a rounded thumbnail and 0 on the full-bleed photo): the engine does not read the CSS radius, and without it the corners do not morph with the box. Unmatched keys are a no-op.
 
 Route rules (on/except, from/to, ordered, priority), every preset and its options, persistent layouts, scroll restoration and troubleshooting are SSGOI's and are documented at https://ssgoi.dev/llms.txt (config shape is identical; only the component names differ).
 

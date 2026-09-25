@@ -79,7 +79,7 @@ The whole contract is one keyed element: `RouteBoundary` renders a `PageBoundary
 </RouteBoundary>
 ```
 
-`hero()` carries one element between two pages: give it `data-hero-exit-key={id}` where you leave and `data-hero-enter-key={id}` where you arrive. Rules, every preset, persistent layouts, scroll restoration and troubleshooting are documented by [SSGOI](https://ssgoi.dev/llms.txt), the engine behind it; the config shape is identical, only the component names differ.
+`hero()` carries one element between two pages: give it `data-hero-exit-key={id}` where you leave and `data-hero-enter-key={id}` where you arrive, plus `data-hero-radius` (the corner radius in px) on both ends so the corners morph with the box. Rules, every preset, persistent layouts, scroll restoration and troubleshooting are documented by [SSGOI](https://ssgoi.dev/llms.txt), the engine behind it; the config shape is identical, only the component names differ.
 
 ## Bottom sheet
 

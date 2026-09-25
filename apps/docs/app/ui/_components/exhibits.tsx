@@ -266,6 +266,10 @@ function PlaceRow({ place }: { place: (typeof PLACES)[number] }) {
   )
 }
 
+// hero 양 끝의 모서리 반경(px). 엔진은 CSS 반경을 읽지 않으므로 명시해야 전환 중 반경이 보정된다.
+const CONTROL_RADIUS = 10 // rounded-control (--radius)
+const CARD_RADIUS = 16 // rounded-card (--card-radius)
+
 /** 목록 행 — 누르면 어디로든 간다. heroKey 를 주면 썸네일이 상세로 이어진다. */
 function PlaceRowButton({
   place,
@@ -286,6 +290,7 @@ function PlaceRowButton({
         tone={place.tone}
         className="size-14 shrink-0 rounded-control"
         data-hero-exit-key={heroKey}
+        data-hero-radius={heroKey ? CONTROL_RADIUS : undefined}
       />
       <PlaceRowText place={place} />
       <ChevronRight className="size-4 shrink-0 text-subtle-foreground" />
@@ -479,6 +484,7 @@ function PlaceDetailPage({
         tone={place.tone}
         className="h-56 shrink-0"
         data-hero-enter-key={variant === 'hero' ? `place-${index}` : undefined}
+        data-hero-radius={variant === 'hero' ? 0 : undefined}
       />
       <div className="space-y-4 px-5 pt-4 pb-8">
         <div>
@@ -959,7 +965,12 @@ function PhotoPage({
   return (
     <>
       <FloatingBackButton onClick={onBack} style={{ left: 12, top: 46 }} />
-      <Photo tone={place.tone} className="h-72 shrink-0" data-hero-enter-key={`photo-${index}`} />
+      <Photo
+        tone={place.tone}
+        className="h-72 shrink-0"
+        data-hero-enter-key={`photo-${index}`}
+        data-hero-radius={0}
+      />
       <div className="space-y-4 px-5 pt-4 pb-8">
         <div>
           <h4 className="text-title-lg text-foreground">{place.name}</h4>
@@ -1091,7 +1102,12 @@ function TabsLayout({
                     onClick={() => onOpenPhoto(i)}
                     className="block w-full text-left"
                   >
-                    <Photo tone={p.tone} className="h-40" data-hero-exit-key={`photo-${i}`} />
+                    <Photo
+                      tone={p.tone}
+                      className="h-40"
+                      data-hero-exit-key={`photo-${i}`}
+                      data-hero-radius={CARD_RADIUS}
+                    />
                   </button>
                   <div className="flex items-center justify-between gap-3 p-3">
                     {/* 제목을 누르면 drill — 상세가 쉘 위로 밀려 들어온다 */}

@@ -40,7 +40,8 @@
  *
  * 규칙: on/except(계층 진입·이탈) · from/to(정확한 쌍) · ordered(탭 순서). 뒤로가기는 같은 효과를 거꾸로 돈다.
  * 스크롤 위치는 규칙에서 자동으로 복원·초기화된다. `prefers-reduced-motion` 이면 전환 없이 바로 바꾼다.
- * hero 는 두 페이지의 공유 요소에 `data-hero-exit-key`(출발) / `data-hero-enter-key`(도착) 를 같은 값으로 단다.
+ * hero 는 두 페이지의 공유 요소에 `data-hero-exit-key`(출발) / `data-hero-enter-key`(도착) 를 같은 값으로 달고,
+ * 양쪽에 `data-hero-radius`(모서리 반경 px) 도 적는다 — 엔진은 CSS 반경을 읽지 않으므로 이 값으로 전환 중 반경을 보정한다.
  */
 
 import * as React from 'react'

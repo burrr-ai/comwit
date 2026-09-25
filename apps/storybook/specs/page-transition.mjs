@@ -143,7 +143,7 @@ return (
       {
         name: 'Hero',
         description:
-          'hero(): mark the shared element with data-hero-exit-key on the page you leave and data-hero-enter-key on the page you enter, same value on both. The engine morphs it across; type: "fade" crossfades the rest.',
+          'hero(): mark the shared element with data-hero-exit-key on the page you leave and data-hero-enter-key on the page you enter, same value on both, plus data-hero-radius (px) on each end so the corner radius morphs with the box. The engine morphs it across; type: "fade" crossfades the rest.',
         renderFn: `const [path, setPath] = React.useState('/photos')
 const photo = PHOTOS.find((p) => '/photos/' + p.id === path)
 return (
@@ -154,6 +154,7 @@ return (
           <>
             <div
               data-hero-enter-key={photo.id}
+              data-hero-radius={0}
               className={'h-56 w-full bg-linear-to-br ' + photo.tone}
             />
             <div className="flex items-center gap-2 px-4 py-3">
@@ -178,7 +179,11 @@ return (
                   onClick={() => setPath('/photos/' + p.id)}
                   className="overflow-hidden rounded-card text-left"
                 >
-                  <div data-hero-exit-key={p.id} className={'h-32 w-full bg-linear-to-br ' + p.tone} />
+                  <div
+                    data-hero-exit-key={p.id}
+                    data-hero-radius={16}
+                    className={'h-32 w-full bg-linear-to-br ' + p.tone}
+                  />
                   <span className="block px-1 pt-2 text-label font-medium text-foreground">{p.title}</span>
                 </button>
               ))}
