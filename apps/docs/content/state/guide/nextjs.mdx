@@ -15,7 +15,61 @@ client interactions.
 Server Component → resolved data → client route adapter → domain hook → UI
 ```
 
-Add the [provider](/state/docs/guide/quickstart) once above the route.
+For a query that should render inside a streamed `<Suspense>` boundary, the experimental
+[`.suspend(arg)`](#streaming-suspense-experimental) path runs the query during the server render
+and streams its result to the browser cache. Both paths start with the provider below.
+
+## Provider setup
+
+Next.js owns request data and the HTML stream, so the provider receives the framework functions it
+needs as props. Nothing else about the provider changes; both props are optional.
+
+```tsx
+// app/providers.tsx
+'use client'
+
+import { ComwitProvider } from '@comwit/state'
+import { useRouter, useServerInsertedHTML } from 'next/navigation'
+import type { ReactNode } from 'react'
+import { getServerSearchParams } from './get-server-search-params'
+
+export function Providers({ children }: { children: ReactNode }) {
+  const router = useRouter()
+
+  return (
+    <ComwitProvider
+      context={{ router }}
+      getServerSearchParams={getServerSearchParams}
+      useServerInsertedHTML={useServerInsertedHTML}
+      defaultOptions={{ query: { staleTime: 30_000 } }}
+    >
+      {children}
+    </ComwitProvider>
+  )
+}
+```
+
+```ts
+// app/get-server-search-params.ts
+import { workUnitAsyncStorage } from 'next/dist/server/app-render/work-unit-async-storage.external.js'
+
+/** Request search for searchParam() fields. Prerendering has no request, so the browser initializes. */
+export function getServerSearchParams(): string | null {
+  if (typeof window !== 'undefined') return null
+  const store = workUnitAsyncStorage.getStore()
+  return store?.type === 'request' ? store.url.search : null
+}
+```
+
+| Prop                    | Server                                                                                          | Browser                                             |
+| ----------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `getServerSearchParams` | Read once when the provider initializes; seeds [`searchParam()`](/state/docs/api/router) fields | Never called; hydration reads the transferred value |
+| `useServerInsertedHTML` | Inserts a JSON script with resolved `.suspend()` results ahead of each flushed chunk            | No-op; hydrating selectors read those scripts       |
+
+The request store above is an internal Next.js module. It is the only synchronous way to read the
+request URL from a Client Component's server render, so pin it per Next.js version and keep the
+getter in one file. `useServerInsertedHTML` is a public export of `next/navigation`; the same slot
+accepts any function with that signature that inserts the returned element before the next flush.
 
 ## 1. Define the query
 
@@ -117,12 +171,13 @@ later `.load()` or `.query()` calls; `.refetch()` still forces a request.
 
 ## Choose who owns the request
 
-| Data owner                           | Pattern                                         |
-| ------------------------------------ | ----------------------------------------------- |
-| A mounted Client Component           | `.load(arg)` and render loading/error state     |
-| A Server Component                   | Await data, then `useDomain.hydrate(...)`       |
-| A user event or coordinated workflow | An action calling `.query(arg)` or `.refetch()` |
-| An IndexedDB-only fallback           | Standalone `local()` with `.restore(arg)`       |
+| Data owner                           | Pattern                                                     |
+| ------------------------------------ | ----------------------------------------------------------- |
+| A mounted Client Component           | `.load(arg)` and render loading/error state                 |
+| A Server Component                   | Await data, then `useDomain.hydrate(...)`                   |
+| A streamed `<Suspense>` boundary     | `.suspend(arg)` with `useServerInsertedHTML` (experimental) |
+| A user event or coordinated workflow | An action calling `.query(arg)` or `.refetch()`             |
+| An IndexedDB-only fallback           | Standalone `local()` with `.restore(arg)`                   |
 
 `.load()` does not start a request during SSR because its work begins after commit. A passive
 read after hydration displays the supplied server data. Adding `.load(arg)` makes that component
@@ -132,13 +187,77 @@ an owner of subsequent client loading and freshness checks.
 IndexedDB work and canonical entity reconciliation begin after commit. Server and browser
 providers have separate memory; the explicit seed is what connects their initial renders.
 
-## Suspense and older initialization patterns
+## Streaming Suspense (experimental)
 
-Use a Server Component's `Suspense` boundary to stream a fallback around an async loader when
-needed. Experimental selector `.suspend(arg)` executes the query during render and requires a
-query function that is safe in every rendering environment. A Next.js Server Function cannot be
-called from a Client Component's initial render; await it on the server and hydrate instead.
+`.suspend(arg)` runs `queryFn` during render and throws the pending Promise, so a `<Suspense>`
+boundary shows its fallback while the server waits for the data. With `useServerInsertedHTML` on
+the provider, the resolved result travels with the boundary's HTML and the browser hydrates the
+same data without calling `queryFn` again. Available in `@comwit/state@2.5.0-beta.0`:
 
-Do not initialize state by calling an action in a render body. Deprecated [`silent()`](/state/docs/api/silent)
-does not make that mutation safe. Move resolved server query data to `hydrate()` and leave normal
-actions for events and imperative workflows.
+```sh
+npm install @comwit/state@beta
+```
+
+```tsx
+// app/products/[id]/page.tsx
+import { Suspense } from 'react'
+import { ProductDetail } from './product-detail'
+
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  return (
+    <Suspense fallback={<ProductSkeleton />}>
+      <ProductDetail id={id} />
+    </Suspense>
+  )
+}
+```
+
+```tsx
+// app/products/[id]/product-detail.tsx
+'use client'
+
+import { useProduct } from '@/state/product'
+
+export function ProductDetail({ id }: { id: string }) {
+  const product = useProduct((s) => s.detail.suspend(id))
+  if (!product.data) return <NotFound />
+
+  return (
+    <article>
+      <h1>{product.data.title}</h1>
+      <p>{product.data.description}</p>
+    </article>
+  )
+}
+```
+
+```text
+server render: suspend(id) → queryFn → boundary HTML
+                                  ↘ <script type="application/json" data-comwit-suspend> before that chunk
+browser: hydrate boundary → suspend(id) reads the script → same snapshot, no queryFn → entry active after commit
+```
+
+The streamed entry keeps the server's fetch time, so `staleTime` applies to later `.load()` and
+`.query()` calls as if the browser had fetched it. Each result is matched to the selecting hook's
+position in the tree, so nested providers and repeated components stay isolated. Without the
+provider prop, the server and browser caches are separate and the browser runs `queryFn` again
+while hydrating; that is the same as today's behavior.
+
+Use this path only when `queryFn` can run in both environments:
+
+- It executes inside the Client Component bundle during SSR. It cannot import database code, and
+  Next.js rejects Server Function calls during render. Call a Route Handler or an external API.
+- On the server, `fetch` needs an absolute URL. Build the origin from an environment variable or a
+  request-aware helper instead of writing `fetch('/api/products')`.
+- Results are transferred as JSON. Dates arrive as strings; convert them where the data is read.
+- Keep the `<Suspense>` boundary inside the provider. A server-side query failure renders the
+  boundary's fallback and the browser retries the request with the same error boundary rules.
+- `renderToString`, the Pages Router, realtime queries, and streaming `AsyncIterable` fetchers are
+  not covered.
+
+`hydrate()` remains the default for data that must stay on the server. Choose `.suspend()` for
+public, cacheable reads whose loading state belongs to a Suspense boundary.
+
+Do not initialize state by calling an action in a render body. Move resolved server query data to
+`hydrate()` or a streamed `.suspend()` and leave normal actions for events and imperative workflows.

@@ -135,7 +135,7 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
             <div className="docs-nav-intro">{intro.map((doc) => docLink(doc, true))}</div>
           )}
           {sections.map(({ title, docs }) => {
-            const SectionIcon = title === 'API' ? BracketsCurlyIcon : CompassIcon
+            const SectionIcon = title === 'Guide' ? CompassIcon : BracketsCurlyIcon
             return (
               <section className="docs-nav-section" key={title}>
                 <h3>
