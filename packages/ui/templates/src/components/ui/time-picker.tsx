@@ -8,6 +8,7 @@ import { useMobile } from '@comwit/ui'
 import { popup } from '../../lib/popup'
 import { focusField, disabledStyle } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 type TimePickerProps = {
   id?: string
@@ -51,10 +52,10 @@ export function TimePicker({
   id,
   value,
   onChange,
-  placeholder = 'Select time',
+  placeholder = uiText.timePicker.placeholder,
   stepMinutes = 30,
-  locale = 'en-US',
-  title = 'Select time',
+  locale = uiText.locale,
+  title = uiText.timePicker.title,
   className,
   disabled,
 }: TimePickerProps) {

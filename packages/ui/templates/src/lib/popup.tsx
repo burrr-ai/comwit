@@ -15,6 +15,7 @@ import {
 import { Button } from '../components/ui/button'
 import { GlassSurface } from '../components/ui/glass'
 import { OverlayMotion } from './overlay-motion'
+import { uiText } from './ui-text'
 import {
   BottomSheet,
   BottomSheetContent,
@@ -89,10 +90,10 @@ function PopupShell({
 }
 
 function confirm({
-  title = 'Are you sure?',
+  title = uiText.popup.confirmTitle,
   description,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText = uiText.popup.confirm,
+  cancelText = uiText.popup.cancel,
   destructive = false,
 }: ConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
@@ -134,7 +135,11 @@ function confirm({
   })
 }
 
-function alert({ title = 'Notice', description, confirmText = 'OK' }: AlertOptions): Promise<void> {
+function alert({
+  title = uiText.popup.alertTitle,
+  description,
+  confirmText = uiText.popup.ok,
+}: AlertOptions): Promise<void> {
   return new Promise((resolve) => {
     overlay.open(({ isOpen, close, unmount }) => (
       <PopupShell

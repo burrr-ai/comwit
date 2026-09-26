@@ -7,6 +7,7 @@ import { X } from 'lucide-react'
 import { useRipple } from '@comwit/ui'
 import { disabledStyle, focusRing, pressable, rippleItemClassName } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 // 칩 = 필터·태그·선택. tone×variant 색은 compoundVariants 에서, 인터랙션은 아래 훅에서.
 const chipVariants = cva(
@@ -130,7 +131,7 @@ function Chip({
   selected,
   onClick,
   onDelete,
-  deleteLabel = 'Remove',
+  deleteLabel = uiText.chip.remove,
   disabled,
   onPointerDown,
   children,

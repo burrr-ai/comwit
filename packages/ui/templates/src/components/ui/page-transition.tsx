@@ -19,12 +19,15 @@
  *   </PageTransition>
  *
  *  - <PageTransition>   앱 루트에 한 번. 나가는 페이지가 제자리에 머물도록 쉘(relative · z-0 · overflow-x-clip)을 깐다.
+ *                       쉘은 flex 열이고 경계가 grow 로 쉘 높이를 채운다 — 퍼센트 min-height 는 높이가 auto 인
+ *                       부모에서 풀리지 않으므로 짧은 페이지의 sticky 탭바가 바닥에 서려면 이 배선이 필요하다.
  *                       overflow-x 는 hidden 이 아니라 clip 이어야 한다 — hidden 은 쉘을 스크롤 컨테이너로 만들어
  *                       스크롤 복원이 엉뚱한 요소를 겨눈다.
  *  - <PageBoundary>     라우트가 소유한 DOM. path = 규칙이 매칭하는 논리 경로, routeKey = DOM 수명(생략 시 path).
  *                       key 가 바뀌면 React 가 언마운트·마운트하고 엔진이 그 교체를 전환으로 바꾼다 — 라우터 없이
  *                       상태값(`const [path, setPath] = useState('/notes')`)으로도 똑같이 돈다.
- *                       기본 min-h-full: 페이지는 최소 쉘 높이라 나가는 동안 sticky 탭바·액션바가 바닥에 머문다.
+ *                       기본 grow + min-h-full: 흐름 안에선 쉘을 채우고, 나가는 동안(absolute)엔 쉘 높이를 유지해
+ *                       sticky 탭바·액션바가 바닥에 머문다.
  *  - <RouteBoundary>    (route-boundary.tsx · CLI 가 라우터를 감지해 설치) 라우터의 pathname 을 대신 읽는 <PageBoundary>.
  *
  * 앱바는 페이지 안(경계 안)에 둔다 — 페이지와 함께 움직이는 것이 앱의 감각이다. 살아남는 쉘은 탭바처럼 페이지
@@ -102,7 +105,7 @@ function PageTransition({
     <div
       data-slot="page-transition"
       // overflow-x-clip: hidden 은 이 쉘을 스크롤 컨테이너로 만들어 스크롤 복원이 엉뚱한 요소를 겨눈다.
-      className={cn('relative z-0 min-h-dvh overflow-x-clip', className)}
+      className={cn('relative z-0 flex min-h-dvh flex-col overflow-x-clip', className)}
       {...props}
     >
       <Ssgoi config={resolved}>{children}</Ssgoi>
@@ -138,8 +141,9 @@ function PageBoundary<T extends React.ElementType = 'div'>({
       key={routeKey ?? path}
       data-slot="page-boundary"
       data-ssgoi-transition={path}
-      // 페이지는 최소 쉘 높이다 — 나가는 동안(absolute) 짧은 페이지가 줄어들어 sticky 탭바·액션바가 위로 올라오지 않는다.
-      className={cn('min-h-full', className)}
+      // grow: 흐름 안에서 쉘(flex 열)을 채운다. min-h-full: 나가는 동안(absolute, 쉘이 기준)에도 쉘 높이를 유지한다.
+      // 둘 다 없으면 짧은 페이지가 줄어들어 sticky 탭바·액션바가 위로 올라온다.
+      className={cn('min-h-full grow', className)}
     >
       {children}
     </Component>

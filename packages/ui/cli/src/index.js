@@ -32,7 +32,7 @@ const die = (msg) => {
 
 // ── args ────────────────────────────────────────────────────────────────
 // 값을 받는 플래그만 다음 인자를 먹는다 — `--overwrite add button` 에서 add 가 플래그 값이 되지 않게.
-const VALUE_FLAGS = new Set(['cwd', 'css', 'router'])
+const VALUE_FLAGS = new Set(['cwd', 'css', 'router', 'locale'])
 function parseArgs(argv) {
   const positional = []
   const flags = {}
@@ -214,11 +214,17 @@ function detectRouter(cwd) {
   for (const [variant, pkgs] of ROUTER_PACKAGES) if (pkgs.some((n) => n in deps)) return variant
   return 'generic'
 }
-/** variants 가 있는 아이템의 content/deps 를 감지된(또는 --router 로 지정한) 변형으로 바꾼다. */
-function applyVariant(item, cwd, flags) {
-  if (!item.variants) return { item, variant: null }
+/**
+ * variants 가 있는 아이템의 content/deps 를 고른 변형으로 바꾼다.
+ *   variantBy 'router' — package.json 에서 감지(또는 --router)
+ *   variantBy 'locale' — --locale 또는 comwit.json 의 locale(기본 en). ui-text 의 문구 언어다.
+ */
+function applyVariant(item, cwd, flags, cfg) {
+  if (!item.variants) return { item, variant: null, detected: false }
   const names = Object.keys(item.variants)
-  const variant = flags.router ?? detectRouter(cwd)
+  const byLocale = item.variantBy === 'locale'
+  const chosen = byLocale ? (flags.locale ?? cfg.locale) : flags.router
+  const variant = chosen ?? (byLocale ? 'en' : detectRouter(cwd))
   if (!names.includes(variant))
     die(`'${item.name}' 에 '${variant}' 변형이 없습니다. 가능: ${names.join(' · ')}`)
   const v = item.variants[variant]
@@ -231,6 +237,7 @@ function applyVariant(item, cwd, flags) {
   }
   return {
     variant,
+    detected: !byLocale && !chosen,
     item: {
       ...item,
       dependencies: v.dependencies,
@@ -247,7 +254,10 @@ function detectPM(cwd) {
   if (existsSync(join(cwd, 'bun.lockb')) || existsSync(join(cwd, 'bun.lock'))) return 'bun'
   return 'npm'
 }
-function installDeps(deps, cwd, { dry }) {
+// 이미 package.json 에 있는 패키지는 다시 add 하지 않는다 — 재설치는 프로젝트가 고정한 버전(7.2.0 → ^최신)을 바꾼다.
+function installDeps(wanted, cwd, { dry }) {
+  const declared = projectDeps(cwd)
+  const deps = wanted.filter((name) => !(name in declared))
   if (!deps.length) return
   const pm = detectPM(cwd)
   const cmd = pm === 'npm' ? `npm install ${deps.join(' ')}` : `${pm} add ${deps.join(' ')}`
@@ -278,7 +288,13 @@ function cmdList() {
   }
   for (const it of idx.items)
     if (it.variants)
-      log(c.dim(`  ${it.name}: 라우터 감지 변형 ${it.variants.join(' · ')} (--router 로 지정)`))
+      log(
+        c.dim(
+          it.variantBy === 'locale'
+            ? `  ${it.name}: 문구 로케일 ${it.variants.join(' · ')} (--locale 또는 comwit.json locale, 기본 en)`
+            : `  ${it.name}: 라우터 감지 변형 ${it.variants.join(' · ')} (--router 로 지정)`
+        )
+      )
 }
 
 function cmdInit(flags) {
@@ -286,10 +302,17 @@ function cmdInit(flags) {
   const dry = !!flags.dry
   const p = configPath(cwd)
   if (existsSync(p) && !flags.overwrite) {
-    log(c.yellow('• ') + 'comwit.json 이 이미 있습니다 (건너뜀). 덮으려면 --overwrite.')
+    if (flags.locale) {
+      // 설정은 그대로 두고 문구 로케일만 바꾼다. 이미 설치된 ui-text 는 `add ui-text --overwrite` 로 교체한다.
+      const current = JSON.parse(readFileSync(p, 'utf8'))
+      if (!dry)
+        writeFileSync(p, JSON.stringify({ ...current, locale: flags.locale }, null, 2) + '\n')
+      log(c.green('✔ ') + `comwit.json locale: ${flags.locale}`)
+    } else log(c.yellow('• ') + 'comwit.json 이 이미 있습니다 (건너뜀). 덮으려면 --overwrite.')
   } else {
     const cfg = { ...DEFAULT_CONFIG, srcDir: detectSrcDir(cwd, DEFAULT_CONFIG.importAlias) }
     if (flags.css) cfg.css = flags.css
+    if (flags.locale) cfg.locale = flags.locale
     // css 위치 자동 감지 (없으면 기본)
     if (!flags.css) {
       for (const guess of [
@@ -376,7 +399,7 @@ function cmdAdd(names, flags) {
   const deps = new Set()
   log(c.bold(`add: ${names.join(', ')}`) + c.dim(`  (해석된 ${items.length} 아이템)`))
   for (const raw of items) {
-    const { item, variant } = applyVariant(raw, cwd, flags)
+    const { item, variant, detected } = applyVariant(raw, cwd, flags, cfg)
     for (const d of item.dependencies || []) deps.add(d)
     for (const f of item.files) {
       const rel = targetPath(f.path, cfg)
@@ -384,7 +407,7 @@ function cmdAdd(names, flags) {
       const content = f.path.endsWith('.css') ? f.content : rewriteImports(f.content, cfg, f.path)
       const r = writeFileSafe(abs, content, { overwrite, dry })
       const mark = r === 'skip' ? c.yellow('•') : c.green('✔')
-      const tag = variant ? c.cyan(` (${variant}${flags.router ? '' : ' 감지'})`) : ''
+      const tag = variant ? c.cyan(` (${variant}${detected ? ' 감지' : ''})`) : ''
       log(
         `  ${mark} ${rel}${tag}${r === 'skip' ? c.dim(' (존재, 건너뜀 — --overwrite)') : r === 'overwrite' ? c.dim(' (덮어씀)') : ''}`
       )
@@ -420,7 +443,8 @@ switch (cmd) {
   ${c.cyan('comwit-ui list')}            설치 가능한 컴포넌트 목록
 
   플래그: --cwd <dir>  --overwrite  --dry  --no-install  --css <path>
-          --router <nextjs|react-router|tanstack-router|generic>  (route-boundary 변형 — 기본은 package.json 에서 감지)`)
+          --router <nextjs|react-router|tanstack-router|generic>  (route-boundary 변형 — 기본은 package.json 에서 감지)
+          --locale <en|ko>  (컴포넌트 기본 문구 lib/ui-text — init 은 comwit.json 에 기록, 기본 en)`)
     break
   default:
     die(`알 수 없는 명령: ${cmd}. \`comwit-ui help\` 참고.`)

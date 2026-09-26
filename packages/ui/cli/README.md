@@ -19,7 +19,8 @@ npx comwit-ui@latest add button    # 컴포넌트 + 의존 설치
 
 **플래그**: `--cwd <dir>` 대상 프로젝트 · `--overwrite` 기존 파일 덮기 · `--dry` 미리보기(안 씀) ·
 `--no-install` npm 설치 스킵 · `--css <path>` 전역 CSS 경로 지정 ·
-`--router <nextjs|react-router|tanstack-router|generic>` 라우터 종속 구현체(`route-boundary`)를 직접 지정
+`--router <nextjs|react-router|tanstack-router|generic>` 라우터 종속 구현체(`route-boundary`)를 직접 지정 ·
+`--locale <en|ko>` 컴포넌트 기본 문구(`lib/ui-text`)의 언어 — `init` 은 `comwit.json` 에 기록하고 `add` 는 거기서 읽는다
 
 ## 동작 방식
 
@@ -31,7 +32,10 @@ npx comwit-ui@latest add button    # 컴포넌트 + 의존 설치
    `@comwit/ui`(엔진)는 그대로 npm 참조.
 4. **npm `dependencies` 설치** — `@comwit/ui` 및 `class-variance-authority`·`lucide-react`·(해당 시)
    `react-hook-form`·`@tiptap/*`·`sonner`·`@ssgoi/react`·`react-virtuoso` 등. 패키지 매니저(pnpm/yarn/bun/npm) 자동 감지.
-5. **라우터 감지 변형** — `variants` 가 있는 아이템(`route-boundary`)은 `package.json` 의 `next` ·
+5. **이미 있는 npm 패키지는 건너뛴다** — `package.json` 에 선언된 패키지는 다시 add 하지 않는다(프로젝트가 고정한 버전을 바꾸지 않게).
+6. **문구 로케일** — 컴포넌트가 화면·스크린리더에 쓰는 기본 문구와 날짜 로케일은 `lib/ui-text.ts` 하나에 모인다.
+   `--locale` 또는 `comwit.json` 의 `locale`(기본 `en`)로 언어판을 고르고, 설치 뒤엔 내 파일이니 그대로 고친다.
+7. **라우터 감지 변형** — `variants` 가 있는 아이템(`route-boundary`)은 `package.json` 의 `next` ·
    `react-router(-dom)` · `@tanstack/react-router` 를 보고 맞는 구현체를 쓴다(없으면 generic). 프레임워크 패키지는
    이미 있으므로 설치 목록에 넣지 않는다. `--router` 로 강제할 수 있고, `comwit-ui list` 가 변형 목록을 보여준다.
 
@@ -52,6 +56,8 @@ npx comwit-ui@latest add button    # 컴포넌트 + 의존 설치
 - `importAlias` — 재작성된 import 접두사(`@/`). 프로젝트 tsconfig `paths` 와 맞춘다.
 - `srcDir` — `importAlias` 가 가리키는 폴더. `init` 이 tsconfig/jsconfig 의 `"@/*": ["./src/*"]` 를 읽어 `src` 로
   채운다(없으면 루트 `""`). 필드가 없는 옛 설정도 실행할 때 같은 방식으로 감지한다.
+- `locale`(선택) — `lib/ui-text.ts` 문구 언어(`en` · `ko`). `init --locale ko` 가 기록한다. 이미 설치된 문구를 바꾸려면
+  `comwit-ui add ui-text --overwrite`.
 
 ## 토큰 계약
 

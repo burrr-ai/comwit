@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 
 - The copied file is the API reference: read it for parts and props, and edit it directly.
 - Import from the copied files, never from @comwit/ui-templates. ScrollChromeProvider, useScrollChrome, useMobile and useMobileDevice come from @comwit/ui.
+- Default text (button labels, placeholders, screen-reader names) and the picker date locale live in one copied file, lib/ui-text.ts. `init --locale ko` installs the Korean version; edit that file to change wording, or pass the component's labels/placeholder props for one screen.
 - Set the --font-pretendard variable on <html> (for example with next/font/local), or components fall back to the system font.
 - Mount once: the copied Toaster for toast (then call toast() from '@/components/ui/toast', not sonner's), OverlayProvider from overlay-kit for popup, ScrollChromeProvider around the scroller for app-bar and bottom-nav, PageTransition with RouteBoundary around the routed content for page-transition.
 - Style with the token utilities (bg-primary, text-muted-foreground, rounded-card …), not hardcoded colors, and merge classes with cn() from lib/utils; a plain twMerge drops token utilities. Keep your own global element rules inside @layer base. Give page content its side margins with px-gutter (the --page-gutter token, safe-area aware) so it lines up with the phone toasts. Theme by overriding the CSS variables; dark mode is the .dark class.

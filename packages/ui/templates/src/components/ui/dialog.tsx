@@ -7,6 +7,7 @@ import { XIcon } from 'lucide-react'
 import { GlassSurface } from './glass'
 import { OverlayMotion } from '../../lib/overlay-motion'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 import { focusRing } from '../../lib/interaction'
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -75,7 +76,7 @@ function DialogContent({
                 )}
               >
                 <XIcon />
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{uiText.close}</span>
               </DialogPrimitive.Close>
             )}
           </OverlayMotion>

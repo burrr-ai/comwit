@@ -28,6 +28,7 @@ import { GlassSurface } from './glass'
 import { useMobile } from '@comwit/ui'
 import { focusRing } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info' | 'loading'
 
@@ -150,7 +151,7 @@ function Toast({
         {closeButton ? (
           <button
             type="button"
-            aria-label="Close notification"
+            aria-label={uiText.toast.close}
             onClick={() => sonner.dismiss(id)}
             className={cn(
               focusRing,

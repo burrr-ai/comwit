@@ -7,6 +7,7 @@ import { XIcon } from 'lucide-react'
 import { GlassSurface } from './glass'
 import { OverlayMotion } from '../../lib/overlay-motion'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 import { focusRing } from '../../lib/interaction'
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
@@ -83,7 +84,7 @@ function SheetContent({
                 )}
               >
                 <XIcon className="size-4" />
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{uiText.close}</span>
               </SheetPrimitive.Close>
             )}
           </OverlayMotion>

@@ -8,6 +8,7 @@ import { useMobile } from '@comwit/ui'
 import { popup } from '../../lib/popup'
 import { focusField, disabledStyle } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 type MonthPickerLabels = {
   /** 모바일 바텀시트 제목 */
@@ -33,11 +34,11 @@ type MonthPickerProps = {
 }
 
 const DEFAULT_LABELS: Required<MonthPickerLabels> = {
-  title: 'Select month',
-  clear: 'Clear',
-  thisMonth: 'This month',
-  previousYear: 'Previous year',
-  nextYear: 'Next year',
+  title: uiText.monthPicker.title,
+  clear: uiText.monthPicker.clear,
+  thisMonth: uiText.monthPicker.thisMonth,
+  previousYear: uiText.monthPicker.previousYear,
+  nextYear: uiText.monthPicker.nextYear,
 }
 
 const TRIGGER_CLASS = cn(
@@ -58,10 +59,10 @@ export function MonthPicker({
   id,
   value,
   onChange,
-  placeholder = 'Select month',
+  placeholder = uiText.monthPicker.placeholder,
   min,
   max,
-  locale = 'en-US',
+  locale = uiText.locale,
   labels,
   className,
   disabled,
