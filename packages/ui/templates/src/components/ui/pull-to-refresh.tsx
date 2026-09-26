@@ -17,6 +17,7 @@ import { Loader2 } from 'lucide-react'
 import { PullToRefresh as PullToRefreshPrimitive } from '@comwit/ui'
 
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 /** 인디케이터 원의 지름(px). */
 const DIAL = 34
@@ -84,7 +85,9 @@ function PullIndicator() {
     >
       {({ state }) => (
         <>
-          <span className="sr-only">{state === 'refreshing' ? 'Refreshing' : ''}</span>
+          <span className="sr-only">
+            {state === 'refreshing' ? uiText.pullToRefresh.refreshing : ''}
+          </span>
           <div
             className="flex items-center justify-center rounded-full bg-background shadow-panel ring-1 ring-border transition-transform duration-base group-data-[state=armed]/ptr:scale-105 group-data-[state=refreshing]/ptr:scale-105"
             style={{ width: DIAL, height: DIAL }}

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { disabledStyle, focusRing, pressable } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 type PagerProps = {
   page: number
@@ -31,10 +32,10 @@ function Pager({ page, totalPages, onChange, className, alwaysShow = false, labe
   if (totalPages <= 1 && !alwaysShow) return null
 
   const text = {
-    nav: 'Pagination',
-    previous: 'Previous page',
-    next: 'Next page',
-    page: (p: number) => `Page ${p}`,
+    nav: uiText.pager.nav,
+    previous: uiText.pager.previous,
+    next: uiText.pager.next,
+    page: uiText.pager.page,
     ...labels,
   }
   const total = Math.max(1, totalPages)

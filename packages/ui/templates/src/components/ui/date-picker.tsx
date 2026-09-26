@@ -8,6 +8,7 @@ import { useMobile } from '@comwit/ui'
 import { popup } from '../../lib/popup'
 import { focusField, disabledStyle } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 type DatePickerLabels = {
   /** 모바일 바텀시트 제목 */
@@ -33,11 +34,11 @@ type DatePickerProps = {
 }
 
 const DEFAULT_LABELS: Required<DatePickerLabels> = {
-  title: 'Select date',
-  clear: 'Clear',
-  today: 'Today',
-  previousMonth: 'Previous month',
-  nextMonth: 'Next month',
+  title: uiText.datePicker.title,
+  clear: uiText.datePicker.clear,
+  today: uiText.datePicker.today,
+  previousMonth: uiText.datePicker.previousMonth,
+  nextMonth: uiText.datePicker.nextMonth,
 }
 
 const TRIGGER_CLASS = cn(
@@ -55,10 +56,10 @@ export function DatePicker({
   id,
   value,
   onChange,
-  placeholder = 'Select date',
+  placeholder = uiText.datePicker.placeholder,
   min,
   max,
-  locale = 'en-US',
+  locale = uiText.locale,
   labels,
   className,
   disabled,

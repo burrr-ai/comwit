@@ -36,6 +36,7 @@ import { GlassButton } from './glass'
 import { Textarea } from './textarea'
 import { focusWithinField } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 export type ChatMode = NonNullable<React.ComponentProps<typeof ChatPrimitive.Root>['mode']>
 
@@ -148,8 +149,8 @@ function ChatMessages<T>({
 }
 
 const DEFAULT_LABELS: Required<ChatMessagesLabels> = {
-  scrollToBottom: 'Jump to latest',
-  newMessages: (n) => (n === 1 ? '1 new message' : `${n} new messages`),
+  scrollToBottom: uiText.chat.scrollToBottom,
+  newMessages: uiText.chat.newMessages,
 }
 
 type ChatScrollToBottomProps = Omit<
@@ -257,7 +258,7 @@ type ChatTypingProps = Omit<React.ComponentProps<typeof ChatBubble>, 'children'>
 }
 
 /** 입력 중 표시 — 점 셋이 번갈아 뛴다. 말풍선 톤을 그대로 따른다(assistant 모드에선 면 없이). */
-function ChatTyping({ label = 'Typing', className, ...props }: ChatTypingProps) {
+function ChatTyping({ label = uiText.chat.typing, className, ...props }: ChatTypingProps) {
   return (
     <ChatBubble
       role="status"
@@ -307,18 +308,24 @@ type ChatComposerProps = React.ComponentProps<typeof ChatPrimitive.Composer> & {
 const ComposerSkinContext = React.createContext<{
   placeholder?: string
   labels: Required<ChatComposerLabels>
-}>({ placeholder: 'Message', labels: { send: 'Send', stop: 'Stop' } })
+}>({
+  placeholder: uiText.chat.placeholder,
+  labels: { send: uiText.chat.send, stop: uiText.chat.stop },
+})
 
 /** 하단 입력 면 — `rounded-sheet` 카드 하나가 보더·포커스 링을 그리고, 안의 textarea 는 bare 다. */
 function ChatComposer({
-  placeholder = 'Message',
+  placeholder = uiText.chat.placeholder,
   labels,
   className,
   children,
   ...props
 }: ChatComposerProps) {
   const skin = React.useMemo(
-    () => ({ placeholder, labels: { send: 'Send', stop: 'Stop', ...labels } }),
+    () => ({
+      placeholder,
+      labels: { send: uiText.chat.send, stop: uiText.chat.stop, ...labels },
+    }),
     [placeholder, labels]
   )
   return (

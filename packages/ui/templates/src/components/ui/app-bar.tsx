@@ -25,6 +25,7 @@ import { AppBar as AppBarPrimitive } from '@comwit/ui'
 import { Button } from './button'
 import { Glass, GlassButton, type GlassVariant } from './glass'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 export type AppBarBehavior = NonNullable<
   React.ComponentProps<typeof AppBarPrimitive.Root>['behavior']
@@ -115,7 +116,7 @@ function AppBarBackButton({
       <Button
         variant="plain"
         size="none"
-        aria-label={ariaLabel ?? 'Close'}
+        aria-label={ariaLabel ?? uiText.close}
         className={cn(
           'inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent',
           className
@@ -130,7 +131,7 @@ function AppBarBackButton({
     <GlassButton
       shape="circle"
       shadow={false}
-      aria-label={ariaLabel ?? 'Back'}
+      aria-label={ariaLabel ?? uiText.back}
       className={cn('size-11 shrink-0', className)}
       {...props}
     >

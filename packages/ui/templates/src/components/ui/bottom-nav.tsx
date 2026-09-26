@@ -25,6 +25,7 @@ import { BottomNav as BottomNavPrimitive, Slottable } from '@comwit/ui'
 import { Glass } from './glass'
 import { focusRing, pressable } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 type BottomNavProps = Omit<React.ComponentProps<typeof BottomNavPrimitive.Root>, 'children'> & {
   value?: string
@@ -64,7 +65,7 @@ function BottomNav({
   className,
   style,
   children,
-  'aria-label': ariaLabel = 'Main',
+  'aria-label': ariaLabel = uiText.bottomNav,
   ...props
 }: BottomNavProps) {
   const items = React.Children.toArray(children).filter(

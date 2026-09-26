@@ -117,6 +117,7 @@ function routerVariant(file) {
     dependencies: generic.dependencies,
     registryDependencies: generic.registryDependencies,
     files: [{ path: 'components/ui/route-boundary.tsx', content: generic.content }],
+    variantBy: 'router',
     variants,
   })
 }
@@ -157,6 +158,25 @@ for (const [dir, type] of [
     if (file.startsWith('index.')) continue
     items.push(fileItem(file.replace(/\.tsx?$/, ''), `${dir}/${file}`, type))
   }
+}
+
+// 2b) locales/ui-text.<locale>.ts → lib/ui-text 아이템의 로케일 변형. 기본(files[0])은 영어판 lib/ui-text.ts 다.
+//     comwit-ui 가 --locale 또는 comwit.json 의 locale 로 고른다. 모든 로케일은 같은 키를 갖는다(check-ui-text.ts 가 검사).
+{
+  const item = items.find((i) => i.name === 'ui-text')
+  if (!item) throw new Error('lib/ui-text.ts is missing')
+  const variants = {
+    en: { dependencies: [], registryDependencies: [], content: item.files[0].content },
+  }
+  for (const file of readdirSync(join(tplSrc, 'locales')).sort()) {
+    const m = /^ui-text\.([a-z]{2}(?:-[A-Z]{2})?)\.ts$/.exec(file)
+    if (!m) continue
+    const content = readFileSync(join(tplSrc, 'locales', file), 'utf8')
+    if (parseImports(content).length) throw new Error(`locales/${file}: must not import anything`)
+    variants[m[1]] = { dependencies: [], registryDependencies: [], content }
+  }
+  item.variantBy = 'locale'
+  item.variants = variants
 }
 
 // 3) theme — 토큰 계약. globals.css(SSOT) 에서 :root 이후(토큰 + @theme + base)를 그대로 CSS 파일로 싣는다.

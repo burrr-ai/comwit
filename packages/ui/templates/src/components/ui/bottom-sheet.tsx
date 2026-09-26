@@ -32,6 +32,7 @@ import { XIcon } from 'lucide-react'
 import { GlassSurface } from './glass'
 import { OverlayMotion } from '../../lib/overlay-motion'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 import { focusRing } from '../../lib/interaction'
 
 function BottomSheet({ ...props }: React.ComponentProps<typeof BottomSheetPrimitive.Root>) {
@@ -143,7 +144,7 @@ function BottomSheetContent({
                 )}
               >
                 <XIcon className="size-4" />
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{uiText.close}</span>
               </BottomSheetPrimitive.Close>
             )}
           </OverlayMotion>
