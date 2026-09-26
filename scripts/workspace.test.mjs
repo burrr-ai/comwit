@@ -41,6 +41,108 @@ test('moved UI CLI installs usable sources and preserves consumer edits', () => 
   }
 })
 
+test('src-dir projects: files land where the import alias points, lib siblings stay in lib', () => {
+  execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
+  const fixture = mkdtempSync(join(tmpdir(), 'comwit-cli-src-'))
+  try {
+    mkdirSync(join(fixture, 'src/app'), { recursive: true })
+    writeFileSync(join(fixture, 'package.json'), '{"private":true}')
+    writeFileSync(join(fixture, 'src/app/globals.css'), '@import "tailwindcss";\n')
+    // tsconfig allows comments and trailing commas; "@/*" must survive comment stripping.
+    writeFileSync(
+      join(fixture, 'tsconfig.json'),
+      '{\n  // paths\n  "compilerOptions": { "paths": { "@/*": ["./src/*"], }, /* x */ },\n}\n'
+    )
+    const run = (...args) =>
+      execFileSync(process.execPath, [cli, ...args, '--cwd', fixture, '--no-install'], {
+        encoding: 'utf8',
+      })
+    run('init')
+    const config = JSON.parse(readFileSync(join(fixture, 'comwit.json'), 'utf8'))
+    assert.equal(config.srcDir, 'src')
+    assert.ok(existsSync(join(fixture, 'src/app/comwit-tokens.css')))
+
+    // A project that keeps other helpers in lib/utils/ puts cn() beside them.
+    config.aliases = { ...config.aliases, ui: 'lib/components/ui', utils: 'lib/utils/cn' }
+    writeFileSync(join(fixture, 'comwit.json'), JSON.stringify(config))
+    // Boolean flags never swallow the next word: `--overwrite popup` still installs popup.
+    run('add', '--overwrite', 'popup')
+    const read = (rel) => readFileSync(join(fixture, 'src', rel), 'utf8')
+    assert.ok(!existsSync(join(fixture, 'lib')), 'nothing is written outside srcDir')
+    assert.match(read('lib/utils/cn.ts'), /export function cn/)
+    assert.match(read('lib/components/ui/button.tsx'), /from ['"]@\/lib\/utils\/cn['"]/)
+    const popup = read('lib/popup.tsx')
+    assert.match(popup, /from ['"]@\/lib\/overlay-motion['"]/)
+    assert.match(popup, /from ['"]@\/lib\/components\/ui\/dialog['"]/)
+    assert.ok(read('lib/overlay-motion.tsx').length)
+  } finally {
+    rmSync(fixture, { recursive: true, force: true })
+  }
+})
+
+test('component text follows the project locale and declared packages keep their pins', () => {
+  execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
+  const fixture = mkdtempSync(join(tmpdir(), 'comwit-cli-locale-'))
+  try {
+    mkdirSync(join(fixture, 'app'))
+    writeFileSync(
+      join(fixture, 'package.json'),
+      JSON.stringify({
+        private: true,
+        dependencies: { sonner: '2.0.7', 'lucide-react': '0.544.0' },
+      })
+    )
+    writeFileSync(join(fixture, 'app/globals.css'), '@import "tailwindcss";\n')
+    const run = (...args) =>
+      execFileSync(process.execPath, [cli, ...args, '--cwd', fixture], { encoding: 'utf8' })
+    run('init', '--locale', 'ko', '--no-install')
+    assert.equal(JSON.parse(readFileSync(join(fixture, 'comwit.json'), 'utf8')).locale, 'ko')
+    const out = run('add', 'date-picker', 'popup', '--no-install')
+    assert.match(out, /lib\/ui-text\.ts.*\(ko\)/)
+    const text = readFileSync(join(fixture, 'lib/ui-text.ts'), 'utf8')
+    assert.match(text, /locale: 'ko-KR'/)
+    assert.match(text, /날짜 선택/)
+    assert.doesNotMatch(text, /^import /m)
+    for (const file of ['components/ui/date-picker.tsx', 'lib/popup.tsx']) {
+      const source = readFileSync(join(fixture, file), 'utf8')
+      assert.match(source, /from ['"]@\/lib\/ui-text['"]/, `${file} reads its text from ui-text`)
+      assert.doesNotMatch(
+        source,
+        /'Select date'|'Confirm'|'Cancel'/,
+        `${file} has no inline English`
+      )
+    }
+    // --locale on add wins over comwit.json; an unknown locale lists the available ones.
+    run('add', 'ui-text', '--overwrite', '--locale', 'en', '--no-install')
+    assert.match(readFileSync(join(fixture, 'lib/ui-text.ts'), 'utf8'), /locale: 'en-US'/)
+    assert.throws(
+      () => run('add', 'ui-text', '--overwrite', '--locale', 'xx', '--no-install'),
+      /en · ko/
+    )
+
+    // Re-adding a declared package would move its pin (2.0.7 → ^latest), so only missing ones install.
+    const dry = run('add', 'toast', '--dry')
+    const install = dry.split('\n').find((line) => line.includes('$ npm install'))
+    assert.ok(install, 'missing packages are installed')
+    assert.match(install, /@comwit\/ui/)
+    assert.doesNotMatch(install, /\bsonner\b|lucide-react/)
+  } finally {
+    rmSync(fixture, { recursive: true, force: true })
+  }
+})
+
+test('every ui-text locale is complete and import-free', () => {
+  const dir = join(root, 'packages/ui/templates/src/locales')
+  const index = JSON.parse(readFileSync(join(root, 'packages/ui/cli/registry/index.json'), 'utf8'))
+  const item = index.items.find((i) => i.name === 'ui-text')
+  assert.equal(item.variantBy, 'locale')
+  assert.deepEqual(item.variants, ['en', 'ko'])
+  const keys = (source) => [...source.matchAll(/^\s+(\w+):/gm)].map((m) => m[1]).sort()
+  const en = readFileSync(join(root, 'packages/ui/templates/src/lib/ui-text.ts'), 'utf8')
+  const ko = readFileSync(join(dir, 'ui-text.ko.ts'), 'utf8')
+  assert.deepEqual(keys(ko), keys(en))
+})
+
 test('registry dependencies are real npm package names, never import examples from comments', () => {
   execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
   const index = JSON.parse(readFileSync(join(root, 'packages/ui/cli/registry/index.json'), 'utf8'))

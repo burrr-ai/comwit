@@ -18,6 +18,7 @@ import { CheckIcon, ChevronDownIcon } from 'lucide-react'
 import { Autocomplete as AutocompletePrimitive } from '@comwit/ui'
 import { focusWithinField } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 type RootPrimitiveProps = React.ComponentProps<typeof AutocompletePrimitive.Root>
 
@@ -45,7 +46,7 @@ function Autocomplete({
   triggerClassName,
   contentClassName,
   itemClassName,
-  emptyText = 'No results',
+  emptyText = uiText.autocomplete.empty,
   placeholder,
   children,
   ...props

@@ -2,13 +2,14 @@ import * as React from 'react'
 import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from 'lucide-react'
 
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 import { Button, buttonVariants } from './button'
 
 function Pagination({ className, ...props }: React.ComponentProps<'nav'>) {
   return (
     <nav
       role="navigation"
-      aria-label="pagination"
+      aria-label={uiText.pagination.nav}
       data-slot="pagination"
       className={cn('mx-auto flex w-full justify-center', className)}
       {...props}
@@ -69,7 +70,7 @@ function PaginationLink({
 function PaginationPrevious({
   className,
   size,
-  label = 'Previous',
+  label = uiText.pagination.previous,
   ...props
 }: React.ComponentProps<typeof PaginationLink> & { label?: string }) {
   return (
@@ -88,7 +89,7 @@ function PaginationPrevious({
 function PaginationNext({
   className,
   size,
-  label = 'Next',
+  label = uiText.pagination.next,
   ...props
 }: React.ComponentProps<typeof PaginationLink> & { label?: string }) {
   return (
@@ -113,7 +114,7 @@ function PaginationEllipsis({ className, ...props }: React.ComponentProps<'span'
       {...props}
     >
       <MoreHorizontalIcon className="size-4" />
-      <span className="sr-only">More pages</span>
+      <span className="sr-only">{uiText.pagination.more}</span>
     </span>
   )
 }

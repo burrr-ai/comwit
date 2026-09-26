@@ -96,7 +96,6 @@ function ItemInfo({ component: c, sticky }: { component: Component; sticky?: boo
         <h3 id={`${c.name}-title`} className="text-title-sm text-foreground">
           {c.title}
         </h3>
-        <p className="mt-0.5 text-caption text-muted-foreground">{c.summary}</p>
         <Credits component={c} className="mt-1" />
       </div>
       <CodeButton name={c.name} className="md:mt-2 md:-ml-3" />

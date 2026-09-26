@@ -19,6 +19,12 @@ npx comwit-ui@latest add button dialog input
 
 `init` creates `comwit.json`, adds the token stylesheet, and installs the base dependencies. `add` copies the requested components and their local dependencies into your project.
 
+Files go where your `@/` import alias points. When `tsconfig.json` maps `"@/*"` to `"./src/*"`, `init` records `"srcDir": "src"` in `comwit.json`, so `components/ui` lands in `src/components/ui`. Change the folders with `aliases` (`ui`, `lib`, and optionally `utils` for the `cn()` file, for example `"lib/utils/cn"` when `lib/utils/` already holds other helpers).
+
+## Language
+
+Default text that components show or announce (placeholders, button labels, screen-reader names) and the date locale of the pickers live in one copied file, `lib/ui-text.ts`. Run `init --locale ko` (or set `"locale": "ko"` in `comwit.json`) to install the Korean version. Edit the file to change the wording everywhere; a component's `labels`, `placeholder` or `title` prop still overrides it for one screen. To switch an existing project, change the locale and run `add ui-text --overwrite`.
+
 ## Use a component
 
 ```tsx

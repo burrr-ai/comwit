@@ -23,7 +23,7 @@ import {
   type ReactNode,
   type Ref,
 } from 'react'
-import { Slot, Slottable, useGlassLens, type GlassLensTexture } from '@comwit/ui'
+import { Slot, useGlassLens, type GlassLensTexture } from '@comwit/ui'
 import { Button } from './button'
 import { cn } from '../../lib/utils'
 
@@ -66,28 +66,31 @@ function Glass({
   shape = 'pill',
   variant = 'morphing',
 }: GlassOptions) {
-  const visual = useGlassVisual({ opacity, shape, tint, variant })
+  const { attach, filterId, hasLens, lensMap, style } = useGlassVisual({
+    opacity,
+    shape,
+    tint,
+    variant,
+  })
 
   return (
     <span
-      ref={visual.ref}
+      ref={attach}
       aria-hidden="true"
       data-slot="glass"
       data-glass={variant}
       className={cn(
         'glass pointer-events-none absolute inset-0 z-0 rounded-[inherit]',
         VARIANT_CLASS[variant],
-        visual.hasLens && 'glass-lens',
+        hasLens && 'glass-lens',
         pressed && 'glass-pressed',
         !shadow && 'glass-shadowless',
         dense && 'glass-dense',
         className
       )}
-      style={visual.style}
+      style={style}
     >
-      {visual.hasLens ? (
-        <GlassFilter filterId={visual.filterId} variant={variant} lensMap={visual.lensMap} />
-      ) : null}
+      {hasLens ? <GlassFilter filterId={filterId} variant={variant} lensMap={lensMap} /> : null}
     </span>
   )
 }
@@ -113,35 +116,38 @@ function GlassSurface({
   shape = 'panel',
   variant = 'morphing',
 }: GlassSurfaceProps) {
-  const visual = useGlassVisual({ opacity, shape, tint, variant })
+  const { attach, filterId, hasLens, lensMap, mounted, style } = useGlassVisual({
+    opacity,
+    shape,
+    tint,
+    variant,
+  })
 
   return (
-    // Slot 이 자식의 ref 를 유지하면서 우리 ref 도 합친다 — 열릴 때마다 마운트되는 팝오버·다이얼로그 콘텐츠의 렌즈를 그때 만든다.
-    <Slot
-      ref={visual.ref}
-      data-glass={variant}
-      className={cn(
-        'glass',
-        VARIANT_CLASS[variant],
-        visual.hasLens && 'glass-lens',
-        pressed && 'glass-pressed',
-        !shadow && 'glass-shadowless',
-        dense && 'glass-dense',
-        className
-      )}
-      style={visual.style}
-    >
-      <Slottable child={children}>
-        {(inner) => (
-          <>
-            {inner}
-            {visual.hasLens ? (
-              <GlassFilter filterId={visual.filterId} variant={variant} lensMap={visual.lensMap} />
-            ) : null}
-          </>
+    <>
+      {/* Slot 이 자식의 ref 를 유지하면서 우리 ref 도 합친다 — 열릴 때마다 마운트되는 팝오버·다이얼로그 콘텐츠의 렌즈를 그때 만든다. */}
+      <Slot
+        ref={attach}
+        data-glass={variant}
+        className={cn(
+          'glass',
+          VARIANT_CLASS[variant],
+          hasLens && 'glass-lens',
+          pressed && 'glass-pressed',
+          !shadow && 'glass-shadowless',
+          dense && 'glass-dense',
+          className
         )}
-      </Slottable>
-    </Slot>
+        style={style}
+      >
+        {children}
+      </Slot>
+      {/* 렌즈 필터는 면의 형제로 둔다 — 자식이 asChild 로 한 요소에 합쳐지는 파트(오버레이 Content)여도 자식이 하나로 남는다.
+          url(#id) 는 문서 어디의 필터든 가리킨다. 면이 없을 땐(닫힌 서브메뉴 등) 그리지 않는다. */}
+      {hasLens && mounted ? (
+        <GlassFilter filterId={filterId} variant={variant} lensMap={lensMap} />
+      ) : null}
+    </>
   )
 }
 
@@ -222,9 +228,12 @@ function useGlassVisual({
   return {
     filterId,
     hasLens: lens.supported,
+    mounted: element !== null,
     style,
     lensMap: lens.texture,
-    ref: setElement as Ref<HTMLElement>,
+    // 콜백 ref(상태 setter)다. 호출부는 구조 분해해서 쓴다 — 반환 객체째 두고 그 속성을 ref 로 넘기면
+    // React Compiler 가 객체 전체를 ref 로 보고 hasLens · style 읽기까지 "렌더 중 ref 접근" 으로 막는다.
+    attach: setElement as Ref<HTMLElement>,
   }
 }
 

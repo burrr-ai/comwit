@@ -42,21 +42,22 @@ L0 는 유틸을 만들지 않는다(`--color-` 접두사가 없다). 컴포넌�
 
 ### 노브
 
-| 노브                                                                  | 바뀌는 것                                                                                    |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `--brand` · `--brand-strong` · `--brand-ink` · `--brand-surface`      | 버튼·링크·포커스 링·선택 표식 전부 (리브랜딩은 이 4개)                                       |
-| `--canvas*` · `--surface-subtle` · `--fill*` · `--ink*` · `--line*`   | 면 사다리 · 텍스트 위계 · 선                                                                 |
-| `--radius` · `--card-radius` · `--sheet-radius`                       | `rounded-control` / `rounded-card` / `rounded-sheet`                                         |
-| `--pill-radius`                                                       | `rounded-pill` — 버튼·칩·탭바 알약                                                           |
-| `--radius-scale`                                                      | 위 반경 전부 + t-shirt 사다리(`rounded-sm/md/lg…`)의 승수                                    |
-| `--text-scale` · `--tracking-scale` · `--weight-*` · `--display-font` | 타입 스케일 · 자간 · 굵기 · 제목 서체                                                        |
-| `--border-width(-strong)`                                             | bare/방향 보더 두께                                                                          |
-| `--focus-ring-width/-offset` · `--field-ring-width`                   | 컨트롤 포커스 링(`ring-focus`) · 입력 포커스 링(`ring-field`)                                |
-| `--duration-*` · `--press-scale(-thumb)` · `--ripple-opacity`         | 전환 속도 · 눌림 · 리플                                                                      |
-| `--state-*`                                                           | hover/선택 헤일로 · 비활성 불투명도                                                          |
-| `--elevation-*`                                                       | `shadow-xs…xl` · `shadow-card(-hover)` · `shadow-panel` · `shadow-message` · `shadow-raised` |
-| `--glass-*`                                                           | 굴절 유리의 틴트·광택·그림자 (`.glass*` 가 소비)                                             |
-| `--z-*`                                                               | `z-appbar` < `z-overlay` < `z-modal` < `z-dropdown` < `z-toast`                              |
+| 노브                                                                  | 바뀌는 것                                                                                     |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `--brand` · `--brand-strong` · `--brand-ink` · `--brand-surface`      | 버튼·링크·포커스 링·선택 표식 전부 (리브랜딩은 이 4개)                                        |
+| `--canvas*` · `--surface-subtle` · `--fill*` · `--ink*` · `--line*`   | 면 사다리 · 텍스트 위계 · 선                                                                  |
+| `--radius` · `--card-radius` · `--sheet-radius`                       | `rounded-control` / `rounded-card` / `rounded-sheet`                                          |
+| `--pill-radius`                                                       | `rounded-pill` — 버튼·칩·탭바 알약                                                            |
+| `--radius-scale`                                                      | 위 반경 전부 + t-shirt 사다리(`rounded-sm/md/lg…`)의 승수                                     |
+| `--text-scale` · `--tracking-scale` · `--weight-*` · `--display-font` | 타입 스케일 · 자간 · 굵기 · 제목 서체                                                         |
+| `--border-width(-strong)`                                             | bare/방향 보더 두께                                                                           |
+| `--focus-ring-width/-offset` · `--field-ring-width`                   | 컨트롤 포커스 링(`ring-focus`) · 입력 포커스 링(`ring-field`)                                 |
+| `--duration-*` · `--press-scale(-thumb)` · `--ripple-opacity`         | 전환 속도 · 눌림 · 리플                                                                       |
+| `--state-*`                                                           | hover/선택 헤일로 · 비활성 불투명도                                                           |
+| `--elevation-*`                                                       | `shadow-xs…xl` · `shadow-card(-hover)` · `shadow-panel` · `shadow-message` · `shadow-raised`  |
+| `--glass-*`                                                           | 굴절 유리의 틴트·광택·그림자 (`.glass*` 가 소비)                                              |
+| `--z-*`                                                               | `z-appbar` < `z-overlay` < `z-modal` < `z-dropdown` < `z-toast`                               |
+| `--page-gutter`                                                       | 페이지 좌우 여백 `px-gutter`(safe-area 포함) — 페이지 콘텐츠와 모바일 토스트가 같은 선에 선다 |
 
 `z-dropdown` 이 `z-modal` **위**인 건 의도다 — 다이얼로그·시트 안에서 연 셀렉트·메뉴·피커가 body 로 포털되므로
 modal 보다 낮으면 자기를 연 다이얼로그 뒤로 숨는다.

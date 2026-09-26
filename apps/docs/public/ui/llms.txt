@@ -11,7 +11,7 @@ npx comwit-ui@latest init
 npx comwit-ui@latest add button dialog input
 ```
 
-init creates comwit.json, wires comwit-tokens.css and installs the base dependencies. add copies each component, plus the components and lib/* files it uses, into components/ui and lib (aliases in comwit.json), then installs its npm dependencies. Existing files are skipped: --overwrite replaces local edits, --dry previews, --no-install skips npm.
+init creates comwit.json, wires comwit-tokens.css and installs the base dependencies. add copies each component, plus the components and lib/* files it uses, into components/ui and lib (aliases in comwit.json, under src/ when tsconfig maps @/* to ./src/*), then installs its npm dependencies. Existing files are skipped: --overwrite replaces local edits, --dry previews, --no-install skips npm.
 
 ```tsx
 'use client'
@@ -20,9 +20,10 @@ import { Button } from '@/components/ui/button'
 
 - The copied file is the API reference: read it for parts and props, and edit it directly.
 - Import from the copied files, never from @comwit/ui-templates. ScrollChromeProvider, useScrollChrome, useMobile and useMobileDevice come from @comwit/ui.
+- Default text (button labels, placeholders, screen-reader names) and the picker date locale live in one copied file, lib/ui-text.ts. `init --locale ko` installs the Korean version; edit that file to change wording, or pass the component's labels/placeholder props for one screen.
 - Set the --font-pretendard variable on <html> (for example with next/font/local), or components fall back to the system font.
 - Mount once: the copied Toaster for toast (then call toast() from '@/components/ui/toast', not sonner's), OverlayProvider from overlay-kit for popup, ScrollChromeProvider around the scroller for app-bar and bottom-nav, PageTransition with RouteBoundary around the routed content for page-transition.
-- Style with the token utilities (bg-primary, text-muted-foreground, rounded-card …), not hardcoded colors, and merge classes with cn() from lib/utils; a plain twMerge drops token utilities. Keep your own global element rules inside @layer base. Theme by overriding the CSS variables; dark mode is the .dark class.
+- Style with the token utilities (bg-primary, text-muted-foreground, rounded-card …), not hardcoded colors, and merge classes with cn() from lib/utils; a plain twMerge drops token utilities. Keep your own global element rules inside @layer base. Give page content its side margins with px-gutter (the --page-gutter token, safe-area aware) so it lines up with the phone toasts. Theme by overriding the CSS variables; dark mode is the .dark class.
 
 ## Components
 
@@ -31,7 +32,7 @@ Add any of them by name: npx comwit-ui@latest add <name>. The gallery shows each
 ### Mobile app
 Chrome that behaves like a native app and gets out of the way while you read.
 - app-bar: Glass top bar. Hides while you scroll down, returns the moment you scroll up.
-- bottom-nav: Floating tab capsule. The indicator springs between tabs; the bar shrinks as you scroll. Built on Motion.
+- bottom-nav: Floating tab capsule. The indicator springs between tabs; the bar shrinks as you scroll.
 - page-transition: Hero, zoom, drill or fade from the photo grid into the photo. One keyed boundary marks the page; your router or plain state drives it. Built on SSGOI.
 - bottom-sheet: Rises from the bottom. Drag the handle down to dismiss; the scrim fades as you pull.
 - pull-to-refresh: Pull down at the top to reload. Only the dial moves, so sticky bars stay put.
@@ -49,8 +50,8 @@ A refracting surface for everything that floats above content.
 
 ### Notifications
 Tell people what happened and what to do next.
-- toast: Glass toasts. Top of the screen on phones, bottom right on desktop. Built on Sonner.
-- popup: await popup.confirm(), popup.alert() and popup.sheet() from anywhere, no state needed. Import from @/lib/popup. Built on Motion and overlay-kit.
+- toast: Glass toasts, one surface for every status. Full width at the top on phones, top right on desktop. Built on Sonner.
+- popup: await popup.confirm(), popup.alert() and popup.sheet() from anywhere, no state needed. Import from @/lib/popup. Built on overlay-kit.
 - alert: Inline callout in five tones.
 - empty-state: When a list is empty, offer the one thing to do next.
 

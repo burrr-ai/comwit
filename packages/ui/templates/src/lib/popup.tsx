@@ -1,8 +1,8 @@
 'use client'
 
+import * as React from 'react'
 import type { ReactNode } from 'react'
 import { overlay } from 'overlay-kit'
-import { AnimatePresence, motion } from 'motion/react'
 import { Dialog as DialogPrimitive } from '@comwit/ui'
 import {
   Dialog,
@@ -14,6 +14,8 @@ import {
 } from '../components/ui/dialog'
 import { Button } from '../components/ui/button'
 import { GlassSurface } from '../components/ui/glass'
+import { OverlayMotion } from './overlay-motion'
+import { uiText } from './ui-text'
 import {
   BottomSheet,
   BottomSheetContent,
@@ -48,6 +50,13 @@ function PopupShell({
   onUnmount: () => void
   children: React.ReactNode
 }) {
+  // 스크림과 패널이 둘 다 사라진 뒤에 overlay-kit 에서 뺀다 — 먼저 끝난 쪽이 나머지를 끊지 않게.
+  const exiting = React.useRef(2)
+  const settle = () => {
+    exiting.current -= 1
+    if (exiting.current === 0) onUnmount()
+  }
+
   return (
     <Dialog
       open={isOpen}
@@ -55,50 +64,36 @@ function PopupShell({
         if (!open) onClose()
       }}
     >
-      <DialogPortal forceMount>
-        <AnimatePresence onExitComplete={onUnmount}>
-          {isOpen && (
-            <DialogPrimitive.Overlay key="popup-overlay" forceMount asChild>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="fixed inset-0 z-overlay bg-overlay"
-              />
-            </DialogPrimitive.Overlay>
-          )}
-          {isOpen && (
-            <DialogPrimitive.Content
-              key="popup-content"
-              forceMount
-              className="pointer-events-none fixed inset-0 z-modal grid place-items-center"
+      <DialogPortal>
+        <DialogPrimitive.Overlay asChild>
+          <OverlayMotion
+            preset="scrim"
+            onExitComplete={settle}
+            className="fixed inset-0 z-overlay bg-overlay"
+          />
+        </DialogPrimitive.Overlay>
+        <DialogPrimitive.Content className="pointer-events-none fixed inset-0 z-modal grid place-items-center">
+          {/* dialog.tsx 와 같은 스크림 위 굴절 유리(dense) · 같은 움직임(lib/overlay-motion) */}
+          <GlassSurface variant="morphing" shape="panel" dense>
+            <OverlayMotion
+              preset="dialog"
+              onExitComplete={settle}
+              className="text-popover-foreground pointer-events-auto grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-card p-6 sm:max-w-lg"
             >
-              {/* dialog.tsx 와 같은 스크림 위 굴절 유리(dense) */}
-              <GlassSurface variant="morphing" shape="panel" dense>
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 8 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                  className="text-popover-foreground pointer-events-auto grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-card p-6 sm:max-w-lg"
-                >
-                  {children}
-                </motion.div>
-              </GlassSurface>
-            </DialogPrimitive.Content>
-          )}
-        </AnimatePresence>
+              {children}
+            </OverlayMotion>
+          </GlassSurface>
+        </DialogPrimitive.Content>
       </DialogPortal>
     </Dialog>
   )
 }
 
 function confirm({
-  title = 'Are you sure?',
+  title = uiText.popup.confirmTitle,
   description,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText = uiText.popup.confirm,
+  cancelText = uiText.popup.cancel,
   destructive = false,
 }: ConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
@@ -140,7 +135,11 @@ function confirm({
   })
 }
 
-function alert({ title = 'Notice', description, confirmText = 'OK' }: AlertOptions): Promise<void> {
+function alert({
+  title = uiText.popup.alertTitle,
+  description,
+  confirmText = uiText.popup.ok,
+}: AlertOptions): Promise<void> {
   return new Promise((resolve) => {
     overlay.open(({ isOpen, close, unmount }) => (
       <PopupShell

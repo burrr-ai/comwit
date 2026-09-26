@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * Toast — 유리 토스트. 모바일은 상단 가운데(위로 스와이프), 데스크톱은 우하단(오른쪽 스와이프).
+ * Toast — 유리 토스트. 모바일은 상단 가운데에 레이아웃 폭만큼(위로 스와이프), 데스크톱은 우상단 고정 폭(오른쪽 스와이프).
  *
  * 엔진은 sonner 다: 위치·스택·스와이프·타이머·접근성을 맡는다. 면은 우리 것이다 — `toast()` 가 sonner 의
- * `toast.custom` 에 <Toast>(GlassSurface · 메뉴·앱바·다이얼로그와 같은 굴절 유리)를 꽂는다. 그래서 sonner 의
+ * `toast.custom` 에 <Toast>(GlassSurface · 드롭다운·팝오버와 같은 굴절 유리)를 꽂는다. 그래서 sonner 의
  * 기본 스킨을 CSS 로 덮지 않고, 토스트 한 장이 그냥 리액트 컴포넌트다.
  *
  *   // 앱 루트에 한 번 (overlay-kit 의 OverlayProvider 옆)
@@ -14,7 +14,8 @@
  *   toast.success('Changes saved', { description: 'Just now', action: { label: 'Undo', onClick } })
  *   toast.promise(save(), { loading: 'Saving…', success: 'Saved', error: 'Could not save' })
  *
- * 상태색은 작은 솔리드 아이콘 원이 전달하고, 유리 틴트는 상태 틴트 면을 살짝 섞는다(styles.css).
+ * 성공·실패·경고 모두 같은 면이다 — 상태는 왼쪽의 작은 솔리드 아이콘 원만 말한다. 알아서 닫히므로 닫기 버튼은
+ * 기본으로 없다(closeButton 으로 켤 수 있다). 모바일 여백은 페이지 거터 토큰(--page-gutter · safe-area)이다.
  * `import { toast } from 'sonner'` 로 직접 부르면 sonner 의 기본 스킨으로 뜬다 — 항상 이 파일의 toast 를 쓴다.
  */
 
@@ -27,6 +28,7 @@ import { GlassSurface } from './glass'
 import { useMobile } from '@comwit/ui'
 import { focusRing } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info' | 'loading'
 
@@ -56,28 +58,28 @@ export type ToastOptions = {
 
 const STATUS_ICON: Record<Exclude<ToastType, 'default'>, React.ReactNode> = {
   success: (
-    <span className="flex size-7 items-center justify-center rounded-full bg-success text-success-foreground">
-      <CircleCheck className="size-3.5" aria-hidden="true" />
+    <span className="flex size-8 items-center justify-center rounded-full bg-success text-success-foreground">
+      <CircleCheck className="size-4" aria-hidden="true" />
     </span>
   ),
   error: (
-    <span className="flex size-7 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
-      <XCircle className="size-3.5" aria-hidden="true" />
+    <span className="flex size-8 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
+      <XCircle className="size-4" aria-hidden="true" />
     </span>
   ),
   warning: (
-    <span className="flex size-7 items-center justify-center rounded-full bg-warning text-warning-foreground">
-      <TriangleAlert className="size-3.5" aria-hidden="true" />
+    <span className="flex size-8 items-center justify-center rounded-full bg-warning text-warning-foreground">
+      <TriangleAlert className="size-4" aria-hidden="true" />
     </span>
   ),
   info: (
-    <span className="flex size-7 items-center justify-center rounded-full bg-info text-info-foreground">
-      <Info className="size-3.5" aria-hidden="true" />
+    <span className="flex size-8 items-center justify-center rounded-full bg-info text-info-foreground">
+      <Info className="size-4" aria-hidden="true" />
     </span>
   ),
   loading: (
-    <span className="flex size-7 items-center justify-center rounded-full bg-primary-surface text-primary">
-      <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+    <span className="flex size-8 items-center justify-center rounded-full bg-primary-surface text-primary">
+      <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
     </span>
   ),
 }
@@ -95,7 +97,7 @@ type ToastProps = Pick<
 
 /**
  * 토스트 한 장 — `toast()` 가 sonner 에 꽂는 유리 면. 직접 렌더할 수도 있다:
- * `toast.custom((id) => <Toast id={id} title="…" />)`. 폭은 Toaster 가 정한 --width 를 따른다.
+ * `toast.custom((id) => <Toast id={id} title="…" />)`. 폭은 Toaster 가 정한 --width 다 — sonner 는 커스텀 토스트 칸에 폭을 주지 않는다.
  */
 function Toast({
   id,
@@ -116,12 +118,12 @@ function Toast({
     }
 
   return (
-    <GlassSurface variant="morphing" shape="panel" dense>
+    <GlassSurface variant="morphing" shape="panel">
       <div
         data-slot="toast"
         data-type={type}
         className={cn(
-          'flex w-(--width) items-center gap-2.5 rounded-sheet px-3.5 py-3 text-label text-popover-foreground',
+          'flex w-(--width) items-center gap-3 rounded-sheet px-4 py-3.5 text-label text-popover-foreground',
           className
         )}
       >
@@ -133,7 +135,7 @@ function Toast({
         <div data-slot="toast-content" className="min-w-0 flex-1">
           <p className="font-semibold leading-snug text-foreground">{title}</p>
           {description ? (
-            <p className="mt-0.5 text-caption text-soft-foreground">{description}</p>
+            <p className="mt-0.5 text-body-sm leading-snug text-soft-foreground">{description}</p>
           ) : null}
         </div>
         {cancel ? (
@@ -149,7 +151,7 @@ function Toast({
         {closeButton ? (
           <button
             type="button"
-            aria-label="Close notification"
+            aria-label={uiText.toast.close}
             onClick={() => sonner.dismiss(id)}
             className={cn(
               focusRing,
@@ -250,20 +252,26 @@ const toast = Object.assign(
   }
 )
 
+/** 모바일 여백 — 페이지 거터 토큰(--page-gutter, px-gutter 와 같은 식)이라 페이지 콘텐츠와 줄이 맞는다. */
+const GUTTER = 'var(--page-gutter, 1rem)'
+const GUTTER_LEFT = `max(${GUTTER}, env(safe-area-inset-left))`
+const GUTTER_RIGHT = `max(${GUTTER}, env(safe-area-inset-right))`
+const MOBILE_OFFSET = {
+  top: `calc(env(safe-area-inset-top) + ${GUTTER})`,
+  right: GUTTER_RIGHT,
+  left: GUTTER_LEFT,
+}
+
 /** 앱 루트에 한 번 마운트한다. 면은 <Toast> 가 그리므로 여기엔 위치·스택 설정만 있다. */
 function Toaster({ ...props }: ToasterProps) {
   const { isMobile } = useMobile(767)
 
   return (
     <Sonner
-      position={isMobile ? 'top-center' : 'bottom-right'}
-      offset={{ right: 24, bottom: 24 }}
-      mobileOffset={{
-        top: 'calc(env(safe-area-inset-top) + 14px)',
-        right: 12,
-        bottom: 12,
-        left: 12,
-      }}
+      position={isMobile ? 'top-center' : 'top-right'}
+      // sonner 는 600px 이하에서만 mobileOffset 을 쓴다 — 그 위의 모바일 폭(~767px)도 같은 여백을 쓰게 둘 다 준다.
+      offset={isMobile ? MOBILE_OFFSET : { top: 24, right: 24 }}
+      mobileOffset={MOBILE_OFFSET}
       swipeDirections={isMobile ? ['top'] : ['right']}
       gap={10}
       visibleToasts={3}
@@ -271,7 +279,8 @@ function Toaster({ ...props }: ToasterProps) {
       className="comwit-toaster toaster group"
       style={
         {
-          '--width': isMobile ? 'min(344px, calc(100vw - 28px))' : '352px',
+          // 모바일은 레이아웃 폭에서 거터만 뺀다(600px 이하에선 sonner 가 mobileOffset 으로 같은 폭을 잡는다).
+          '--width': isMobile ? `calc(100vw - ${GUTTER_LEFT} - ${GUTTER_RIGHT})` : '356px',
         } as React.CSSProperties
       }
       {...props}

@@ -24,6 +24,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table'
 import { Button } from './button'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 
 /** 페이지네이션 응답 shape */
 interface Pageable<T> {
@@ -71,7 +72,7 @@ function DataTable<TData, TValue>({
   data: queryData,
   onPageChange,
   onRowClick,
-  emptyMessage = 'Nothing to show yet.',
+  emptyMessage = uiText.dataTable.empty,
   toolbar,
   labels,
 }: DataTableProps<TData, TValue>) {
@@ -108,11 +109,10 @@ function DataTable<TData, TValue>({
   const showSkeleton = isLoading || (!isSuccess && !isError)
 
   const text = {
-    refreshing: 'Updating',
-    range: (start: number, end: number, all: number) =>
-      all > 0 ? `${start}–${end} of ${all.toLocaleString()}` : '0 items',
-    previous: 'Previous page',
-    next: 'Next page',
+    refreshing: uiText.dataTable.refreshing,
+    range: uiText.dataTable.range,
+    previous: uiText.dataTable.previous,
+    next: uiText.dataTable.next,
     ...labels,
   }
 

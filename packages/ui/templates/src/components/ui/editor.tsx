@@ -22,6 +22,7 @@ import {
 
 import { focusWithinField } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 import { Button } from './button'
 import { Separator } from './separator'
 
@@ -70,7 +71,7 @@ function ToolbarButton({
 function Toolbar({ editor }: { editor: TiptapEditor }) {
   const setLink = React.useCallback(() => {
     const previous = editor.getAttributes('link').href as string | undefined
-    const url = window.prompt('URL', previous ?? 'https://')
+    const url = window.prompt(uiText.editor.linkUrl, previous ?? 'https://')
     if (url === null) return
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run()
@@ -80,7 +81,7 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
   }, [editor])
 
   const addImage = React.useCallback(() => {
-    const url = window.prompt('Image URL')
+    const url = window.prompt(uiText.editor.imageUrl)
     if (!url) return
     editor.chain().focus().setImage({ src: url }).run()
   }, [editor])

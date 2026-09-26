@@ -5,7 +5,9 @@ import { Dialog as SheetPrimitive } from '@comwit/ui'
 import { XIcon } from 'lucide-react'
 
 import { GlassSurface } from './glass'
+import { OverlayMotion } from '../../lib/overlay-motion'
 import { cn } from '../../lib/utils'
+import { uiText } from '../../lib/ui-text'
 import { focusRing } from '../../lib/interaction'
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
@@ -31,12 +33,12 @@ function SheetOverlay({
   return (
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
-      className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-overlay bg-overlay',
-        className
-      )}
+      className={cn('fixed inset-0 z-overlay bg-overlay', className)}
       {...props}
-    />
+      asChild
+    >
+      <OverlayMotion preset="scrim" />
+    </SheetPrimitive.Overlay>
   )
 }
 
@@ -57,34 +59,35 @@ function SheetContent({
       <GlassSurface variant="morphing" shape="panel" dense>
         <SheetPrimitive.Content
           data-slot="sheet-content"
+          data-side={side}
           className={cn(
-            'text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-modal flex flex-col gap-4 transition ease-standard data-[state=closed]:duration-slow data-[state=open]:duration-slower',
-            side === 'right' &&
-              'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-y-0 border-r-0 sm:max-w-sm',
-            side === 'left' &&
-              'data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left inset-y-0 left-0 h-full w-3/4 border-y-0 border-l-0 sm:max-w-sm',
-            side === 'top' &&
-              'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto rounded-b-sheet border-x-0 border-t-0',
+            'text-popover-foreground fixed z-modal flex flex-col gap-4',
+            side === 'right' && 'inset-y-0 right-0 h-full w-3/4 border-y-0 border-r-0 sm:max-w-sm',
+            side === 'left' && 'inset-y-0 left-0 h-full w-3/4 border-y-0 border-l-0 sm:max-w-sm',
+            side === 'top' && 'inset-x-0 top-0 h-auto rounded-b-sheet border-x-0 border-t-0',
             // 바텀시트: 아래에서 올라오므로 윗모서리만 rounded-sheet
-            side === 'bottom' &&
-              'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto rounded-t-sheet border-x-0 border-b-0',
+            side === 'bottom' && 'inset-x-0 bottom-0 h-auto rounded-t-sheet border-x-0 border-b-0',
             className
           )}
           {...props}
+          asChild
         >
-          {children}
-          {showCloseButton && (
-            <SheetPrimitive.Close
-              data-slot="sheet-close"
-              className={cn(
-                focusRing,
-                'absolute top-4 right-4 rounded-control p-1 opacity-60 transition-opacity hover:opacity-100 disabled:pointer-events-none'
-              )}
-            >
-              <XIcon className="size-4" />
-              <span className="sr-only">Close</span>
-            </SheetPrimitive.Close>
-          )}
+          {/* 붙은 변 쪽으로 자기 크기만큼(100%) 들어오고 나간다 — lib/overlay-motion */}
+          <OverlayMotion preset="sheet" side={side}>
+            {children}
+            {showCloseButton && (
+              <SheetPrimitive.Close
+                data-slot="sheet-close"
+                className={cn(
+                  focusRing,
+                  'absolute top-4 right-4 rounded-control p-1 opacity-60 transition-opacity hover:opacity-100 disabled:pointer-events-none'
+                )}
+              >
+                <XIcon className="size-4" />
+                <span className="sr-only">{uiText.close}</span>
+              </SheetPrimitive.Close>
+            )}
+          </OverlayMotion>
         </SheetPrimitive.Content>
       </GlassSurface>
     </SheetPortal>

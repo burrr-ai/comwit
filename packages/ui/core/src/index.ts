@@ -31,6 +31,8 @@ export * as Switch from './switch'
 
 // Slot 은 단일 컴포넌트라 평면 export
 export * from './slot'
+// 오버레이 파트의 열림·닫힘 — 스프링 설정과 모습(style(t))만 받는다. 적분·재생(Web Animations API)은 내부다
+export * from './presence-animation'
 
 // 자체 헤드리스 컴포넌트 프리미티브(radix 에 없어 직접 구현) — 단일 컴포넌트라 평면 export
 export * from './input' // Input (bare, IME-safe · InputBase 대응)
