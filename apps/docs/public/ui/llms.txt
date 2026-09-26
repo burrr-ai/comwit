@@ -11,7 +11,7 @@ npx comwit-ui@latest init
 npx comwit-ui@latest add button dialog input
 ```
 
-init creates comwit.json, wires comwit-tokens.css and installs the base dependencies. add copies each component, plus the components and lib/* files it uses, into components/ui and lib (aliases in comwit.json), then installs its npm dependencies. Existing files are skipped: --overwrite replaces local edits, --dry previews, --no-install skips npm.
+init creates comwit.json, wires comwit-tokens.css and installs the base dependencies. add copies each component, plus the components and lib/* files it uses, into components/ui and lib (aliases in comwit.json, under src/ when tsconfig maps @/* to ./src/*), then installs its npm dependencies. Existing files are skipped: --overwrite replaces local edits, --dry previews, --no-install skips npm.
 
 ```tsx
 'use client'

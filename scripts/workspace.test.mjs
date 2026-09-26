@@ -41,6 +41,45 @@ test('moved UI CLI installs usable sources and preserves consumer edits', () => 
   }
 })
 
+test('src-dir projects: files land where the import alias points, lib siblings stay in lib', () => {
+  execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
+  const fixture = mkdtempSync(join(tmpdir(), 'comwit-cli-src-'))
+  try {
+    mkdirSync(join(fixture, 'src/app'), { recursive: true })
+    writeFileSync(join(fixture, 'package.json'), '{"private":true}')
+    writeFileSync(join(fixture, 'src/app/globals.css'), '@import "tailwindcss";\n')
+    // tsconfig allows comments and trailing commas; "@/*" must survive comment stripping.
+    writeFileSync(
+      join(fixture, 'tsconfig.json'),
+      '{\n  // paths\n  "compilerOptions": { "paths": { "@/*": ["./src/*"], }, /* x */ },\n}\n'
+    )
+    const run = (...args) =>
+      execFileSync(process.execPath, [cli, ...args, '--cwd', fixture, '--no-install'], {
+        encoding: 'utf8',
+      })
+    run('init')
+    const config = JSON.parse(readFileSync(join(fixture, 'comwit.json'), 'utf8'))
+    assert.equal(config.srcDir, 'src')
+    assert.ok(existsSync(join(fixture, 'src/app/comwit-tokens.css')))
+
+    // A project that keeps other helpers in lib/utils/ puts cn() beside them.
+    config.aliases = { ...config.aliases, ui: 'lib/components/ui', utils: 'lib/utils/cn' }
+    writeFileSync(join(fixture, 'comwit.json'), JSON.stringify(config))
+    // Boolean flags never swallow the next word: `--overwrite popup` still installs popup.
+    run('add', '--overwrite', 'popup')
+    const read = (rel) => readFileSync(join(fixture, 'src', rel), 'utf8')
+    assert.ok(!existsSync(join(fixture, 'lib')), 'nothing is written outside srcDir')
+    assert.match(read('lib/utils/cn.ts'), /export function cn/)
+    assert.match(read('lib/components/ui/button.tsx'), /from ['"]@\/lib\/utils\/cn['"]/)
+    const popup = read('lib/popup.tsx')
+    assert.match(popup, /from ['"]@\/lib\/overlay-motion['"]/)
+    assert.match(popup, /from ['"]@\/lib\/components\/ui\/dialog['"]/)
+    assert.ok(read('lib/overlay-motion.tsx').length)
+  } finally {
+    rmSync(fixture, { recursive: true, force: true })
+  }
+})
+
 test('registry dependencies are real npm package names, never import examples from comments', () => {
   execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
   const index = JSON.parse(readFileSync(join(root, 'packages/ui/cli/registry/index.json'), 'utf8'))
