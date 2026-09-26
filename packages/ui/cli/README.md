@@ -45,9 +45,13 @@ npx comwit-ui@latest add button    # 컴포넌트 + 의존 설치
 }
 ```
 
-- `aliases` — 파일이 놓일 위치. `add` 가 이 경로로 복사한다.
+- `aliases` — `importAlias` 뒤에 붙는 경로. `add` 가 `srcDir/<alias>` 로 복사하고 import 를 `@/<alias>/…` 로 쓴다.
+  `aliases.utils`(선택)는 `cn()` 파일 위치다(확장자 없이, 기본 `<lib>/utils`). `lib/utils/` 폴더에 다른 헬퍼가
+  이미 있으면 `"lib/utils/cn"` 처럼 그 안에 둔다.
 - `css` — 전역 CSS. `init` 이 여기에 `@import "./comwit-tokens.css"` 를 (tailwind import 뒤에) 배선한다.
 - `importAlias` — 재작성된 import 접두사(`@/`). 프로젝트 tsconfig `paths` 와 맞춘다.
+- `srcDir` — `importAlias` 가 가리키는 폴더. `init` 이 tsconfig/jsconfig 의 `"@/*": ["./src/*"]` 를 읽어 `src` 로
+  채운다(없으면 루트 `""`). 필드가 없는 옛 설정도 실행할 때 같은 방식으로 감지한다.
 
 ## 토큰 계약
 
