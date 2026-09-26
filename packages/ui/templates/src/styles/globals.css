@@ -837,6 +837,26 @@
       -webkit-backdrop-filter: blur(18px) saturate(155%) var(--glass-filter);
       backdrop-filter: blur(18px) saturate(155%) var(--glass-filter);
     }
+
+    /* 페이지 전환 중엔 렌즈 대신 CSS 블러 — 엔진이 움직이는 경계에 `contain: layout paint` 를 거는 동안
+       Chromium 은 SVG(url) backdrop-filter 를 통째로 버려 바텀내비·앱바 유리의 블러가 풀린다.
+       전환이 끝나 contain 이 지워지면 렌즈가 돌아온다. */
+    [style*='contain: layout paint'] .glass-morphing.glass-lens {
+      -webkit-backdrop-filter: blur(12px) saturate(165%) contrast(103%);
+      backdrop-filter: blur(12px) saturate(165%) contrast(103%);
+    }
+    [style*='contain: layout paint'] .glass-blur.glass-lens {
+      -webkit-backdrop-filter: blur(22px) saturate(185%) contrast(106%);
+      backdrop-filter: blur(22px) saturate(185%) contrast(106%);
+    }
+    [style*='contain: layout paint'] .glass-frosted.glass-lens {
+      -webkit-backdrop-filter: blur(10px) saturate(140%) contrast(102%);
+      backdrop-filter: blur(10px) saturate(140%) contrast(102%);
+    }
+    [style*='contain: layout paint'] .glass-fade.glass-lens {
+      -webkit-backdrop-filter: blur(18px) saturate(155%) contrast(102%);
+      backdrop-filter: blur(18px) saturate(155%) contrast(102%);
+    }
   }
 
   /* 레이어가 가진 그림자는 여기서 끈다(바깥 버튼이 아니라) — 앱바 뒤로가기처럼 면에 붙는 유리 */
