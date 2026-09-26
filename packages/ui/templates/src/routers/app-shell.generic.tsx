@@ -40,7 +40,7 @@ type AppShellProps = {
   path: string
   /** 탭·뒤로가기 fallback 이 여기로 간다. 없으면 전체 로드. */
   onNavigate?: (href: string) => void
-  /** 전환 규칙. 기본은 appTransitions(탭 경로): 탭끼리 가로 축, 그 밖은 drill. */
+  /** 전환 규칙. 기본은 appTransitions(탭 경로): 탭끼리 가로 축, 그 밖은 drill. 규칙 문법: https://ssgoi.dev/llms.txt */
   transitions?: PageTransitionConfig
   /** 스크롤러 위에 붙는 것(설치 배너 등). 있으면 상단 safe-area 는 이쪽이 갖는다. */
   top?: React.ReactNode

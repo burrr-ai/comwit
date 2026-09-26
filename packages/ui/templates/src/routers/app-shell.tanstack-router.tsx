@@ -35,7 +35,7 @@ import { TabBar, type AppTab } from './tab-bar.tanstack-router'
 type AppShellProps = {
   /** 탭 목록 — 순서가 곧 탭바 순서이자 전환 방향. */
   tabs: readonly AppTab[]
-  /** 전환 규칙. 기본은 appTransitions(탭 경로): 탭끼리 가로 축, 그 밖은 drill. */
+  /** 전환 규칙. 기본은 appTransitions(탭 경로): 탭끼리 가로 축, 그 밖은 drill. 규칙 문법: https://ssgoi.dev/llms.txt */
   transitions?: PageTransitionConfig
   /** 스크롤러 위에 붙는 것(설치 배너 등). 있으면 상단 safe-area 는 이쪽이 갖는다. */
   top?: React.ReactNode

@@ -54,6 +54,8 @@
  *
  * 규칙: on/except(계층 진입·이탈) · from/to(정확한 쌍) · ordered(탭 순서). 뒤로가기는 같은 효과를 거꾸로 돈다.
  * 스크롤 위치는 규칙에서 자동으로 복원·초기화된다.
+ * 엔진은 ssgoi 다 — 규칙 문법(on/except · from/to · ordered · priority) · 프리셋 옵션 · middleware · scrollLock 의
+ * 상세는 https://ssgoi.dev/llms.txt 를 읽는다.
  * hero 는 두 페이지의 공유 요소에 `data-hero-exit-key`(출발) / `data-hero-enter-key`(도착) 를 같은 값으로 달고,
  * 양쪽에 `data-hero-radius`(모서리 반경 px) 도 적는다 — 엔진은 CSS 반경을 읽지 않으므로 이 값으로 전환 중 반경을 보정한다.
  */
@@ -64,7 +66,7 @@ import { axis, drill } from '@ssgoi/react/view-transitions'
 
 import { cn } from '../../lib/utils'
 
-/** 전환 규칙 — `transitions` 배열(또는 `({ isMobile }) => 배열`)과 선택적 `middleware` · `scrollLock`. */
+/** 전환 규칙 — `transitions` 배열(또는 `({ isMobile }) => 배열`)과 선택적 `middleware` · `scrollLock`. 문법 상세: https://ssgoi.dev/llms.txt */
 export type PageTransitionConfig = SsgoiConfig
 
 type PageTransitionProps = React.ComponentProps<'div'> & {
@@ -158,7 +160,7 @@ function appTransitions(
 
 export { PageTransition, PageBoundary, appTransitions }
 
-// 전환 프리셋 — 이름은 UX 의도다. 더 많은 효과(film · strip · rotate …)는 '@ssgoi/react/view-transitions' 에.
+// 전환 프리셋 — 이름은 UX 의도다. 각 프리셋의 옵션(type · feel · spring …)은 https://ssgoi.dev/llms.txt 에 있다. 더 많은 효과(film · strip · rotate …)는 '@ssgoi/react/view-transitions' 에.
 //   drill  목록 → 상세(계층)     sheet  작성·필터 같은 임시 작업     slide  순서 있는 탭
 //   axis   머티리얼 공유축       zoom   카드가 상세로 확대            hero   두 페이지가 공유하는 요소
 //   fade   조용한 순차 페이드

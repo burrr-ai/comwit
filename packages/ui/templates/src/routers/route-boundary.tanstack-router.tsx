@@ -10,6 +10,8 @@
  *   <PageTransition config={transitions}>
  *     <RouteBoundary><Outlet /></RouteBoundary>
  *   </PageTransition>
+ *
+ * 어댑터·경계 계약의 상세는 https://ssgoi.dev/llms.txt 를 읽는다.
  */
 
 import * as React from 'react'

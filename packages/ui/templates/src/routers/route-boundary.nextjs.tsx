@@ -19,6 +19,7 @@
  *   </RouteBoundary>
  *
  * `resolve` 로 인터셉트 모달(@modal)처럼 URL 과 소유 슬롯이 다른 경우의 id/key 를 직접 정한다.
+ * 어댑터·경계 계약의 상세는 https://ssgoi.dev/llms.txt 를 읽는다.
  */
 
 import * as React from 'react'
