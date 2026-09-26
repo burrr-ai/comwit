@@ -54,11 +54,11 @@ const transitions = {
         name: 'Drill',
         gallery: true,
         description:
-          'One keyed boundary marks the page. PageTransition lays the shell the leaving page needs (relative · z-0 · overflow-x-clip); inside your own scroller give it min-h-full and give every page a background.',
+          'One keyed boundary marks the page. PageTransition lays a layout-only shell (a flex column); inside your own scroller give it min-h-full. The scroller anchors, stacks and clips the leaving page: give it relative z-0 overflow-x-clip, which also keeps sticky bars steady while it scrolls. Give every page a background.',
         renderFn: `const [path, setPath] = React.useState('/notes')
 const note = NOTES.find((n) => '/notes/' + n.id === path)
 return (
-  <div className="h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
+  <div className="relative z-0 h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
     <PageTransition config={transitions} className="min-h-full">
       <PageBoundary path={path} className="min-h-full bg-background">
         {note ? (
@@ -101,7 +101,7 @@ return (
           'sheet({ type: "blur" }) for compose, filters and other temporary tasks. The page behind recedes and blurs; close it and it comes back untouched.',
         renderFn: `const [path, setPath] = React.useState('/notes')
 return (
-  <div className="h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
+  <div className="relative z-0 h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
     <PageTransition config={transitions} className="min-h-full">
       <PageBoundary path={path} className="flex min-h-full flex-col bg-background">
         {path === '/compose' ? (
@@ -149,7 +149,7 @@ return (
         renderFn: `const [path, setPath] = React.useState('/photos')
 const photo = PHOTOS.find((p) => '/photos/' + p.id === path)
 return (
-  <div className="h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
+  <div className="relative z-0 h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
     <PageTransition config={transitions} className="min-h-full">
       <PageBoundary path={path} className="min-h-full bg-background">
         {photo ? (
@@ -197,7 +197,7 @@ return (
 const [tab, setTab] = React.useState('/home')
 const current = TABS.find((t) => t.value === tab) ?? TABS[0]
 return (
-  <div className="h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
+  <div className="relative z-0 h-96 w-full max-w-sm overflow-x-clip overflow-y-auto rounded-card bg-muted">
     <PageTransition config={transitions} className="flex min-h-full flex-col">
       <PageBoundary path={tab} routeKey="tabs" className="flex min-h-full flex-1 flex-col bg-background">
         <PageBoundary path={tab} className="flex-1 bg-background">

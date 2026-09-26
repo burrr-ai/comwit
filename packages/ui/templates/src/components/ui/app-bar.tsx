@@ -54,7 +54,7 @@ function AppBar({
         'pt-[env(safe-area-inset-top)] pr-[max(0.75rem,env(safe-area-inset-right))] pl-[max(0.75rem,env(safe-area-inset-left))]',
         behavior === 'flow' ? 'relative' : 'sticky top-0',
         behavior === 'reveal' &&
-          'transform-gpu transition-transform duration-slow ease-out focus-within:pointer-events-auto focus-within:translate-y-0 motion-reduce:transition-none',
+          'transform-gpu transition-transform duration-slow ease-out focus-within:pointer-events-auto focus-within:translate-y-0',
         'data-[state=hidden]:pointer-events-none data-[state=hidden]:-translate-y-full',
         className
       )}
@@ -154,7 +154,7 @@ function FloatingBackButton({
       <div
         data-slot="floating-back-button"
         className={cn(
-          'fixed z-appbar transition-[transform,opacity] duration-slow ease-out motion-reduce:transition-none',
+          'fixed z-appbar transition-[transform,opacity] duration-slow ease-out',
           'data-[state=hidden]:pointer-events-none data-[state=hidden]:opacity-0 data-[state=hidden]:[transform:translateY(calc(-100%-env(safe-area-inset-top)-16px))]',
           className
         )}

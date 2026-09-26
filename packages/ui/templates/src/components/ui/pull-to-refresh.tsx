@@ -31,7 +31,7 @@ type PullToRefreshProps = Omit<
     'onRefresh' | 'enabled' | 'threshold' | 'maxPull' | 'resting'
   > & {
     /** 스크롤러 요소 ref — ScrollChromeProvider 에 넘긴다. */
-    ref?: React.Ref<HTMLDivElement>
+    ref?: React.Ref<HTMLElement>
     /** 바깥 래퍼 className (스크롤러는 className) */
     wrapperClassName?: string
   }
@@ -109,4 +109,4 @@ function PullIndicator() {
   )
 }
 
-export { PullToRefresh }
+export { PullToRefresh, PullIndicator }

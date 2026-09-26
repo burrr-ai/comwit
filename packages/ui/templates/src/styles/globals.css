@@ -837,6 +837,26 @@
       -webkit-backdrop-filter: blur(18px) saturate(155%) var(--glass-filter);
       backdrop-filter: blur(18px) saturate(155%) var(--glass-filter);
     }
+
+    /* 페이지 전환 중엔 렌즈 대신 CSS 블러 — 엔진이 움직이는 경계에 `contain: layout paint` 를 거는 동안
+       Chromium 은 SVG(url) backdrop-filter 를 통째로 버려 바텀내비·앱바 유리의 블러가 풀린다.
+       전환이 끝나 contain 이 지워지면 렌즈가 돌아온다. */
+    [style*='contain: layout paint'] .glass-morphing.glass-lens {
+      -webkit-backdrop-filter: blur(12px) saturate(165%) contrast(103%);
+      backdrop-filter: blur(12px) saturate(165%) contrast(103%);
+    }
+    [style*='contain: layout paint'] .glass-blur.glass-lens {
+      -webkit-backdrop-filter: blur(22px) saturate(185%) contrast(106%);
+      backdrop-filter: blur(22px) saturate(185%) contrast(106%);
+    }
+    [style*='contain: layout paint'] .glass-frosted.glass-lens {
+      -webkit-backdrop-filter: blur(10px) saturate(140%) contrast(102%);
+      backdrop-filter: blur(10px) saturate(140%) contrast(102%);
+    }
+    [style*='contain: layout paint'] .glass-fade.glass-lens {
+      -webkit-backdrop-filter: blur(18px) saturate(155%) contrast(102%);
+      backdrop-filter: blur(18px) saturate(155%) contrast(102%);
+    }
   }
 
   /* 레이어가 가진 그림자는 여기서 끈다(바깥 버튼이 아니라) — 앱바 뒤로가기처럼 면에 붙는 유리 */
@@ -1008,17 +1028,35 @@
     pointer-events: none;
   }
 
+  /* ── 앱 셸(app-shell) — 폰 틀. 높이는 브라우저 툴바를 따라가는 dvh, 설치형(standalone) iOS 는 dvh 가 safe-area 를 빼고
+     계산돼 vh 로 되돌린다. 안의 스크롤러들은 스크롤바를 숨긴다. 위에 붙는 것(설치 배너)이 있으면 상단 safe-area 는 그쪽이 갖고,
+     앱바 없는 탭 화면(AppScreen)이 --app-safe-area-top 만큼만 띄운다. ── */
+  [data-slot='app-shell'] {
+    --app-safe-area-top: env(safe-area-inset-top);
+    height: 100vh;
+    height: 100dvh;
+  }
+  @media (display-mode: standalone) and (max-width: 767px) {
+    [data-slot='app-shell'] {
+      height: 100vh;
+    }
+  }
+  /* 래퍼는 늘 있고 배너는 조건부로 그려진다 — 실제로 보일 때만 상단 safe-area 를 넘긴다. */
+  [data-slot='app-shell']:has(> [data-slot='app-shell-top']:not(:empty)) {
+    --app-safe-area-top: 0px;
+  }
+  [data-slot='app-shell'] * {
+    scrollbar-width: none;
+  }
+  [data-slot='app-shell'] *::-webkit-scrollbar {
+    display: none;
+  }
+
   /* ── 플로팅 탭 인디케이터 — 바텀내비·세그먼트 탭의 활성 알약 ── */
   .floating-tab-indicator {
     border: 0;
     background-color: color-mix(in srgb, var(--ink) 6%, transparent);
     box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-sheen) 38%, transparent);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .glass-morphing [data-glass-item] {
-      transition: none;
-    }
   }
 }
 

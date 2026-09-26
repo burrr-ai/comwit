@@ -31,6 +31,20 @@ export const groups = [
     blurb: 'Chrome that behaves like a native app and gets out of the way while you read.',
     items: [
       {
+        name: 'app-shell',
+        title: 'App shell',
+        exhibit: 'phone',
+        summary:
+          'The whole mobile shell in one piece: the only scroller, pull to refresh, shared scroll intent, page transitions and history-aware back. Installed for your router.',
+      },
+      {
+        name: 'app-screen',
+        title: 'App screen',
+        exhibit: 'phone',
+        summary:
+          'One screen = app bar + body. Tab roots flow, details reveal with a glass back button that falls back to the parent route on direct entry.',
+      },
+      {
         name: 'app-bar',
         title: 'App bar',
         exhibit: 'phone',

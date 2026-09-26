@@ -31,6 +31,8 @@ Add any of them by name: npx comwit-ui@latest add <name>. The gallery shows each
 
 ### Mobile app
 Chrome that behaves like a native app and gets out of the way while you read.
+- app-shell: The whole mobile shell in one piece: the only scroller, pull to refresh, shared scroll intent, page transitions and history-aware back. Installed for your router.
+- app-screen: One screen = app bar + body. Tab roots flow, details reveal with a glass back button that falls back to the parent route on direct entry.
 - app-bar: Glass top bar. Hides while you scroll down, returns the moment you scroll up.
 - bottom-nav: Floating tab capsule. The indicator springs between tabs; the bar shrinks as you scroll.
 - page-transition: Hero, zoom, drill or fade from the photo grid into the photo. One keyed boundary marks the page; your router or plain state drives it. Built on SSGOI.
