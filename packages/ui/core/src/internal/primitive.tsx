@@ -20,6 +20,7 @@ const NODES = [
   'input',
   'label',
   'li',
+  'main',
   'nav',
   'ol',
   'p',

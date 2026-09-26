@@ -173,11 +173,37 @@ test('page-transition installs the route boundary that matches the detected rout
     run('init')
     const out = run('add', 'page-transition')
     assert.match(out, /route-boundary\.tsx.*nextjs/)
-    assert.match(boundary(), /from ['"]next\/navigation['"]/)
-    assert.match(boundary(), /from ['"]@\/components\/ui\/page-transition['"]/)
+    // Next.js and TanStack Router boundaries wrap ssgoi's own adapters.
+    assert.match(boundary(), /from ['"]@ssgoi\/react\/nextjs['"]/)
+    assert.match(boundary(), /from ['"]@\/lib\/utils['"]/)
     const provider = readFileSync(join(fixture, 'components/ui/page-transition.tsx'), 'utf8')
     assert.match(provider, /from ['"]@ssgoi\/react['"]/)
+    // The shell is layout only; the scroller is the positioned, clipping stacking context. An overflow between
+    // the scroller and a sticky nav makes it jitter on iOS.
+    assert.match(provider, /className=\{cn\('flex min-h-dvh flex-col', className\)\}/)
     assert.doesNotMatch(out, /npm deps.*\bnext\b/)
+
+    // app-shell pulls the whole mobile shell for the detected router; sibling variants lose their suffix.
+    const shellOut = run('add', 'app-shell')
+    assert.match(shellOut, /app-shell\.tsx.*nextjs/)
+    assert.match(shellOut, /tab-bar\.tsx.*nextjs/)
+    const shell = readFileSync(join(fixture, 'components/ui/app-shell.tsx'), 'utf8')
+    assert.match(shell, /from ['"]next\/navigation['"]/)
+    assert.match(shell, /from ['"]@\/components\/ui\/tab-bar['"]/)
+    assert.match(shell, /from ['"]@\/components\/ui\/route-boundary['"]/)
+    assert.doesNotMatch(shell, /\.(nextjs|generic)['"]/)
+    for (const file of ['tab-bar', 'pull-to-refresh', 'bottom-nav'])
+      assert.ok(
+        existsSync(join(fixture, `components/ui/${file}.tsx`)),
+        `app-shell installs ${file}`
+      )
+    // AppScreen is what pages use, not the shell — it installs on its own and brings the app bar.
+    run('add', 'app-screen')
+    assert.ok(existsSync(join(fixture, 'components/ui/app-bar.tsx')), 'app-screen installs app-bar')
+    assert.match(
+      readFileSync(join(fixture, 'components/ui/app-screen.tsx'), 'utf8'),
+      /useBackNavigation.*from ['"]@comwit\/ui['"]/
+    )
 
     // React Router 6 projects only carry react-router-dom; the import follows the installed package.
     setDeps({ dependencies: { 'react-router-dom': '6.30.0' } })
@@ -186,18 +212,18 @@ test('page-transition installs the route boundary that matches the detected rout
 
     setDeps({ dependencies: { '@tanstack/react-router': '1.0.0' } })
     run('add', 'route-boundary', '--overwrite')
-    assert.match(boundary(), /from ['"]@tanstack\/react-router['"]/)
+    assert.match(boundary(), /from ['"]@ssgoi\/react\/tanstack-router['"]/)
 
     // No supported router → the prop-based boundary, and --router overrides detection.
     setDeps({})
     run('add', 'route-boundary', '--overwrite')
     assert.doesNotMatch(
       boundary(),
-      /from ['"](next\/navigation|react-router|@tanstack\/react-router)['"]/
+      /from ['"](next\/navigation|react-router|@tanstack\/react-router|@ssgoi\/react\/[\w-]+)['"]/
     )
     assert.match(boundary(), /path/)
     run('add', 'route-boundary', '--overwrite', '--router', 'nextjs')
-    assert.match(boundary(), /from ['"]next\/navigation['"]/)
+    assert.match(boundary(), /from ['"]@ssgoi\/react\/nextjs['"]/)
     assert.throws(() => run('add', 'route-boundary', '--overwrite', '--router', 'remix'))
   } finally {
     rmSync(fixture, { recursive: true, force: true })

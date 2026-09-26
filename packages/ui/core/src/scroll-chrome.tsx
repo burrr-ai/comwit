@@ -12,6 +12,8 @@
  *   const { compact, expand } = useScrollChrome()
  *
  * scrollRef 를 생략하면 문서(window) 스크롤을 본다. resetKey 가 바뀌면(라우트 전환) 펼친다.
+ * 그 스크롤러 안에 sticky 탭바를 두면 스크롤러가 스태킹과 가로 자르기를 맡고(`relative z-0 overflow-x-clip`),
+ * 스크롤러와 탭바 사이에는 overflow 를 가진 조상을 두지 않는다 — 아니면 iOS 에서 스크롤 중 탭바가 떨린다.
  * 프로바이더 아래 `[data-scroll-chrome="compact" | "expanded"]` 요소가 상태를 CSS 에도 알린다.
  */
 

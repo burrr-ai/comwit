@@ -1,6 +1,6 @@
 {
   "name": "@comwit/ui-templates",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Comwit UI templates — copy-paste styled components (shadcn-inspired ownership model, no shadcn tooling) built on the @comwit/ui headless engine.",
   "keywords": [
     "react",
@@ -28,6 +28,9 @@
     "./lib/utils": "./src/lib/utils.ts",
     "./lib/popup": "./src/lib/popup.tsx",
     "./lib/interaction": "./src/lib/interaction.ts",
+    "./app-shell": "./src/routers/app-shell.generic.tsx",
+    "./tab-bar": "./src/routers/tab-bar.generic.tsx",
+    "./route-boundary": "./src/routers/route-boundary.generic.tsx",
     "./*": "./src/components/ui/*.tsx"
   },
   "files": [
@@ -43,7 +46,7 @@
   },
   "dependencies": {
     "@comwit/ui": "workspace:*",
-    "@ssgoi/react": "^7.2.0",
+    "@ssgoi/react": "^7.3.0",
     "@tanstack/react-table": "^8.21.3",
     "@tiptap/extension-image": "^3.22.4",
     "@tiptap/extension-link": "^3.22.4",
