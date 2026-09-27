@@ -8,3 +8,7 @@ allowBuilds:
   sharp: true
   '@tailwindcss/oxide': true
   unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - '@ssgoi/core@7.3.1'
+  - '@ssgoi/react@7.3.1'
