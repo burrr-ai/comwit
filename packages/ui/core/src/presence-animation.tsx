@@ -21,7 +21,6 @@
  *  - 시작 시각은 WAAPI 가 정한다 — 첫 프레임이 실제로 그려질 때 출발하고(pending play), transform · opacity 는
  *    합성기에서 돌아 그 뒤 메인 스레드가 바빠도(렌즈 맵 생성 등) 끊기지 않는다. 프레임 루프는 따로 없다.
  *  - 끝난 뒤에도 마지막 모습을 유지한다(fill: both) — 파트 자신의 위치는 translate 같은 개별 속성으로 둔다.
- *  - 시스템이 동작 줄이기면 열린 모습(style(1))에 머문 채 투명도만 짧게 바꾼다.
  *  - 모습 · 스프링 값은 소비처(템플릿)의 몫이다 — 여기엔 값이 없다.
  */
 
@@ -49,22 +48,8 @@ interface PresenceAnimationOptions {
 
 const ENTER: SpringConfig = { duration: 0.28 }
 const EXIT: SpringConfig = { duration: 0.2 }
-/** 동작 줄이기 — 투명도만 이 시간(ms)에 선형으로. */
-const REDUCED_MS = 120
 
 type Run = { animation: Animation; frames: SpringFrame[] }
-
-function prefersReducedMotion(node: Element) {
-  const view = node.ownerDocument.defaultView
-  return Boolean(view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
-}
-
-/** 동작 줄이기 모습 — 열린 자리에 머문 채 투명도만. */
-function fadeAt(style: PresenceAnimationOptions['style'], t: number): Keyframe {
-  const rest = style(1)
-  const opacity = typeof rest.opacity === 'number' ? rest.opacity : 1
-  return { ...rest, opacity: opacity * Math.min(1, Math.max(0, t)) }
-}
 
 function usePresenceAnimation<T extends Element = HTMLElement>(
   options: PresenceAnimationOptions
@@ -98,16 +83,10 @@ function usePresenceAnimation<T extends Element = HTMLElement>(
       previous.animation.cancel()
     }
 
-    const reduced = prefersReducedMotion(node)
-    const frames: SpringFrame[] = reduced
-      ? [
-          { time: 0, position: from.position, velocity: 0 },
-          { time: REDUCED_MS, position: target, velocity: 0 },
-        ]
-      : simulateSpring(present ? enter : exit, from.position, target, from.velocity)
+    const frames = simulateSpring(present ? enter : exit, from.position, target, from.velocity)
     const total = frames[frames.length - 1]!.time
     const keyframes = frames.map((frame) => ({
-      ...(reduced ? fadeAt(style, frame.position) : style(frame.position)),
+      ...style(frame.position),
       offset: frame.time / total,
     }))
     const animation = node.animate(keyframes, { duration: total, easing: 'linear', fill: 'both' })

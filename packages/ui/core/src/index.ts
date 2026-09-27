@@ -50,6 +50,8 @@ export * as Autocomplete from './autocomplete'
 //   AppBar.Root(behavior → data-state) · BottomNav.Root/Item(선택·compact·펼치기)
 //   DragScroller.Root/Track(드래그·관성·휠·키보드 가로 스크롤) · PullToRefresh.Root/Scroller/Indicator(당김 제스처)
 //   Chat.Root/Title/Description/List/ScrollToBottom/Message/MessageContent/Bubble/Composer/… (가상화 목록·스크롤 규칙·컴포저)
+//   AppShell.Root/Scroller/Indicator(유일한 스크롤러 <main> + 스크롤 의도 + 당겨서 새로고침 한 묶음)
+export * as AppShell from './app-shell'
 export * as AppBar from './app-bar'
 export * as BottomNav from './bottom-nav'
 export * as DragScroller from './drag-scroller'
@@ -57,6 +59,8 @@ export * as PullToRefresh from './pull-to-refresh'
 export * as Chat from './chat'
 // 훅은 flat: 앱바·바텀내비가 공유하는 스크롤 의도, 모바일 감지, 유리 렌즈 엔진
 export * from './scroll-chrome'
+// 뒤로가기 깊이 — 앱 안 히스토리가 있으면 back, 직접 진입이면 부모로 replace(라우터 어댑터는 소비처가 준다)
+export * from './nav-depth'
 export * from './use-mobile'
 export * from './glass-lens'
 

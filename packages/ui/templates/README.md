@@ -148,7 +148,7 @@ import { Button } from '@/components/ui/button' // CLI 가 복사한 경로
 
 docs 갤러리와 같은 묶음 — 컴윗 특화 UX 가 먼저, 기본형이 마지막.
 
-- **모바일 앱** — app-bar · bottom-nav · page-transition(+ route-boundary) · pull-to-refresh · drag-scroller
+- **모바일 앱** — app-shell(AppShell · TabShell, + tab-bar · route-boundary — 라우터 감지 변형) · app-screen · app-bar · bottom-nav · page-transition · pull-to-refresh · drag-scroller
 - **채팅** — chat(`Chat` · `ChatHeader` · `ChatMessages`(가상화) · `ChatMessage` · `ChatBubble` · `ChatTyping` · `ChatComposer` …)
 - **유리** — glass(`Glass` · `GlassSurface` · `GlassButton`) · dropdown-menu · popover · (dialog · sheet · popup · 토스트도 같은 굴절 유리 — 스크림 위라 `dense`)
 - **알림** — toast(`Toaster` · `toast()` · `Toast`) · `lib/popup`(confirm · alert · sheet) · alert · empty-state
@@ -163,7 +163,8 @@ docs 갤러리와 같은 묶음 — 컴윗 특화 UX 가 먼저, 기본형이 �
 (앱바 reveal · 바텀내비 compact 가 공유하는 스크롤 의도, 모바일 감지). 복사할 `hooks/` 파일은 없다.
 
 **동작은 프리미티브, 템플릿은 스타일.** 앱바(`AppBar.Root`) · 바텀내비(`BottomNav.Root/Item`) · 드래그 스크롤러
-(`DragScroller.Root/Track`) · 당겨서 새로고침(`PullToRefresh.Root/Scroller/Indicator`) · 채팅(`Chat.*`) · 유리 렌즈
+(`DragScroller.Root/Track`) · 당겨서 새로고침(`PullToRefresh.Root/Scroller/Indicator`) · 앱 셸(`AppShell.Root/Scroller/Indicator` —
+유일한 스크롤러 · 스크롤 의도 · 새로고침 한 묶음) · 뒤로가기 깊이(`NavDepthProvider`) · 채팅(`Chat.*`) · 유리 렌즈
 (`useGlassLens`)의 JS 는 `@comwit/ui` 에 있고, 템플릿은 프리미티브가 방출하는 `data-state` · `data-tone` 같은
 속성에 토큰을 입힌다. 새 컴포넌트를 짤 때도 같은 규칙이다: 제스처·스크롤·키보드 같은 동작은 코어에 옵션으로,
 템플릿에는 className 과 슬롯 조립만.

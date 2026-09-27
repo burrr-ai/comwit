@@ -6,6 +6,7 @@
 export * from './components/ui/accordion'
 export * from './components/ui/alert'
 export * from './components/ui/app-bar'
+export * from './components/ui/app-screen'
 export * from './components/ui/autocomplete'
 export * from './components/ui/avatar'
 export * from './components/ui/badge'
@@ -49,6 +50,10 @@ export * from './components/ui/text-field'
 export * from './components/ui/textarea'
 export * from './components/ui/time-picker'
 export * from './components/ui/toast'
+
+// ── routers — generic 변형(패키지 소비처용). CLI 는 라우터를 감지해 nextjs · react-router · tanstack-router 변형을 설치한다 ──
+export * from './routers/app-shell.generic'
+export * from './routers/tab-bar.generic'
 
 // ── lib ────────────────────────────────────────────────────
 export { cn } from './lib/utils'

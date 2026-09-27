@@ -147,6 +147,7 @@ function detectSrcDir(cwd, importAlias) {
 // 어느 폴더에 있었는지 알아야 `./X` 를 형제 ui 로 볼지 형제 lib 로 볼지 정할 수 있다.
 //   ../../lib/X → @/lib/X (utils 는 aliases.utils) · ../../hooks/X → @/hooks/X (bare ../../hooks → use-mobile)
 //   components/ui 의 ./X → @/components/ui/X · lib 의 ./X → @/lib/X
+const VARIANT_SUFFIX = /\.(nextjs|react-router|tanstack-router|generic)$/
 function rewriteImports(content, cfg, filePath) {
   const { importAlias: A, aliases } = cfg
   const lib = (rest) => (rest === 'utils' ? utilsAlias(cfg) : `${aliases.lib}/${rest}`)
@@ -162,7 +163,8 @@ function rewriteImports(content, cfg, filePath) {
     else if (spec === '../../hooks' || spec === '../hooks') mapped = `${aliases.hooks}/use-mobile`
     else if (spec.startsWith('../components/ui/'))
       mapped = `${aliases.ui}/${spec.slice('../components/ui/'.length)}`
-    else if (spec.startsWith('./')) mapped = sibling(spec.slice(2))
+    // 라우터 변형끼리는 `./tab-bar.nextjs` 처럼 서로를 가리킨다 — 설치되면 접미사 없는 하나의 파일이다.
+    else if (spec.startsWith('./')) mapped = sibling(spec.slice(2).replace(VARIANT_SUFFIX, ''))
     if (!mapped) return m // @comwit/ui, npm, react 등은 그대로
     return `${kw}${q}${A}${mapped}${q}`
   })
@@ -443,7 +445,7 @@ switch (cmd) {
   ${c.cyan('comwit-ui list')}            설치 가능한 컴포넌트 목록
 
   플래그: --cwd <dir>  --overwrite  --dry  --no-install  --css <path>
-          --router <nextjs|react-router|tanstack-router|generic>  (route-boundary 변형 — 기본은 package.json 에서 감지)
+          --router <nextjs|react-router|tanstack-router|generic>  (app-shell · tab-bar · route-boundary 변형 — 기본은 package.json 에서 감지)
           --locale <en|ko>  (컴포넌트 기본 문구 lib/ui-text — init 은 comwit.json 에 기록, 기본 en)`)
     break
   default:

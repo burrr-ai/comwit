@@ -24,10 +24,19 @@ const ROUTER_VARIANTS = {
   generic: null,
 }
 
+// ssgoi 공식 라우터 어댑터 — 이걸 import 하는 변형은 그 라우터용이다(프레임워크 패키지를 직접 import 하지 않아도).
+const ROUTER_ADAPTERS = {
+  '@ssgoi/react/nextjs': 'next',
+  '@ssgoi/react/react-router': 'react-router',
+  '@ssgoi/react/tanstack-router': '@tanstack/react-router',
+}
+
 // import 로 드러나지 않는 짝 — 함께 설치돼야 완성되는 아이템.
-//   page-transition 은 라우터에 맞는 route-boundary(감지형 변형)와 함께 설치된다.
+//   page-transition 은 라우터에 맞는 route-boundary(감지형 변형)와 함께 설치되고, 어댑터를 감싼 route-boundary 변형은
+//   PageTransition(Ssgoi 프로바이더) 안에서만 돈다.
 const EXTRA_REGISTRY_DEPS = {
   'page-transition': ['route-boundary'],
+  'route-boundary': ['page-transition'],
 }
 
 function pkgName(spec) {
@@ -77,18 +86,23 @@ for (const file of readdirSync(uiDir).filter((f) => f.endsWith('.tsx'))) {
   })
 }
 
-// 1b) routers/route-boundary.<variant>.tsx → 하나의 "route-boundary" 아이템 + variants.
+// 1b) routers/<name>.<variant>.tsx → 이름마다 하나의 "ui" 아이템 + variants (variantBy: 'router').
 //     files[0] 은 라우터를 못 찾았을 때의 generic 구현이고, comwit-ui add 가 package.json 에서
 //     next / react-router / @tanstack/react-router 를 감지해(또는 --router 로) 변형 content 를 대신 쓴다.
-function routerVariant(file) {
+//     변형끼리는 `./<name>.<variant>` 로 서로를 import 한다 — 레지스트리 의존성은 <name>, 설치 시 CLI 가 접미사를 뗀다.
+const VARIANT_FILE = /^([a-z][a-z0-9-]*)\.(nextjs|react-router|tanstack-router|generic)\.tsx$/
+function routerVariant(name, file) {
   const content = readFileSync(join(tplSrc, 'routers', file), 'utf8')
   const deps = new Set()
-  const registryDeps = new Set()
+  const registryDeps = new Set(EXTRA_REGISTRY_DEPS[name] ?? [])
   let framework = null
   for (const s of parseImports(content)) {
     if (s.startsWith('../components/ui/')) registryDeps.add(s.split('/').pop())
+    else if (s.startsWith('../lib/')) registryDeps.add(basename(s))
+    else if (s.startsWith('./')) registryDeps.add(s.slice(2).replace(VARIANT_SUFFIX, ''))
     else if (s.startsWith('.')) continue
     else {
+      if (ROUTER_ADAPTERS[s]) framework = ROUTER_ADAPTERS[s]
       const p = pkgName(s)
       if (IGNORE_NPM.has(p)) continue
       if (Object.values(ROUTER_VARIANTS).includes(p)) framework = p
@@ -102,24 +116,34 @@ function routerVariant(file) {
     content,
   }
 }
+const VARIANT_SUFFIX = /\.(nextjs|react-router|tanstack-router|generic)$/
 {
-  const variants = {}
-  for (const name of Object.keys(ROUTER_VARIANTS)) {
-    const file = `route-boundary.${name}.tsx`
-    variants[name] = routerVariant(file)
-    if (variants[name].framework !== ROUTER_VARIANTS[name])
-      throw new Error(`routers/${file}: expected to import ${ROUTER_VARIANTS[name]}`)
+  const byName = new Map()
+  for (const file of readdirSync(join(tplSrc, 'routers')).sort()) {
+    const m = VARIANT_FILE.exec(file)
+    if (!m) continue
+    if (!byName.has(m[1])) byName.set(m[1], {})
+    byName.get(m[1])[m[2]] = routerVariant(m[1], file)
   }
-  const generic = variants.generic
-  items.push({
-    name: 'route-boundary',
-    type: 'ui',
-    dependencies: generic.dependencies,
-    registryDependencies: generic.registryDependencies,
-    files: [{ path: 'components/ui/route-boundary.tsx', content: generic.content }],
-    variantBy: 'router',
-    variants,
-  })
+  for (const [name, variants] of byName) {
+    for (const variant of Object.keys(ROUTER_VARIANTS)) {
+      if (!variants[variant]) throw new Error(`routers/${name}.${variant}.tsx is missing`)
+      if (variants[variant].framework !== ROUTER_VARIANTS[variant])
+        throw new Error(
+          `routers/${name}.${variant}.tsx: expected to import ${ROUTER_VARIANTS[variant]}`
+        )
+    }
+    const generic = variants.generic
+    items.push({
+      name,
+      type: 'ui',
+      dependencies: generic.dependencies,
+      registryDependencies: generic.registryDependencies,
+      files: [{ path: `components/ui/${name}.tsx`, content: generic.content }],
+      variantBy: 'router',
+      variants,
+    })
+  }
 }
 
 // 2) lib / hooks 지원 파일

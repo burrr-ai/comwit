@@ -74,7 +74,7 @@ function BottomNav({
   const count = Math.max(1, items.length)
   const activeIndex = items.findIndex((item) => item.props.value === value)
 
-  // 탭이 바뀐 뒤에만 찌그러진다 — 첫 렌더와 동작 줄이기 설정에선 돌지 않는다.
+  // 탭이 바뀐 뒤에만 찌그러진다 — 첫 렌더에선 돌지 않는다.
   const shapeRef = React.useRef<HTMLSpanElement>(null)
   const previousIndex = React.useRef(activeIndex)
   React.useEffect(() => {
@@ -82,7 +82,6 @@ function BottomNav({
     previousIndex.current = activeIndex
     const shape = shapeRef.current
     if (!shape || typeof shape.animate !== 'function') return
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     shape.animate(SQUASH, { duration: 400 })
   }, [activeIndex])
 
@@ -108,7 +107,7 @@ function BottomNav({
       <div
         className={cn(
           'relative isolate mx-auto grid h-14 w-full max-w-[336px] origin-bottom rounded-pill p-1',
-          'transition-[scale] duration-(--nav-scale-duration) ease-(--nav-scale-ease) motion-reduce:transition-none',
+          'transition-[scale] duration-(--nav-scale-duration) ease-(--nav-scale-ease)',
           'group-data-[state=compact]/nav:scale-[0.86]'
         )}
         style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}
@@ -117,7 +116,7 @@ function BottomNav({
         {activeIndex >= 0 ? (
           <div aria-hidden="true" className="pointer-events-none absolute inset-1 transform-gpu">
             <span
-              className="absolute inset-y-0 left-0 flex justify-center transition-[translate] duration-(--nav-slide-duration) ease-(--nav-slide-ease) motion-reduce:transition-none"
+              className="absolute inset-y-0 left-0 flex justify-center transition-[translate] duration-(--nav-slide-duration) ease-(--nav-slide-ease)"
               style={{ width: `${100 / count}%`, translate: `${activeIndex * 100}% 0` }}
             >
               <span ref={shapeRef} className="floating-tab-indicator size-full rounded-pill" />
@@ -166,7 +165,6 @@ function BottomNavItem({
         'relative z-raised flex min-w-0 transform-gpu flex-col items-center justify-center gap-0.5 rounded-pill',
         focusRing,
         pressable,
-        'motion-reduce:transition-none motion-reduce:active:scale-100',
         '[&_svg]:size-6 [&_svg]:shrink-0 [&_img]:size-7 [&_img]:object-contain',
         '[&_svg]:transition-[opacity,transform] [&_img]:transition-[filter,opacity,transform] [&_svg]:duration-base [&_img]:duration-base',
         'text-foreground/65 hover:bg-accent/35 hover:text-foreground [&_img]:opacity-65 [&_img]:grayscale-[0.72]',

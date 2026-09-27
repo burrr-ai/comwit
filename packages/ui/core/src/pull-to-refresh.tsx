@@ -68,7 +68,7 @@ function usePullStore(): PullStore {
 
 type PullToRefreshContextValue = {
   store: PullStore
-  setScroller: (element: HTMLDivElement | null) => void
+  setScroller: (element: HTMLElement | null) => void
 }
 const [PullToRefreshProvider, usePullToRefreshContext] =
   createContext<PullToRefreshContextValue>(ROOT_NAME)
@@ -100,7 +100,7 @@ const PullToRefreshRoot = React.forwardRef<HTMLDivElement, PullToRefreshRootProp
     } = props
     const wrapperRef = React.useRef<HTMLDivElement>(null)
     const composedRef = useComposedRefs(forwardedRef, wrapperRef)
-    const [scroller, setScroller] = React.useState<HTMLDivElement | null>(null)
+    const [scroller, setScroller] = React.useState<HTMLElement | null>(null)
     const store = usePullStore()
     const refreshRef = React.useRef(onRefresh)
     React.useEffect(() => {
@@ -281,7 +281,7 @@ PullToRefreshRoot.displayName = ROOT_NAME
 const SCROLLER_NAME = 'PullToRefreshScroller'
 
 /** 제스처를 받는 스크롤러. overflow-y:auto · overscroll-behavior-y:contain 은 인라인으로 강제한다. */
-const PullToRefreshScroller = React.forwardRef<HTMLDivElement, PrimitiveDivProps>(
+const PullToRefreshScroller = React.forwardRef<HTMLElement, PrimitiveDivProps>(
   (props, forwardedRef) => {
     const { style, ...scrollerProps } = props
     const context = usePullToRefreshContext(SCROLLER_NAME)
