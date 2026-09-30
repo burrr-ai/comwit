@@ -17,6 +17,9 @@
 .exhibition[data-library='ui'] {
   --poster-paper: #e8e9df;
 }
+.exhibition[data-library='template'] {
+  --poster-paper: #ede3c3;
+}
 
 .exhibition .site-header .product-nav:hover {
   background: #171b1210;
@@ -135,7 +138,7 @@
 }
 .exhibition-routes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   position: relative;
   z-index: 5;
   background: var(--poster-ink);
@@ -225,6 +228,27 @@
   }
   50% {
     transform: translateY(-17px) rotate(1.5deg);
+  }
+}
+/* Three routes share the band: the tagline stays on two lines, and gives way before it wraps. */
+.exhibition-route-detail {
+  white-space: nowrap;
+}
+@media (min-width: 1001px) and (max-width: 1599px) {
+  .exhibition-route {
+    gap: 16px;
+    padding-inline: 26px;
+  }
+  .exhibition-route-title {
+    font-size: clamp(36px, 2.6vw, 47px);
+  }
+}
+@media (min-width: 1001px) and (max-width: 1399px) {
+  .exhibition-route-detail {
+    display: none;
+  }
+  .exhibition-route-arrow {
+    margin-left: auto;
   }
 }
 @media (min-width: 1600px) {

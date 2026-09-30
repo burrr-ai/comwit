@@ -1,0 +1,1478 @@
+/* Comwit Template docs. A manila folder with a green cutting mat on it: the paper is the page, the mat
+   holds the one diagram that explains the product (layers laid across it as paper strips, domains
+   cut through them as slices). Everything else stays quiet — ink, rules, one green.
+   Header geometry is the shared contract (globals.css); only its colors change here. */
+
+/* :root 에도 건다 — html 의 scroll-padding-top 이 이 높이를 읽어야 앵커가 헤더 바로 아래에 선다. */
+:root:has(.template-product),
+.template-product {
+  --site-header-height: 64px;
+  --site-header-gutter: 24px;
+}
+.template-product {
+  --tp-paper: #ede3c3; /* manila — the folder */
+  --tp-paper-deep: #e2d5ac; /* hover, inline code, the fold */
+  --tp-sheet: #f7f1dc; /* paper laid on the mat */
+  --tp-ink: #1b1a15;
+  --tp-muted: #665c47;
+  --tp-rule: #cdbd90;
+  --tp-mat: #0e5a43; /* the one accent: cutting-mat green */
+  --tp-mat-deep: #0a4533;
+  --tp-mat-line: rgb(255 255 255 / 0.075);
+  --tp-display: var(--font-template-display), 'Barlow Condensed', sans-serif;
+  --tp-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* The shared header and globals read these. */
+  --site-background: var(--tp-paper);
+  --site-foreground: var(--tp-ink);
+  --site-muted: var(--tp-muted);
+  --site-border: var(--tp-rule);
+  --site-accent: var(--tp-mat);
+
+  min-height: 100svh;
+  background: var(--tp-paper);
+  color: var(--tp-ink);
+  font-family: var(--font-inter), sans-serif;
+}
+@layer base {
+  /* 오버스크롤·짧은 페이지에서도 manila 가 이어진다 */
+  body:has(.template-product) {
+    background: #ede3c3;
+  }
+}
+.template-product ::selection {
+  background: #b9d6c4;
+  color: var(--tp-ink);
+}
+.template-product :focus-visible {
+  outline: 2px solid var(--tp-mat);
+  outline-offset: 3px;
+}
+.template-product .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.template-product .product-home > svg {
+  color: var(--tp-mat);
+}
+.template-product .product-home:hover,
+.template-product .template-menu-button:hover {
+  background: var(--tp-paper-deep);
+}
+.template-product code {
+  font-family: var(--tp-mono);
+}
+
+/* ── Shell ─────────────────────────────────────────────────────────────── */
+.template-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  max-width: 1480px;
+  margin-inline: auto;
+}
+.template-sidebar {
+  position: sticky;
+  top: var(--site-header-height);
+  height: calc(100svh - var(--site-header-height));
+  overflow-y: auto;
+  padding: 28px 16px 28px 20px;
+  border-right: 1px solid var(--tp-rule);
+}
+.template-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.template-nav a {
+  position: relative;
+  display: block;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tp-muted);
+}
+.template-nav a:hover {
+  background: var(--tp-paper-deep);
+  color: var(--tp-ink);
+}
+.template-nav a[aria-current='page'] {
+  color: var(--tp-ink);
+  font-weight: 600;
+  background: var(--tp-sheet);
+  box-shadow: inset 3px 0 0 var(--tp-mat);
+  border-radius: 2px 6px 6px 2px;
+}
+.template-nav-group {
+  margin: 20px 10px 6px;
+  font-size: 12px;
+  color: var(--tp-muted);
+  opacity: 0.8;
+}
+.template-main {
+  min-width: 0;
+  padding: 48px clamp(20px, 4vw, 64px) 120px;
+}
+.template-menu-button {
+  display: none;
+}
+.template-mobile-nav {
+  position: fixed;
+  inset: var(--site-header-height) 0 0;
+  z-index: 39;
+  overflow: auto;
+  padding: 16px;
+  background: var(--tp-paper);
+}
+/* 패널은 헤더의 nav 안에 그려진다 — 공유 헤더의 nav 정렬·글자 규칙을 되돌린다. */
+.site-header.app-header .template-mobile-nav .template-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1px;
+}
+.site-header.app-header .template-mobile-nav .template-nav a {
+  padding: 11px 12px;
+  font:
+    400 15px/1.5 var(--font-inter),
+    sans-serif;
+}
+.site-header.app-header .template-mobile-nav .template-nav a[aria-current='page'] {
+  font-weight: 600;
+}
+
+/* ── Overview ──────────────────────────────────────────────────────────── */
+.tp-overview {
+  max-width: 1080px;
+}
+.tp-overview :is(h1, h2, h3) {
+  font-family: var(--tp-display);
+}
+/* :where — 다이어그램·목록의 자체 code 크기를 이기지 않도록 특이성 0 */
+:where(.tp-overview :not(pre)) > code {
+  font-size: 0.88em;
+}
+
+.tp-hero {
+  padding-top: 8px;
+}
+.tp-kicker {
+  margin: 0 0 22px;
+  font-size: 14px;
+  color: var(--tp-muted);
+}
+.tp-kicker code {
+  margin-left: 2px;
+  padding: 2px 7px;
+  border: 1px solid var(--tp-rule);
+  border-radius: 4px;
+  background: var(--tp-sheet);
+  color: var(--tp-ink);
+}
+.tp-hero h1 {
+  max-width: 11.5em;
+  margin: 0;
+  font-size: clamp(52px, 7.4vw, 108px);
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+.tp-hero h1 span {
+  display: block;
+}
+/* The second line is the answer: it sits one slice to the right, like a column offset on the mat. */
+.tp-hero h1 span + span {
+  padding-left: 0.9em;
+}
+.tp-lead {
+  max-width: 36em;
+  margin: 30px 0 0;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #3d372b;
+}
+.tp-lead code {
+  font-size: 0.85em;
+}
+.tp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 28px;
+  margin-top: 34px;
+}
+.tp-hero-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+}
+.tp-command {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 52px;
+  padding: 0 8px 0 20px;
+  border-radius: 8px;
+  background: var(--tp-ink);
+  color: var(--tp-sheet);
+}
+.tp-command code {
+  overflow-x: auto;
+  white-space: nowrap;
+  font-size: 15px;
+  scrollbar-width: none;
+}
+.tp-command-prompt {
+  margin-right: 12px;
+  color: #93c6a9;
+  user-select: none;
+}
+.tp-command button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-left: 12px;
+  border-radius: 6px;
+  color: inherit;
+  opacity: 0.7;
+}
+.tp-command button:hover {
+  background: rgb(255 255 255 / 0.1);
+  opacity: 1;
+}
+.tp-command button:focus-visible {
+  outline-color: #93c6a9;
+  outline-offset: 0;
+}
+.tp-button {
+  display: inline-flex;
+  align-items: center;
+  height: 52px;
+  padding: 0 22px;
+  border-radius: 8px;
+  background: var(--tp-mat);
+  color: #f7f1dc;
+  font-size: 15px;
+  font-weight: 600;
+}
+.tp-button:hover {
+  background: var(--tp-mat-deep);
+}
+.tp-link {
+  display: inline-block;
+  color: var(--tp-mat);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.tp-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.tp-section {
+  margin-top: 112px;
+}
+.tp-section-title {
+  margin: 0;
+  padding-top: 18px;
+  border-top: 2px solid var(--tp-ink);
+  font-size: clamp(34px, 4vw, 52px);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+.tp-section-lead {
+  max-width: 40em;
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: #3d372b;
+}
+.tp-section > .tp-link {
+  margin-top: 26px;
+}
+
+/* ── The mat (identity piece) ──────────────────────────────────────────── */
+.tp-slices {
+  margin-top: 96px;
+}
+.tp-figure {
+  margin: 28px 0 0;
+}
+.slice-mat {
+  --cell-h: 58px;
+  position: relative;
+  padding: 26px 30px 22px 22px;
+  border-radius: 14px;
+  background-color: var(--tp-mat);
+  /* 1cm 격자 + 5cm 굵은 선 — 커팅 매트 */
+  background-image:
+    linear-gradient(var(--tp-mat-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--tp-mat-line) 1px, transparent 1px),
+    linear-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+  background-size:
+    24px 24px,
+    24px 24px,
+    120px 120px,
+    120px 120px;
+  background-position: -1px -1px;
+  color: var(--tp-sheet);
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.18),
+    0 1px 0 rgb(255 255 255 / 0.4);
+}
+.slice-grid {
+  display: grid;
+  grid-template-columns: 124px repeat(3, minmax(0, 1fr)) 22px repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto repeat(3, var(--cell-h)) auto;
+  row-gap: 12px;
+}
+
+/* Service brackets: dimension lines over their domains. */
+.slice-service {
+  grid-row: 1;
+  grid-column: var(--col);
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 0 6px;
+  padding-bottom: 2px;
+}
+.slice-service::before {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 9px;
+  margin-top: -1px;
+  border: 1.5px solid rgb(247 241 220 / 0.55);
+  border-bottom: 0;
+}
+.slice-service > span {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 10px;
+  background: var(--tp-mat);
+}
+.slice-service code {
+  font-size: 14px;
+  font-weight: 600;
+}
+.slice-service-who {
+  font-size: 12px;
+  color: rgb(247 241 220 / 0.62);
+}
+
+/* Domain heads: column bubbles, and the controls. */
+.slice-head {
+  grid-row: 2;
+  grid-column: var(--col);
+  justify-self: center;
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  max-width: 100%;
+  margin-bottom: 2px;
+  padding: 5px 13px;
+  border: 1.5px solid rgb(247 241 220 / 0.7);
+  border-radius: 999px;
+  background: var(--tp-mat);
+  color: var(--tp-sheet);
+  font:
+    500 13px/1.3 var(--tp-mono),
+    monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.slice-head:hover,
+.slice-head[data-lit='true'] {
+  background: var(--tp-sheet);
+  border-color: var(--tp-sheet);
+  color: var(--tp-ink);
+}
+.slice-head:focus-visible {
+  outline: 2px solid var(--tp-sheet);
+  outline-offset: 3px;
+}
+
+/* The outline that ties a lit slice together across the gaps between strips. */
+.slice-outline {
+  grid-column: var(--col);
+  grid-row: 2 / 6;
+  z-index: 1;
+  margin: 12px -3px -6px;
+  border: 2px solid var(--tp-sheet);
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.slice-outline[data-lit='true'] {
+  opacity: 1;
+}
+
+/* Layer names, with one direction marker. */
+.slice-label {
+  display: flex;
+  align-items: center;
+  grid-column: 1;
+  padding-left: 34px;
+}
+.slice-label code {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tp-sheet);
+}
+.slice-label[data-layer='page'],
+.slice-cell[data-layer='page'] {
+  grid-row: 3;
+}
+.slice-label[data-layer='state'],
+.slice-cell[data-layer='state'] {
+  grid-row: 4;
+}
+.slice-label[data-layer='api'],
+.slice-cell[data-layer='api'] {
+  grid-row: 5;
+}
+.slice-label[data-layer='repository'],
+.slice-foundation {
+  grid-row: 6;
+}
+.slice-direction {
+  grid-column: 1;
+  grid-row: 3 / 7;
+  justify-self: start;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 18px;
+  padding: 8px 0 12px;
+}
+.slice-direction span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  rotate: -90deg;
+  padding: 0 8px;
+  background: var(--tp-mat);
+  font:
+    500 11px/1 var(--tp-mono),
+    monospace;
+  color: rgb(247 241 220 / 0.75);
+  white-space: nowrap;
+}
+.slice-direction svg {
+  flex: 1;
+  width: 12px;
+  stroke: rgb(247 241 220 / 0.75);
+  stroke-width: 1.5;
+}
+.slice-direction .slice-direction-head {
+  flex: none;
+  height: 10px;
+  fill: rgb(247 241 220 / 0.75);
+  stroke: none;
+}
+
+/* Layer strips: paper laid across the mat, cut per domain. */
+.slice-cell {
+  grid-column: var(--col);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 8px;
+  background: var(--tp-sheet);
+  color: var(--tp-ink);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.22);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.slice-cell code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.slice-cell[data-first='true'] {
+  border-radius: 4px 0 0 4px;
+}
+.slice-cell[data-first='false'] {
+  background-image: linear-gradient(rgb(27 26 21 / 0.28) 50%, transparent 50%);
+  background-size: 1px 6px;
+  background-repeat: repeat-y;
+}
+/* 서비스의 마지막 칸 — cart 와 report */
+.slice-cell[data-last='true'] {
+  border-radius: 0 4px 4px 0;
+}
+.slice-mat[data-active] .slice-cell[data-lit='false'] {
+  color: rgb(27 26 21 / 0.52);
+}
+.slice-cell[data-lit='true'] {
+  background-color: var(--tp-ink);
+  background-image: none;
+  color: var(--tp-sheet);
+}
+/* 한 방향: 켜진 조각의 띠 사이에 아래를 가리키는 작은 화살 */
+.slice-cell[data-lit='true']::after {
+  content: '';
+  position: absolute;
+  bottom: -11px;
+  left: 50%;
+  z-index: 2;
+  translate: -50% 0;
+  border: 5px solid transparent;
+  border-top: 6px solid var(--tp-sheet);
+}
+
+/* The foundation: one hatched strip under both services. */
+.slice-foundation {
+  grid-column: var(--col);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 18px;
+  min-height: var(--cell-h);
+  margin-top: 6px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  background-color: var(--tp-paper);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 7px,
+    rgb(27 26 21 / 0.13) 7px 8px
+  );
+  color: var(--tp-ink);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.22);
+}
+.slice-foundation-path {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: var(--tp-paper);
+}
+.slice-foundation-path code {
+  font-size: 13px;
+  font-weight: 600;
+}
+.slice-foundation-path span {
+  font-size: 12px;
+  color: var(--tp-muted);
+}
+.slice-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.slice-files code {
+  padding: 4px 9px;
+  border: 1px solid rgb(27 26 21 / 0.25);
+  border-radius: 4px;
+  background: var(--tp-sheet);
+  font-size: 12.5px;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.slice-files code[data-lit='true'] {
+  border-color: var(--tp-ink);
+  background: var(--tp-ink);
+  color: var(--tp-sheet);
+}
+
+.slice-readout {
+  min-height: 1.6em;
+  margin: 20px 0 0 34px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgb(247 241 220 / 0.78);
+}
+.slice-readout code {
+  color: var(--tp-sheet);
+  font-size: 12.5px;
+}
+
+/* Strips are laid down once, on load. */
+@media (prefers-reduced-motion: no-preference) {
+  .slice-cell,
+  .slice-foundation {
+    animation: slice-lay 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .slice-cell[data-layer='state'] {
+    animation-delay: 70ms;
+  }
+  .slice-cell[data-layer='api'] {
+    animation-delay: 140ms;
+  }
+  .slice-foundation {
+    animation-delay: 210ms;
+  }
+}
+@keyframes slice-lay {
+  from {
+    opacity: 0;
+    translate: -14px 0;
+  }
+}
+
+/* Title block: the drawing's caption. */
+.tp-titleblock {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  margin-top: 14px;
+  border: 1.5px solid var(--tp-ink);
+  border-radius: 6px;
+}
+.tp-titleblock p {
+  margin: 0;
+  padding: 14px 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #3d372b;
+}
+.tp-titleblock p + p {
+  border-left: 1.5px solid var(--tp-ink);
+}
+.tp-titleblock-main {
+  font-family: var(--tp-display);
+  font-size: 22px !important;
+  font-weight: 600;
+  line-height: 1.15 !important;
+  color: var(--tp-ink) !important;
+}
+.tp-titleblock-main code {
+  font-family: var(--tp-display);
+  font-size: 1em !important;
+}
+
+/* ── Traps → rules ─────────────────────────────────────────────────────── */
+.tp-traps {
+  margin: 36px 0 0;
+}
+.tp-trap {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  gap: 8px 40px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--tp-rule);
+}
+.tp-trap:first-child {
+  border-top: 1px solid var(--tp-rule);
+}
+.tp-trap dt {
+  font-size: 16px;
+  color: var(--tp-muted);
+  text-decoration: line-through;
+  text-decoration-color: rgb(102 92 71 / 0.45);
+  text-decoration-thickness: 1px;
+}
+.tp-trap dd {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: #3d372b;
+}
+.tp-trap dd strong {
+  color: var(--tp-ink);
+  font-weight: 650;
+}
+.tp-trap-tag {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--tp-muted);
+  text-decoration: none;
+}
+.tp-trap dt .tp-trap-tag {
+  display: inline-block;
+  width: 100%;
+}
+.tp-trap dd .tp-trap-tag {
+  color: var(--tp-mat);
+  font-weight: 600;
+}
+
+/* ── One job per layer: the strips again, off the mat ─────────────────── */
+.tp-layers {
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column-reverse; /* 쓰는 순서는 아래부터 — 화면은 다이어그램처럼 page 가 위 */
+  gap: 8px;
+}
+.tp-layers li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: 6px 32px;
+  padding: 16px 20px;
+  border-radius: 6px;
+  background: var(--tp-sheet);
+  box-shadow: 0 1px 0 var(--tp-rule);
+}
+.tp-layers li[data-layer='repository'] {
+  background-color: var(--tp-paper);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 7px,
+    rgb(27 26 21 / 0.08) 7px 8px
+  );
+  box-shadow: inset 0 0 0 1px var(--tp-rule);
+}
+.tp-layers-path {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.tp-layers p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #3d372b;
+}
+
+/* ── The guides beside every layer ─────────────────────────────────────── */
+.tp-docs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 0 56px;
+  align-items: start;
+}
+.tp-docs > .tp-section-title {
+  grid-column: 1 / -1;
+}
+.tp-docs > .tp-tree {
+  margin-top: 22px;
+}
+.tp-tree {
+  margin: 0;
+  padding: 18px 20px;
+  list-style: none;
+  border-radius: 8px;
+  background: var(--tp-sheet);
+  box-shadow: inset 0 0 0 1px var(--tp-rule);
+}
+.tp-tree li {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+  padding: 4px 0 4px calc(var(--depth) * 20px);
+}
+.tp-tree li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--depth) * 20px - 13px);
+  width: 1px;
+  background: var(--tp-rule);
+}
+.tp-tree li[data-depth='0']::before {
+  content: none;
+}
+.tp-tree code {
+  font-size: 13.5px;
+  color: var(--tp-muted);
+}
+.tp-tree li[data-guide] code {
+  color: var(--tp-mat);
+  font-weight: 600;
+}
+.tp-tree span {
+  font-size: 13px;
+  color: var(--tp-muted);
+}
+
+/* ── Screen first, data later ──────────────────────────────────────────── */
+.tp-steps {
+  counter-reset: step;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 28px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.tp-steps li {
+  counter-increment: step;
+  position: relative;
+  padding-top: 52px;
+}
+.tp-steps li::before {
+  content: counter(step);
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid var(--tp-ink);
+  border-radius: 50%;
+  background: var(--tp-paper);
+  font:
+    600 18px/1 var(--tp-display),
+    sans-serif;
+}
+.tp-steps li:first-child::before {
+  background: var(--tp-ink);
+  color: var(--tp-sheet);
+}
+.tp-steps li::after {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 36px;
+  right: -28px;
+  height: 0;
+  border-top: 1.5px dashed var(--tp-ink);
+  opacity: 0.4;
+}
+.tp-steps li:last-child::after {
+  content: none;
+}
+.tp-steps p {
+  max-width: 22em;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: #3d372b;
+}
+.tp-skills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 36px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--tp-rule);
+}
+.tp-skills > span {
+  margin-right: 8px;
+  font-size: 14px;
+  color: var(--tp-muted);
+}
+.tp-skills a {
+  padding: 5px 11px;
+  border: 1px solid var(--tp-rule);
+  border-radius: 999px;
+  background: var(--tp-sheet);
+  color: var(--tp-ink);
+}
+.tp-skills a:hover {
+  border-color: var(--tp-mat);
+  color: var(--tp-mat);
+}
+.tp-skills code {
+  font-size: 13px;
+}
+
+/* ── Curated, not decided ──────────────────────────────────────────────── */
+.tp-curated {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 32px 48px;
+  margin-top: 32px;
+}
+.tp-curated h3 {
+  margin: 0 0 14px;
+  font-size: 24px;
+  font-weight: 600;
+}
+.tp-chosen,
+.tp-open {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tp-chosen li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--tp-rule);
+  font-size: 15px;
+}
+.tp-chosen li:first-child {
+  border-top: 1px solid var(--tp-rule);
+}
+.tp-chosen strong {
+  font-weight: 600;
+}
+.tp-chosen code {
+  font-size: 14px;
+  font-weight: 600;
+}
+.tp-chosen span {
+  font-size: 14px;
+  color: var(--tp-muted);
+}
+/* 비워 둔 칸 — 표제란의 빈 필드처럼 점선 */
+.tp-open {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tp-open li {
+  padding: 11px 14px;
+  border: 1.5px dashed rgb(27 26 21 / 0.35);
+  border-radius: 6px;
+  font-size: 15px;
+  color: #3d372b;
+}
+
+.tp-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin-top: 112px;
+  padding-top: 20px;
+  border-top: 2px solid var(--tp-ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+.tp-footer a {
+  color: var(--tp-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--tp-rule);
+  text-underline-offset: 4px;
+}
+.tp-footer a:hover {
+  text-decoration-color: var(--tp-mat);
+  color: var(--tp-mat);
+}
+
+/* ── Guides (MDX) ──────────────────────────────────────────────────────── */
+.tp-doc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 208px;
+  gap: 56px;
+  max-width: 1080px;
+}
+.tp-doc-body {
+  min-width: 0;
+  max-width: 740px;
+}
+.tp-doc-aside {
+  position: sticky;
+  top: calc(var(--site-header-height) + 32px);
+  align-self: start;
+  max-height: calc(100svh - var(--site-header-height) - 64px);
+  overflow-y: auto;
+}
+.template-guide.prose {
+  --tw-prose-body: #3d372b;
+  --tw-prose-headings: var(--tp-ink);
+  --tw-prose-links: var(--tp-mat);
+  --tw-prose-bold: var(--tp-ink);
+  --tw-prose-bullets: var(--tp-muted);
+  --tw-prose-counters: var(--tp-muted);
+  --tw-prose-hr: var(--tp-rule);
+  --tw-prose-th-borders: var(--tp-ink);
+  --tw-prose-td-borders: var(--tp-rule);
+  font-size: 15.5px;
+  line-height: 1.75;
+  color: #3d372b;
+}
+.template-guide.prose p,
+.template-guide.prose li {
+  font-size: 15.5px;
+  line-height: 1.75;
+}
+.template-guide.prose h1 {
+  margin: 0 0 28px;
+  font-family: var(--tp-display);
+  font-size: clamp(44px, 5vw, 64px);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.005em;
+}
+.template-guide.prose h1 + p {
+  font-size: 18px;
+  line-height: 1.6;
+  color: #3d372b;
+}
+.template-guide.prose h2 {
+  margin: 64px 0 18px;
+  padding-top: 14px;
+  border-top: 2px solid var(--tp-ink);
+  font-family: var(--tp-display);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: 0;
+  scroll-margin-top: 12px;
+}
+.template-guide.prose h3 {
+  margin-top: 36px;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.template-guide.prose :is(h1, h2, h3) {
+  overflow-wrap: anywhere; /* src/services/{service} 같은 경로 제목이 좁은 화면을 넘지 않게 */
+}
+.template-guide.prose :is(h2, h3) code {
+  font-size: 0.8em;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+.template-guide.prose a {
+  color: var(--tp-mat);
+  font-weight: 500;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.template-guide.prose a:hover {
+  text-decoration-thickness: 2px;
+}
+.template-guide.prose strong {
+  font-weight: 650;
+}
+.template-guide.prose :not(pre) > code {
+  padding: 0.14em 0.4em;
+  border-radius: 4px;
+  background: var(--tp-paper-deep);
+  color: var(--tp-ink);
+  font-size: 0.84em;
+  font-weight: 500;
+}
+.template-guide.prose ul > li::marker {
+  color: var(--tp-mat);
+}
+.template-guide.prose pre {
+  margin: 24px 0;
+  padding: 20px 22px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--tp-ink) !important;
+  color: #ece4c8 !important;
+  font-family: var(--tp-mono);
+  font-size: 12.5px;
+  line-height: 1.75;
+}
+.template-guide.prose pre code {
+  font-family: inherit;
+}
+/* 코드 색은 종이 쪽 팔레트로 — 전역(State)의 보라 대신 */
+.template-guide .hljs-keyword,
+.template-guide .hljs-built_in {
+  color: #e6c46a;
+}
+.template-guide .hljs-string,
+.template-guide .hljs-attr {
+  color: #9fd3b2;
+}
+.template-guide .hljs-number,
+.template-guide .hljs-literal {
+  color: #f0a98c;
+}
+.template-guide .hljs-title,
+.template-guide .hljs-title.function_,
+.template-guide .hljs-title.class_ {
+  color: #f7f1dc;
+}
+.template-guide .hljs-comment {
+  color: #978e76;
+  font-style: italic;
+}
+.template-guide .hljs-meta,
+.template-guide .hljs-variable,
+.template-guide .hljs-params,
+.template-guide .hljs-type {
+  color: #d9cfae;
+}
+.template-guide .hljs-tag,
+.template-guide .hljs-name {
+  color: #9fd3b2;
+}
+.template-guide.prose table {
+  display: block;
+  overflow-x: auto;
+  margin: 24px 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.template-guide.prose thead th {
+  padding: 8px 14px 8px 0;
+  border-bottom: 2px solid var(--tp-ink);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tp-ink);
+}
+.template-guide.prose tbody td {
+  padding: 10px 14px 10px 0;
+  vertical-align: top;
+}
+.template-guide.prose tbody td:first-child {
+  min-width: 11em;
+}
+.template-guide.prose tbody td code {
+  white-space: nowrap;
+}
+.template-guide.prose blockquote {
+  border-left: 3px solid var(--tp-mat);
+  background: var(--tp-sheet);
+  border-radius: 0 6px 6px 0;
+  color: #3d372b;
+}
+
+.tp-toc-title {
+  margin: 0 0 10px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tp-muted);
+}
+.tp-toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--tp-rule);
+}
+.tp-toc a {
+  display: block;
+  margin-left: -1px;
+  padding: 5px 0 5px 14px;
+  border-left: 2px solid transparent;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--tp-muted);
+}
+.tp-toc a:hover {
+  color: var(--tp-ink);
+}
+.tp-toc a[aria-current='location'] {
+  border-left-color: var(--tp-mat);
+  color: var(--tp-ink);
+  font-weight: 600;
+}
+
+.tp-pager {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 72px;
+  padding-top: 20px;
+  border-top: 2px solid var(--tp-ink);
+}
+.tp-pager a {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--tp-rule);
+  border-radius: 6px;
+  font-family: var(--tp-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--tp-ink);
+}
+.tp-pager a:hover {
+  border-color: var(--tp-mat);
+  background: var(--tp-sheet);
+}
+.tp-pager a span {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tp-muted);
+}
+.tp-pager a[data-next] {
+  grid-column: 2;
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .tp-doc {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tp-doc-aside {
+    display: none;
+  }
+}
+@media (max-width: 1080px) {
+  .slice-grid {
+    grid-template-columns: 112px repeat(3, minmax(0, 1fr)) 16px repeat(2, minmax(0, 1fr));
+  }
+  .slice-label {
+    padding-left: 28px;
+  }
+  .slice-label code {
+    font-size: 13px;
+  }
+  .slice-service-who {
+    display: none;
+  }
+  .slice-cell code {
+    font-size: 12px;
+  }
+}
+@media (max-width: 900px) {
+  .template-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .template-sidebar {
+    display: none;
+  }
+  .template-main {
+    padding-top: 32px;
+  }
+  .template-menu-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-right: -8px;
+    border-radius: 8px;
+    color: inherit;
+  }
+  .tp-docs,
+  .tp-curated {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 800px) {
+  /* 같은 선택자 목록이어야 한다 — 빌드가 목록을 :is() 로 묶어 특이성이 :root:has() 쪽으로 오른다. */
+  :root:has(.template-product),
+  .template-product {
+    --site-header-height: 56px;
+    --site-header-gutter: 16px;
+  }
+
+  /* 좁은 매트: 레이어 이름이 띠 위 한 줄로 올라가고, 방향 표시는 오른쪽 위 구석으로. */
+  .slice-mat {
+    --cell-h: 44px;
+    padding: 18px 12px 16px;
+    border-radius: 10px;
+  }
+  .slice-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 10px repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto auto var(--cell-h) auto var(--cell-h) auto var(--cell-h) auto auto;
+    row-gap: 6px;
+  }
+  .slice-service,
+  .slice-head,
+  .slice-cell,
+  .slice-foundation,
+  .slice-outline {
+    grid-column: var(--col-narrow);
+  }
+  .slice-service {
+    margin: 0 2px;
+  }
+  .slice-service code {
+    font-size: 13px;
+  }
+  .slice-head {
+    padding: 4px 7px;
+    font-size: 11.5px;
+  }
+  .slice-label {
+    grid-column: 1 / -1;
+    padding: 6px 0 0;
+  }
+  .slice-label code {
+    font-size: 12px;
+  }
+  .slice-label[data-layer='page'] {
+    grid-row: 3;
+  }
+  .slice-cell[data-layer='page'] {
+    grid-row: 4;
+  }
+  .slice-label[data-layer='state'] {
+    grid-row: 5;
+  }
+  .slice-cell[data-layer='state'] {
+    grid-row: 6;
+  }
+  .slice-label[data-layer='api'] {
+    grid-row: 7;
+  }
+  .slice-cell[data-layer='api'] {
+    grid-row: 8;
+  }
+  .slice-label[data-layer='repository'] {
+    grid-row: 9;
+  }
+  .slice-foundation {
+    grid-row: 10;
+    margin-top: 0;
+    padding: 10px;
+  }
+  .slice-outline {
+    grid-row: 2 / 9;
+    margin: 10px -2px -4px;
+  }
+  .slice-direction {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: end;
+    flex-direction: row;
+    width: auto;
+    padding: 6px 0 0;
+  }
+  .slice-direction span {
+    position: static;
+    translate: none;
+    rotate: none;
+    padding: 0 6px 0 0;
+  }
+  .slice-direction svg {
+    display: none;
+  }
+  .slice-direction .slice-direction-head {
+    display: block;
+    width: 9px;
+    height: 8px;
+  }
+  .slice-cell {
+    padding: 0 3px;
+  }
+  .slice-cell code {
+    font-size: 10px;
+    letter-spacing: -0.02em;
+  }
+  /* 좁은 화면에선 띠 사이에 레이어 이름 줄이 끼므로 칸 사이 화살은 뺀다 — 오른쪽 위 표시가 방향을 말한다 */
+  .slice-cell[data-lit='true']::after {
+    content: none;
+  }
+  .slice-files code {
+    padding: 3px 7px;
+    font-size: 11.5px;
+  }
+  .slice-foundation-path span {
+    display: none;
+  }
+  .slice-readout {
+    margin: 14px 0 0;
+    font-size: 12.5px;
+  }
+
+  .tp-titleblock {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tp-titleblock p + p {
+    border-left: 0;
+    border-top: 1.5px solid var(--tp-ink);
+  }
+  .tp-trap,
+  .tp-layers li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tp-steps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .tp-steps li {
+    padding: 6px 0 0 54px;
+    min-height: 36px;
+  }
+  .tp-steps li::after {
+    top: 42px;
+    bottom: -20px;
+    left: 18px;
+    right: auto;
+    height: auto;
+    border-top: 0;
+    border-left: 1.5px dashed var(--tp-ink);
+  }
+  .tp-section {
+    margin-top: 80px;
+  }
+}
+@media (max-width: 600px) {
+  .template-main {
+    padding: 28px 16px 88px;
+  }
+  .tp-hero h1 {
+    font-size: clamp(44px, 13.4vw, 60px);
+  }
+  .tp-hero h1 span + span {
+    padding-left: 0;
+  }
+  .tp-lead {
+    font-size: 16.5px;
+  }
+  .tp-hero-actions {
+    align-items: stretch;
+  }
+  .tp-command {
+    width: 100%;
+    padding-left: 14px;
+  }
+  .tp-command code {
+    font-size: 13.5px;
+  }
+  .tp-command-prompt {
+    margin-right: 8px;
+  }
+  .tp-command button {
+    margin-left: auto;
+  }
+  .tp-button {
+    height: 46px;
+  }
+  .tp-tree {
+    padding: 14px;
+  }
+  .tp-tree li {
+    padding-left: calc(var(--depth) * 14px);
+  }
+  .tp-tree li::before {
+    left: calc(var(--depth) * 14px - 9px);
+  }
+  .tp-tree span {
+    flex-basis: 100%;
+    font-size: 12.5px;
+  }
+  .template-guide.prose pre {
+    margin-inline: -16px;
+    border-radius: 0;
+    font-size: 12px;
+  }
+  .tp-pager a {
+    font-size: 19px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .template-product *,
+  .template-product *::before,
+  .template-product *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
