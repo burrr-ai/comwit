@@ -208,14 +208,10 @@ function applyOpenNext(target, name, variantFiles) {
     'AGENTS.md',
     agents.slice(0, deployAt) + readFileSync(join(dir, 'agents-deploy.md'), 'utf8')
   )
-  write(
-    'README.md',
-    read('README.md').trimEnd() + '\n' + readFileSync(join(dir, 'readme.md'), 'utf8')
-  )
-  write(
-    '.gitignore',
-    read('.gitignore').trimEnd() + '\n' + readFileSync(join(dir, 'gitignore'), 'utf8')
-  )
+  // 조각 파일의 앞뒤 공백은 믿지 않는다(포매터가 지운다) — 항상 빈 줄 하나로 잇는다.
+  const fragment = (file) => readFileSync(join(dir, file), 'utf8').trim() + '\n'
+  write('README.md', read('README.md').trimEnd() + '\n\n' + fragment('readme.md'))
+  write('.gitignore', read('.gitignore').trimEnd() + '\n\n' + fragment('gitignore'))
 }
 
 // ── install ─────────────────────────────────────────────────────────────

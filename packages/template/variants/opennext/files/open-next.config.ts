@@ -1,4 +1,4 @@
-import { defineCloudflareConfig } from '@opennextjs/cloudflare'
+import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 
 // OpenNext for Cloudflare Workers. `pnpm run preview` / `pnpm run deploy` call
 // `opennextjs-cloudflare build`, which runs the build command below (service
@@ -7,5 +7,5 @@ import { defineCloudflareConfig } from '@opennextjs/cloudflare'
 // relies on it: https://opennext.js.org/cloudflare/caching
 export default {
   ...defineCloudflareConfig({}),
-  buildCommand: 'pnpm run build',
-}
+  buildCommand: "pnpm run build",
+};
