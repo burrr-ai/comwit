@@ -38,6 +38,7 @@ The CLI copies styled component sources into your project. You own and edit thos
 
 ```bash
 npm create comwit@latest my-app
+npm create comwit@latest my-app -- --opennext   # Cloudflare Workers via OpenNext
 ```
 
 `create-comwit` scaffolds the Next.js template: services sliced by domain, `page → state → api → repository`, an `.ai.md` guide beside every layer, Oxlint rules that enforce the boundaries, and skills for the app shell, auth and SEO. State and UI come pre-wired; the database, storage and hosting stay your choice. Read [why the folders look this way](https://library.comwit.io/template/docs/architecture) or give your agent [Template's llms.txt](https://library.comwit.io/template/llms.txt).
@@ -79,7 +80,6 @@ pnpm dev:docs
 | `pnpm dev:ui-catalog`            | UI catalog, port 3007                                               |
 | `pnpm storybook`                 | UI stories, port 6008                                               |
 | `pnpm registry`                  | Regenerate the bundled component registry                           |
-| `pnpm sync:template`             | Regenerate the bundled project template from the source checkout    |
 
 For catalog/Storybook development, run `pnpm build:packages` first and keep `pnpm dev:ui` running when editing the headless engine. See [contributing](CONTRIBUTING.md) for documentation generation and release checks.
 

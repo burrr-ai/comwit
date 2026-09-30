@@ -77,7 +77,7 @@ const CHOSEN = [
 const LEFT_TO_YOU = [
   'The database',
   'The storage bucket',
-  'The hosting platform',
+  'The hosting platform (or --opennext for Cloudflare Workers)',
   'The brand tokens',
   'The UI language (Korean by default, in one file)',
 ]

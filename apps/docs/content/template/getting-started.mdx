@@ -19,7 +19,7 @@ pnpm run dev
 `npx create-comwit@latest my-app` does the same. The CLI copies the template,
 sets the package name, installs dependencies with pnpm (or `--pm npm|yarn|bun`)
 and makes an initial commit. `--no-install`, `--no-git` and `--dry` skip those
-steps.
+steps. `--opennext` targets Cloudflare Workers from the start (below).
 
 ## What you get
 
@@ -169,17 +169,41 @@ pnpm run validate   # typecheck + lint — the lint rules check every boundary a
 - **Storage.** Any S3-compatible bucket with presigned URLs. The server issues
   the URL, the browser uploads directly, the api layer returns the public URL.
 - **Deploy.** `pnpm run build` produces standard Next.js output. Run it with
-  `next start` on any Node host or with the hosting platform's adapter. An
-  OpenNext variant of the template is planned.
+  `next start` on any Node host or with the hosting platform's adapter.
+
+## Cloudflare Workers with `--opennext`
+
+```bash
+npm create comwit@latest my-app -- --opennext
+```
+
+The same project, plus the OpenNext adapter for Cloudflare Workers:
+`open-next.config.ts`, `wrangler.jsonc` (Worker name from the project name,
+`nodejs_compat`, static assets binding), `.dev.vars.example`,
+`@opennextjs/cloudflare` and `wrangler` as dev dependencies, Next pinned to a
+version the adapter supports, and `initOpenNextCloudflareForDev()` in
+`next.config.ts` so `next dev` can reach Cloudflare bindings. The `Deploy`
+section of `AGENTS.md` is replaced with the Worker flow:
+
+```bash
+pnpm run preview   # opennextjs-cloudflare build (runs pnpm run build) + local workerd
+pnpm run deploy    # build + wrangler deploy, after `wrangler login`
+```
+
+`next dev` keeps reading `.env`; the Worker reads `vars` in `wrangler.jsonc`,
+secrets from `wrangler secret put`, and `.dev.vars` locally. Incremental cache
+(ISR) needs a KV or R2 binding once the product relies on it; the OpenNext docs
+cover that step.
 
 Every one of these is described in the generated `AGENTS.md`, sections 5 to 7.
 
 ## Commands
 
-| Command              | Purpose                                                     |
-| -------------------- | ----------------------------------------------------------- |
-| `pnpm run dev`       | development server on port 3000                             |
-| `pnpm run validate`  | typecheck and lint, run after every change                  |
-| `pnpm run build`     | service worker, version file, then `next build`             |
-| `pnpm ui add <name>` | install a comwit-ui component as source                     |
-| `pnpm agents:test`   | check that Claude Code skill stubs mirror `.agents/skills/` |
+| Command                                | Purpose                                                         |
+| -------------------------------------- | --------------------------------------------------------------- |
+| `pnpm run dev`                         | development server on port 3000                                 |
+| `pnpm run validate`                    | typecheck and lint, run after every change                      |
+| `pnpm run build`                       | service worker, version file, then `next build`                 |
+| `pnpm ui add <name>`                   | install a comwit-ui component as source                         |
+| `pnpm agents:test`                     | check that Claude Code skill stubs mirror `.agents/skills/`     |
+| `pnpm run preview` / `pnpm run deploy` | `--opennext` projects only: build and run or publish the Worker |

@@ -2,7 +2,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 // create-comwit — Comwit 템플릿으로 Next.js 프로젝트를 만든다.
 //   npm create comwit@latest my-app
-//   npx create-comwit@latest my-app [--pm pnpm|npm|yarn|bun] [--no-install] [--no-git] [--cwd <dir>]
+//   npx create-comwit@latest my-app [--opennext] [--pm pnpm|npm|yarn|bun] [--no-install] [--no-git] [--cwd <dir>]
 //
 // 템플릿은 이 패키지에 통째로 번들돼 있다(template/). zero-dep(Node 내장만).
 // 프로젝트 이름만 package.json / README 에 넣고, 나머지는 그대로 복사한다.
@@ -14,6 +14,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const TEMPLATE = join(HERE, '..', 'template')
+const VARIANTS = join(HERE, '..', 'variants')
 const DOCS = 'https://library.comwit.io/template'
 
 // ── tiny ansi ─────────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ function usage() {
   ${c.cyan('npx create-comwit@latest <dir>')} [options]
 
 Options
+  --opennext        deploy target Cloudflare Workers via OpenNext (adds wrangler.jsonc, open-next.config.ts, scripts)
   --name <name>     package name (default: the directory name)
   --pm <manager>    pnpm · npm · yarn · bun (default: pnpm when installed, else the invoking manager)
   --no-install      skip dependency installation
@@ -126,12 +128,14 @@ if (
   die(`${target} already exists and is not empty`)
 
 const files = walk(TEMPLATE)
+const variantFiles = flags.opennext ? walk(join(VARIANTS, 'opennext', 'files')) : []
 log(
-  `${c.bold('create-comwit')} → ${c.cyan(relative(process.cwd(), target) || '.')} ${c.dim(`(${files.length} files)`)}`
+  `${c.bold('create-comwit')} → ${c.cyan(relative(process.cwd(), target) || '.')} ${c.dim(`(${files.length + variantFiles.length} files${flags.opennext ? ', opennext' : ''})`)}`
 )
 
 if (flags.dry) {
   log(files.map((f) => `  ${f}`).join('\n'))
+  if (flags.opennext) log(variantFiles.map((f) => `  ${f} (opennext)`).join('\n'))
   process.exit(0)
 }
 
@@ -150,7 +154,69 @@ pkg.name = name
 writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
 const readmePath = join(target, 'README.md')
 writeFileSync(readmePath, readFileSync(readmePath, 'utf8').replaceAll('{{name}}', name))
+if (flags.opennext) applyOpenNext(target, name, variantFiles)
 log(c.green('✔ ') + 'files written')
+
+// ── --opennext: Cloudflare Workers overlay ──────────────────────────────
+// variants/opennext/ 는 손으로 관리한다(스냅샷과 달리 생성물이 아님). 파일 추가 + package.json 병합 +
+// next.config.ts 에 dev 초기화 한 줄 + AGENTS.md 의 Deploy 절 교체 + README/.gitignore 덧붙이기.
+function applyOpenNext(target, name, variantFiles) {
+  const dir = join(VARIANTS, 'opennext')
+  const read = (rel) => readFileSync(join(target, rel), 'utf8')
+  const write = (rel, text) => writeFileSync(join(target, rel), text)
+  // Worker 이름: 소문자·숫자·하이픈만.
+  const worker = name
+    .replace(/^@/, '')
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  for (const rel of variantFiles) {
+    const out = join(target, rel)
+    mkdirSync(dirname(out), { recursive: true })
+    writeFileSync(
+      out,
+      readFileSync(join(dir, 'files', rel), 'utf8').replaceAll('{{worker}}', worker)
+    )
+  }
+  const patch = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
+  const pkg = JSON.parse(read('package.json'))
+  for (const key of ['scripts', 'dependencies', 'devDependencies'])
+    pkg[key] = { ...pkg[key], ...patch[key] }
+  write('package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+
+  const nextConfig = read('next.config.ts')
+  const exportLine = 'export default withServerFn(nextConfig);'
+  if (!nextConfig.includes(exportLine))
+    die('next.config.ts changed shape; the opennext overlay needs updating')
+  write(
+    'next.config.ts',
+    nextConfig
+      .replace(
+        'import type { NextConfig } from "next";',
+        'import type { NextConfig } from "next";\nimport { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";'
+      )
+      .replace(
+        exportLine,
+        '// `next dev` 에서도 Cloudflare 바인딩(getCloudflareContext)을 쓸 수 있게 한다.\ninitOpenNextCloudflareForDev();\n\n' +
+          exportLine
+      )
+  )
+
+  const agents = read('AGENTS.md')
+  const deployAt = agents.lastIndexOf('## Deploy')
+  if (deployAt < 0) die('AGENTS.md has no Deploy section; the opennext overlay needs updating')
+  write(
+    'AGENTS.md',
+    agents.slice(0, deployAt) + readFileSync(join(dir, 'agents-deploy.md'), 'utf8')
+  )
+  write(
+    'README.md',
+    read('README.md').trimEnd() + '\n' + readFileSync(join(dir, 'readme.md'), 'utf8')
+  )
+  write(
+    '.gitignore',
+    read('.gitignore').trimEnd() + '\n' + readFileSync(join(dir, 'gitignore'), 'utf8')
+  )
+}
 
 // ── install ─────────────────────────────────────────────────────────────
 const pm = chooseManager(flags.pm)
@@ -207,7 +273,7 @@ log(`
 ${c.bold('Next steps')}
   cd ${relative(process.cwd(), target) || '.'}${flags.install === false ? `\n  ${pm} install` : ''}
   ${run} dev            ${c.dim('http://localhost:3000')}
-  ${run} validate       ${c.dim('typecheck + lint, after every change')}
+  ${run} validate       ${c.dim('typecheck + lint, after every change')}${flags.opennext ? `\n  ${run} preview        ${c.dim('Cloudflare Worker locally (OpenNext)')}\n  ${run} deploy         ${c.dim('wrangler login once, then deploy')}` : ''}
 
 Read ${c.cyan('AGENTS.md')} and the ${c.cyan('.ai.md')} next to each layer before writing code.
 Architecture: ${c.cyan(DOCS)}

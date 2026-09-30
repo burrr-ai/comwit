@@ -11,7 +11,8 @@ npm create comwit@latest my-app     # or: npx create-comwit@latest my-app
 cd my-app && pnpm run dev
 ```
 
-Flags: `--name <pkg>` · `--pm pnpm|npm|yarn|bun` · `--no-install` · `--no-git` · `--dry`.
+Flags: `--opennext` (Cloudflare Workers via OpenNext: wrangler.jsonc, open-next.config.ts, `preview`/`deploy` scripts) ·
+`--name <pkg>` · `--pm pnpm|npm|yarn|bun` · `--no-install` · `--no-git` · `--dry`.
 
 ## Inside a generated project
 

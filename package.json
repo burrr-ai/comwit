@@ -33,7 +33,6 @@
     "storybook": "pnpm --filter storybook dev",
     "stories": "pnpm --filter storybook stories",
     "registry": "pnpm --filter comwit-ui build:registry",
-    "sync:template": "node packages/template/scripts/sync.mjs",
     "build:packages": "pnpm --filter @comwit/state build && pnpm --filter @comwit/ui build && pnpm registry",
     "build": "pnpm --filter docs build",
     "test": "pnpm --filter @comwit/state test && node --test scripts/workspace.test.mjs",

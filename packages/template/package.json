@@ -24,13 +24,13 @@
   "files": [
     "src",
     "template",
+    "variants",
     "README.md"
   ],
   "scripts": {
-    "sync": "node scripts/sync.mjs",
     "verify": "node scripts/verify.mjs",
     "test": "node scripts/verify.mjs",
-    "typecheck": "node --check src/index.js && node --check scripts/sync.mjs && node --check scripts/verify.mjs"
+    "typecheck": "node --check src/index.js && node --check scripts/verify.mjs"
   },
   "engines": {
     "node": ">=20"

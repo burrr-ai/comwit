@@ -9,6 +9,8 @@ libraries come pre-wired.
 npm create comwit@latest my-app
 # or
 npx create-comwit@latest my-app
+# Cloudflare Workers through OpenNext
+npm create comwit@latest my-app -- --opennext
 ```
 
 ```
@@ -38,28 +40,22 @@ AGENTS.md                   the rules file every coding agent reads
 - **@comwit/state** domain hooks, **comwit-ui** components you own, Tailwind v4 tokens.
 - **Better Auth + Drizzle** wired by the `auth-setup` skill once a database is connected.
 - **No infrastructure lock-in.** The template does not assume a database, a bucket
-  or a hosting platform; `AGENTS.md` explains how to add each.
+  or a hosting platform; `AGENTS.md` explains how to add each. `--opennext` opts
+  into Cloudflare Workers (`@opennextjs/cloudflare` + wrangler) up front.
 
 ## Options
 
-| Flag                          | Effect                                         |
-| ----------------------------- | ---------------------------------------------- |
-| `--name <name>`               | package name (default: the directory name)     |
-| `--pm <pnpm\|npm\|yarn\|bun>` | package manager (default: pnpm when installed) |
-| `--no-install`                | skip dependency installation                   |
-| `--no-git`                    | skip `git init` and the initial commit         |
-| `--cwd <dir>`                 | create the project relative to this directory  |
-| `--dry`                       | list the files that would be written           |
+| Flag                          | Effect                                                                                                    |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `--name <name>`               | package name (default: the directory name)                                                                |
+| `--pm <pnpm\|npm\|yarn\|bun>` | package manager (default: pnpm when installed)                                                            |
+| `--no-install`                | skip dependency installation                                                                              |
+| `--no-git`                    | skip `git init` and the initial commit                                                                    |
+| `--cwd <dir>`                 | create the project relative to this directory                                                             |
+| `--dry`                       | list the files that would be written                                                                      |
+| `--opennext`                  | Cloudflare Workers via OpenNext: adds `wrangler.jsonc`, `open-next.config.ts`, `preview`/`deploy` scripts |
 
 ## Docs
 
 Why the folders look this way, the layer rules and the agent workflow:
 https://library.comwit.io/template
-
-## Maintaining the snapshot
-
-The bundled `template/` is generated from the private Comwit template by
-`node scripts/sync.mjs` (see [CONTRIBUTING](../../CONTRIBUTING.md)). It strips
-platform-specific provisioning and deployment, keeps the architecture, guides
-and skills, and refuses to finish while any platform token remains.
-`node scripts/verify.mjs` runs that check on its own and is part of `pnpm test`.

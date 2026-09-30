@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "{{worker}}",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // Runtime variables (SITE_URL, …) go here under "vars"; secrets through `wrangler secret put`.
+  // Locally, `.dev.vars` (gitignored) feeds `pnpm run preview`; `next dev` keeps reading `.env`.
+}

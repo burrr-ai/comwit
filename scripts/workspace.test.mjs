@@ -375,3 +375,52 @@ test('the bundled template snapshot stays free of platform-specific content', ()
     stdio: 'pipe',
   })
 })
+
+test('create-comwit --opennext overlays the Cloudflare Workers adapter', () => {
+  const cli = join(root, 'packages/template/src/index.js')
+  const fixture = mkdtempSync(join(tmpdir(), 'create-comwit-on-'))
+  try {
+    execFileSync(
+      process.execPath,
+      [
+        cli,
+        '@acme/shop',
+        '--name',
+        '@acme/shop',
+        '--opennext',
+        '--cwd',
+        fixture,
+        '--no-install',
+        '--no-git',
+      ],
+      { encoding: 'utf8' }
+    )
+    const app = join(fixture, '@acme/shop')
+    const pkg = JSON.parse(readFileSync(join(app, 'package.json'), 'utf8'))
+    assert.equal(pkg.name, '@acme/shop')
+    assert.ok('@opennextjs/cloudflare' in pkg.devDependencies)
+    assert.ok('wrangler' in pkg.devDependencies)
+    assert.match(pkg.scripts.deploy, /opennextjs-cloudflare deploy/)
+    assert.match(pkg.scripts.build, /next build/, 'the project build script is kept')
+    // Worker names allow only lowercase letters, digits and dashes.
+    assert.match(readFileSync(join(app, 'wrangler.jsonc'), 'utf8'), /"name": "acme-shop"/)
+    assert.ok(existsSync(join(app, 'open-next.config.ts')))
+    assert.ok(existsSync(join(app, '.dev.vars.example')))
+    const nextConfig = readFileSync(join(app, 'next.config.ts'), 'utf8')
+    assert.match(
+      nextConfig,
+      /initOpenNextCloudflareForDev\(\);\s*\n\s*\nexport default withServerFn\(nextConfig\);/
+    )
+    const agents = readFileSync(join(app, 'AGENTS.md'), 'utf8')
+    assert.equal(agents.split('## Deploy').length, 2)
+    assert.match(agents, /Cloudflare Workers through OpenNext/)
+    assert.doesNotMatch(agents, /pnpm start/)
+    assert.match(readFileSync(join(app, '.gitignore'), 'utf8'), /\.open-next/)
+    assert.match(
+      readFileSync(join(app, 'README.md'), 'utf8'),
+      /^# @acme\/shop[\s\S]*Cloudflare Workers via OpenNext/
+    )
+  } finally {
+    rmSync(fixture, { recursive: true, force: true })
+  }
+})
