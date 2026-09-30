@@ -8,6 +8,8 @@ export interface TemplateDocMeta {
   title: string
   slug: string
   description?: string
+  /** Sidebar group; docs keep their frontmatter order inside it. */
+  group: string
   order: number
 }
 
@@ -22,6 +24,7 @@ function read(file: string) {
     title: data.title as string,
     slug: file.replace(/\.mdx$/, ''),
     description: data.description as string | undefined,
+    group: (data.group as string) ?? 'How it works',
     order: (data.order as number) ?? 999,
     content,
   }
@@ -32,8 +35,8 @@ export function getTemplateDocs(): TemplateDocMeta[] {
     .readdirSync(CONTENT_DIR)
     .filter((file) => file.endsWith('.mdx'))
     .map((file) => {
-      const { title, slug, description, order } = read(file)
-      return { title, slug, description, order }
+      const { title, slug, description, group, order } = read(file)
+      return { title, slug, description, group, order }
     })
     .sort((a, b) => a.order - b.order)
 }

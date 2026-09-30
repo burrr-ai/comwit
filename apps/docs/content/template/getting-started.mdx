@@ -1,14 +1,11 @@
 ---
-title: Getting started
+title: Install
+group: Install
 order: 1
-description: Create a project, build the first feature bottom-up, and connect real infrastructure only when the product needs it.
+description: One command creates the project. Everything else is already inside it.
 ---
 
-# Getting started
-
-One command scaffolds a Next.js 16 project with the whole architecture in
-place: services sliced by domain, four layers that depend one way, an `.ai.md`
-rulebook beside every layer, and the State and UI libraries already wired.
+# Install
 
 ```bash
 npm create comwit@latest my-app
@@ -16,12 +13,24 @@ cd my-app
 pnpm run dev
 ```
 
-`npx create-comwit@latest my-app` does the same. The CLI copies the template,
-sets the package name, installs dependencies with pnpm (or `--pm npm|yarn|bun`)
-and makes an initial commit. `--no-install`, `--no-git` and `--dry` skip those
-steps. `--opennext` targets Cloudflare Workers from the start (below).
+`npx create-comwit@latest my-app` does the same. The CLI copies the kit, sets
+the package name, installs dependencies with pnpm and makes an initial commit.
+Then open `AGENTS.md`, hand the project to your coding agent, and describe the
+product.
 
-## What you get
+## Options
+
+| Flag                          | Effect                                                                |
+| ----------------------------- | --------------------------------------------------------------------- |
+| `--opennext`                  | Cloudflare Workers via OpenNext (below)                               |
+| `--name <name>`               | package name (default: the directory name)                            |
+| `--pm <pnpm\|npm\|yarn\|bun>` | package manager (default: pnpm when installed, else the invoking one) |
+| `--no-install`                | skip dependency installation                                          |
+| `--no-git`                    | skip `git init` and the initial commit                                |
+| `--cwd <dir>`                 | create the project relative to this directory                         |
+| `--dry`                       | list the files that would be written                                  |
+
+## What lands in the folder
 
 ```text
 my-app/
@@ -32,16 +41,11 @@ my-app/
     app/                        Next.js App Router — routing only
     services/
       .ai.md · api.ai.md · state.ai.md · page.ai.md · design.md
-      app/                      end-user service
-        api/user/               server actions shaped for the screen
-        state/user/             @comwit/state model · actions · hook
-        page/home/              sections that read state and call actions
+      app/                      end-user service: api/ · state/ · page/ per domain
       admin/                    separate operator service, own auth and UI
     lib/                        shared code; comwit-ui components installed as source
     server/repository/          the only gateway to data — mock rows first
 ```
-
-The stack is curated so nothing has to be chosen on day one:
 
 | Job                          | Choice                                                                                              |
 | ---------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -49,153 +53,12 @@ The stack is curated so nothing has to be chosen on day one:
 | State                        | `@comwit/state` — one typed hook per domain                                                         |
 | UI                           | `comwit-ui` components installed as source, Tailwind v4 tokens, Korean copy in `src/lib/ui-text.ts` |
 | Forms, tables, editor, dates | react-hook-form + zod, TanStack Table, Tiptap, react-day-picker (wrapped by the UI kit)             |
-| Auth                         | Better Auth on Drizzle, installed by the `auth-setup` skill                                         |
+| Auth                         | Better Auth on Drizzle, installed by the `auth-setup` skill once a database is connected            |
 | Lint                         | Oxlint with project rules for every layer boundary                                                  |
 
-What it deliberately does **not** choose: the database, the object storage and
-the hosting platform. The template runs on mock data until the product needs
-persistence, and `AGENTS.md` explains how to add each.
-
-## The first feature, bottom-up
-
-Say the product needs a list of posts. Work from the data up, reading each
-layer's `.ai.md` first.
-
-**1. Repository** — `src/server/repository/post.ts`. Mock rows live in
-`_data/post.ts`, normalized like tables. The repository exposes raw values
-and standard CRUD names; deletion is a soft delete.
-
-```ts
-import 'server-only'
-import { uuid } from './id'
-import { POSTS } from './_data/post'
-import type { PageRequest, Pageable } from './types'
-
-export async function findAll(
-  filter: { search?: string },
-  page: PageRequest
-): Promise<Pageable<Post>> {
-  const rows = POSTS.filter(
-    (p) => !p.deletedAt && (!filter.search || p.title.includes(filter.search))
-  )
-  const start = (page.page - 1) * page.limit
-  return {
-    items: rows.slice(start, start + page.limit),
-    total: rows.length,
-    ...page,
-    totalPages: Math.ceil(rows.length / page.limit),
-  }
-}
-```
-
-**2. API** — `src/services/app/api/post/`. Server actions shaped for the
-screen that uses them: display labels and formatted dates are computed here,
-never in components.
-
-```ts
-// actions/find-all.ts
-'use server'
-import { createAction } from '@/lib/utils'
-import * as repository from '@/server/repository/post'
-import { kstRelativeTime } from '@/lib/kst'
-
-async function _findAll(filter: FindAllFilter, page: PageRequest): Promise<Pageable<PostSimple>> {
-  const result = await repository.findAll(filter, page)
-  return {
-    ...result,
-    items: result.items.map((p) => ({ ...p, createdLabel: kstRelativeTime(p.createdAt) })),
-  }
-}
-export const findAll = createAction(_findAll)
-```
-
-```ts
-// index.ts
-import { resolveActions } from '@/lib/utils'
-export * from './types'
-import { findAll } from './actions/find-all'
-export const post = resolveActions({ findAll })
-```
-
-**3. State** — `src/services/app/state/post/`. `types.ts` is the contract,
-`model.ts` holds queries and local fields, `actions/` holds every side effect,
-`index.ts` creates the hook.
-
-```ts
-// model.ts
-import { model, query } from '@comwit/state'
-import { post as api } from '@/services/app/api/post'
-
-export const post = model<PostState>({
-  posts: query<Pageable<PostSimple>, { page: number }>({
-    initialData: { items: [], total: 0, page: 1, limit: 20, totalPages: 0 },
-    queryFn: ({ page }) => api.findAll({}, { page, limit: 20 }),
-  }),
-})
-```
-
-**4. Page** — `src/services/app/page/posts/`. `index.tsx` composes sections;
-each section reads the domain hook once, with a selector, and renders.
-
-```tsx
-'use client'
-import { usePost } from '@/services/app/state/post'
-
-export function PostListSection({ page }: { page: number }) {
-  const post = usePost((state) => ({ posts: state.posts.load({ page }), actions: state.actions }))
-  if (post.posts.isError) return <ErrorMessage error={post.posts.error} />
-  if (post.posts.isLoading) return <PostsSkeleton />
-  return post.posts.data.items.map((p) => <PostCard key={p.id} post={p} />)
-}
-```
-
-Finally a route file in `src/app/(app)/posts/page.tsx` imports the page
-component. Then:
-
-```bash
-pnpm run validate   # typecheck + lint — the lint rules check every boundary above
-```
-
-## Connecting real infrastructure
-
-- **Database.** Add a Drizzle driver for the database you want, put the
-  server-only client in `src/server/db/index.ts`, define tables in
-  `schema.ts`, generate and review the migration, then replace the `_data/`
-  reads inside repositories. The api layer does not change. The
-  `/refactoring` workflow automates this pass for selected domains.
-- **Auth.** Once a database is connected, the `auth-setup` skill installs
-  Better Auth per service: prefixed tables, cookies, a base path and an auth
-  instance for `app` and `admin`.
-- **Storage.** Any S3-compatible bucket with presigned URLs. The server issues
-  the URL, the browser uploads directly, the api layer returns the public URL.
-- **Deploy.** `pnpm run build` produces standard Next.js output. Run it with
-  `next start` on any Node host or with the hosting platform's adapter.
-
-## Cloudflare Workers with `--opennext`
-
-```bash
-npm create comwit@latest my-app -- --opennext
-```
-
-The same project, plus the OpenNext adapter for Cloudflare Workers:
-`open-next.config.ts`, `wrangler.jsonc` (Worker name from the project name,
-`nodejs_compat`, static assets binding), `.dev.vars.example`,
-`@opennextjs/cloudflare` and `wrangler` as dev dependencies, Next pinned to a
-version the adapter supports, and `initOpenNextCloudflareForDev()` in
-`next.config.ts` so `next dev` can reach Cloudflare bindings. The `Deploy`
-section of `AGENTS.md` is replaced with the Worker flow:
-
-```bash
-pnpm run preview   # opennextjs-cloudflare build (runs pnpm run build) + local workerd
-pnpm run deploy    # build + wrangler deploy, after `wrangler login`
-```
-
-`next dev` keeps reading `.env`; the Worker reads `vars` in `wrangler.jsonc`,
-secrets from `wrangler secret put`, and `.dev.vars` locally. Incremental cache
-(ISR) needs a KV or R2 binding once the product relies on it; the OpenNext docs
-cover that step.
-
-Every one of these is described in the generated `AGENTS.md`, sections 5 to 7.
+Not decided for you: the database, the object storage and the hosting
+platform. The project runs on mock data until the product needs persistence;
+`AGENTS.md` says how to add each.
 
 ## Commands
 
@@ -207,3 +70,26 @@ Every one of these is described in the generated `AGENTS.md`, sections 5 to 7.
 | `pnpm ui add <name>`                   | install a comwit-ui component as source                         |
 | `pnpm agents:test`                     | check that Claude Code skill stubs mirror `.agents/skills/`     |
 | `pnpm run preview` / `pnpm run deploy` | `--opennext` projects only: build and run or publish the Worker |
+
+## Cloudflare Workers with `--opennext`
+
+```bash
+npm create comwit@latest my-app -- --opennext
+```
+
+The same project plus the OpenNext adapter: `open-next.config.ts`,
+`wrangler.jsonc` (Worker name from the project name, `nodejs_compat`, static
+assets binding), `.dev.vars.example`, `@opennextjs/cloudflare` and `wrangler`
+as dev dependencies, Next pinned to a version the adapter supports, and
+`initOpenNextCloudflareForDev()` in `next.config.ts`. The Deploy section of
+`AGENTS.md` becomes the Worker flow:
+
+```bash
+pnpm run preview   # opennextjs-cloudflare build (runs pnpm run build) + local workerd
+pnpm run deploy    # build + wrangler deploy, after `wrangler login`
+```
+
+`next dev` keeps reading `.env`; the Worker reads `vars` in `wrangler.jsonc`,
+secrets from `wrangler secret put`, and `.dev.vars` locally. Incremental cache
+(ISR) needs a KV or R2 binding once the product relies on it; the OpenNext docs
+cover that step.

@@ -82,33 +82,36 @@
 .template-nav {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
+/* The sidebar reads like body text: ink on manila, no grey. */
 .template-nav a {
   position: relative;
   display: block;
   padding: 7px 10px;
   border-radius: 6px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--tp-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--tp-ink);
 }
 .template-nav a:hover {
   background: var(--tp-paper-deep);
-  color: var(--tp-ink);
 }
 .template-nav a[aria-current='page'] {
-  color: var(--tp-ink);
-  font-weight: 600;
+  font-weight: 700;
   background: var(--tp-sheet);
   box-shadow: inset 3px 0 0 var(--tp-mat);
   border-radius: 2px 6px 6px 2px;
 }
+/* Group names in the display face: the same lettering as the page headings, set small. */
 .template-nav-group {
-  margin: 20px 10px 6px;
-  font-size: 12px;
-  color: var(--tp-muted);
-  opacity: 0.8;
+  margin: 22px 10px 4px;
+  font-family: var(--tp-display);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--tp-ink);
 }
 .template-main {
   min-width: 0;
@@ -134,15 +137,24 @@
 }
 .site-header.app-header .template-mobile-nav .template-nav a {
   padding: 11px 12px;
+  color: var(--tp-ink);
   font:
-    400 15px/1.5 var(--font-inter),
+    500 15px/1.45 var(--font-inter),
     sans-serif;
 }
 .site-header.app-header .template-mobile-nav .template-nav a[aria-current='page'] {
-  font-weight: 600;
+  font-weight: 700;
+}
+.site-header.app-header .template-mobile-nav .template-nav-group {
+  margin: 24px 12px 6px;
+  font:
+    600 18px/1.2 var(--tp-display),
+    sans-serif;
+  color: var(--tp-ink);
 }
 
 /* ── Overview ──────────────────────────────────────────────────────────── */
+/* The overview sells; the "How it works" guides explain. Hero, four strengths, the mat, then links. */
 .tp-overview {
   max-width: 1080px;
 }
@@ -154,28 +166,28 @@
   font-size: 0.88em;
 }
 
-.tp-hero {
-  padding-top: 8px;
-}
 .tp-kicker {
-  margin: 0 0 22px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0 0 20px;
   font-size: 14px;
-  color: var(--tp-muted);
+  font-weight: 500;
+  color: var(--tp-ink);
 }
 .tp-kicker code {
-  margin-left: 2px;
   padding: 2px 7px;
   border: 1px solid var(--tp-rule);
   border-radius: 4px;
   background: var(--tp-sheet);
-  color: var(--tp-ink);
 }
 .tp-hero h1 {
-  max-width: 11.5em;
+  max-width: 13em;
   margin: 0;
-  font-size: clamp(52px, 7.4vw, 108px);
+  font-size: clamp(48px, 6.2vw, 92px);
   font-weight: 600;
-  line-height: 0.9;
+  line-height: 0.92;
   letter-spacing: -0.012em;
   text-wrap: balance;
 }
@@ -187,21 +199,19 @@
   padding-left: 0.9em;
 }
 .tp-lead {
-  max-width: 36em;
-  margin: 30px 0 0;
+  max-width: 50em;
+  margin: 26px 0 0;
   font-size: 18px;
   line-height: 1.6;
   color: #3d372b;
-}
-.tp-lead code {
-  font-size: 0.85em;
+  text-wrap: pretty;
 }
 .tp-hero-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 14px 28px;
-  margin-top: 34px;
+  margin-top: 30px;
 }
 .tp-hero-links {
   display: flex;
@@ -279,7 +289,7 @@
 }
 
 .tp-section {
-  margin-top: 112px;
+  margin-top: 88px;
 }
 .tp-section-title {
   margin: 0;
@@ -291,21 +301,43 @@
   letter-spacing: -0.005em;
   text-wrap: balance;
 }
-.tp-section-lead {
-  max-width: 40em;
-  margin: 16px 0 0;
-  font-size: 16px;
-  line-height: 1.65;
-  color: #3d372b;
+
+/* Four strengths: one title block, ruled into cells like the corner of a drawing. */
+.tp-strengths {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 52px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1.5px solid var(--tp-ink);
+  border-radius: 6px;
 }
-.tp-section > .tp-link {
-  margin-top: 26px;
+.tp-strengths li {
+  padding: 20px 24px 22px;
+}
+.tp-strengths li:nth-child(even) {
+  border-left: 1.5px solid var(--tp-ink);
+}
+.tp-strengths li:nth-child(n + 3) {
+  border-top: 1.5px solid var(--tp-ink);
+}
+.tp-strengths h2 {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.05;
+}
+.tp-strengths code {
+  white-space: nowrap; /* seo-optimize 가 하이픈에서 끊기지 않게 */
+}
+.tp-strengths p {
+  margin: 10px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #3d372b;
 }
 
 /* ── The mat (identity piece) ──────────────────────────────────────────── */
-.tp-slices {
-  margin-top: 96px;
-}
 .tp-figure {
   margin: 28px 0 0;
 }
@@ -637,271 +669,31 @@
   }
 }
 
-/* Title block: the drawing's caption. */
-.tp-titleblock {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+/* The drawing's caption, framed like its title block. */
+.tp-caption {
   margin-top: 14px;
+  padding: 12px 18px;
   border: 1.5px solid var(--tp-ink);
   border-radius: 6px;
-}
-.tp-titleblock p {
-  margin: 0;
-  padding: 14px 18px;
-  font-size: 14px;
-  line-height: 1.55;
-  color: #3d372b;
-}
-.tp-titleblock p + p {
-  border-left: 1.5px solid var(--tp-ink);
-}
-.tp-titleblock-main {
   font-family: var(--tp-display);
-  font-size: 22px !important;
+  font-size: 22px;
   font-weight: 600;
-  line-height: 1.15 !important;
-  color: var(--tp-ink) !important;
+  line-height: 1.15;
 }
-.tp-titleblock-main code {
-  font-family: var(--tp-display);
-  font-size: 1em !important;
-}
-
-/* ── Traps → rules ─────────────────────────────────────────────────────── */
-.tp-traps {
-  margin: 36px 0 0;
-}
-.tp-trap {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
-  gap: 8px 40px;
-  padding: 22px 0;
-  border-bottom: 1px solid var(--tp-rule);
-}
-.tp-trap:first-child {
-  border-top: 1px solid var(--tp-rule);
-}
-.tp-trap dt {
-  font-size: 16px;
-  color: var(--tp-muted);
-  text-decoration: line-through;
-  text-decoration-color: rgb(102 92 71 / 0.45);
-  text-decoration-thickness: 1px;
-}
-.tp-trap dd {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.55;
-  color: #3d372b;
-}
-.tp-trap dd strong {
-  color: var(--tp-ink);
-  font-weight: 650;
-}
-.tp-trap-tag {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: var(--tp-muted);
-  text-decoration: none;
-}
-.tp-trap dt .tp-trap-tag {
-  display: inline-block;
-  width: 100%;
-}
-.tp-trap dd .tp-trap-tag {
-  color: var(--tp-mat);
-  font-weight: 600;
+.tp-caption code {
+  font-family: inherit;
+  font-size: 1em;
 }
 
-/* ── One job per layer: the strips again, off the mat ─────────────────── */
-.tp-layers {
-  margin: 32px 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column-reverse; /* 쓰는 순서는 아래부터 — 화면은 다이어그램처럼 page 가 위 */
-  gap: 8px;
-}
-.tp-layers li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  align-items: center;
-  gap: 6px 32px;
-  padding: 16px 20px;
-  border-radius: 6px;
-  background: var(--tp-sheet);
-  box-shadow: 0 1px 0 var(--tp-rule);
-}
-.tp-layers li[data-layer='repository'] {
-  background-color: var(--tp-paper);
-  background-image: repeating-linear-gradient(
-    -45deg,
-    transparent 0 7px,
-    rgb(27 26 21 / 0.08) 7px 8px
-  );
-  box-shadow: inset 0 0 0 1px var(--tp-rule);
-}
-.tp-layers-path {
-  font-size: 14px;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-.tp-layers p {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.55;
-  color: #3d372b;
-}
-
-/* ── The guides beside every layer ─────────────────────────────────────── */
-.tp-docs {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  gap: 0 56px;
-  align-items: start;
-}
-.tp-docs > .tp-section-title {
-  grid-column: 1 / -1;
-}
-.tp-docs > .tp-tree {
-  margin-top: 22px;
-}
-.tp-tree {
-  margin: 0;
-  padding: 18px 20px;
-  list-style: none;
-  border-radius: 8px;
-  background: var(--tp-sheet);
-  box-shadow: inset 0 0 0 1px var(--tp-rule);
-}
-.tp-tree li {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px 14px;
-  padding: 4px 0 4px calc(var(--depth) * 20px);
-}
-.tp-tree li::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--depth) * 20px - 13px);
-  width: 1px;
-  background: var(--tp-rule);
-}
-.tp-tree li[data-depth='0']::before {
-  content: none;
-}
-.tp-tree code {
-  font-size: 13.5px;
-  color: var(--tp-muted);
-}
-.tp-tree li[data-guide] code {
-  color: var(--tp-mat);
-  font-weight: 600;
-}
-.tp-tree span {
-  font-size: 13px;
-  color: var(--tp-muted);
-}
-
-/* ── Screen first, data later ──────────────────────────────────────────── */
-.tp-steps {
-  counter-reset: step;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0 28px;
-  margin: 36px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.tp-steps li {
-  counter-increment: step;
-  position: relative;
-  padding-top: 52px;
-}
-.tp-steps li::before {
-  content: counter(step);
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border: 1.5px solid var(--tp-ink);
-  border-radius: 50%;
-  background: var(--tp-paper);
-  font:
-    600 18px/1 var(--tp-display),
-    sans-serif;
-}
-.tp-steps li:first-child::before {
-  background: var(--tp-ink);
-  color: var(--tp-sheet);
-}
-.tp-steps li::after {
-  content: '';
-  position: absolute;
-  top: 18px;
-  left: 36px;
-  right: -28px;
-  height: 0;
-  border-top: 1.5px dashed var(--tp-ink);
-  opacity: 0.4;
-}
-.tp-steps li:last-child::after {
-  content: none;
-}
-.tp-steps p {
-  max-width: 22em;
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.55;
-  color: #3d372b;
-}
-.tp-skills {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 36px 0 0;
-  padding-top: 20px;
-  border-top: 1px solid var(--tp-rule);
-}
-.tp-skills > span {
-  margin-right: 8px;
-  font-size: 14px;
-  color: var(--tp-muted);
-}
-.tp-skills a {
-  padding: 5px 11px;
-  border: 1px solid var(--tp-rule);
-  border-radius: 999px;
-  background: var(--tp-sheet);
-  color: var(--tp-ink);
-}
-.tp-skills a:hover {
-  border-color: var(--tp-mat);
-  color: var(--tp-mat);
-}
-.tp-skills code {
-  font-size: 13px;
-}
-
-/* ── Curated, not decided ──────────────────────────────────────────────── */
-.tp-curated {
+/* ── Inside the kit ────────────────────────────────────────────────────── */
+.tp-kit {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 32px 48px;
-  margin-top: 32px;
+  margin-top: 28px;
 }
-.tp-curated h3 {
-  margin: 0 0 14px;
+.tp-kit h3 {
+  margin: 0 0 12px;
   font-size: 24px;
   font-weight: 600;
 }
@@ -916,7 +708,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 2px 12px;
-  padding: 11px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--tp-rule);
   font-size: 15px;
 }
@@ -932,7 +724,7 @@
 }
 .tp-chosen span {
   font-size: 14px;
-  color: var(--tp-muted);
+  color: #3d372b;
 }
 /* 비워 둔 칸 — 표제란의 빈 필드처럼 점선 */
 .tp-open {
@@ -941,18 +733,54 @@
   gap: 8px;
 }
 .tp-open li {
-  padding: 11px 14px;
+  padding: 9px 14px;
   border: 1.5px dashed rgb(27 26 21 / 0.35);
   border-radius: 6px;
   font-size: 15px;
   color: #3d372b;
 }
 
+/* ── Read on ───────────────────────────────────────────────────────────── */
+.tp-read {
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.tp-read a {
+  display: grid;
+  grid-template-columns: minmax(0, 17em) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 4px 32px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--tp-rule);
+  color: var(--tp-ink);
+}
+.tp-read li:first-child a {
+  border-top: 1px solid var(--tp-rule);
+}
+.tp-read strong {
+  font-family: var(--tp-display);
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.tp-read span {
+  font-size: 15px;
+  line-height: 1.55;
+  color: #3d372b;
+}
+.tp-read a:hover strong {
+  color: var(--tp-mat);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+
 .tp-footer {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 28px;
-  margin-top: 112px;
+  margin-top: 88px;
   padding-top: 20px;
   border-top: 2px solid var(--tp-ink);
   font-size: 14px;
@@ -1259,8 +1087,7 @@
     border-radius: 8px;
     color: inherit;
   }
-  .tp-docs,
-  .tp-curated {
+  .tp-kit {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -1382,36 +1209,20 @@
     font-size: 12.5px;
   }
 
-  .tp-titleblock {
+  .tp-strengths {
     grid-template-columns: minmax(0, 1fr);
   }
-  .tp-titleblock p + p {
+  .tp-strengths li:nth-child(even) {
     border-left: 0;
+  }
+  .tp-strengths li + li {
     border-top: 1.5px solid var(--tp-ink);
   }
-  .tp-trap,
-  .tp-layers li {
+  .tp-read a {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .tp-steps {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 24px;
-  }
-  .tp-steps li {
-    padding: 6px 0 0 54px;
-    min-height: 36px;
-  }
-  .tp-steps li::after {
-    top: 42px;
-    bottom: -20px;
-    left: 18px;
-    right: auto;
-    height: auto;
-    border-top: 0;
-    border-left: 1.5px dashed var(--tp-ink);
   }
   .tp-section {
-    margin-top: 80px;
+    margin-top: 72px;
   }
 }
 @media (max-width: 600px) {
@@ -1446,18 +1257,14 @@
   .tp-button {
     height: 46px;
   }
-  .tp-tree {
-    padding: 14px;
+  .tp-strengths li {
+    padding: 16px 16px 18px;
   }
-  .tp-tree li {
-    padding-left: calc(var(--depth) * 14px);
+  .tp-strengths h2 {
+    font-size: 24px;
   }
-  .tp-tree li::before {
-    left: calc(var(--depth) * 14px - 9px);
-  }
-  .tp-tree span {
-    flex-basis: 100%;
-    font-size: 12.5px;
+  .tp-caption {
+    font-size: 19px;
   }
   .template-guide.prose pre {
     margin-inline: -16px;

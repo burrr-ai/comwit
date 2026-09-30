@@ -10,6 +10,17 @@ import type { TemplateDocMeta } from '@/lib/template-docs'
 const OVERVIEW = '/template'
 const hrefFor = (doc: TemplateDocMeta) => `/template/docs/${doc.slug}`
 
+/** Groups in the order their first doc appears; docs keep their `order` inside a group. */
+function groupDocs(docs: TemplateDocMeta[]) {
+  const groups = new Map<string, TemplateDocMeta[]>()
+  for (const doc of [...docs].sort((a, b) => a.order - b.order)) {
+    const list = groups.get(doc.group)
+    if (list) list.push(doc)
+    else groups.set(doc.group, [doc])
+  }
+  return [...groups]
+}
+
 function NavContent({ docs, onNavigate }: { docs: TemplateDocMeta[]; onNavigate?: () => void }) {
   const pathname = usePathname()
   return (
@@ -21,20 +32,24 @@ function NavContent({ docs, onNavigate }: { docs: TemplateDocMeta[]; onNavigate?
       >
         Overview
       </Link>
-      <p className="template-nav-group">Guides</p>
-      {docs.map((doc) => {
-        const href = hrefFor(doc)
-        return (
-          <Link
-            key={doc.slug}
-            href={href}
-            aria-current={pathname === href ? 'page' : undefined}
-            onClick={onNavigate}
-          >
-            {doc.title}
-          </Link>
-        )
-      })}
+      {groupDocs(docs).map(([group, items]) => (
+        <React.Fragment key={group}>
+          <p className="template-nav-group">{group}</p>
+          {items.map((doc) => {
+            const href = hrefFor(doc)
+            return (
+              <Link
+                key={doc.slug}
+                href={href}
+                aria-current={pathname === href ? 'page' : undefined}
+                onClick={onNavigate}
+              >
+                {doc.title}
+              </Link>
+            )
+          })}
+        </React.Fragment>
+      ))}
       <p className="template-nav-group">For agents</p>
       <a href="/template/llms.txt" target="_blank" rel="noreferrer">
         llms.txt
