@@ -1,0 +1,7 @@
+interface:
+  display_name: "Refactoring"
+  short_description: "Structure pass, DB wiring, and cleanup"
+  default_prompt: "Use $refactoring to run the refactoring workflow on this project."
+
+policy:
+  allow_implicit_invocation: false

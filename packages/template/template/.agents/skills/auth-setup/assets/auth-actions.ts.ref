@@ -1,0 +1,96 @@
+// ============================================================
+// 레퍼런스: services/{service}/state/user/actions/auth.ts
+// 기존 mock을 실제 인증으로 교체할 때 참고한다.
+// ============================================================
+// 치환 대상:
+//   {service} → app, admin 등
+//   {homePath} → 로그인 성공 후 이동할 expression (app: "/", admin: adminRoutes.dashboard)
+//   {loginPath} → 로그아웃 후 이동할 expression (app: "/login", admin: adminRoutes.login)
+//   auth client import: '@/lib/auth-client/{service}'
+//   useUser hook 이름은 서비스에 따라 다름 (useUser, useAdminUser 등)
+//   admin이면 '@/lib/admin-routes'의 adminRoutes도 import
+// ============================================================
+
+import { action } from "@comwit/state"
+import type { UserActions } from "../types"
+import { user } from "../model"
+import { {service}Auth } from "@/lib/auth-client/{service}"
+
+type UserAuthActions = Pick<
+  UserActions,
+  "signIn" | "signUp" | "signOut"
+>
+
+export const userAuthActions = action<UserAuthActions>(({ state }) => {
+  class UserAuthActions {
+    private model = state(user)
+
+    async signIn({
+      email,
+      password,
+    }: {
+      email: string
+      password: string
+    }): Promise<void> {
+      this.model.isLoading = true
+
+      try {
+        const { error } = await {service}Auth.signIn.email({
+          email,
+          password,
+        })
+
+        if (error) {
+          throw new Error(error.message)
+        }
+
+        // 세션 쿠키가 설정되었으므로 service home으로 이동해 서버에서 user를 다시 가져옴
+        window.location.href = {homePath}
+      } finally {
+        this.model.isLoading = false
+      }
+    }
+
+    async signUp({
+      email,
+      name,
+      password,
+    }: {
+      email: string
+      name: string
+      password: string
+    }): Promise<void> {
+      this.model.isLoading = true
+
+      try {
+        const { error } = await {service}Auth.signUp.email({
+          email,
+          name,
+          password,
+        })
+
+        if (error) {
+          throw new Error(error.message)
+        }
+
+        window.location.href = {homePath}
+      } finally {
+        this.model.isLoading = false
+      }
+    }
+
+    async signOut(): Promise<void> {
+      this.model.isLoading = true
+
+      try {
+        await {service}Auth.signOut()
+        this.model.me.set(null)
+        window.location.href = {loginPath}
+      } finally {
+        this.model.isLoading = false
+      }
+    }
+  }
+
+  return new UserAuthActions()
+})

@@ -7,14 +7,15 @@
 
 **The building blocks behind [comwit.io](https://comwit.io).**
 
-Open-source State and UI libraries used in Comwit templates. Use either on its own, or together.
+Open-source State and UI libraries used in Comwit templates, and the template itself as one command. Use any of them on its own, or all together.
 
 [Website](https://library.comwit.io) · [Releases](https://github.com/burrr-ai/comwit/releases)
 
-| Library   | What it does                                                                    | Get started                                                                  |
-| --------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **State** | Client state, queries, and actions through one typed domain hook.               | [Docs](https://library.comwit.io/state/docs) · [Source](packages/state/core) |
-| **UI**    | Headless behavior and editable component sources you install into your project. | [Docs](https://library.comwit.io/ui) · [Source](packages/ui)                 |
+| Library      | What it does                                                                                           | Get started                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| **State**    | Client state, queries, and actions through one typed domain hook.                                      | [Docs](https://library.comwit.io/state/docs) · [Source](packages/state/core) |
+| **UI**       | Headless behavior and editable component sources you install into your project.                        | [Docs](https://library.comwit.io/ui) · [Source](packages/ui)                 |
+| **Template** | A Next.js 16 project sliced by domain, with one-way layers, `.ai.md` rules per layer and agent skills. | [Docs](https://library.comwit.io/template) · [Source](packages/template)     |
 
 ## State
 
@@ -33,6 +34,14 @@ npx comwit-ui@latest add button dialog input
 
 The CLI copies styled component sources into your project. You own and edit those files; `@comwit/ui` provides the underlying behavior. The templates use Tailwind CSS v4. See [installation](https://library.comwit.io/ui/docs/installation), [components](https://library.comwit.io/ui/components), or [UI's llms.txt](https://library.comwit.io/ui/llms.txt).
 
+## Template
+
+```bash
+npm create comwit@latest my-app
+```
+
+`create-comwit` scaffolds the Next.js template: services sliced by domain, `page → state → api → repository`, an `.ai.md` guide beside every layer, Oxlint rules that enforce the boundaries, and skills for the app shell, auth and SEO. State and UI come pre-wired; the database, storage and hosting stay your choice. Read [why the folders look this way](https://library.comwit.io/template/docs/architecture) or give your agent [Template's llms.txt](https://library.comwit.io/template/llms.txt).
+
 ## Workspace
 
 ```text
@@ -46,6 +55,7 @@ packages/
   ui/core/              @comwit/ui
   ui/templates/         @comwit/ui-templates — source for CLI and previews
   ui/cli/               comwit-ui — component installer
+  template/             create-comwit — project scaffolder (bundled template snapshot)
 ```
 
 Each published package keeps its own version. The retired `comwit` compatibility wrapper is no longer maintained in this workspace; use `@comwit/state`.
@@ -69,6 +79,7 @@ pnpm dev:docs
 | `pnpm dev:ui-catalog`            | UI catalog, port 3007                                               |
 | `pnpm storybook`                 | UI stories, port 6008                                               |
 | `pnpm registry`                  | Regenerate the bundled component registry                           |
+| `pnpm sync:template`             | Regenerate the bundled project template from the source checkout    |
 
 For catalog/Storybook development, run `pnpm build:packages` first and keep `pnpm dev:ui` running when editing the headless engine. See [contributing](CONTRIBUTING.md) for documentation generation and release checks.
 

@@ -1,0 +1,78 @@
+// ============================================================
+// 레퍼런스: src/server/auth/admin.ts
+// 공개 가입은 차단하고, 명시적으로 요청받은 계정만 서버에서 생성한다.
+// ============================================================
+
+import 'server-only'
+
+import { betterAuth, type BetterAuthOptions } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { admin } from "better-auth/plugins/admin"
+import { connection } from "next/server"
+import { cache } from "react"
+import { INTERNAL_ADMIN_AUTH_BASE_PATH } from "@/lib/admin-routes"
+import { getDb } from "@/server/db"
+import {
+  adminAuthUser,
+  adminAuthSession,
+  adminAuthAccount,
+  adminAuthVerification,
+} from "@/server/db/schema"
+import { config } from "@/server/config"
+
+async function createAuth() {
+  // betterAuth() calls Math.random(); with cacheComponents it must run at
+  // request time, so opt out of prerendering before creating the instance.
+  await connection()
+  const db = await getDb()
+
+  const authOptions = {
+    secret: config.ADMIN_AUTH_SECRET,
+    basePath: INTERNAL_ADMIN_AUTH_BASE_PATH,
+    baseURL: {
+      allowedHosts: ["*"],
+      protocol: config.NODE_ENV === "development" ? "auto" : "https",
+    },
+    database: drizzleAdapter(db, {
+      provider: "sqlite",
+      schema: {
+        user: adminAuthUser,
+        session: adminAuthSession,
+        account: adminAuthAccount,
+        verification: adminAuthVerification,
+      },
+    }),
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: true,
+    },
+    plugins: [
+      admin({
+        defaultRole: "admin",
+        adminRoles: ["admin"],
+      }),
+    ],
+    account: {
+      skipStateCookieCheck: true,
+    },
+    advanced: {
+      cookiePrefix: "admin",
+      useSecureCookies: true,
+      defaultCookieAttributes: {
+        sameSite: "None",
+      },
+    },
+    trustedOrigins: ["*"],
+  } satisfies BetterAuthOptions
+
+  return betterAuth(authOptions)
+}
+
+export const getAdminAuth = cache(createAuth)
+
+export const getAdminServerSession = cache(async () => {
+  const auth = await getAdminAuth()
+  return auth.api.getSession({
+    headers: await import('next/headers').then(m => m.headers()),
+  })
+})

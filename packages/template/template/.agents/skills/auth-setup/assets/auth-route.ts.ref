@@ -1,0 +1,26 @@
+// ============================================================
+// 레퍼런스: API 라우트 핸들러
+// 위치: src/app/({service})/{service}/api/auth/[...all]/route.ts
+// ============================================================
+// 치환 대상:
+//   {service} → app, admin 등
+//   {Service} → App, Admin 등 (PascalCase)
+// ============================================================
+
+import { get{Service}Auth } from "@/server/auth/{service}"
+import { toNextJsHandler } from "better-auth/next-js"
+
+const handler = async (req: Request) => {
+  const auth = await get{Service}Auth()
+  const nextHandler = toNextJsHandler(auth.handler)
+
+  if (req.method === "GET") {
+    return nextHandler.GET(req)
+  } else if (req.method === "POST") {
+    return nextHandler.POST(req)
+  }
+
+  return new Response("Method not allowed", { status: 405 })
+}
+
+export { handler as GET, handler as POST }

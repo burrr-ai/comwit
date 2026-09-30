@@ -1,0 +1,136 @@
+---
+title: Why domains, not layers
+order: 2
+description: The reasoning behind the folder structure — change arrives per domain, so code should be sliced per domain.
+---
+
+# Why domains, not layers
+
+Day one is always fine. Anyone, human or model, can scaffold a CRUD page in
+minutes. The test comes months later: forty features in, the product manager
+pivots, and a "like" button means touching twelve files across four folders.
+Nobody remembers why `formatCount` lives in a shared utils folder that three
+other features depend on.
+
+This template is the answer we arrived at after building many products that
+way. The answer is not new — Redux slices, Feature-Sliced Design and vertical
+slice architecture all land in the same place — but here it shapes every
+folder, every lint rule and every `.ai.md`.
+
+## Three traps
+
+They show up in almost every growing React project.
+
+**Over-abstracting similar UI.** A `PostCard` and a `ProductCard` look alike,
+so someone builds a shared `CardView` with `variant="post"` and
+`variant="product"`. Six months later it has fourteen props, three conditional
+branches, and nobody touches it because changing the post layout might break
+the product page. Looking similar is not being similar: post cards and product
+cards change for completely different business reasons.
+
+**Over-separating concerns.** The API returns a follower count as `1234567`
+and the UI needs `1.2M`, so a `formatFollowerCount` util gets called from
+everywhere. When product asks for the exact number on hover, you hunt through
+eight components. Format once, in the data layer, before the value reaches a
+component.
+
+**Over-splitting cohesive operations.** Liking a post means updating the item
+in the list, updating the detail view, sending the request and handling the
+error. Split into four functions in the name of single responsibility, and the
+next person forgets to call one of them. Operations that happen together
+should live together.
+
+## The real villain is change
+
+If requirements never changed, any structure would work. They always change,
+and that is the job, not a bug in the process. The useful question is not "how
+do I write perfect code" but "how do I make change cheap".
+
+Look at how requirements actually arrive: **per domain**. "Add tags to posts"
+is the post domain. "Users need profile pictures" is the user domain. "The
+cart should support discount codes" is the cart domain. Nobody walks in and
+says "change every component that uses `formatDate`".
+
+So changes propagate per domain, and contents differ per domain. Code should
+be sliced the same way.
+
+## Slicing
+
+Instead of grouping by technical role:
+
+```text
+src/
+  components/  PostCard.tsx   UserAvatar.tsx   CartItem.tsx
+  hooks/       usePost.ts     useUser.ts       useCart.ts
+  api/         post.ts        user.ts          cart.ts
+```
+
+group by the business unit, and keep the technical layers inside it:
+
+```text
+src/services/app/
+  api/    post/   user/   cart/
+  state/  post/   user/   cart/
+  page/   posts/  profile/  cart/
+```
+
+When product says "add comments to posts", you open the `post` slice of each
+layer and everything you need is there. Nothing scatters across `components/`,
+`hooks/`, `api/` and `store/`.
+
+The layers still exist, because they carry different responsibilities and
+different runtimes (server actions, client state, React). They just do not
+own the top-level structure. The structure belongs to the domain.
+
+## Rules that came from doing this
+
+These are the rules the template enforces, and each one is the fix for a trap
+above.
+
+- **Pages compose any domain.** A page is a composition layer; it pulls from
+  `post`, `user` and `cart` as it needs.
+- **Domain UI is repeated, not shared.** If two pages show a post card, there
+  are two post card components. UI is repeated; logic is reused.
+- **Domain state is global.** One store per domain, reachable from anywhere.
+  No prop drilling, no context provider per domain.
+- **List and detail live together.** Liking a post from the list updates the
+  detail view too, because they share a model.
+- **Actions are stateful.** On the post detail page the action already knows
+  which post is current; the UI does not pass `postId` around.
+- **The API layer preprocesses.** Raw numbers become `1.2M`, timestamps
+  become `3 days ago`, before the component sees them. Components never
+  format, filter, aggregate or slice.
+- **Domain objects travel whole.** `<PostCard post={post} />`, not a dozen
+  scalar props.
+- **Dependencies flow one way.** `page → state → api → repository`. Never
+  backwards, and never around: a page does not call the api directly.
+
+## Two kinds of slice
+
+Domains slice by business object. **Services** slice by who the user is. The
+template starts with `app` for end users and `admin` for operators, each with
+its own layout, auth boundary and UI. Cross-imports between services are
+forbidden; shared code lives in `src/lib` and `src/server`. A product that
+serves a genuinely different kind of user, say suppliers next to buyers, adds
+a third service instead of branching every screen.
+
+## Why this matters more with AI
+
+When you ask a model to "add a bookmark feature to posts", it has to
+understand the codebase first. In a role-grouped project it reads through
+`components/`, `hooks/`, `api/` and `store/` to piece together how posts
+work, misses things, and puts code in the wrong place.
+
+With domain slices it reads `state/post/types.ts` and knows what the domain
+manages, which actions exist and what each one does. `model.ts` shows
+initialization, `actions/*.ts` shows implementation, `index.ts` shows the
+public surface. The write order is always the same, the dependency direction
+is always the same, and the lint rules reject anything else.
+
+That is why the template ships an `.ai.md` beside every layer instead of a
+long README: the structure is the documentation, and the guide next to it
+states the few things the structure cannot. A human who missed the tribal
+knowledge gets the same benefit.
+
+Good architecture was always the answer. Models only made the price of
+ignoring it impossible to hide.

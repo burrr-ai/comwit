@@ -11,6 +11,7 @@ Comwit is a pnpm workspace containing independent State and UI libraries used in
 - `pnpm dev:docs` — start the shared documentation app.
 - `pnpm dev:state` / `pnpm dev:ui` — watch-build a runtime.
 - `pnpm dev:playground`, `pnpm dev:ui-catalog`, `pnpm storybook` — development apps.
+- `pnpm sync:template` — regenerate `packages/template/template` from the private template checkout (needs `~/work/projects/comwit-template` or `--source`).
 
 ## Boundaries
 
@@ -18,7 +19,8 @@ Comwit is a pnpm workspace containing independent State and UI libraries used in
 - `packages/ui/core` (`@comwit/ui`) owns headless behavior and accessibility.
 - `packages/ui/templates` (`@comwit/ui-templates`) owns editable component source and the shared CSS token contract.
 - `packages/ui/cli` (`comwit-ui`) installs component source into consumer projects. Generate its registry from templates; do not edit generated JSON.
-- `apps/docs` owns the shared site, product-specific human docs and separate llms.txt files. Generate UI previews from Storybook specs and registry source.
+- `packages/template` (`create-comwit`) scaffolds the Next.js project template. `template/` is a generated snapshot: never edit it by hand; change `scripts/sync.mjs` (excludes, patches) or `overrides/` and re-run the sync. The snapshot must stay free of any hosting, database or storage vendor; `scripts/verify.mjs` enforces that in `pnpm test`.
+- `apps/docs` owns the shared site, product-specific human docs and separate llms.txt files. Generate UI previews from Storybook specs and registry source. Template guides live in `content/template`.
 
 Keep public package names, independent versions, and runtime exports stable during repository maintenance. Site branding must not change the UI library's token defaults. Never couple the UI engine to State just to support a docs example.
 

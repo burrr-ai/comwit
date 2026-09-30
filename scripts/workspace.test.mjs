@@ -311,3 +311,67 @@ test('generated docs consume the moved registry and expose separate agent guides
   assert.match(state, /@comwit\/state/)
   assert.doesNotMatch(state, /library\.comwit\.io\/(docs|llm)\//)
 })
+
+test('create-comwit scaffolds a project that carries no platform-specific files', () => {
+  const cli = join(root, 'packages/template/src/index.js')
+  const fixture = mkdtempSync(join(tmpdir(), 'create-comwit-'))
+  try {
+    const out = execFileSync(
+      process.execPath,
+      [cli, 'my-shop', '--cwd', fixture, '--no-install', '--no-git'],
+      { encoding: 'utf8' }
+    )
+    assert.match(out, /files written/)
+    const app = join(fixture, 'my-shop')
+    for (const rel of [
+      'AGENTS.md',
+      'CLAUDE.md',
+      '.gitignore', // shipped as _gitignore, restored on scaffold
+      '.env.example',
+      'comwit.json',
+      'src/services/.ai.md',
+      'src/services/state.ai.md',
+      'src/server/repository/.ai.md',
+      '.agents/skills/app-setup/SKILL.md',
+      '.agents/skills/auth-setup/SKILL.md',
+      '.claude/skills/auth-setup/SKILL.md',
+      'src/services/app/page/home/index.tsx',
+    ])
+      assert.ok(existsSync(join(app, rel)), `${rel} should be scaffolded`)
+    assert.ok(!existsSync(join(app, '_gitignore')))
+    for (const rel of [
+      '.gitea',
+      '.tools',
+      'contracts',
+      '.mcp.json',
+      'src/instrumentation.ts',
+      'pnpm-lock.yaml',
+    ])
+      assert.ok(!existsSync(join(app, rel)), `${rel} must not be scaffolded`)
+    const pkg = JSON.parse(readFileSync(join(app, 'package.json'), 'utf8'))
+    assert.equal(pkg.name, 'my-shop')
+    assert.equal(pkg.scripts.dev, 'next dev')
+    assert.ok(!('@brrrd/adapter' in pkg.dependencies))
+    assert.ok('@comwit/state' in pkg.dependencies)
+    assert.doesNotMatch(readFileSync(join(app, 'next.config.ts'), 'utf8'), /brrrd|adapterPath/)
+    assert.match(readFileSync(join(app, 'README.md'), 'utf8'), /^# my-shop/)
+    // A second run into the same non-empty directory is refused.
+    assert.throws(() =>
+      execFileSync(
+        process.execPath,
+        [cli, 'my-shop', '--cwd', fixture, '--no-install', '--no-git'],
+        {
+          stdio: 'pipe',
+        }
+      )
+    )
+  } finally {
+    rmSync(fixture, { recursive: true, force: true })
+  }
+})
+
+test('the bundled template snapshot stays free of platform-specific content', () => {
+  execFileSync(process.execPath, [join(root, 'packages/template/scripts/verify.mjs')], {
+    stdio: 'pipe',
+  })
+})
