@@ -2,7 +2,9 @@
 
 `create-comwit` scaffolds a Next.js 16 project whose structure is the documentation:
 services sliced by domain, four layers that depend one way, an `.ai.md` rulebook beside
-every layer, and skills for the one-time setups.
+every layer, and skills for the one-time setups. Two positions: AI-native (the rules an
+agent needs ship with the project) and Next.js as the full stack (the api layer is the
+backend).
 
 ## Create a project
 
@@ -27,7 +29,11 @@ Read these before writing code, in this order:
 
 Dependency flow `page → state → api → repository`; write order is the reverse. All data
 goes through `src/server/repository/` (in-memory rows in `_data/` until a database is
-connected; connecting one changes only repository bodies).
+connected; connecting one changes only repository bodies). The api layer's `'use server'`
+functions are wrapped in `createAction` and exported through `resolveActions`; the build
+turns them into the kit's own transport (one POST route handler, parallel calls, only
+`ActionError` messages reach the browser), not native Server Actions — keep the source
+convention and call the api only through a domain's `index.ts`.
 
 Skills in `.agents/skills/`: `app-setup` (tabs, detail screens, PWA — before the first app
 screen), `auth-setup` (Better Auth per service — after a database), `seo-optimize`,
@@ -38,6 +44,7 @@ Oxlint rules in `eslint-rules/` enforce every boundary above.
 
 - Why domains, not layers: https://library.comwit.io/template/docs/architecture
 - Folder structure and lint rules: https://library.comwit.io/template/docs/structure
+- Design decisions (server-function transport, caching, auth boundary): https://library.comwit.io/template/docs/decisions
 - The four layers: https://library.comwit.io/template/docs/layers
 - Agents, guides and skills: https://library.comwit.io/template/docs/agents
 - State library: https://library.comwit.io/state/llms.txt

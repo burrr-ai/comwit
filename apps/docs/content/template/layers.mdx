@@ -49,7 +49,9 @@ than stored. When a database arrives, only the function bodies change.
 function wrapped in `createAction`, exported as one object from `index.ts`
 through `resolveActions`. The build replaces that object with a typed facade
 over a single POST route handler, so Server Components call the manifest
-directly and browsers send one request per method.
+directly and browsers send one request per method — the kit's own transport,
+not native Server Actions; [Design decisions](/template/docs/decisions)
+explains why.
 
 ```ts
 // types.ts — the contract, written first

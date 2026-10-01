@@ -9,9 +9,20 @@ const STRENGTHS: { title: string; body: React.ReactNode }[] = [
     title: 'Build like a developer, without being one.',
     body: (
       <>
-        <code>AGENTS.md</code> and an <code>.ai.md</code> beside every layer tell Claude Code, Codex
-        or Antigravity where things go and how they are written. Your prompts stay about the
-        product.
+        <code>AGENTS.md</code>, an <code>.ai.md</code> beside every layer and one-time skills (
+        <code>app-setup</code>, <code>auth-setup</code>, <code>seo-optimize</code>) tell Claude
+        Code, Codex or Antigravity where things go and how they are written. Your prompts stay about
+        the product.
+      </>
+    ),
+  },
+  {
+    title: 'Full-stack in one repo.',
+    body: (
+      <>
+        The api layer is the backend: typed server functions over the kit’s own transport — parallel
+        calls, only <code>ActionError</code> reaches the browser, Server Components call them with
+        no HTTP hop. No second service to run.
       </>
     ),
   },
@@ -30,15 +41,6 @@ const STRENGTHS: { title: string; body: React.ReactNode }[] = [
       <>
         Two dozen Oxlint rules fail <code>pnpm run validate</code> when a boundary is crossed,
         before anyone reviews.
-      </>
-    ),
-  },
-  {
-    title: 'Setups as skills.',
-    body: (
-      <>
-        <code>app-setup</code> (tabs, detail screens, PWA), <code>auth-setup</code> (Better Auth per
-        service), <code>seo-optimize</code>. One-time setups remove themselves when done.
       </>
     ),
   },
@@ -69,15 +71,15 @@ export default function TemplateOverview() {
     <div className="tp-overview">
       <header className="tp-hero">
         <p className="tp-kicker">
-          <code>create-comwit</code> Comwit’s Next.js kit
+          <code>create-comwit</code> AI-native · Next.js full-stack
         </p>
         <h1>
           <span>One command.</span> <span>A codebase your agent can’t get wrong.</span>
         </h1>
         <p className="tp-lead">
-          The architecture, the agent rulebook and the lint rules that enforce it, in one project —
-          so a non-developer with a coding agent builds like a senior team, and the code stays
-          maintainable for a hundred years.
+          Next.js as the whole stack, with the architecture, the agent rulebook and the lint rules
+          that enforce it in one project — so a non-developer with a coding agent builds like a
+          senior team, and the code stays maintainable for a hundred years.
         </p>
         <div className="tp-hero-actions">
           <CopyCommand command="npm create comwit@latest my-app" />
