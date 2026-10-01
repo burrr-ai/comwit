@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/state/*
   - packages/ui/*
+  - packages/template
 
 allowBuilds:
   esbuild: true

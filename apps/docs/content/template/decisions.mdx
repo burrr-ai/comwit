@@ -1,0 +1,104 @@
+---
+title: Design decisions
+group: How it works
+order: 5
+description: The choices behind the kit and why they were made — starting with how server functions are wired.
+---
+
+# Design decisions
+
+The kit takes two positions: it is **AI-native** (the rules an agent needs ship
+with the project) and it uses **Next.js as the full stack** (the api layer is
+the backend; there is no second service). Everything below follows from those
+two. New decisions get an entry here, with the reason, so the next person does
+not re-derive it.
+
+## Server functions: our own transport, not native Server Actions
+
+The api layer looks like server actions — `'use server'` files wrapped in
+`createAction`, exported through `resolveActions` — but at build time the kit
+swaps the mechanics (`src/lib/server-action/`, wired by `withServerFn` in
+`next.config.ts`):
+
+- A Turbopack loader turns `'use server'` into `import 'server-only'`, so the
+  functions are never registered as native Next Server Functions.
+- The domain `index.ts` is replaced by a typed facade of function ids. Server
+  Components and RSC resolve the `react-server` export condition and call the
+  action module directly through a build-time manifest, with no HTTP hop.
+  Client-side code gets a client runtime that POSTs to one internal route
+  handler, `POST /api/internal/server-fn/[...slug]`, one request per method.
+- The wire codec is plain JSON plus tags for `undefined`, `Date`, `bigint` and
+  non-finite numbers, so the same codec runs in the browser and the handler
+  and `@comwit/state` proxies serialize as they are.
+
+Why not native Server Actions:
+
+- **Parallelism.** Next runs native action calls from one client in series. Here
+  each method is an independent POST, so `Promise.all([a.findAll(), a.getStats()])`
+  really runs in parallel.
+- **Explicit errors.** Only `ActionError` messages cross to the browser; any
+  other throw is logged and masked by the handler. A lint rule
+  (`api-action-error`) makes the boundary visible in code.
+- **No closure capture, stable ids.** Actions are plain modules, never
+  closures created in a render; ids come from the file path, not an opaque
+  hash, which makes the manifest reviewable.
+- **One place for transport rules.** Same-origin checks, body limits and
+  `Cache-Control: no-store` live in one handler instead of per action.
+- **Server callers stay direct.** The service layout awaits `getMe()` in RSC
+  without going through HTTP, so hydration does not add a round trip.
+
+What it asks of you: keep `'use server'` as the source convention, call the
+api only through `index.ts`, and do not add API-transport-only `snapshot()` or
+`deproxy()` calls — the codec serializes enumerable values already.
+
+## Cache Components with a service worker that respects the same boundary
+
+`cacheComponents: true` and `partialPrefetching` separate the static shell
+from request-time data. `staleTimes.static` is a year and `staleTimes.dynamic`
+is zero; the service worker (`src/app/sw.ts`) caches static assets, static
+RSC payloads and complete documents, and never anything marked `private` or
+`no-store`. One deployment id (`NEXT_DEPLOYMENT_ID` or the Git SHA) namespaces
+every cache; `AppVersionGuard` polls `version.json` and reloads stale clients.
+Metadata never reads request data, so the shell stays static and social
+crawlers get the tags in `<head>`.
+
+## Auth resolves on the server, once, with a null boundary
+
+Each service's route group renders `<Suspense fallback={null}>` around an
+async layout that awaits `getMe()`; a small client adapter calls
+`useUser.hydrate(...)` before any consumer reads the user. No skeleton, no
+anonymous flash, no `useEffect` bootstrap, and the adapter subscribes to
+nothing so a sign-out can never replay the server seed. A lint rule
+(`auth-hydration-boundary`) keeps the adapter clean.
+
+## The api layer shapes data for the screen
+
+Domains in the api layer are page-fit, not table-fit. Relative times
+(`30분 전`), formatted dates and display counts are produced in the api with
+the shared `kst` helpers, so components never format, filter, aggregate or
+slice. The reason is pagination: a component only has the current page, so
+client-side numbers are wrong by construction.
+
+## Repository is the only door to data
+
+Every read goes through `src/server/repository/`, which starts as functions
+over normalized in-memory rows. IDs are UUID v7 (time-ordered, safe as a
+primary key), deletion is a soft delete, and `schema.dbml` is written before
+rows so relationships are designed rather than discovered. Connecting a
+database changes only the function bodies.
+
+## Admin lives on a stable internal path
+
+The admin service's route files stay under `/admin`; the public entry is a
+project-specific prefix that `src/proxy.ts` rewrites, and direct `/admin/*`
+requests return 404. Rewriting in the request proxy rather than
+`next.config.ts` keeps RSC navigation and prefetch from resolving an app
+catch-all first. There is no admin sign-up; the first account is created only
+on an explicit request through the server-only admin API.
+
+## Rules are code
+
+Every rule above that can be checked is an Oxlint plugin in `eslint-rules/`,
+run by `pnpm run validate`. The `.ai.md` files state what the structure
+cannot; the lint rules reject what the `.ai.md` files forbid. Agents and
+people get the same feedback, before review.

@@ -1,0 +1,143 @@
+'use client'
+
+import * as React from 'react'
+import { Dialog as DialogPrimitive } from '@comwit/ui'
+import { XIcon } from 'lucide-react'
+
+import { GlassSurface } from '@/lib/components/ui/glass'
+import { OverlayMotion } from '@/lib/overlay-motion'
+import { cn } from '@/lib/utils/cn'
+import { uiText } from '@/lib/ui-text'
+import { focusRing } from '@/lib/interaction'
+
+function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+}
+
+function DialogTrigger({ ...props }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
+}
+
+function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
+}
+
+function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrimitive.Close>) {
+  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
+}
+
+function DialogOverlay({
+  className,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+  return (
+    <DialogPrimitive.Overlay
+      data-slot="dialog-overlay"
+      className={cn('fixed inset-0 z-overlay bg-overlay', className)}
+      {...props}
+      asChild
+    >
+      <OverlayMotion preset="scrim" />
+    </DialogPrimitive.Overlay>
+  )
+}
+
+function DialogContent({
+  className,
+  children,
+  showCloseButton = true,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  showCloseButton?: boolean
+}) {
+  return (
+    <DialogPortal data-slot="dialog-portal">
+      <DialogOverlay />
+      {/* 스크림 위의 굴절 유리(dense) — 면·보더·그림자는 .glass 가 갖는다. 색만 유틸로 덮으면 유리가 사라진다. */}
+      <GlassSurface variant="morphing" shape="panel" dense>
+        <DialogPrimitive.Content
+          data-slot="dialog-content"
+          className={cn(
+            'text-popover-foreground fixed top-[50%] left-[50%] z-modal grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-card p-6 sm:max-w-lg',
+            className
+          )}
+          {...props}
+          asChild
+        >
+          {/* 0.9 배에서 커지며 나타나고 같은 길로 사라진다 — lib/overlay-motion */}
+          <OverlayMotion preset="dialog">
+            {children}
+            {showCloseButton && (
+              <DialogPrimitive.Close
+                data-slot="dialog-close"
+                className={cn(
+                  focusRing,
+                  "absolute top-4 right-4 rounded-lg p-1 opacity-60 transition hover:bg-accent hover:opacity-100 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+                )}
+              >
+                <XIcon />
+                <span className="sr-only">{uiText.close}</span>
+              </DialogPrimitive.Close>
+            )}
+          </OverlayMotion>
+        </DialogPrimitive.Content>
+      </GlassSurface>
+    </DialogPortal>
+  )
+}
+
+function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot="dialog-header"
+      className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+      {...props}
+    />
+  )
+}
+
+function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot="dialog-footer"
+      className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
+      {...props}
+    />
+  )
+}
+
+function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
+  return (
+    <DialogPrimitive.Title
+      data-slot="dialog-title"
+      className={cn('text-title-md leading-none', className)}
+      {...props}
+    />
+  )
+}
+
+function DialogDescription({
+  className,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Description>) {
+  return (
+    <DialogPrimitive.Description
+      data-slot="dialog-description"
+      className={cn('text-body-sm text-soft-foreground', className)}
+      {...props}
+    />
+  )
+}
+
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+}

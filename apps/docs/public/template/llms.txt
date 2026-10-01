@@ -1,0 +1,51 @@
+# Comwit Template — agent guide
+
+`create-comwit` scaffolds a Next.js 16 project whose structure is the documentation:
+services sliced by domain, four layers that depend one way, an `.ai.md` rulebook beside
+every layer, and skills for the one-time setups. Two positions: AI-native (the rules an
+agent needs ship with the project) and Next.js as the full stack (the api layer is the
+backend).
+
+## Create a project
+
+```bash
+npm create comwit@latest my-app     # or: npx create-comwit@latest my-app
+cd my-app && pnpm run dev
+```
+
+Flags: `--opennext` (Cloudflare Workers via OpenNext: wrangler.jsonc, open-next.config.ts, `preview`/`deploy` scripts) ·
+`--name <pkg>` · `--pm pnpm|npm|yarn|bun` · `--no-install` · `--no-git` · `--dry`.
+
+## Inside a generated project
+
+Read these before writing code, in this order:
+
+1. `AGENTS.md` — the rules file (CLAUDE.md imports it): flow, stack, tree, env, database/storage/deploy.
+2. `src/services/.ai.md` — import rules and layer dependencies.
+3. The `.ai.md` of the layer you are about to touch: `src/services/api.ai.md`,
+   `src/services/state.ai.md`, `src/services/page.ai.md`, `src/server/repository/.ai.md`,
+   `src/app/.ai.md`, `src/services/admin/.ai.md`.
+4. `src/services/design.md` before any visual decision.
+
+Dependency flow `page → state → api → repository`; write order is the reverse. All data
+goes through `src/server/repository/` (in-memory rows in `_data/` until a database is
+connected; connecting one changes only repository bodies). The api layer's `'use server'`
+functions are wrapped in `createAction` and exported through `resolveActions`; the build
+turns them into the kit's own transport (one POST route handler, parallel calls, only
+`ActionError` messages reach the browser), not native Server Actions — keep the source
+convention and call the api only through a domain's `index.ts`.
+
+Skills in `.agents/skills/`: `app-setup` (tabs, detail screens, PWA — before the first app
+screen), `auth-setup` (Better Auth per service — after a database), `seo-optimize`,
+`pnpm run validate` after every change; the
+Oxlint rules in `eslint-rules/` enforce every boundary above.
+
+## Reference
+
+- Why domains, not layers: https://library.comwit.io/template/docs/architecture
+- Folder structure and lint rules: https://library.comwit.io/template/docs/structure
+- Design decisions (server-function transport, caching, auth boundary): https://library.comwit.io/template/docs/decisions
+- The four layers: https://library.comwit.io/template/docs/layers
+- Agents, guides and skills: https://library.comwit.io/template/docs/agents
+- State library: https://library.comwit.io/state/llms.txt
+- UI library: https://library.comwit.io/ui/llms.txt

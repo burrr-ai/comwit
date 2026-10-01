@@ -6,6 +6,7 @@ import { useState, useSyncExternalStore } from 'react'
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'motion/react'
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight'
 import { SquaresFourIcon } from '@phosphor-icons/react/dist/csr/SquaresFour'
+import { TreeStructureIcon } from '@phosphor-icons/react/dist/csr/TreeStructure'
 import { PauseIcon } from '@phosphor-icons/react/dist/csr/Pause'
 import { PlayIcon } from '@phosphor-icons/react/dist/csr/Play'
 import { SiteHeader } from './site-header'
@@ -61,7 +62,7 @@ export function ExhibitionLanding() {
     serverPresentation
   )
   const [paused, setPaused] = useState(false)
-  const [library, setLibrary] = useState<'state' | 'ui' | null>(null)
+  const [library, setLibrary] = useState<'state' | 'ui' | 'template' | null>(null)
   const active = allowed && !paused
   const targetX = useMotionValue(0)
   const targetY = useMotionValue(0)
@@ -172,6 +173,27 @@ export function ExhibitionLanding() {
               Your interface.
               <br />
               Your rules.
+            </span>
+            <span className="exhibition-route-arrow">
+              <ArrowUpRightIcon size={32} aria-hidden="true" />
+            </span>
+            <span className="sr-only"> documentation</span>
+          </Link>
+          <Link
+            href="/template"
+            onPointerEnter={() => setLibrary('template')}
+            onPointerLeave={() => setLibrary(null)}
+            onFocus={() => setLibrary('template')}
+            onBlur={() => setLibrary(null)}
+            className="exhibition-route"
+          >
+            <span className="exhibition-route-index">03</span>
+            <TreeStructureIcon size={43} weight="fill" aria-hidden="true" />
+            <span className="exhibition-route-title">Template</span>
+            <span className="exhibition-route-detail">
+              One command.
+              <br />
+              One architecture.
             </span>
             <span className="exhibition-route-arrow">
               <ArrowUpRightIcon size={32} aria-hidden="true" />

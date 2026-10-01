@@ -1,0 +1,74 @@
+// ============================================================
+// 레퍼런스: src/services/admin/state/user/actions/auth.ts
+// 관리자 공개 가입은 없고 로그인/비밀번호 변경/로그아웃만 제공한다.
+// ============================================================
+
+import { action } from "@comwit/state"
+import { adminRoutes } from "@/lib/admin-routes"
+import { adminAuth } from "@/lib/auth-client/admin"
+import type { UserActions } from "../types"
+import { user } from "../model"
+
+type UserAuthActions = Pick<
+  UserActions,
+  "signIn" | "changePassword" | "signOut"
+>
+
+export const userAuthActions = action<UserAuthActions>(({ state }) => {
+  class UserAuthActions {
+    private model = state(user)
+
+    async signIn({
+      email,
+      password,
+    }: {
+      email: string
+      password: string
+    }): Promise<void> {
+      this.model.isLoading = true
+
+      try {
+        const { error } = await adminAuth.signIn.email({ email, password })
+        if (error) throw new Error(error.message)
+        window.location.href = adminRoutes.dashboard
+      } finally {
+        this.model.isLoading = false
+      }
+    }
+
+    async changePassword({
+      currentPassword,
+      newPassword,
+    }: {
+      currentPassword: string
+      newPassword: string
+    }): Promise<void> {
+      this.model.isLoading = true
+
+      try {
+        const { error } = await adminAuth.changePassword({
+          currentPassword,
+          newPassword,
+          revokeOtherSessions: true,
+        })
+        if (error) throw new Error(error.message)
+      } finally {
+        this.model.isLoading = false
+      }
+    }
+
+    async signOut(): Promise<void> {
+      this.model.isLoading = true
+
+      try {
+        await adminAuth.signOut()
+        this.model.me.set(null)
+        window.location.href = adminRoutes.login
+      } finally {
+        this.model.isLoading = false
+      }
+    }
+  }
+
+  return new UserAuthActions()
+})

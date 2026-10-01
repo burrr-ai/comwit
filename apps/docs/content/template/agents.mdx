@@ -1,0 +1,92 @@
+---
+title: Working with coding agents
+group: How it works
+order: 6
+description: AGENTS.md, the .ai.md guides, the bundled skills and the workflow they assume.
+---
+
+# Working with coding agents
+
+The template was shaped by watching models build products in it. Everything
+a model needs is in the repository: one rules file, a guide beside each
+layer, skills for the one-time setups, and lint rules that reject wrong
+placement before a human sees it. Claude Code, Codex and Antigravity read the
+same files.
+
+## `AGENTS.md`
+
+The rules file. `CLAUDE.md` only imports it, so there is one copy. It covers
+the dependency flow, the services and domains, the skills, the tech stack
+table and the project tree. It says nothing about databases, storage or
+deployment: those are the project's decisions, and the repository layer keeps
+them out of the api, state and page code.
+
+## `.ai.md` beside every layer
+
+| Guide                          | Read before                                                              |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| `src/app/.ai.md`               | touching routes, layouts or the auth boundary                            |
+| `src/services/.ai.md`          | any work under services — import rules, layer dependencies               |
+| `src/services/api.ai.md`       | writing server actions                                                   |
+| `src/services/state.ai.md`     | writing models, actions or hooks                                         |
+| `src/services/page.ai.md`      | writing screens; lists the installed components                          |
+| `src/services/design.md`       | any visual decision — voice, mood, type scale, token usage               |
+| `src/services/admin/.ai.md`    | admin routes, account rules and how to tell the user the entry URL       |
+| `src/server/repository/.ai.md` | repository rules, CRUD naming, in-memory rows and the move to a database |
+
+The guides are short because the structure carries most of the meaning. They
+state the few things a folder tree cannot: write order, naming suffixes,
+which side effects belong where, and the traps that were hit before.
+
+## Skills
+
+Skills live in `.agents/skills/<name>/` (Codex and Antigravity read them
+directly) with a stub in `.claude/skills/<name>/` that carries the same
+frontmatter and points at the canonical file. `pnpm agents:test` fails when
+the two drift.
+
+**`app-setup`** — one-time setup for an app-like product: bottom tabs,
+fullscreen detail screens, app bars with history-aware back, page transitions,
+viewport and PWA install banner. Its CLI installs the shell from `comwit-ui`
+(`app-shell`, `app-screen`, `bottom-sheet`) for the detected router and inserts
+three guide sections about route groups, detail UI and detail state. The agent
+then connects the requested tabs and data. After validation the skill removes
+itself; the guides stay.
+
+**`auth-setup`** — installs Better Auth on Drizzle for one or more services.
+Each service gets prefixed tables, its own cookies, base path and auth
+instance; `app` gets a signed session-cookie cache, `admin` stays
+DB-authoritative and has no sign-up. The skill replaces the template's
+`TODO(auth-setup)` mocks (`getMe`, sign-in actions) with real session reads
+and keeps the hydration boundary intact. It needs a connected database first.
+
+**`seo-optimize`** — installs `src/lib/seo` with a site config,
+`buildMetadata`, JSON-LD, sitemap and robots, then wires the root layout.
+Absolute URLs come from `SITE_URL`.
+
+## Lint as the last reader
+
+Rules in `eslint-rules/` run on every `pnpm run validate`. They encode the
+architecture so a misplaced file, a component that formats data, or an api
+module that reaches into the database fails before review. The full list is
+on the [folder structure](/template/docs/structure#what-enforces-it) page.
+
+## Design guide
+
+`src/services/design.md` is the single source of truth for visual tone. It
+asks every element to justify itself, keeps one message per section, sizes
+text by role rather than by how much fits, and maps every change to the token
+knob that makes it (`--brand`, `--radius-scale`, `--display-font`, …) so
+components are edited last. When a project decides its voice and mood, that
+file changes first, then the screens.
+
+## What the template leaves to you
+
+- The database and its driver.
+- The object storage bucket.
+- The hosting platform. `pnpm run build` is standard Next.js output;
+  `--opennext` at scaffold time wires Cloudflare Workers instead.
+- The brand: colours, fonts and the mark are token overrides in
+  `globals.css` and one component.
+- The language of the UI. Defaults are Korean in `src/lib/ui-text.ts`, one
+  file to translate.

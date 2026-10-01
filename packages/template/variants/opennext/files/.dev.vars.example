@@ -1,0 +1,3 @@
+# Copy to .dev.vars (gitignored). Read by `pnpm run preview` (workerd); `next dev` reads .env instead.
+NODE_ENV=production
+SITE_URL=

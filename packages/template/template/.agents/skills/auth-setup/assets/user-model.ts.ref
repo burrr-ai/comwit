@@ -1,0 +1,14 @@
+// src/services/{service}/state/user/model.ts
+// In types.ts: me: Query<User | null>; isLoading: boolean (interactive actions).
+// Remove init/loadMe from UserActions. Adapt the API export for admin.
+import { model, query } from '@comwit/state'
+import { user as userApi } from '@/services/{service}/api/user'
+import type { User, UserState } from './types'
+
+export const user = model<UserState>({
+  me: query<User | null>({
+    initialData: null,
+    queryFn: () => userApi.getMe(),
+  }),
+  isLoading: false,
+})

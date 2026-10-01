@@ -2255,6 +2255,9 @@ html {
   background: #ffffff12;
 }
 @media (max-width: 800px) {
+  /* 위와 같은 선택자 목록이어야 한다 — 빌드가 목록을 :is() 로 묶어 특이성이 :root:has() 쪽으로 오르므로,
+     .ui-product 하나로는 폰에서 헤더 높이가 64px 로 남는다. */
+  :root:has(.ui-product, .state-docs-frame),
   .ui-product,
   .state-docs-frame {
     --site-header-height: 56px;

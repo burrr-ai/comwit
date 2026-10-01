@@ -1,0 +1,17 @@
+// src/services/{service}/page/layout/client.tsx
+// Adapt useUser to useAdminUser for admin. Preserve existing UI/providers.
+'use client'
+
+import { useUser, type User } from '@/services/{service}/state/user'
+
+export function {Service}LayoutClient({ children, initialUser }: {
+  children: React.ReactNode
+  initialUser: User | null
+}) {
+  // Hydration only: put normal user-hook subscriptions, account effects, and
+  // interactive UI in child components. Re-rendering this adapter on a user
+  // mutation can replay the old server seed after logout. Null is a valid seed.
+  // Await the server API in layout/index.tsx, not this synchronous initializer.
+  useUser.hydrate({ me: { data: initialUser } })
+  return <>{children}</>
+}

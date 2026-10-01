@@ -1,0 +1,215 @@
+---
+title: The four layers
+group: How it works
+order: 4
+description: What each layer is allowed to do, with the patterns the .ai.md files ask for.
+---
+
+# The four layers
+
+```text
+page  →  state  →  api  →  repository
+```
+
+Each layer has one job and one direction of dependency. This page is the
+short version of the four `.ai.md` guides the template installs; the guides
+are the source of truth and carry the full examples.
+
+## Repository — the only door to data
+
+`src/server/repository/{entity}.ts`, server-only, one file per aggregate
+root. It exposes raw table values through fixed names and hides whether they
+come from mock rows or a database.
+
+```ts
+import 'server-only'
+import { uuid } from './id'
+
+export async function create(data: { title: string }): Promise<Post> {
+  const now = new Date()
+  const post: Post = {
+    id: uuid(),
+    title: data.title,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  }
+  posts.push(post)
+  return post
+}
+```
+
+Mock rows in `_data/` are normalized like tables: flat, no duplication,
+foreign keys as ids, computed values like `likeCount` derived on query rather
+than stored. When a database arrives, only the function bodies change.
+
+## API — server actions shaped for the screen
+
+`src/services/{service}/api/{domain}/`. Every method is a `'use server'`
+function wrapped in `createAction`, exported as one object from `index.ts`
+through `resolveActions`. The build replaces that object with a typed facade
+over a single POST route handler, so Server Components call the manifest
+directly and browsers send one request per method — the kit's own transport,
+not native Server Actions; [Design decisions](/template/docs/decisions)
+explains why.
+
+```ts
+// types.ts — the contract, written first
+export interface PostAPI {
+  /** List query — always Pageable */
+  findAll: (filter: FindAllFilter, pageable: PageRequest) => Promise<Pageable<PostSimple>>
+  /** Detail query */
+  find: (id: string) => Promise<PostDetail>
+  /** Create */
+  create: (request: CreatePostRequest) => Promise<void>
+}
+```
+
+```ts
+// actions/create.ts
+'use server'
+import { createAction, ActionError } from '@/lib/utils'
+
+async function _create(request: CreatePostRequest): Promise<void> {
+  if (!request.title) throw new ActionError('제목을 입력해주세요')
+  await repository.create(request)
+}
+export const create = createAction(_create)
+```
+
+What the api layer owns:
+
+- **Screen-shaped responses.** `{ likeCount: 3, userId: 'abc' }` from the
+  repository becomes `{ likeCount: 3, isLikedByMe: true, displayCount: '3개' }`.
+  Relative times (`30분 전`) and formatted dates are produced here with the
+  shared `kst` helpers, never in components.
+- **Minimal arguments.** The current user comes from the session inside the
+  action, not from the caller. Queries return only what the user owns unless
+  the resource is public.
+- **User-facing errors.** Only `ActionError` messages reach the browser;
+  everything else is logged and masked.
+- **No database access.** Data goes through the repository, mock or real.
+
+## State — the domain model and every side effect
+
+`src/services/{service}/state/{domain}/` is the only place that imports
+`@comwit/state`. Four files, written in order:
+
+```text
+types.ts      State + Actions types — read this and you know the domain
+model.ts      model() with queries and local fields
+actions/*.ts  load · crud · interact — every side effect lives here
+index.ts      create() the hook, re-export types
+```
+
+```ts
+// model.ts
+export const product = model<ProductState>({
+  products: query<Pageable<Product>, { page: number }>({
+    initialData: { items: [], total: 0, page: 1, limit: 20, totalPages: 0 },
+    queryFn: ({ page }) => api.product.findAll({}, { page, limit: 20 }),
+    placeholderData: keepPreviousData,
+  }),
+  stats: query<ProductStats>({ initialData: EMPTY_STATS, queryFn: () => api.product.getStats() }),
+  selectedIds: [],
+})
+```
+
+```ts
+// actions/crud.ts
+export const crudActions = action<Pick<ProductActions, 'delete'>>(({ state }) => {
+  class CrudActions {
+    private model = state(product)
+
+    @OnError((e: unknown) => toast.error(e instanceof Error ? e.message : '실패했어요'))
+    async delete(id: string) {
+      if (!(await popup.confirm({ title: '삭제할까요?', destructive: true }))) return
+      const snapshot = [...this.model.products.data.items]
+      this.model.products.data.items = snapshot.filter((p) => p.id !== id) // optimistic
+      try {
+        await api.product.delete(id)
+        await Promise.all([this.model.products.refetch(), this.model.stats.refetch()])
+      } catch {
+        this.model.products.data.items = snapshot // rollback
+        throw new Error('Failed to delete')
+      }
+    }
+  }
+  return new CrudActions()
+})
+```
+
+The rules the guide asks for:
+
+- **List, detail and stats together.** A mutation updates them in one action
+  and refetches what it touched.
+- **Side effects only in actions.** Toasts, confirms, navigation through
+  `context.router`, cross-domain reads with `state(otherModel)`. Components
+  call one action and nothing else.
+- **Selectors own initial loads.** `state.products.load({ page })` inside the
+  selector starts the request after commit and dedupes by key. No `useEffect`
+  bootstraps.
+- **Server-owned data is hydrated.** A Server Component resolves it, a small
+  client adapter calls `useDomain.hydrate(...)`, and consumers read it without
+  loading. Basic auth follows this path: `getMe()` is awaited in the service
+  layout and hydrated into `user.me`.
+- **Whole action collections.** Select `actions: state.actions`; picking one
+  method off the proxy is a runtime error waiting to happen.
+- **Decorators for the boring parts.** `@OnError`, `@OnSuccess`,
+  `@Authorized`, `@Debounce`, and `intercept()` for a reusable
+  `@LoginRequired`.
+
+## Page — sections that read and render
+
+`src/services/{service}/page/{route}/`. `index.tsx` composes sections; each
+section is its own file. Everything is `'use client'` except the layout's
+server half.
+
+```tsx
+'use client'
+export function ProductsSection({ page }: { page: number }) {
+  const product = useProduct((state) => ({
+    products: state.products.load({ page }),
+    actions: state.actions,
+  }))
+  if (product.products.isError) return <ErrorMessage error={product.products.error} />
+  if (product.products.isLoading) return <ProductsSkeleton />
+  return (
+    <>
+      {product.products.isFetching && <Spinner />}
+      {product.products.data.items.map((p) => (
+        <ProductCard key={p.id} product={p} />
+      ))}
+      <Pagination
+        current={product.products.data.page}
+        total={product.products.data.totalPages}
+        onPageChange={(next) => product.actions.openPage(next)}
+      />
+    </>
+  )
+}
+```
+
+- **One domain hook call per file, namespace style.** `product.products`,
+  `product.actions.openPage()`; no destructuring, no second call for the same
+  domain.
+- **No data processing.** No `.filter().length`, no `.reduce()`, no
+  `.slice(0, 3)`. With pagination the component only has the current page,
+  so client-side numbers are wrong by construction; the api does it.
+- **Error, loading, data — in that order.** `isLoading` is the first load,
+  `isFetching` is a background refresh with data still on screen.
+- **Installed components only.** `Button`, `Input`, `Dialog`, `DataTable`
+  and the rest come from `src/lib/components/ui`; raw `<button>` and
+  `<input>` are lint errors. Missing something? `pnpm ui add <name>` before
+  writing one.
+- **Tokens before values.** Colours, type, radius and shadows come from the
+  token contract in `globals.css`; `design.md` decides the tone.
+
+## The admin service
+
+`admin` is the same four layers with its own domains, its own Better Auth
+instance and DB-authoritative sessions. Its routes live on a stable internal
+`/admin` path while the public entry is a project-specific prefix that
+`src/proxy.ts` rewrites; direct `/admin/*` requests get a 404. There is no
+admin sign-up: the first account is created only on an explicit request
+through the server-only admin API, and password change stays behind login.
