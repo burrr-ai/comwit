@@ -35,7 +35,7 @@ product.
 ```text
 my-app/
   AGENTS.md                     the rules file every coding agent reads (CLAUDE.md imports it)
-  .agents/skills/               app-setup · auth-setup · seo-optimize · refactoring
+  .agents/skills/               app-setup · auth-setup · seo-optimize
   eslint-rules/                 Oxlint rules that enforce the layer boundaries
   src/
     app/                        Next.js App Router — routing only
@@ -44,7 +44,7 @@ my-app/
       app/                      end-user service: api/ · state/ · page/ per domain
       admin/                    separate operator service, own auth and UI
     lib/                        shared code; comwit-ui components installed as source
-    server/repository/          the only gateway to data — mock rows first
+    server/repository/          the only gateway to data
 ```
 
 | Job                          | Choice                                                                                              |
@@ -57,8 +57,8 @@ my-app/
 | Lint                         | Oxlint with project rules for every layer boundary                                                  |
 
 Not decided for you: the database, the object storage and the hosting
-platform. The project runs on mock data until the product needs persistence;
-`AGENTS.md` says how to add each.
+platform. Repositories start on in-memory rows in `_data/`; connect a Drizzle
+database when the product needs one and only the repository bodies change.
 
 ## Commands
 

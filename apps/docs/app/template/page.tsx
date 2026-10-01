@@ -38,8 +38,7 @@ const STRENGTHS: { title: string; body: React.ReactNode }[] = [
     body: (
       <>
         <code>app-setup</code> (tabs, detail screens, PWA), <code>auth-setup</code> (Better Auth per
-        service), <code>seo-optimize</code>, <code>/refactoring</code> (mock → database). Screens
-        first, data later.
+        service), <code>seo-optimize</code>. One-time setups remove themselves when done.
       </>
     ),
   },

@@ -30,8 +30,8 @@ src/
       page/{route}/         sections that read state and call actions
     admin/                  separate operator service (own auth, own UI)
   lib/                      shared code; comwit-ui components installed as source
-  server/repository/        the only gateway to data — mock rows first, DB later
-.agents/skills/             app-setup · auth-setup · seo-optimize · refactoring
+  server/repository/        the only gateway to data
+.agents/skills/             app-setup · auth-setup · seo-optimize
 eslint-rules/               Oxlint rules that enforce the layer boundaries
 AGENTS.md                   the rules file every coding agent reads
 ```

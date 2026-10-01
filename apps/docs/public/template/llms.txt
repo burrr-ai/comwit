@@ -25,13 +25,13 @@ Read these before writing code, in this order:
    `src/app/.ai.md`, `src/services/admin/.ai.md`.
 4. `src/services/design.md` before any visual decision.
 
-Dependency flow `page → state → api → repository`; write order is the reverse.
-Screens first on mock rows in `src/server/repository/_data/`; connect a Drizzle database
-only when persistence is needed (AGENTS.md section 6), then run `auth-setup`.
+Dependency flow `page → state → api → repository`; write order is the reverse. All data
+goes through `src/server/repository/` (in-memory rows in `_data/` until a database is
+connected; connecting one changes only repository bodies).
 
 Skills in `.agents/skills/`: `app-setup` (tabs, detail screens, PWA — before the first app
 screen), `auth-setup` (Better Auth per service — after a database), `seo-optimize`,
-`refactoring` (explicit `/refactoring` only). `pnpm run validate` after every change; the
+`pnpm run validate` after every change; the
 Oxlint rules in `eslint-rules/` enforce every boundary above.
 
 ## Reference

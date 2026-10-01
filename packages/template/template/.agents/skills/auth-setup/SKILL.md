@@ -1,6 +1,6 @@
 ---
 name: auth-setup
-description: Install Better Auth on Drizzle for one or more services. Triggers - "인증 설정", "로그인", "회원가입", "auth 추가". Requires a connected Drizzle database (AGENTS.md § Database) first.
+description: Install Better Auth on Drizzle for one or more services. Triggers - "인증 설정", "로그인", "회원가입", "auth 추가". Requires a connected Drizzle database first.
 ---
 
 # auth-setup
@@ -13,7 +13,7 @@ Previously this skill tried to do heavy string templating inside a shell script.
 
 ## Preconditions
 
-- A Drizzle database is connected (AGENTS.md § Database). Verify
+- A Drizzle database is connected. Verify
   `src/server/db/index.ts` and `drizzle.config.ts` exist and `.env` contains a
   non-empty `DATABASE_URL` (plus any driver token). They stay in the
   ignored/untracked `.env`; nothing is copied into tracked source. Never print

@@ -48,11 +48,12 @@ const REQUIRED = [
   '.agents/skills/app-setup/SKILL.md',
   '.agents/skills/auth-setup/SKILL.md',
   '.agents/skills/seo-optimize/SKILL.md',
-  '.agents/skills/refactoring/SKILL.md',
   '.agents/scripts/cleanup-skill.mjs',
   'eslint-rules/index.cjs',
 ]
 const ABSENT = [
+  '.agents/skills/refactoring',
+  '.agents/workflows',
   '.git',
   '.gitignore',
   '.gitea',

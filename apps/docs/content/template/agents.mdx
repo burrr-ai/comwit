@@ -16,40 +16,27 @@ same files.
 ## `AGENTS.md`
 
 The rules file. `CLAUDE.md` only imports it, so there is one copy. It covers
-the development flow, the tech stack table, the project tree, environment
-rules and what to do about databases, storage, large media and deployment.
-It is deliberately neutral about infrastructure: it tells the agent how to
-add a Drizzle database or an S3-compatible bucket, not which vendor to use.
+the dependency flow, the services and domains, the skills, the tech stack
+table and the project tree. It says nothing about databases, storage or
+deployment: those are the project's decisions, and the repository layer keeps
+them out of the api, state and page code.
 
 ## `.ai.md` beside every layer
 
-| Guide                          | Read before                                                        |
-| ------------------------------ | ------------------------------------------------------------------ |
-| `src/app/.ai.md`               | touching routes, layouts or the auth boundary                      |
-| `src/services/.ai.md`          | any work under services — import rules, layer dependencies         |
-| `src/services/api.ai.md`       | writing server actions                                             |
-| `src/services/state.ai.md`     | writing models, actions or hooks                                   |
-| `src/services/page.ai.md`      | writing screens; lists the installed components                    |
-| `src/services/design.md`       | any visual decision — voice, mood, type scale, token usage         |
-| `src/services/admin/.ai.md`    | admin routes, account rules and how to tell the user the entry URL |
-| `src/server/repository/.ai.md` | mock data, CRUD naming, the mock → database migration              |
+| Guide                          | Read before                                                              |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| `src/app/.ai.md`               | touching routes, layouts or the auth boundary                            |
+| `src/services/.ai.md`          | any work under services — import rules, layer dependencies               |
+| `src/services/api.ai.md`       | writing server actions                                                   |
+| `src/services/state.ai.md`     | writing models, actions or hooks                                         |
+| `src/services/page.ai.md`      | writing screens; lists the installed components                          |
+| `src/services/design.md`       | any visual decision — voice, mood, type scale, token usage               |
+| `src/services/admin/.ai.md`    | admin routes, account rules and how to tell the user the entry URL       |
+| `src/server/repository/.ai.md` | repository rules, CRUD naming, in-memory rows and the move to a database |
 
 The guides are short because the structure carries most of the meaning. They
 state the few things a folder tree cannot: write order, naming suffixes,
 which side effects belong where, and the traps that were hit before.
-
-## Screen first, data later
-
-The flow the template assumes:
-
-1. Build the screens on mock data. Every read goes through the repository;
-   mock rows live in `_data/`.
-2. Connect a database when the product actually needs persistence. Replace
-   the inside of each repository function; the api layer does not move.
-3. Add auth once the database exists.
-
-Nothing is provisioned on day one, so the first hour is spent on the product,
-not on accounts and credentials.
 
 ## Skills
 
@@ -76,12 +63,6 @@ and keeps the hydration boundary intact. It needs a connected database first.
 **`seo-optimize`** — installs `src/lib/seo` with a site config,
 `buildMetadata`, JSON-LD, sitemap and robots, then wires the root layout.
 Absolute URLs come from `SITE_URL`.
-
-**`refactoring`** — explicit invocation only (`/refactoring`,
-`$refactoring`). Runs the structure pass against every `.ai.md`, then, for
-domains the user selects, migrates mock repositories to the database, seeds,
-implements real APIs and cleans up. It never runs on its own from an
-ordinary "clean this up" request.
 
 ## Lint as the last reader
 

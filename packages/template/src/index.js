@@ -201,13 +201,11 @@ function applyOpenNext(target, name, variantFiles) {
       )
   )
 
+  // AGENTS.md 에 Deploy 절이 있으면 그 절을 바꾸고, 없으면(기본 템플릿) 끝에 덧붙인다.
   const agents = read('AGENTS.md')
   const deployAt = agents.lastIndexOf('## Deploy')
-  if (deployAt < 0) die('AGENTS.md has no Deploy section; the opennext overlay needs updating')
-  write(
-    'AGENTS.md',
-    agents.slice(0, deployAt) + readFileSync(join(dir, 'agents-deploy.md'), 'utf8')
-  )
+  const before = deployAt < 0 ? agents.trimEnd() + '\n\n---\n\n' : agents.slice(0, deployAt)
+  write('AGENTS.md', before + readFileSync(join(dir, 'agents-deploy.md'), 'utf8'))
   // 조각 파일의 앞뒤 공백은 믿지 않는다(포매터가 지운다) — 항상 빈 줄 하나로 잇는다.
   const fragment = (file) => readFileSync(join(dir, file), 'utf8').trim() + '\n'
   write('README.md', read('README.md').trimEnd() + '\n\n' + fragment('readme.md'))
