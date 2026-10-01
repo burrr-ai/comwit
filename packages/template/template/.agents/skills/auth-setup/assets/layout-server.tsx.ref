@@ -1,0 +1,13 @@
+// src/services/{service}/page/layout/index.tsx
+// Adapt the API export to adminUser for admin.
+// The synchronous app-router wrapper MUST render this async layout inside
+// <Suspense fallback={null}>. Keep existing metadata/routing in that wrapper.
+import { user } from '@/services/{service}/api/user'
+import { {Service}LayoutClient } from './client'
+
+export async function {Service}Layout({ children }: { children: React.ReactNode }) {
+  // getMe maps only Better Auth's session.user. Separate tables load lazily.
+  // Let session errors propagate; null is reserved for confirmed anonymous.
+  const initialUser = await user.getMe()
+  return <{Service}LayoutClient initialUser={initialUser}>{children}</{Service}LayoutClient>
+}

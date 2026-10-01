@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { SquaresFourIcon } from '@phosphor-icons/react/dist/csr/SquaresFour'
+import { TreeStructureIcon } from '@phosphor-icons/react/dist/csr/TreeStructure'
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight'
 import { Brand } from './brand'
 
@@ -17,6 +18,11 @@ const PRODUCTS = {
     href: '/ui',
     label: 'UI',
     mark: <SquaresFourIcon size={23} weight="fill" aria-hidden="true" />,
+  },
+  template: {
+    href: '/template',
+    label: 'Template',
+    mark: <TreeStructureIcon size={23} weight="fill" aria-hidden="true" />,
   },
 }
 

@@ -14,3 +14,7 @@ apps/storybook/src/generated
 packages/ui/cli/registry
 
 pnpm-lock.yaml
+
+# generated/verbatim project template — keeps its own formatting so the sync stays idempotent
+packages/template/template
+packages/template/variants/opennext/files

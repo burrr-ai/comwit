@@ -1,0 +1,12 @@
+{
+  "aliases": {
+    "ui": "lib/components/ui",
+    "lib": "lib",
+    "hooks": "lib/hooks",
+    "utils": "lib/utils/cn"
+  },
+  "css": "src/app/globals.css",
+  "importAlias": "@/",
+  "srcDir": "src",
+  "locale": "ko"
+}

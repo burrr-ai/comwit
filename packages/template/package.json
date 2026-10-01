@@ -1,0 +1,46 @@
+{
+  "name": "create-comwit",
+  "version": "0.1.0",
+  "description": "Scaffold a Next.js app with the Comwit template: services sliced by domain, one-way layers (page → state → api → repository), .ai.md rules per layer, and agent skills for app shell, auth and SEO.",
+  "keywords": [
+    "comwit",
+    "create",
+    "template",
+    "nextjs",
+    "domain-driven",
+    "vibe-coding",
+    "claude-code"
+  ],
+  "homepage": "https://library.comwit.io/template",
+  "license": "MIT",
+  "author": "burrr-ai",
+  "type": "module",
+  "bin": {
+    "create-comwit": "./src/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "template",
+    "variants",
+    "README.md"
+  ],
+  "scripts": {
+    "verify": "node scripts/verify.mjs",
+    "test": "node scripts/verify.mjs",
+    "typecheck": "node --check src/index.js && node --check scripts/verify.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/burrr-ai/comwit.git",
+    "directory": "packages/template"
+  },
+  "bugs": {
+    "url": "https://github.com/burrr-ai/comwit/issues"
+  }
+}

@@ -1,0 +1,95 @@
+---
+title: Install
+group: Install
+order: 1
+description: One command creates the project. Everything else is already inside it.
+---
+
+# Install
+
+```bash
+npm create comwit@latest my-app
+cd my-app
+pnpm run dev
+```
+
+`npx create-comwit@latest my-app` does the same. The CLI copies the kit, sets
+the package name, installs dependencies with pnpm and makes an initial commit.
+Then open `AGENTS.md`, hand the project to your coding agent, and describe the
+product.
+
+## Options
+
+| Flag                          | Effect                                                                |
+| ----------------------------- | --------------------------------------------------------------------- |
+| `--opennext`                  | Cloudflare Workers via OpenNext (below)                               |
+| `--name <name>`               | package name (default: the directory name)                            |
+| `--pm <pnpm\|npm\|yarn\|bun>` | package manager (default: pnpm when installed, else the invoking one) |
+| `--no-install`                | skip dependency installation                                          |
+| `--no-git`                    | skip `git init` and the initial commit                                |
+| `--cwd <dir>`                 | create the project relative to this directory                         |
+| `--dry`                       | list the files that would be written                                  |
+
+## What lands in the folder
+
+```text
+my-app/
+  AGENTS.md                     the rules file every coding agent reads (CLAUDE.md imports it)
+  .agents/skills/               app-setup · auth-setup · seo-optimize
+  eslint-rules/                 Oxlint rules that enforce the layer boundaries
+  src/
+    app/                        Next.js App Router — routing only
+    services/
+      .ai.md · api.ai.md · state.ai.md · page.ai.md · design.md
+      app/                      end-user service: api/ · state/ · page/ per domain
+      admin/                    separate operator service, own auth and UI
+    lib/                        shared code; comwit-ui components installed as source
+    server/repository/          the only gateway to data
+```
+
+| Job                          | Choice                                                                                              |
+| ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| Framework                    | Next.js 16 App Router with Cache Components, service worker and offline page                        |
+| State                        | `@comwit/state` — one typed hook per domain                                                         |
+| UI                           | `comwit-ui` components installed as source, Tailwind v4 tokens, Korean copy in `src/lib/ui-text.ts` |
+| Forms, tables, editor, dates | react-hook-form + zod, TanStack Table, Tiptap, react-day-picker (wrapped by the UI kit)             |
+| Auth                         | Better Auth on Drizzle, installed by the `auth-setup` skill once a database is connected            |
+| Lint                         | Oxlint with project rules for every layer boundary                                                  |
+
+Not decided for you: the database, the object storage and the hosting
+platform. Repositories start on in-memory rows in `_data/`; connect a Drizzle
+database when the product needs one and only the repository bodies change.
+
+## Commands
+
+| Command                                | Purpose                                                         |
+| -------------------------------------- | --------------------------------------------------------------- |
+| `pnpm run dev`                         | development server on port 3000                                 |
+| `pnpm run validate`                    | typecheck and lint, run after every change                      |
+| `pnpm run build`                       | service worker, version file, then `next build`                 |
+| `pnpm ui add <name>`                   | install a comwit-ui component as source                         |
+| `pnpm agents:test`                     | check that Claude Code skill stubs mirror `.agents/skills/`     |
+| `pnpm run preview` / `pnpm run deploy` | `--opennext` projects only: build and run or publish the Worker |
+
+## Cloudflare Workers with `--opennext`
+
+```bash
+npm create comwit@latest my-app -- --opennext
+```
+
+The same project plus the OpenNext adapter: `open-next.config.ts`,
+`wrangler.jsonc` (Worker name from the project name, `nodejs_compat`, static
+assets binding), `.dev.vars.example`, `@opennextjs/cloudflare` and `wrangler`
+as dev dependencies, Next pinned to a version the adapter supports, and
+`initOpenNextCloudflareForDev()` in `next.config.ts`. The Deploy section of
+`AGENTS.md` becomes the Worker flow:
+
+```bash
+pnpm run preview   # opennextjs-cloudflare build (runs pnpm run build) + local workerd
+pnpm run deploy    # build + wrangler deploy, after `wrangler login`
+```
+
+`next dev` keeps reading `.env`; the Worker reads `vars` in `wrangler.jsonc`,
+secrets from `wrangler secret put`, and `.dev.vars` locally. Incremental cache
+(ISR) needs a KV or R2 binding once the product relies on it; the OpenNext docs
+cover that step.

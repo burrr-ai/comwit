@@ -1,0 +1,99 @@
+// ============================================================
+// 레퍼런스: src/server/auth/{service}.ts
+// 서비스별로 이 파일을 참고하여 생성한다.
+// ============================================================
+// 치환 대상:
+//   {service}  → app, admin, supplier 등
+//   {Service}  → App, Admin, Supplier 등 (PascalCase)
+//   {SERVICE}  → APP, ADMIN, SUPPLIER 등 (UPPER_SNAKE)
+//   {basePath} → "/{service}/api/auth"
+// ============================================================
+// admin 예외:
+//   SKILL.md 지침대로 INTERNAL_ADMIN_AUTH_BASE_PATH를 import하고
+//   basePath 문자열 대신 해당 상수를 사용한다.
+// ============================================================
+
+import 'server-only'
+
+import { betterAuth, type BetterAuthOptions } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { nextCookies } from "better-auth/next-js"
+import { connection } from "next/server"
+import { cache } from "react"
+import { getDb } from "@/server/db"
+import {
+  {service}AuthUser,
+  {service}AuthSession,
+  {service}AuthAccount,
+  {service}AuthVerification,
+} from "@/server/db/schema"
+import { config } from "@/server/config"
+
+async function createAuth() {
+  // betterAuth() calls Math.random(); with cacheComponents it must run at
+  // request time, so opt out of prerendering before creating the instance.
+  await connection()
+  const db = await getDb()
+
+  const authOptions: BetterAuthOptions = {
+    secret: config.{SERVICE}_AUTH_SECRET,
+    basePath: "{basePath}",
+    // Detect the current hosted domain from the request so newly connected
+    // domains work without an additional URL environment variable.
+    baseURL: {
+      allowedHosts: ["*"],
+      protocol: config.NODE_ENV === "development" ? "auto" : "https",
+    },
+    database: drizzleAdapter(db, {
+      provider: "sqlite",
+      // better-auth looks up tables by the keys `user`, `session`, `account`,
+      // `verification`. Because our tables are prefixed per service, you MUST
+      // pass an explicit mapping here. `schema: schema` (the whole module) will
+      // fail at runtime with "The model 'user' was not found in the schema".
+      schema: {
+        user: {service}AuthUser,
+        session: {service}AuthSession,
+        account: {service}AuthAccount,
+        verification: {service}AuthVerification,
+      },
+    }),
+    emailAndPassword: {
+      enabled: true,
+    },
+    session: {
+      cookieCache: {
+        enabled: true,
+        maxAge: 60 * 60,
+        strategy: "compact",
+        version: "1",
+      },
+    },
+    account: {
+      skipStateCookieCheck: true,
+    },
+    // Keep nextCookies last so refreshed session/cache cookies from Server
+    // Actions are written to the Next.js response.
+    plugins: [nextCookies()],
+    advanced: {
+      cookiePrefix: "{service}",
+      useSecureCookies: true,
+      defaultCookieAttributes: {
+        sameSite: "None",
+      },
+    },
+    trustedOrigins: ["*"],
+  }
+
+  return betterAuth(authOptions)
+}
+
+// Keep Better Auth request-scoped so mutable auth state cannot cross warm
+// serverless isolate requests. The underlying database connection uses app env.
+export const get{Service}Auth = cache(createAuth)
+
+export const get{Service}ServerSession = cache(async () => {
+  const auth = await get{Service}Auth()
+  return auth.api.getSession({
+    headers: await import('next/headers').then(m => m.headers()),
+  })
+})

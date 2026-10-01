@@ -1,0 +1,5 @@
+# OpenNext / Cloudflare
+/.open-next
+/.wrangler
+.dev.vars*
+!.dev.vars.example

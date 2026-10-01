@@ -305,6 +305,8 @@ importers:
         specifier: ^4.0.18
         version: 4.1.11(@types/node@20.19.43)(happy-dom@20.14.5)(vite@7.3.6(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.1))
 
+  packages/template: {}
+
   packages/ui/cli: {}
 
   packages/ui/core:

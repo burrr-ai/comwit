@@ -1,0 +1,67 @@
+// ============================================================
+// 레퍼런스: src/server/db/plugin/auth/{service}-schema.ts
+// 서비스별로 이 파일을 참고하여 생성한다.
+// ============================================================
+// 치환 대상:
+//   {service}  → app, admin 등
+//   {Service}  → App, Admin 등 (PascalCase)
+//   테이블명: {service}_auth__user, {service}_auth__session 등
+//   export명: {service}AuthUser, {service}AuthSession 등
+// ============================================================
+
+// NOTE: Do NOT add `import 'server-only'` here. drizzle-kit loads this file
+// during `pnpm drizzle-kit generate/migrate` and will fail on the server-only
+// import. Files under `src/server/db/plugin/**` must be safely loadable in a
+// plain Node context.
+
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
+
+export const {service}AuthUser = sqliteTable("{service}_auth__user", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+  email: text("email").notNull().unique(),
+  emailVerified: integer("emailVerified", { mode: "boolean" }).notNull(),
+  image: text("image"),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
+})
+
+export const {service}AuthSession = sqliteTable("{service}_auth__session", {
+  id: text("id").primaryKey(),
+  expiresAt: integer("expiresAt", { mode: "timestamp" }).notNull(),
+  token: text("token").notNull().unique(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
+  ipAddress: text("ipAddress"),
+  userAgent: text("userAgent"),
+  userId: text("userId")
+    .notNull()
+    .references(() => {service}AuthUser.id, { onDelete: "cascade" }),
+})
+
+export const {service}AuthAccount = sqliteTable("{service}_auth__account", {
+  id: text("id").primaryKey(),
+  accountId: text("accountId").notNull(),
+  providerId: text("providerId").notNull(),
+  userId: text("userId")
+    .notNull()
+    .references(() => {service}AuthUser.id, { onDelete: "cascade" }),
+  accessToken: text("accessToken"),
+  refreshToken: text("refreshToken"),
+  idToken: text("idToken"),
+  accessTokenExpiresAt: integer("accessTokenExpiresAt", { mode: "timestamp" }),
+  refreshTokenExpiresAt: integer("refreshTokenExpiresAt", { mode: "timestamp" }),
+  scope: text("scope"),
+  password: text("password"),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
+})
+
+export const {service}AuthVerification = sqliteTable("{service}_auth__verification", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: integer("expiresAt", { mode: "timestamp" }).notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }),
+})
