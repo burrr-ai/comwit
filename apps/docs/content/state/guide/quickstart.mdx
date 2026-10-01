@@ -182,8 +182,10 @@ export function ProductList() {
 ```
 
 `.load()` returns loading state during render and starts the request after commit. Selecting
-`s.list` alone is a passive read. For data already fetched by a Server Component, follow the
-[Next.js guide](/state/docs/guide/nextjs) and use `useProduct.hydrate(...)`.
+`s.list` alone is a passive read. For server-rendered data, follow the
+[Next.js guide](/state/docs/guide/nextjs): seed a value a Server Component already fetched with
+`useProduct.hydrate(...)`, or let one component inside `<Suspense>` run and stream the query with
+the experimental `s.list.suspend()`.
 
 ## Next steps
 

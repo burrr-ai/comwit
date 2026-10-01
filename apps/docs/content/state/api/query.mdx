@@ -80,9 +80,12 @@ const cached = useDashboard((state) => state.list) // passive read
 
 Existing effect-driven actions remain supported. Use selector `load` when the request belongs to the mounted view; use action `.query()` when loading is part of a command, sequence, preload, or user event.
 
-## Hydrate resolved server data
+## Server data: hydrate or suspend
 
-Await data in a Server Component and pass it to a small client route adapter:
+Next.js server data reaches a query in one of two ways. Either one works; pick per route.
+
+**`hydrate()`** — await in a Server Component, pass the value to a small client route adapter, seed
+the entry there:
 
 ```tsx
 'use client'
@@ -97,6 +100,24 @@ function ProductDetail() {
   return detail ? <ProductView product={detail} /> : <NotFound />
 }
 ```
+
+**`.suspend(arg)` (experimental)** — one Client Component inside a `<Suspense>` boundary selects
+the query; the server render runs `queryFn`, streams the result, and the browser hydrates it:
+
+```tsx
+'use client'
+
+// Experimental: needs useServerInsertedHTML on ComwitProvider and an isomorphic queryFn.
+function ProductDetail({ slug }: { slug: string }) {
+  const detail = useProduct((state) => state.detail.suspend(slug))
+  return detail.data ? <ProductView product={detail.data} /> : <NotFound />
+}
+```
+
+`.suspend()` is the more atomic form: the fetch, the stream, and the browser hydration happen in
+the one component that reads the data, so there is no Server Component fetch plus client adapter
+pair to keep in sync. `hydrate()` is the stable path and the only one for data that must stay on
+the server, such as a database read or a Server Function.
 
 Call `hydrate()` unconditionally before the normal domain read. It returns `void`, accepts nullable
 input, and infers every field's argument and data. It initializes new unread entries before their

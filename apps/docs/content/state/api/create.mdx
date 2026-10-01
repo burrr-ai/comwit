@@ -52,11 +52,14 @@ return posts.data.map((post) => <Card key={post.id} post={post} />)
 without `.load(...)` only reads state. Use actions for imperative loading and coordinated workflows.
 See [query()](/state/docs/api/query) for cache keys, freshness, and experimental `.suspend(arg)`.
 
-## Hydrate server data
+## Server data: hydrate or suspend
+
+Two ways to bring Next.js server data into the hook. Either works.
 
 ```tsx
 'use client'
 
+// hydrate(): a Server Component awaited the value and passed it to this route adapter.
 function PostRoute({ slug, initialPost }: Props) {
   usePost.hydrate({ detail: { arg: slug, data: initialPost } })
   return <PostDetail />
@@ -68,10 +71,26 @@ function PostDetail() {
 }
 ```
 
+```tsx
+'use client'
+
+// .suspend() (experimental): render inside <Suspense>; the server render runs queryFn and
+// streams the result when ComwitProvider has useServerInsertedHTML.
+function PostDetail({ slug }: { slug: string }) {
+  const post = usePost((s) => s.detail.suspend(slug))
+  return post.data ? <article>{post.data.title}</article> : null
+}
+```
+
 `hydrate(entries)` infers query field names, arguments, and data from the model. Call it
 unconditionally before the normal domain read. It returns `void` and accepts `null` or `undefined`
 as a no-op. New entries initialize before their first snapshot; changes to observed entries apply
-when the requesting render commits. See the complete [Next.js guide](/state/docs/guide/nextjs).
+when the requesting render commits.
+
+`.suspend(arg)` is the more atomic form: one component declares the data, and fetch, stream and
+hydration happen there, with no Server Component fetch plus adapter pair. It needs a `queryFn`
+that runs in both environments, so data that must stay on the server uses `hydrate()`. See the
+complete [Next.js guide](/state/docs/guide/nextjs).
 
 ## Call an action
 
