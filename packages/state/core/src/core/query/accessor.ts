@@ -824,6 +824,22 @@ export function createResourceAccessor(
   }
 
   /**
+   * A resource nobody has queried yet has no visible value to protect, so its first `.suspend()`
+   * result becomes the observable proxy state as soon as it is known. Passive `state.field.data`
+   * readers in the same server render, or in a boundary hydrating later, then match the result
+   * instead of showing `initialData` until commit. Keys staged over an already-active resource
+   * keep waiting for `commitSuspend`, so an abandoned transition never replaces the current screen.
+   */
+  const activateStagedEntry = (entry: QueryCacheEntry, key: QueryCacheKey, queryArg: unknown) => {
+    runtime.slowLoading?.reset()
+    runtime.fetchId++
+    runtime.lastArg = queryArg
+    runtime.activeKey = key
+    activateLifecycle(key, queryArg)
+    runInternal(() => applyCachedState(state, entry))
+  }
+
+  /**
    * Experimental: prepare an initial query for selector `.suspend()` without touching the
    * observable resource proxy. Cache entries live outside the proxy, so a
    * discarded concurrent render cannot leak a new active value into the
@@ -947,6 +963,7 @@ export function createResourceAccessor(
           if (descriptor.kind === 'infinite') {
             stagedEntry.cursorHistory = [(nextState as ResourceInfiniteState<unknown>).cursor]
           }
+          if (runtime.activeKey === undefined) activateStagedEntry(stagedEntry, key, queryArg)
         } catch (error) {
           stagedEntry.suspendPromise = undefined
           stagedEntry.suspendError =
@@ -979,23 +996,27 @@ export function createResourceAccessor(
 
   /**
    * Experimental: seed a `.suspend()` key from a result the server resolved and streamed into
-   * this document. It runs while the selector reads its snapshot, so it only touches the
-   * non-observable key cache; the staged entry becomes the active proxy value after commit like
-   * any other suspend resolution, and the hydrating render never calls `queryFn`.
+   * this document. It runs while the selector reads its snapshot and never calls `queryFn`.
+   * Like `hydrate()`, a model whose snapshot has not been read yet (`mayInitialize`) and whose
+   * resource was never queried is initialized right away so the hydrating render matches the
+   * server HTML; returns whether that happened so the hook re-reads its snapshot. Otherwise only
+   * the non-observable key cache is touched and the entry activates after commit.
    */
   const restoreSuspend = (
     arg: unknown,
     hasArg: boolean,
     key: QueryCacheKey,
-    hookId: string
-  ): void => {
+    hookId: string,
+    mayInitialize = false
+  ): boolean => {
     const stream = registry.suspendStream
-    if (!stream) return
+    if (!stream) return false
     const existing = runtime.cacheEntries.get(key)
-    if (existing?.hasQueried || existing?.suspendPromise) return
+    if (existing?.hasQueried || existing?.suspendPromise) return false
 
     const streamed = stream.take(hookId, path, key)
-    if (!streamed) return
+    if (!streamed) return false
+    const untouched = runtime.activeKey === undefined && runtime.cacheEntries.size === 0
 
     const queryArg = hasArg ? arg : undefined
     const entry = existing ?? createCacheEntry(state, key, queryArg)
@@ -1022,6 +1043,10 @@ export function createResourceAccessor(
       entry.cursorHistory = [(nextState as ResourceInfiniteState<unknown>).cursor]
     }
     runtime.cacheEntries.set(key, entry)
+
+    if (!mayInitialize || !untouched) return false
+    activateStagedEntry(entry, key, queryArg)
+    return true
   }
 
   /** Server: expose a render-resolved result so the provider can stream it to the browser. */
