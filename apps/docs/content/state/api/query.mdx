@@ -534,14 +534,17 @@ with the resolved data. Initial failures go to an error boundary. Later refetche
 data visible with `isFetching` and do not suspend again. A blocked `enabled` or `dependsOn` condition
 returns the current state without throwing.
 
-Pending keys are staged separately from the currently committed resource. They become active on
-commit, so abandoned renders do not overwrite the visible screen.
+Pending keys are staged separately from the currently committed resource. A resource that has
+never been queried adopts its first result as soon as it resolves, so passive `state.field.data`
+readers in the same server render or in a boundary that hydrates later match the HTML. Keys staged
+over an already-active resource become active on commit, so abandoned renders do not overwrite the
+visible screen.
 
 Server and browser providers have separate caches. Pass Next.js `useServerInsertedHTML` to
 [`ComwitProvider`](/state/docs/api/provider) and each result resolved during the server render is
 inserted as an inert JSON script before the chunk that used it. The hydrating `.suspend()` call
-reads that script, renders the identical snapshot, activates the entry after commit with the
-server's fetch time, and never calls `queryFn`. Results are matched to the selecting hook's tree
+reads that script, renders the identical snapshot with the server's fetch time, and never calls
+`queryFn`. Results are matched to the selecting hook's tree
 position, so the server and browser trees must line up as hydration already requires. Without the
 prop, the browser runs `queryFn` again while hydrating.
 

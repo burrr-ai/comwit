@@ -167,8 +167,13 @@ function ProductDetail({ id }: { id: string }) {
 
 With `useServerInsertedHTML` on the provider (available in `@comwit/state@2.5.0-beta.0`), a result
 resolved during the Next.js server render is inserted as an inert JSON script before that boundary's HTML. The hydrating `.suspend()` reads it,
-renders the identical snapshot, activates the entry after commit with the server's fetch time, and
-never calls `queryFn` again. Without the prop, the browser fetches again while hydrating.
+renders the identical snapshot with the server's fetch time, and never calls `queryFn` again.
+Without the prop, the browser fetches again while hydrating.
+
+A resource nobody has queried yet adopts its first `.suspend()` result as soon as it resolves (or
+is restored from the stream), so passive `state.field.data` readers beside the caller or in a
+boundary that hydrates later match the server HTML. Keys staged over an already-active resource
+still activate after commit, so an abandoned transition never replaces the visible screen.
 
 Requirements: `queryFn` runs inside the Client Component bundle on both server and browser. It
 cannot call a Next.js Server Function or import database code; use a Route Handler or external API

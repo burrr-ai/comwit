@@ -4,7 +4,7 @@ import { createRoot, hydrateRoot, type Root } from 'react-dom/client'
 import { renderToReadableStream, renderToStaticMarkup } from 'react-dom/server'
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { action, ComwitProvider, create, model, query, useAction } from '../src'
+import { action, ComwitProvider, create, model, query, useAction, useModel } from '../src'
 
 type ServerInsertedHTMLHook = NonNullable<
   React.ComponentProps<typeof ComwitProvider>['useServerInsertedHTML']
@@ -262,5 +262,67 @@ describe('query selector suspend streaming hydration', () => {
     await waitFor(() => expect(screen.getByText('fetched')).toBeDefined())
     expect(querySelectorAll).not.toHaveBeenCalled()
     querySelectorAll.mockRestore()
+  })
+
+  test('hydrates passive readers beside and below the streamed suspend without a mismatch', async () => {
+    const queryFn = vi.fn(async () => ({ id: 'u1' }))
+    const session = model({
+      me: query<{ id: string } | null>({ initialData: null, queryFn }),
+    })
+
+    function Shell({ children }: { children: ReactNode }) {
+      useModel(session, (state) => state.me.suspend().isSuccess)
+      return <>{children}</>
+    }
+    function Header() {
+      const me = useModel(session, (state) => state.me.data)
+      return <header>{me ? me.id : 'anonymous'}</header>
+    }
+    function Nav() {
+      const me = useModel(session, (state) => state.me.data)
+      return <nav>{me ? 'member' : 'guest'}</nav>
+    }
+    function App({ strategy }: { strategy: ServerInsertedHTMLHook }) {
+      return (
+        <ComwitProvider useServerInsertedHTML={strategy}>
+          <Shell>
+            <Header />
+            {/* A nested boundary hydrates in its own pass after the shell committed. */}
+            <Suspense fallback={<nav>pending</nav>}>
+              <Nav />
+            </Suspense>
+          </Shell>
+        </ComwitProvider>
+      )
+    }
+
+    const server = createInsertedHTMLStrategy()
+    const { html, script } = await onServer(async () => {
+      const stream = await renderToReadableStream(<App strategy={server.useServerInsertedHTML} />)
+      const html = await readStream(stream)
+      return { html, script: server.flush() }
+    })
+
+    expect(queryFn).toHaveBeenCalledOnce()
+    expect(html).toContain('<header>u1</header>')
+    expect(html).toContain('<nav>member</nav>')
+
+    document.body.innerHTML = `${script}<div id="root">${html}</div>`
+    const container = document.getElementById('root')!
+    const recoverableError = vi.fn()
+    const browser = createInsertedHTMLStrategy()
+
+    await act(async () => {
+      roots.push(
+        hydrateRoot(container, <App strategy={browser.useServerInsertedHTML} />, {
+          onRecoverableError: recoverableError,
+        })
+      )
+    })
+
+    expect(recoverableError).not.toHaveBeenCalled()
+    expect(queryFn).toHaveBeenCalledOnce()
+    expect(container.querySelector('header')!.textContent).toBe('u1')
+    expect(container.querySelector('nav')!.textContent).toBe('member')
   })
 })

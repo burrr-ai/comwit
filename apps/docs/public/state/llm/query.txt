@@ -202,9 +202,12 @@ the query can restart.
 suspend(arg) → stage Promise by key → throw → resolve staged entry → React retry → commit entry
 ```
 
-Staging a new key does not mutate the active observable resource. An abandoned route render cannot
-replace the value used by the currently committed screen. Existing successful keys stay visible;
-freshness revalidation starts after commit.
+A resource that has never been queried adopts its first result as soon as it resolves (or is
+restored from the SSR stream), so passive `state.field.data` readers in the same server render or
+in a boundary that hydrates later see the same value as the HTML. Staging a new key over an
+already-active resource does not mutate it. An abandoned route render cannot replace the value
+used by the currently committed screen. Existing successful keys stay visible; freshness
+revalidation starts after commit.
 
 ### Streaming from Next.js SSR
 

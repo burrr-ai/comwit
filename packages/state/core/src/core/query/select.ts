@@ -23,6 +23,8 @@ export type QuerySelectorLoad = {
   path: string
   method: string
   mode: 'load' | 'suspend'
+  /** A streamed `.suspend()` result initialized this never-read model during the selector. */
+  initialized?: boolean
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -68,7 +70,9 @@ function cachedState(
   registry: QueryBindingRegistry
 ): ResourceDataLike {
   const activeEntry = runtime?.activeKey === key ? runtime.cacheEntries.get(key) : undefined
-  if (activeEntry) return state
+  // A first `.suspend()` result is already the proxy value, but until the selecting tree commits
+  // the caller keeps reading its immutable staged snapshot, exactly as before activation.
+  if (activeEntry && !activeEntry.suspendNeedsCommit) return state
 
   const entry = runtime?.cacheEntries.get(key)
   const pending =
@@ -98,7 +102,8 @@ function createResourceSelector(
   path: string,
   registry: QueryBindingRegistry,
   loads: QuerySelectorLoad[],
-  hookId: string | undefined
+  hookId: string | undefined,
+  mayInitialize: boolean
 ) {
   return new Proxy(state, {
     get(target, prop, receiver) {
@@ -126,7 +131,12 @@ function createResourceSelector(
         // so the hydrating render matches the server HTML without throwing or refetching.
         if (isSuspend && hookId !== undefined && registry.suspendStream) {
           const restore = Reflect.get(controller, RESOURCE_SUSPEND_RESTORE)
-          if (typeof restore === 'function') restore.call(controller, arg, hasArg, key, hookId)
+          if (
+            typeof restore === 'function' &&
+            restore.call(controller, arg, hasArg, key, hookId, mayInitialize) === true
+          ) {
+            load.initialized = true
+          }
         }
 
         const runtime = registry.boundResourceRuntime.get(controller)
@@ -143,6 +153,7 @@ function bindSelectorPath(
   registry: QueryBindingRegistry,
   loads: QuerySelectorLoad[],
   hookId: string | undefined,
+  mayInitialize: boolean,
   path = ''
 ): object {
   return new Proxy(state, {
@@ -157,13 +168,31 @@ function bindSelectorPath(
       if (descriptor && isRecord(next)) {
         const bound = Reflect.get(controller, prop, controller)
         if (!isRecord(bound)) return next
-        return createResourceSelector(next, bound, descriptor, nextPath, registry, loads, hookId)
+        return createResourceSelector(
+          next,
+          bound,
+          descriptor,
+          nextPath,
+          registry,
+          loads,
+          hookId,
+          mayInitialize
+        )
       }
 
       if (isRecord(next) && hasNestedPath(descriptors, nextPath)) {
         const bound = Reflect.get(controller, prop, controller)
         if (!isRecord(bound)) return next
-        return bindSelectorPath(next, bound, descriptors, registry, loads, hookId, nextPath)
+        return bindSelectorPath(
+          next,
+          bound,
+          descriptors,
+          registry,
+          loads,
+          hookId,
+          mayInitialize,
+          nextPath
+        )
       }
 
       return next
@@ -177,11 +206,20 @@ export function createQuerySelectorState<T extends object>(
   descriptors: ResourceDescriptorMap,
   registry: QueryBindingRegistry,
   loads: QuerySelectorLoad[],
-  hookId?: string
+  hookId?: string,
+  mayInitialize = false
 ): T {
   if (descriptors.size === 0) return state
   const target = Object.isFrozen(state) ? { ...state } : state
-  return bindSelectorPath(target, controller, descriptors, registry, loads, hookId) as T
+  return bindSelectorPath(
+    target,
+    controller,
+    descriptors,
+    registry,
+    loads,
+    hookId,
+    mayInitialize
+  ) as T
 }
 
 /**
