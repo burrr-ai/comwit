@@ -97,7 +97,7 @@ export const product = model<ProductState>({
 - `local.query()` / `local.infinite()`: query lifecycle plus normalized IndexedDB views.
 - Plain values: client-owned reactive state.
 
-## Read, load, and hydrate queries
+## Read, load, hydrate, or suspend queries
 
 ```tsx
 // Non-suspending. Returns isLoading immediately; starts queryFn after commit.
@@ -111,9 +111,18 @@ const draft = useProduct((state) => state.draft.restore(slug))
 ```
 
 Use `.load(arg)` when the mounted client component owns the request and renders `isLoading` /
-`isError` itself. For SSR data, execute and await the server function in a Server Component, pass
-the resolved seed only to a small client route adapter, and hydrate before the first normal domain
-hook read:
+`isError` itself.
+
+### Server data: `hydrate()` or `.suspend()` (experimental)
+
+Next.js server data reaches a query by one of two paths. Either is valid. `hydrate()` is stable and
+is the only path for data that must stay on the server (database code, Server Functions).
+`.suspend()` is experimental and more atomic: the one component that reads the data also fetches,
+streams, and hydrates it, so there is no Server Component fetch plus client adapter pair to keep in
+sync.
+
+Path 1 — `hydrate()`: await the server function in a Server Component, pass the resolved seed only
+to a small client route adapter, and hydrate before the first normal domain hook read:
 
 ```tsx
 // Server Component
@@ -138,43 +147,47 @@ function ProductDetail() {
 }
 ```
 
-Call `.hydrate(...)` unconditionally like a hook and before any normal domain-hook read for that
-model. It returns `void`, accepts `null` / `undefined` as a no-op, infers field, `arg`, and `data`
-types from query fields, and records freshness internally. New `query()` / `local.query()` entries
-initialize before their first snapshot. Equivalent repeated seeds are no-ops. A changed seed for an
-observed entry is applied only after the requesting render commits, so an abandoned transition
-cannot replace current state. It never invokes `queryFn`, and it does not use actions or public
-proxy mutation.
-
-### Experimental selector Suspense
-
-`.suspend(arg)` is experimental. It starts or reuses `queryFn` during render and throws the keyed
-Promise while pending, so a `<Suspense>` boundary shows its fallback. It accepts only the query
-argument—never a Promise or initial-data override.
+Path 2 — `.suspend(arg)` (experimental): render the reading component inside a `<Suspense>`
+boundary and select `.suspend(arg)`. The server render runs `queryFn`, the result streams with the
+boundary's HTML, and the same component hydrates it in the browser:
 
 ```tsx
 // Server Component: the boundary streams once the query resolves.
 <Suspense fallback={<ProductSkeleton />}>
-  <ProductDetail id={id} />
+  <ProductDetail slug={slug} />
 </Suspense>
 
-// Client Component: the same selector renders on the server and hydrates in the browser.
-function ProductDetail({ id }: { id: string }) {
-  const detail = useProduct((state) => state.detail.suspend(id))
+// Client Component — experimental. The same selector renders on the server and hydrates in the
+// browser; ComwitProvider must receive useServerInsertedHTML.
+'use client'
+
+function ProductDetail({ slug }: { slug: string }) {
+  const detail = useProduct((state) => state.detail.suspend(slug))
   return detail.data ? <ProductView product={detail.data} /> : <NotFound />
 }
 ```
 
-With `useServerInsertedHTML` on the provider (available in `@comwit/state@2.5.0-beta.0`), a result
-resolved during the Next.js server render is inserted as an inert JSON script before that boundary's HTML. The hydrating `.suspend()` reads it,
-renders the identical snapshot, activates the entry after commit with the server's fetch time, and
-never calls `queryFn` again. Without the prop, the browser fetches again while hydrating.
+`hydrate()` contract: call it unconditionally like a hook and before any normal domain-hook read for
+that model. It returns `void`, accepts `null` / `undefined` as a no-op, infers field, `arg`, and
+`data` types from query fields, and records freshness internally. New `query()` / `local.query()`
+entries initialize before their first snapshot. Equivalent repeated seeds are no-ops. A changed seed
+for an observed entry is applied only after the requesting render commits, so an abandoned
+transition cannot replace current state. It never invokes `queryFn`, and it does not use actions or
+public proxy mutation.
 
-Requirements: `queryFn` runs inside the Client Component bundle on both server and browser. It
-cannot call a Next.js Server Function or import database code; use a Route Handler or external API
-with an absolute URL on the server. Results must be JSON-serializable. Keep the boundary inside the
-provider. Ordinary single/infinite queries and `local.query()` / `local.infinite()` are supported;
-realtime and streaming resources are not. Prefer `hydrate()` for data that must stay on the server.
+`.suspend(arg)` contract: it starts or reuses `queryFn` during render and throws the keyed Promise
+while pending, so the `<Suspense>` boundary shows its fallback. It accepts only the query
+argument—never a Promise or initial-data override. With `useServerInsertedHTML` on the provider
+(available in the `@comwit/state@2.5.0` beta line), a result resolved during the Next.js server
+render is inserted as an inert JSON script before that boundary's HTML. The hydrating `.suspend()`
+reads it, renders the identical snapshot, activates the entry after commit with the server's fetch
+time, and never calls `queryFn` again. Without the prop, the browser fetches again while hydrating.
+
+`.suspend()` requirements: `queryFn` runs inside the Client Component bundle on both server and
+browser. It cannot call a Next.js Server Function or import database code; use a Route Handler or
+external API with an absolute URL on the server. Results must be JSON-serializable. Keep the
+boundary inside the provider. Ordinary single/infinite queries and `local.query()` /
+`local.infinite()` are supported; realtime and streaming resources are not.
 
 The descriptor option `suspense: true` and `Query.Suspense*` aliases are deprecated. They retain
 legacy behavior for compatibility.
@@ -223,10 +236,12 @@ mutating action during render to initialize the same store.
 
 ## SSR safety
 
-Server-owned data has two paths. Await it in a Server Component, pass the resolved value only to the
-route adapter, and hydrate the query cache there; or render a streamed `<Suspense>` boundary with an
-isomorphic `.suspend(arg)` and `useServerInsertedHTML`. In both cases the actual UI reads the domain
-hook.
+Server-owned data has two paths, and either is valid. Await it in a Server Component, pass the
+resolved value only to the route adapter, and `hydrate()` the query cache there; or render a streamed
+`<Suspense>` boundary whose component selects the experimental `.suspend(arg)` with
+`useServerInsertedHTML` on the provider. `.suspend()` is the more atomic of the two (one component,
+no fetch-and-adapter pair); `hydrate()` is required when the fetch must stay on the server. In both
+cases the actual UI reads the domain hook.
 
 Never initialize state by mutating it during render. React checks external-store snapshots before
 commit even when no subscriber fires, so a render-time mutation can discard and retry the tree
@@ -319,7 +334,8 @@ await search(snapshot(this.m.filters))
 ## Delivery checklist
 
 - Query arguments and route identities are explicit.
-- `.load()` owns client fetching; `.hydrate()` initializes resolved server query values.
+- `.load()` owns client fetching. Server data uses `.hydrate()` (Server Component fetch + route
+  adapter) or the experimental `.suspend()` (one component inside `<Suspense>`); either is valid.
 - Experimental `.suspend()` is used only with a render-safe, isomorphic query function, and the
   provider receives `useServerInsertedHTML` so SSR results stream instead of refetching.
 - Passive selectors do not accidentally fetch.

@@ -484,8 +484,10 @@ if (posts.isError) return <p>Error: {posts.error}</p>
 
 ## Next.js server rendering
 
-Await the server function in a Server Component and hydrate the resolved entry in a small client
-route adapter:
+Two paths. Either is valid; pick per route.
+
+Path 1 — `hydrate()`: await the server function in a Server Component and hydrate the resolved entry
+in a small client route adapter:
 
 ```tsx
 function ProductRoute({ id, initialDetail }: Props) {
@@ -503,10 +505,28 @@ The route adapter calls `hydrate()` before the actual UI takes its first domain 
 business-data prop reaches the UI, and `queryFn` is not called again for the hydrated entry. Do not
 initialize the same store by invoking a mutating action during render.
 
-Experimental `.suspend(routeArg)` blocks a `<Suspense>` boundary for an isomorphic `queryFn`. It
-cannot call a Next.js Server Function during render. Pass `useServerInsertedHTML` to the provider so
-the server-resolved result streams to the browser (see "Streaming from Next.js SSR" above); without
-it, the browser fetches again while hydrating.
+Path 2 — `.suspend(arg)` (experimental): one Client Component inside `<Suspense>` selects the query.
+The server render runs `queryFn`, the result streams with the boundary, and the same component
+hydrates it:
+
+```tsx
+// Server Component
+<Suspense fallback={<ProductSkeleton />}>
+  <ProductDetail id={id} />
+</Suspense>
+
+// Client Component — experimental; needs useServerInsertedHTML on the provider.
+function ProductDetail({ id }: { id: string }) {
+  const detail = useProduct((state) => state.detail.suspend({ id }))
+  return detail.data ? <ProductView product={detail.data} /> : <NotFound />
+}
+```
+
+`.suspend()` is the more atomic form: no Server Component fetch and no adapter, so there is nothing
+to keep in sync. It requires an isomorphic `queryFn` and cannot call a Next.js Server Function
+during render; such data uses Path 1. Pass `useServerInsertedHTML` to the provider so the
+server-resolved result streams to the browser (see "Streaming from Next.js SSR" above); without it,
+the browser fetches again while hydrating.
 
 ## Slow initial loading
 

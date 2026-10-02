@@ -7,17 +7,24 @@ order: 3
 
 # Server data, domain state
 
-Fetch in a Server Component, pass the resolved value to a small Client Component, then initialize
-the domain with `useDomain.hydrate()`. The rest of the UI reads the same domain hook it uses for
-client interactions.
+Server data reaches a query in one of two ways. Either one works, and the rest of the UI reads the
+same domain hook it uses for client interactions.
 
 ```text
-Server Component → resolved data → client route adapter → domain hook → UI
+hydrate():            Server Component → resolved data → client route adapter → domain hook → UI
+.suspend() (experimental): <Suspense> → Client Component selects .suspend(arg) → streamed → same component
 ```
 
-For a query that should render inside a streamed `<Suspense>` boundary, the experimental
-[`.suspend(arg)`](#streaming-suspense-experimental) path runs the query during the server render
-and streams its result to the browser cache. Both paths start with the provider below.
+- [`useDomain.hydrate()`](#3-hydrate-before-the-domain-read) is the stable path. Fetch in a Server
+  Component, pass the resolved value to a small Client Component, and seed the entry there. Use it
+  whenever the fetch must stay on the server.
+- [`.suspend(arg)`](#streaming-suspense-experimental) is the more atomic path. One Client Component
+  inside a streamed `<Suspense>` boundary selects the query; the server render runs `queryFn`, the
+  result streams with the boundary, and the browser hydrates it in the same component. There is no
+  separate fetch step and adapter to keep in sync, at the cost of a `queryFn` that must run in both
+  environments. It is experimental.
+
+Both paths start with the provider below.
 
 ## Provider setup
 
@@ -99,6 +106,9 @@ export const useProduct = create(product, { actions: [] })
 ```
 
 ## 2. Fetch on the server
+
+Steps 2 and 3 are the `hydrate()` path. The [experimental `.suspend()` path](#streaming-suspense-experimental)
+replaces both with one component.
 
 `getProduct` below is your server-side API or database function returning `Product | null`.
 
@@ -189,10 +199,12 @@ providers have separate memory; the explicit seed is what connects their initial
 
 ## Streaming Suspense (experimental)
 
-`.suspend(arg)` runs `queryFn` during render and throws the pending Promise, so a `<Suspense>`
-boundary shows its fallback while the server waits for the data. With `useServerInsertedHTML` on
-the provider, the resolved result travels with the boundary's HTML and the browser hydrates the
-same data without calling `queryFn` again. Available in `@comwit/state@2.5.0-beta.0`:
+The same route as steps 2 and 3, in one component. `.suspend(arg)` runs `queryFn` during render and
+throws the pending Promise, so a `<Suspense>` boundary shows its fallback while the server waits for
+the data. With `useServerInsertedHTML` on the provider, the resolved result travels with the
+boundary's HTML and the browser hydrates the same data without calling `queryFn` again. No Server
+Component fetch, no `initialProduct` prop, no route adapter: the component that reads the data is
+the whole path. Available in the `@comwit/state@2.5.0` beta line:
 
 ```sh
 npm install @comwit/state@beta
@@ -220,6 +232,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 import { useProduct } from '@/state/product'
 
 export function ProductDetail({ id }: { id: string }) {
+  // Experimental: fetch, stream and hydrate happen here; nothing else to wire up.
   const product = useProduct((s) => s.detail.suspend(id))
   if (!product.data) return <NotFound />
 
@@ -256,8 +269,9 @@ Use this path only when `queryFn` can run in both environments:
 - `renderToString`, the Pages Router, realtime queries, and streaming `AsyncIterable` fetchers are
   not covered.
 
-`hydrate()` remains the default for data that must stay on the server. Choose `.suspend()` for
-public, cacheable reads whose loading state belongs to a Suspense boundary.
+Either path is valid. `hydrate()` is the stable choice and the only one for data that must stay on
+the server. `.suspend()` is the more atomic choice for public, cacheable reads whose loading state
+belongs to a Suspense boundary, and it is experimental until its contract settles.
 
 Do not initialize state by calling an action in a render body. Move resolved server query data to
 `hydrate()` or a streamed `.suspend()` and leave normal actions for events and imperative workflows.
