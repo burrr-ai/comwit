@@ -189,56 +189,37 @@ function PostList() {
 </Suspense>
 ```
 
-`.suspend(arg)` starts or reuses the serialized key's query Promise during render, stores it before
-throwing, and returns successful state when React retries. If no explicit `<Suspense>` exists, the
-React 19 streaming server renderer waits at the root. A rejected initial query reaches the nearest
-error boundary. Refetches retain successful data and do not suspend again.
+Use experimental `.suspend(arg)` when a `<Suspense>` fallback should handle initial loading.
+Keep the boundary inside `ComwitProvider` and add an error boundary for initial query failures.
+Later refetches keep successful data visible; use `isFetching` for a refresh indicator.
+Use `.load(arg)` when the component should render its own loading and error states.
 
-For browser mounting and hydration, keep a `<Suspense>` boundary below `ComwitProvider`. If the
-client root suspends before that Provider commits, its provider-scoped cache can be discarded and
-the query can restart.
+### Next.js SSR setup
 
-```text
-suspend(arg) → stage Promise by key → throw → resolve staged entry → React retry → commit entry
-```
-
-Staging a new key does not mutate the active observable resource. An abandoned route render cannot
-replace the value used by the currently committed screen. Existing successful keys stay visible;
-freshness revalidation starts after commit.
-
-### Streaming from Next.js SSR
-
-Server and browser providers have separate caches. Pass Next.js `useServerInsertedHTML` to the
-provider to carry render-resolved results across:
+Pass `useServerInsertedHTML` to the provider to reuse server results without a second browser
+request (available in the `2.5.0` beta line):
 
 ```tsx
+'use client'
+
+import { ComwitProvider } from '@comwit/state'
 import { useServerInsertedHTML } from 'next/navigation'
 
 <ComwitProvider useServerInsertedHTML={useServerInsertedHTML}>{children}</ComwitProvider>
 ```
 
-```text
-server: suspend(arg) → queryFn → boundary HTML, preceded by
-        <script type="application/json" data-comwit-suspend="…">[{ hook id, path, key, fetchedAt, result }]</script>
-browser: hydrating suspend(arg) reads that script → identical snapshot, no queryFn
-         → entry becomes active after commit with the server's fetch time
-```
+- Keep the `<Suspense>` boundary inside this provider.
+- Write `queryFn` to work on both server and browser. Use a Route Handler or external API with an
+  absolute URL for server-side `fetch`; return JSON-serializable data.
+- Use `hydrate()` when fetching requires database code or Next.js Server Functions: await the data
+  in a Server Component, then call `useDomain.hydrate({ field: { arg, data } })` in a client route
+  adapter before reading the domain hook.
+- A server-side failure shows the fallback; the browser retries the request.
+- Without `useServerInsertedHTML`, the browser fetches again during hydration. This SSR setup
+  supports React 19 streaming SSR with the Next.js App Router, not `renderToString` or the Pages Router.
 
-- Each result is keyed by the selecting hook's `useId()`, its field path, and the serialized
-  argument, so nested providers and repeated components cannot cross-hydrate. The server and
-  browser trees must match, as hydration already requires.
-- The inserted script is inert JSON (no executable inline script, no nonce needed). Scripts stay in
-  the document; the provider reads them lazily on the first cache miss.
-- `queryFn` runs in the Client Component bundle on both sides: no Server Functions, no database
-  imports, and an absolute URL for `fetch` on the server. Results must survive `JSON.stringify`.
-- A server-side rejection renders the boundary fallback; the browser retries the request itself.
-- Without the prop, hydration calls `queryFn` again. `renderToString`, the Pages Router, and
-  frameworks without an equivalent insertion hook are not covered.
-
-The descriptor option `{ suspense: true }` and `Query.Suspense*` aliases are deprecated. They retain
-legacy behavior for compatibility. Default new code uses `.load(arg)` for client fetching and the
-generated domain hook's `.hydrate(entries)` for resolved Server Component data. `.suspend(arg)` is
-an experimental opt-in for isomorphic query functions.
+Use `.suspend(arg)` in new code instead of the deprecated `{ suspense: true }` option and
+`Query.Suspense*` types.
 
 ## Methods
 
@@ -256,8 +237,8 @@ const comments = usePost((state) => state.comments.load(postId))
 - The argument is inferred from `Query<TData, TArg>`; an argument query requires exactly that type, while `Query<TData>` uses `.load()`.
 - Calling `.load(arg)` opts the selector into automatic loading. Merely selecting `state.posts` is passive and never fetches.
 - The selector returns the normal resource state (`data`, flags, error, plus infinite/realtime fields).
-- The request begins after React commits, but the selected state reports the first load immediately so skeleton → content does not flash through an empty state.
-- A stable mounted selector does not restart the request on unrelated rerenders. Changing the serialized argument changes the cache key and starts that key.
+- Render loading UI from `isLoading`, which is available on the first render.
+- Pass the route ID or filter as the argument. Changing it loads the matching data; unrelated rerenders do not restart the request.
 - Concurrent selector loads for the same resource and key are deduplicated.
 - Call-time options are deliberately unavailable. Configure provider/query defaults, or use an action method below for forced or coordinated requests.
 
@@ -271,23 +252,17 @@ Call `.suspend()` only inside a selector:
 const post = usePost((state) => state.post.suspend(postId))
 ```
 
-- A cache hit returns the successful query state.
-- A cache miss starts `queryFn` during render and stores the in-flight Promise by serialized arg.
-- Pending work throws that same Promise, so React retries instead of starting duplicate requests.
-- With `<Suspense>`, the nearest fallback renders. Without it, React 19 streaming SSR waits at the
-  root.
-- Initial errors are thrown to the nearest error boundary.
-- If `enabled` or `dependsOn` blocks execution, the selector returns the current initial state
-  without throwing.
-- The `queryFn` must work in every environment where the Client Component renders, including the
-  Next.js server-rendered pass when used for SSR.
-- With `useServerInsertedHTML` on the provider, a result resolved on the server streams to the
-  browser and the hydrating selector returns it without a second request.
-- Promise- or value-returning single and infinite queries are supported, including `local.query()`
-  and `local.infinite()` adapters. Local storage reconciliation waits until commit. Realtime
-  queries and async-iterable fetchers are not supported.
+- Pass only the query argument, not a Promise or initial data.
+- Put the component inside `<Suspense>` under `ComwitProvider` to show a fallback while loading.
+- Add an error boundary for initial query failures.
+- Later refetches keep successful data visible; show a refresh indicator with `isFetching`.
+- If `enabled` or `dependsOn` blocks execution, the selector returns the current initial state.
+- For SSR, `queryFn` must work on server and browser. Use the Next.js setup above to reuse server
+  results without a second browser request.
+- Supports value- or Promise-returning single/infinite queries, including `local.query()` and
+  `local.infinite()`. Realtime queries and async-iterable fetchers are not supported.
 
-Use `.load(arg)` instead when the component must commit and render `isLoading` itself.
+Use `.load(arg)` instead when the component should render `isLoading` and `isError` itself.
 
 ### .query(arg?, options?)
 
@@ -373,24 +348,18 @@ await this.model.trending.previousFetch()
 | `cursor`  | `string \| null` | Current pagination cursor.                                               |
 | `hasMore` | `boolean`        | Whether more pages are available. `nextFetch()` is a no-op when `false`. |
 
-## Cache Lifecycle
+## Reuse data between requests
 
-```
-query() defined in model
-  -> selector .load(arg) after commit
-  -> selector .suspend(arg) during render
-  -> action .query(arg) imperatively
-    -> queryFn executes, data loaded
-    -> cache entry created with key = serialized arg
-    -> within staleTime -> cached data returned, no fetch
-    -> after staleTime -> re-fetch triggered
-    -> after gcTime -> cache entry deleted entirely
-```
-
-- Each unique argument produces a separate cache entry (keyed by serialized arg).
-- Switching between arguments restores the cached state for that argument.
-- `placeholderData` is applied when switching to an argument with no cache.
-- Query resources currently expose one active argument at a time. Cached entries remain per argument, but a displayed resource state represents the active key.
+- Set `staleTime` to reuse fresh results without fetching again; default `0` considers data stale
+  immediately. Use `.refetch()` for an explicit refresh.
+- Set `gcTime` to control how long unused results are kept after the model loses its last observer;
+  default `5 * 60_000` (five minutes).
+- Pass the same argument to reuse its cached data. Switching arguments restores matching cached
+  data when available.
+- Set `placeholderData` for an argument that has no cached data. Use `keepPreviousData` below to
+  keep the previous result visible while fetching.
+- One query field displays one active argument at a time. Use separate fields when two views need
+  different arguments simultaneously.
 
 ## keepPreviousData
 
@@ -501,13 +470,12 @@ function ProductDetail() {
 }
 ```
 
-The route adapter calls `hydrate()` before the actual UI takes its first domain snapshot. No
-business-data prop reaches the UI, and `queryFn` is not called again for the hydrated entry. Do not
+Call `hydrate()` unconditionally in the route adapter before reading the domain hook. Read data
+through the hook in the UI; `hydrate()` uses the supplied value without calling `queryFn`. Do not
 initialize the same store by invoking a mutating action during render.
 
-Path 2 — `.suspend(arg)` (experimental): one Client Component inside `<Suspense>` selects the query.
-The server render runs `queryFn`, the result streams with the boundary, and the same component
-hydrates it:
+Path 2 — `.suspend(arg)` (experimental): fetch where the component reads the data. Put the
+component inside `<Suspense>` under `ComwitProvider` to show a loading fallback:
 
 ```tsx
 // Server Component
@@ -522,16 +490,14 @@ function ProductDetail({ id }: { id: string }) {
 }
 ```
 
-`.suspend()` is the more atomic form: no Server Component fetch and no adapter, so there is nothing
-to keep in sync. It requires an isomorphic `queryFn` and cannot call a Next.js Server Function
-during render; such data uses Path 1. Pass `useServerInsertedHTML` to the provider so the
-server-resolved result streams to the browser (see "Streaming from Next.js SSR" above); without it,
-the browser fetches again while hydrating.
+Use `.suspend()` when `queryFn` can run on both server and browser. Use `hydrate()` for database
+reads or Next.js Server Functions. Pass `useServerInsertedHTML` to the provider to reuse server
+results without a second browser request (see "Next.js SSR setup" above).
 
 ## Slow initial loading
 
-Declare `slowLoadingMs` on a query to read the library-owned `isSlowLoading` boolean. It does
-not delay the request, data, Promise, or existing `isLoading` / `isFetching` flags.
+Set `slowLoadingMs` on a query when a skeleton should appear only for a slow initial load. Read
+`isSlowLoading` alongside `isLoading`; the option does not delay the request or its result.
 
 ```ts
 const projects = model({
@@ -558,31 +524,15 @@ return null
 inspect status rather than data truthiness. Success takes precedence over background errors for
 local queries. Layout space and whether to show a skeleton remain application decisions.
 
-- Supported declarations: `query()`, `query.infinite()`, `query.realtime()`, `local.query()`, and
-  `local.infinite()`. Every query has the same readonly boolean; omitting the option keeps it
-  false and allocates no loading timer. Standalone `local()`, `persist()`, model options,
-  provider defaults, and per-call query options do not accept this policy.
-- Accepts finite milliseconds from `0` through `2147483647`; other values throw `RangeError`.
-  `0` becomes true as soon as a browser query starts initial loading. At `500`, it stays false
-  before 500ms and becomes true if initial loading still continues when the timer runs.
-- The clock starts when the browser query enters initial loading. Selector `.load()` starts
-  work after commit; its earlier synthetic pending/SSR snapshot is false. Disabled/dependent
-  queries that do not start work have no clock. Server rendering starts no loading timers;
-  server seeds and first hydration snapshots remain false. Experimental `.suspend()` starts
-  no clock for its uncommitted, render-staged request.
-- IndexedDB restoration and a cache miss's subsequent fetch share one interval. Restored or
-  remotely successful data clears the flag immediately, even if durable write-through is still
-  finishing. Usable stale data and background revalidation never become slow initial loading.
-  `isLoading: false`, success, or error ends the interval. Stream chunks can mark usable data
-  with `isLoading: false` / `isSuccess: true` without waiting for the stream to finish.
-- Changing serialized arguments or activating a different local scope resets the interval.
-  Overlapping requests for the same key and internal retry/backoff keep a continuous interval;
-  a settled error followed by a new query starts a new one. Stale requests cannot clear a newer
-  interval. No request key, retry counter, or timer is needed in the component.
-- Consumers of the same provider/query share the flag. The last model observer leaving pauses
-  timer notifications; reobserving the still-pending query resumes using its elapsed time.
-  An imperative-only query owns its clock until settlement or provider teardown. These rules
-  affect only the additional boolean, not request cancellation or cache retention.
-- The flag is reset for cache reads and excluded from IndexedDB persistence. There is no minimum
-  display duration: completion clears it immediately. Timer scheduling is a lower bound, not a
-  guarantee of a paint at an exact millisecond.
+- Set the option on `query()`, `query.infinite()`, `query.realtime()`, `local.query()`, or
+  `local.infinite()`. It is not a provider default or a per-call option, and standalone `local()`
+  and `persist()` do not support it. Without the option, `isSlowLoading` stays false.
+- Use finite milliseconds from `0` through `2147483647`; invalid values throw `RangeError`.
+  Use `0` for an immediate indicator or, for example, `500` to wait at least 500ms.
+- Use this flag with `.load()` or action-driven browser requests. For `.suspend()`, use the
+  `<Suspense>` fallback. During SSR and initial hydration, the flag is false.
+- The flag covers initial loading, including local restoration followed by a network request.
+  It becomes false as soon as data is usable or loading ends. Background refetches do not set it.
+- Changing the query argument or local scope starts a new loading interval. Components reading
+  the same query share the flag; do not add a separate timer per component.
+- The flag has no minimum display duration. If the UI needs one, handle it in the component.
