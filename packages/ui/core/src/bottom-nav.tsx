@@ -20,6 +20,7 @@ import * as React from 'react'
 import { composeEventHandlers } from './internal/compose-event-handlers'
 import { createContext } from './internal/context'
 import { Primitive } from './internal/primitive'
+import { simulateSpring, sampleSpring, type SpringFrame } from './internal/spring'
 import { useControllableState } from './internal/use-controllable-state'
 import { useScrollChrome } from './scroll-chrome'
 
@@ -132,6 +133,12 @@ function useIndicator() {
     let target = 0
     let width = 0
     let pressure = 0
+    let pressureVelocity = 0
+    // Same trajectories and velocity sampling as usePresenceAnimation. Pointer targets can
+    // change every frame, so sample them here instead of binding playback to Presence.
+    type Run = { target: number; elapsed: number; frames: SpringFrame[] }
+    let motion: Run | null = null
+    let press: Run | null = null
     let initialized = false
     let suppressClick = false
     let gesture: { id: number; startX: number; startY: number; dragged: boolean } | null = null
@@ -144,29 +151,50 @@ function useIndicator() {
       return ((clientX - rect.left) / rect.width) * bar.offsetWidth
     }
     const draw = () => {
-      // Upstream directional stretch/compression, driven by spring speed instead of mouse distance.
+      // A moving lens swells vertically instead of flattening. Both deformation and
+      // press lift settle with the existing shared spring trajectories.
       const stretch = media.matches ? 0 : Math.min(Math.abs(velocity) / 1400, 1)
-      const swell = media.matches ? 0 : pressure * 0.075
-      lens.style.transform = `translate3d(${x}px, 0, 0) scale(${1 + stretch * 0.3 + swell}, ${1 - stretch * 0.15 + swell})`
+      const held = media.matches ? 0 : pressure
+      const lift = -held * 1.5 - stretch
+      lens.style.transform = `translate3d(${x}px, ${lift}px, 0) scale(${1 + stretch * 0.16 + held * 0.05}, ${1 + stretch * 0.22 + held * 0.12})`
       lens.style.setProperty('--liquid-pressure', String(pressure))
     }
     const tick = (time: number) => {
       const dt = Math.min((time - (lastTime || time - 16)) / 1000, 0.032)
       lastTime = time
-      // Substeps keep the same spring stable at both 60 Hz and 120 Hz.
-      for (let i = 0; i < 4; i++) {
-        velocity += ((target - x) * 420 - velocity * 30) * (dt / 4)
-        x += velocity * (dt / 4)
+      if (!motion || motion.target !== target) {
+        motion = {
+          target,
+          elapsed: 0,
+          frames: simulateSpring({ stiffness: 420, damping: 30 }, x, target, velocity),
+        }
       }
-      pressure += ((gesture ? 1 : 0) - pressure) * Math.min(1, dt * 22)
+      const pressed = gesture ? 1 : 0
+      if (!press || press.target !== pressed) {
+        press = {
+          target: pressed,
+          elapsed: 0,
+          frames: simulateSpring({ duration: 0.18 }, pressure, pressed, pressureVelocity),
+        }
+      }
+      motion.elapsed += dt * 1000
+      press.elapsed += dt * 1000
+      const position = sampleSpring(motion.frames, motion.elapsed)
+      const swelling = sampleSpring(press.frames, press.elapsed)
+      x = position.position
+      velocity = position.velocity
+      pressure = swelling.position
+      pressureVelocity = swelling.velocity
       const settled =
-        Math.abs(target - x) < 0.02 &&
-        Math.abs(velocity) < 0.1 &&
-        Math.abs((gesture ? 1 : 0) - pressure) < 0.001
+        motion.elapsed >= motion.frames[motion.frames.length - 1]!.time &&
+        press.elapsed >= press.frames[press.frames.length - 1]!.time
       if (settled || media.matches) {
         x = target
         velocity = 0
         pressure = gesture && !media.matches ? 1 : 0
+        pressureVelocity = 0
+        motion = null
+        press = null
         frame = 0
         lastTime = 0
       } else {
@@ -191,6 +219,8 @@ function useIndicator() {
         x = target
         velocity = 0
         initialized = true
+        motion = null
+        press = null
         draw()
       }
       animate()

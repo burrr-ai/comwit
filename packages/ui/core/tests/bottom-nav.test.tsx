@@ -138,6 +138,23 @@ describe('liquid bottom nav', () => {
     expect(frames.size).toBe(0)
   })
 
+  it('swells vertically while moving or held, then returns to its resting size', async () => {
+    await act(async () => root.render(<Fixture />))
+    const scaleY = () => Number(lens().style.transform.match(/scale\([^,]+, ([^)]+)\)/)?.[1])
+    expect(scaleY()).toBe(1)
+    await act(async () => item(2).click())
+    await advance(4)
+    expect(scaleY()).toBeGreaterThan(1.05)
+    await advance()
+    expect(scaleY()).toBe(1)
+    await pointer('pointerdown', 209, item(2))
+    await advance()
+    expect(scaleY()).toBeGreaterThan(1.1)
+    await pointer('pointerup', 209)
+    await advance()
+    expect(scaleY()).toBe(1)
+  })
+
   it('commits a dragged link once, suppresses the extra pointer click, and ignores disabled tabs', async () => {
     const onChange = vi.fn()
     await act(async () => root.render(<Fixture onChange={onChange} />))
