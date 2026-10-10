@@ -30,7 +30,11 @@ function useGlassLensSupport() {
 /** 크기가 바뀔 때만 렌즈 맵을 다시 만든다. 스크롤·이동에는 캡처 비용이 없다. */
 function useGlassLens(
   element: HTMLElement | null,
-  { enabled = true, shape = 'pill' }: { enabled?: boolean; shape?: GlassLensShape } = {}
+  {
+    enabled = true,
+    shape = 'pill',
+    rim = 18,
+  }: { enabled?: boolean; shape?: GlassLensShape; rim?: number } = {}
 ) {
   const supported = useGlassLensSupport()
   const active = supported && enabled
@@ -42,7 +46,7 @@ function useGlassLens(
       const width = element.offsetWidth
       const height = element.offsetHeight
       if (width === 0 || height === 0) return
-      const map = createLensMap(width, height, shape)
+      const map = createLensMap(width, height, shape, rim)
       const canvas = document.createElement('canvas')
       canvas.width = map.width
       canvas.height = map.height
@@ -55,13 +59,20 @@ function useGlassLens(
     const observer = new ResizeObserver(update)
     observer.observe(element)
     return () => observer.disconnect()
-  }, [element, active, shape])
+  }, [element, active, shape, rim])
 
   return { supported, texture: active ? texture : undefined }
 }
 
 /** 가장자리만 대칭으로 굴절시킨다 — 중앙과 렌즈 밖 픽셀은 고정. */
-function lensDisplacement(x: number, y: number, width: number, height: number, radius: number) {
+function lensDisplacement(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  rimWidth: number
+) {
   const px = x - width / 2
   const py = y - height / 2
   const qx = Math.abs(px) - (width / 2 - radius)
@@ -70,7 +81,7 @@ function lensDisplacement(x: number, y: number, width: number, height: number, r
   const outsideY = Math.max(qy, 0)
   const cornerLength = Math.hypot(outsideX, outsideY)
   const distance = cornerLength - radius
-  const rim = Math.min(radius, 18)
+  const rim = Math.min(radius, rimWidth)
   if (distance >= 0 || distance <= -rim) return { x: 0, y: 0 }
   // 도함수가 1 미만이라 글자가 접히지 않고 휘기만 한다.
   const bend = Math.sin((-distance / rim) * Math.PI) * rim * 0.3125
@@ -81,13 +92,13 @@ function lensDisplacement(x: number, y: number, width: number, height: number, r
 }
 
 /** 모양만으로 만드는 작은 변위 맵. 페이지 캡처·원격 이미지·프레임 캡처 없음. */
-function createLensMap(width: number, height: number, shape: GlassLensShape) {
+function createLensMap(width: number, height: number, shape: GlassLensShape, rim = 18) {
   const radius =
     shape === 'panel' ? Math.min(16, width / 2, height / 2) : Math.min(width, height) / 2
   const ratio = Math.min(1, 256 / Math.max(width, height))
   const mapWidth = Math.max(1, Math.ceil(width * ratio))
   const mapHeight = Math.max(1, Math.ceil(height * ratio))
-  const strength = Math.min(radius, 18) * 0.3125
+  const strength = Math.min(radius, Math.max(1, rim)) * 0.3125
   const pixels = new Uint8ClampedArray(mapWidth * mapHeight * 4)
   for (let y = 0; y < mapHeight; y += 1) {
     for (let x = 0; x < mapWidth; x += 1) {
@@ -96,7 +107,8 @@ function createLensMap(width: number, height: number, shape: GlassLensShape) {
         ((y + 0.5) * height) / mapHeight,
         width,
         height,
-        radius
+        radius,
+        Math.max(1, rim)
       )
       const index = (y * mapWidth + x) * 4
       pixels[index] = 128 + Math.round((127 * shift.x) / strength)

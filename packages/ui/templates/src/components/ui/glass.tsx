@@ -8,13 +8,14 @@
  *  - <GlassSurface>    레이어 없이 자식 DOM 자체를 유리 면으로 만든다(메뉴·팝오버 content).
  *  - <GlassButton>     유리 레이어를 기본으로 까는 원형/알약 버튼(앱바 뒤로가기·플로팅 액션).
  *
- * variant — morphing(렌즈 가장자리 굴절 · 기본) · blur(강한 블러) · frosted(서리) · fade(아래로 사라짐 · 앱바)
+ * variant — liquid(선명한 굴절 · RGB 분산) · morphing(렌즈 가장자리 굴절 · 기본) · blur(강한 블러) · frosted(서리) · fade(아래로 사라짐 · 앱바)
  * 시각은 styles.css 의 `.glass*` 가 전부 갖고, 여기선 클래스·CSS 변수·SVG 필터만 붙인다.
  * 굴절 렌즈의 변위 맵(지원 감지·크기 추적·캔버스 생성)은 @comwit/ui 의 `useGlassLens` 가 만든다 —
  * 안정적으로 도는 Chromium 에서만 켜고, 그 외엔 블러로 폴백한다.
  */
 
 import {
+  Fragment as ReactFragment,
   useId,
   useState,
   type ComponentProps,
@@ -27,7 +28,7 @@ import { Slot, useGlassLens, type GlassLensTexture } from '@comwit/ui'
 import { Button } from './button'
 import { cn } from '../../lib/utils'
 
-export type GlassVariant = 'morphing' | 'blur' | 'frosted' | 'fade'
+export type GlassVariant = 'morphing' | 'liquid' | 'blur' | 'frosted' | 'fade'
 export type GlassShape = 'pill' | 'circle' | 'panel'
 
 type GlassOptions = {
@@ -50,6 +51,7 @@ type GlassOptions = {
 
 const VARIANT_CLASS: Record<GlassVariant, string> = {
   morphing: 'glass-morphing',
+  liquid: 'glass-liquid',
   blur: 'glass-blur',
   frosted: 'glass-frosted',
   fade: 'glass-fade',
@@ -217,7 +219,11 @@ function useGlassVisual({
   const filterId = `glass-${variant}-${useId().replace(/:/g, '')}`
   // 유리 면 DOM 은 콜백 ref 로 받는다 — 프레즌스로 열고 닫히는 콘텐츠는 마운트 시점이 매번 다르다.
   const [element, setElement] = useState<HTMLElement | null>(null)
-  const lens = useGlassLens(element, { enabled: variant === 'morphing', shape })
+  const lens = useGlassLens(element, {
+    enabled: variant === 'morphing' || variant === 'liquid',
+    shape,
+    rim: variant === 'liquid' ? 10 : 18,
+  })
   const clamped = opacity === undefined ? undefined : Math.min(1, Math.max(0, opacity))
   const style = {
     '--glass-filter': `url(#${filterId})`,
@@ -237,6 +243,25 @@ function useGlassVisual({
   }
 }
 
+/**
+ * @license MIT
+ * RGB refraction adapted from rdev/liquid-glass-react (MIT):
+ * https://github.com/rdev/liquid-glass-react/blob/master/src/index.tsx
+ * Copyright 2025 MAX ROVENSKY
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+ * and associated documentation files (the “Software”), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 function GlassFilter({
   filterId,
   variant,
@@ -249,7 +274,8 @@ function GlassFilter({
   const isBlur = variant === 'blur'
   const isFrosted = variant === 'frosted'
   const isFade = variant === 'fade'
-  const isMorphing = variant === 'morphing'
+  const isLiquid = variant === 'liquid'
+  const isMorphing = variant === 'morphing' || isLiquid
 
   return (
     <svg aria-hidden="true" className="absolute size-0">
@@ -297,24 +323,64 @@ function GlassFilter({
             />
           </>
         )}
-        <feDisplacementMap
-          in="SourceGraphic"
-          in2="soft"
-          scale={isMorphing ? (lensMap?.scale ?? 0) : isBlur ? 28 : isFade ? 6 : 10}
-          xChannelSelector="R"
-          yChannelSelector="G"
-          result="refracted"
-        />
-        <feGaussianBlur
-          in="refracted"
-          stdDeviation={isBlur ? '9.5' : isFade ? '2.5' : isFrosted ? '5.5' : '4'}
-          result="frosted"
-        />
-        <feColorMatrix
-          in="frosted"
-          type="saturate"
-          values={isBlur ? '1.9' : isFade ? '1.25' : isFrosted ? '1.35' : '1.55'}
-        />
+        {isLiquid ? (
+          <>
+            {/* RGB displacement + screen recombination adapted from rdev/liquid-glass-react.
+                The existing edge-only map leaves the lens center sharp and limits color fringing. */}
+            {[1, 0.97, 0.94].map((factor, channel) => (
+              <ReactFragment key={channel}>
+                <feDisplacementMap
+                  in="SourceGraphic"
+                  in2="soft"
+                  scale={(lensMap?.scale ?? 0) * factor}
+                  xChannelSelector="R"
+                  yChannelSelector="G"
+                  result={`liquid-displaced-${channel}`}
+                />
+                <feColorMatrix
+                  in={`liquid-displaced-${channel}`}
+                  type="matrix"
+                  values={[
+                    `${channel === 0 ? 1 : 0} 0 0 0 0`,
+                    `0 ${channel === 1 ? 1 : 0} 0 0 0`,
+                    `0 0 ${channel === 2 ? 1 : 0} 0 0`,
+                    '0 0 0 1 0',
+                  ].join(' ')}
+                  result={`liquid-channel-${channel}`}
+                />
+              </ReactFragment>
+            ))}
+            <feBlend
+              in="liquid-channel-1"
+              in2="liquid-channel-2"
+              mode="screen"
+              result="liquid-gb"
+            />
+            <feBlend in="liquid-channel-0" in2="liquid-gb" mode="screen" result="liquid-rgb" />
+            <feGaussianBlur in="liquid-rgb" stdDeviation="0.25" />
+          </>
+        ) : (
+          <>
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="soft"
+              scale={isMorphing ? (lensMap?.scale ?? 0) : isBlur ? 28 : isFade ? 6 : 10}
+              xChannelSelector="R"
+              yChannelSelector="G"
+              result="refracted"
+            />
+            <feGaussianBlur
+              in="refracted"
+              stdDeviation={isBlur ? '9.5' : isFade ? '2.5' : isFrosted ? '5.5' : '4'}
+              result="frosted"
+            />
+            <feColorMatrix
+              in="frosted"
+              type="saturate"
+              values={isBlur ? '1.9' : isFade ? '1.25' : isFrosted ? '1.35' : '1.55'}
+            />
+          </>
+        )}
       </filter>
     </svg>
   )

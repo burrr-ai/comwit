@@ -35,7 +35,7 @@
     "registry": "pnpm --filter comwit-ui build:registry",
     "build:packages": "pnpm --filter @comwit/state build && pnpm --filter @comwit/ui build && pnpm registry",
     "build": "pnpm --filter docs build",
-    "test": "pnpm --filter @comwit/state test && node --test scripts/workspace.test.mjs",
+    "test": "pnpm --filter @comwit/state test && pnpm --filter @comwit/ui test && node --test scripts/workspace.test.mjs",
     "typecheck": "pnpm build:packages && pnpm --filter docs gen && pnpm stories && pnpm -r --if-present typecheck",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
