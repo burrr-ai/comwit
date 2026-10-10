@@ -26,3 +26,14 @@ pnpm --filter docs lint
 pnpm --filter docs typecheck
 pnpm build
 ```
+
+## Documentation design
+
+Documentation puts the working example and useful controls first. The icon gallery at `/ui/icons` follows this rule.
+
+- Use a plain page title, then the content. Omit eyebrows, slogans, decorative badges, specification ribbons, and promotional footers.
+- Do not add a sentence to explain an obvious search field, filter, card, or copy button. Show contextual feedback only when an action needs it.
+- Keep essential labels readable at the existing body/label token sizes. Avoid miniature metadata and uppercase microcopy as decoration.
+- Put code in the selected example's detail view; keep browsing surfaces focused on the examples.
+- Preserve accessible names, live status, and keyboard guidance with semantic markup or visually hidden text when they do not need to be visible.
+- Technical guides still contain explanations needed to use an API; decorative commentary does not belong around the documentation interface.

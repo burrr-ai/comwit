@@ -10,3 +10,4 @@ storybook-static
 apps/storybook/src/generated/
 packages/ui/cli/registry/
 apps/docs/app/ui/_generated/
+packages/icons/src/generated/

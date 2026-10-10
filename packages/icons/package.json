@@ -1,0 +1,69 @@
+{
+  "name": "@comwit/icons",
+  "version": "0.1.0",
+  "description": "Original Comwit SVG icons with optional, purposeful motion.",
+  "type": "module",
+  "license": "MIT",
+  "author": "burrr-ai",
+  "homepage": "https://library.comwit.io/ui/icons",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/burrr-ai/comwit.git",
+    "directory": "packages/icons"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./animated": {
+      "types": "./dist/animated.d.ts",
+      "import": "./dist/animated.js",
+      "require": "./dist/animated.cjs"
+    },
+    "./catalog": {
+      "types": "./dist/catalog.d.ts",
+      "import": "./dist/catalog.js",
+      "require": "./dist/catalog.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "build": "pnpm generate && vite build",
+    "typecheck": "pnpm generate && tsc --noEmit",
+    "test": "pnpm build && vitest run && node scripts/verify-package.mjs",
+    "prepublishOnly": "pnpm typecheck && pnpm test"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "happy-dom": "^20.6.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.18",
+    "esbuild": "^0.25.12",
+    "prettier": "^3.5.3"
+  }
+}
