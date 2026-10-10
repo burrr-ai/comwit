@@ -2,6 +2,7 @@
 
 import { forwardRef, useEffect, useRef, useImperativeHandle } from 'react'
 import { Icon } from './icon'
+import { bake } from './motion'
 import type { AnimatedIconProps, IconDefinition } from './types'
 
 export const AnimatedIcon = forwardRef<
@@ -16,28 +17,30 @@ export const AnimatedIcon = forwardRef<
     const element = svg.current
     if (!element) return
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-    let animations: Animation[] = []
+    let animations: { animation: Animation; settle: number }[] = []
     const stop = () => {
-      animations.forEach((animation) => animation.cancel())
+      animations.forEach(({ animation }) => animation.cancel())
       animations = []
     }
     const play = () => {
-      stop()
       if (reduced.matches || typeof element.animate !== 'function') return
+      // Restarting mid-gesture would snap parts back to rest; once only the tail is left, it can't show.
+      const busy = animations.some(
+        ({ animation, settle }) =>
+          animation.playState === 'running' && Number(animation.currentTime ?? 0) < settle
+      )
+      if (busy) return
+      stop()
+      const parts = new Map<string, SVGElement>()
+      element
+        .querySelectorAll<SVGElement>('[data-icon-part]')
+        .forEach((node) => parts.set(node.dataset.iconPart!, node))
       animations = definition.motion.flatMap((track) => {
-        const part = Array.from(element.querySelectorAll<SVGElement>('[data-icon-part]')).find(
-          (node) => node.dataset.iconPart === track.part
-        )
+        const part = parts.get(track.part)
         if (!part) return []
-        return [
-          part.animate(track.keyframes, {
-            duration: track.duration ?? 560,
-            delay: track.delay ?? 0,
-            easing: track.easing ?? 'cubic-bezier(.22, 1, .36, 1)',
-            iterations: 1,
-            fill: 'none',
-          }),
-        ]
+        const { keyframes, duration, settle } = bake(track)
+        const animation = part.animate(keyframes, { duration, easing: 'linear', fill: 'none' })
+        return [{ animation, settle }]
       })
     }
     playRef.current = play

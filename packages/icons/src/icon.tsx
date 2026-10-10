@@ -11,7 +11,12 @@ function renderNode(node: IconNode, key: number): ReactElement {
       ...(node.part
         ? {
             'data-icon-part': node.part,
-            style: { transformBox: 'fill-box', transformOrigin: 'center' } as CSSProperties,
+            style: (node.pivot
+              ? {
+                  transformBox: 'view-box',
+                  transformOrigin: `${node.pivot[0]}px ${node.pivot[1]}px`,
+                }
+              : { transformBox: 'fill-box', transformOrigin: 'center' }) as CSSProperties,
           }
         : {}),
     },

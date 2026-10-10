@@ -1,6 +1,6 @@
 # @comwit/icons
 
-Original Comwit icons: 60 familiar shapes on a 24 × 24 grid, with optional motion for each one. MIT licensed. The first collection follows the most-used Lucide names in the Comwit app; its SVG geometry and motion are authored here, not re-exported from Lucide.
+Original Comwit icons: 109 familiar shapes on a 24 × 24 grid, with optional spring motion for each one. MIT licensed. The collection follows the most-used Lucide names in the Comwit app, plus everyday interface glyphs (theme toggle, visibility, media, sharing); its SVG geometry and motion are authored here, not re-exported from Lucide.
 
 **Preview:** this package is prepared for its first release. The npm install command becomes available after publishing; this repository uses the workspace package today.
 
@@ -64,7 +64,9 @@ export function CopyButton({ text }: { text: string }) {
 }
 ```
 
-Motion is finite (including the loader preview), ends at the resting drawing, and stops immediately when the user enables reduced motion. Event listeners and animations are cleaned up on unmount. Browsers without Web Animations keep the static drawing. An animated component forwards its ref to the SVG; static named components intentionally do not expose a ref prop.
+Every gesture is driven by a spring. A part is pushed toward a pose (a few grid units of travel, a quarter turn, a slight squash), then released: the spring carries its velocity back through rest, overshoots and settles, so motion reads as weight rather than a scripted tween. Springs are integrated once per display frame (the same semi-implicit Euler used by `@comwit/ui` presence springs) and baked into Web Animations keyframes the first time an icon plays, so playback is handled by the browser's animation engine rather than a JavaScript loop.
+
+A hover that arrives while the visible part of a gesture is still playing is ignored rather than snapping the drawing back; once only the settling tail remains, it plays again. Motion is finite (including the loader preview), ends at the resting drawing, and stops immediately when the user enables reduced motion. Event listeners and animations are cleaned up on unmount. Browsers without Web Animations keep the static drawing. An animated component forwards its ref to the SVG; static named components intentionally do not expose a ref prop.
 
 `/catalog` contains metadata and all drawings for galleries. Application code should use named imports from the root or `/animated` so bundlers can remove unused icons. Static imports also omit animation keyframes.
 
@@ -72,11 +74,14 @@ Motion is finite (including the loader preview), ends at the resting drawing, an
 
 - 24 × 24 canvas; primarily 3–21 safe drawing bounds, with optical adjustments.
 - 1.65-unit stroke, rounded caps and joins, open interiors, restrained corner radii.
-- Use meaningful moving groups: a bell's body, a document's lines, a bin's lid.
-- Keep finite motions short and restore the exact resting shape; avoid whole-grid autoplay.
+- Use meaningful moving groups: a bell's body, a document's lines, a bin's lid. Give hinges and axles a `pivot`.
+- Compose motion from the gestures in `src/definitions/kit.ts` — `nudge` (wind up, travel, return), `push`, `pop`, `swing`, `turn`, `write`, `enter`, `fly` — and its spring presets instead of hand-written keyframes. Travel 2–3 grid units, turn 10–25°, scale 1.08–1.2.
+- Only write on (`write`) strokes that carry meaning, such as a check or a document's lines; never erase and redraw an icon's main outline.
+- `turn` may end on a pose that draws exactly like rest (a quarter turn of a plus, a gear's tooth pitch); everything else returns to rest. Keep the moving part inside the 24 × 24 frame, including the stroke.
+- Avoid whole-grid autoplay.
 - Keep English names compatible with the audited imports, adding `Icon` to static exports and `Animated…Icon` to animated ones. Similar Lucide names are not automatic aliases.
 
-Edit `src/definitions/actions.ts` or `objects.ts`, then run:
+Edit the category files in `src/definitions/`, then run:
 
 ```sh
 pnpm --filter @comwit/icons build
@@ -86,7 +91,7 @@ pnpm --filter @comwit/icons test
 
 The generator produces independently tree-shakeable definitions and named exports. Do not edit generated files by hand. View `/ui/icons` in Docs for both light/dark preview, size/color controls, search, and usage snippets.
 
-The first 60 icons cover 729 of 931 named runtime imports (78%) in the audited app. The selection audit is in `usage-audit.json`: it counts named runtime imports across the app's `src`, not rendered instances. Refresh against a local application with:
+The 109 icons cover 836 of 931 named runtime imports (90%) and 100 of 175 distinct names in the audited app. The selection audit is in `usage-audit.json`: it counts named runtime imports across the app's `src`, not rendered instances. Refresh against a local application with:
 
 ```sh
 node packages/icons/scripts/audit-usage.mjs /path/to/application/src > packages/icons/usage-audit.json

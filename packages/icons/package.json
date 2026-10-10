@@ -41,7 +41,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "generate": "node --experimental-strip-types scripts/generate.mjs",
+    "generate": "node scripts/generate.mjs",
     "build": "pnpm generate && vite build",
     "typecheck": "pnpm generate && tsc --noEmit",
     "test": "pnpm build && vitest run && node scripts/verify-package.mjs",
