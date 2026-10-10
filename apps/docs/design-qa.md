@@ -39,3 +39,12 @@ Opening a UI dialog initially applied duplicate scrollbar compensation (1150px h
 - Archivo Black is bundled for the matching social image, with its OFL license.
 
 final result: passed
+
+## Icon gallery and motion — 2026-10-10
+
+- The gallery uses a plain title, search, controls, and readable icon names. Eyebrows, specification ribbons, repeated instructions, decorative badges, card captions, and the promotional footer are omitted. The documentation design rule is recorded in `README.md`.
+- All 60 icons have individual motion, using 173 named tracks. Browser checks sampled ten timeline positions per icon and actual SVG path points transformed into viewport coordinates; every drawing stayed inside its viewBox including the default stroke margin. The final pose was compared against rest immediately before completion, with no displacement above 0.05 screen pixels.
+- Representative intermediate frames were visually inspected for bell/clapper lag, separated copy sheets, coordinated sliders, stroke drawing, folding/launching send, rotating locks, and tassel follow-through.
+- Reduced motion produced zero SVG animations across the full collection. Keyboard focus and pointer entry still trigger the same finite playback.
+- Desktop 1440px and mobile 390px/320px have no horizontal overflow. The detail dialog supports short-screen vertical scrolling and horizontal code scrolling; Escape restores focus. Combined code copying and truthful permission-denied feedback were verified.
+- Package tests, ESM/CJS/RSC and tree-shaking checks, Docs type checking, lint, and the production build passed. Screenshots are in `qa/icons/`.

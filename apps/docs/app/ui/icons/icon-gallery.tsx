@@ -66,7 +66,6 @@ function CodeSnippet({ code, label }: { code: string; label: string }) {
   return (
     <div className="icons-code-block">
       <div className="icons-code-heading">
-        <span>{label === 'Copy import' ? 'Import' : 'Usage'}</span>
         <CopyButton key={code} text={code} label={label} />
       </div>
       <pre tabIndex={0}>
@@ -79,7 +78,7 @@ function CodeSnippet({ code, label }: { code: string; label: string }) {
 export function IconGallery() {
   const [query, setQuery] = React.useState('')
   const [category, setCategory] = React.useState('all')
-  const [size, setSize] = React.useState(32)
+  const [size, setSize] = React.useState(40)
   const [color, setColor] = React.useState<string>('currentColor')
   const [mode, setMode] = React.useState<Mode>('motion')
   const [selected, setSelected] = React.useState<Definition | null>(null)
@@ -103,25 +102,7 @@ export function IconGallery() {
   return (
     <div className="icons-page">
       <header className="icons-header">
-        <div className="icons-eyebrow">
-          <span aria-hidden="true" /> THE COMWIT COLLECTION
-        </div>
-        <div className="icons-heading-row">
-          <h1 className="text-display-xl">
-            Comwit Icons<span className="icons-title-dot">.</span>
-          </h1>
-          <span className="icons-preview-label">Preview collection</span>
-        </div>
-        <p className="icons-intro">
-          Familiar shapes. A little character. Original icons with purposeful movement, made for
-          everyday interfaces.
-        </p>
-        <div className="icons-specs" aria-label="Collection details">
-          <span>{iconCatalog.length} original icons</span>
-          <span>24 × 24 grid</span>
-          <span>React + SVG</span>
-          <span>No motion dependency</span>
-        </div>
+        <h1 className="text-display-lg">Icons</h1>
       </header>
 
       <section aria-label="Browse icons" className="icons-browser">
@@ -131,7 +112,7 @@ export function IconGallery() {
             ref={searchRef}
             type="search"
             aria-label="Search icons by name or keyword"
-            placeholder="Search icons, in English or 한국어…"
+            placeholder="Search icons…"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -152,7 +133,7 @@ export function IconGallery() {
 
         <div className="icons-toolbar">
           <label className="icons-select-label">
-            Category
+            <span className="sr-only">Category</span>
             <select value={category} onChange={(event) => setCategory(event.target.value)}>
               <option value="all">All icons</option>
               {categories.map((item) => (
@@ -164,7 +145,7 @@ export function IconGallery() {
           </label>
           <div className="icons-preview-controls">
             <label className="icons-select-label">
-              Size
+              <span className="sr-only">Size</span>
               <select value={size} onChange={(event) => setSize(Number(event.target.value))}>
                 {[24, 32, 40, 48].map((value) => (
                   <option key={value} value={value}>
@@ -202,24 +183,15 @@ export function IconGallery() {
                 aria-pressed={mode === 'motion'}
                 onClick={() => setMode('motion')}
               >
-                <span aria-hidden="true" className="icons-motion-dot" />
                 Motion
               </button>
             </div>
           </div>
         </div>
 
-        <div className="icons-results-meta">
-          <span role="status" aria-live="polite">
-            {visible.length} {visible.length === 1 ? 'icon' : 'icons'}
-            {category !== 'all' ? ` · ${categoryLabel(category)}` : ''}
-          </span>
-          <span>
-            {mode === 'motion'
-              ? 'Hover or focus to play. Select to use.'
-              : 'Select an icon to get the code.'}
-          </span>
-        </div>
+        <span className="sr-only" role="status" aria-live="polite">
+          {visible.length} {visible.length === 1 ? 'icon' : 'icons'}
+        </span>
 
         {visible.length ? (
           <ul className="icons-grid">
@@ -251,9 +223,6 @@ export function IconGallery() {
                     )}
                   </span>
                   <span className="icons-card-name">{labelFor(definition.name)}</span>
-                  <span className="icons-card-action" aria-hidden="true">
-                    View icon <span>↗</span>
-                  </span>
                 </button>
               </li>
             ))}
@@ -261,7 +230,6 @@ export function IconGallery() {
         ) : (
           <div className="icons-empty">
             <p>No icons found.</p>
-            <span>Try a different keyword or browse the full collection.</span>
             <button
               className="icons-small-button"
               type="button"
@@ -277,50 +245,6 @@ export function IconGallery() {
         )}
       </section>
 
-      <section className="icons-get-started" aria-labelledby="icons-get-started-heading">
-        <div>
-          <span className="icons-eyebrow">MADE TO FIT IN</span>
-          <h2 id="icons-get-started-heading" className="text-display-sm">
-            One shape. Two ways to use it.
-          </h2>
-          <p>
-            Use a still icon for navigation, or a small movement for a moment of feedback. Both
-            share the same size, color, and stroke controls.
-          </p>
-        </div>
-        <div className="icons-install">
-          <div>
-            <code>pnpm add @comwit/icons</code>
-            <CopyButton text="pnpm add @comwit/icons" label="Copy command" />
-          </div>
-          <p>Package preview. Install from npm after its first release.</p>
-        </div>
-        <dl className="icons-principles">
-          <div>
-            <dt>Color that belongs</dt>
-            <dd>
-              Inherits text color through <code>currentColor</code>. Set <code>size</code>,{' '}
-              <code>color</code>, or <code>strokeWidth</code> as needed.
-            </dd>
-          </div>
-          <div>
-            <dt>Movement with a purpose</dt>
-            <dd>
-              Animated imports support <code>animateOn=&quot;hover&quot;</code>,{' '}
-              <code>&quot;click&quot;</code>, <code>&quot;mount&quot;</code>, or{' '}
-              <code>&quot;none&quot;</code>. Change <code>replayKey</code> to replay.
-            </dd>
-          </div>
-          <div>
-            <dt>Considered by default</dt>
-            <dd>
-              Respects reduced motion. Decorative icons stay out of the accessibility tree; give a
-              meaningful icon a <code>title</code>.
-            </dd>
-          </div>
-        </dl>
-      </section>
-
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           className="icons-detail"
@@ -333,7 +257,7 @@ export function IconGallery() {
             <>
               <DialogHeader>
                 <DialogTitle>{labelFor(selected.name)}</DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="sr-only">
                   {categoryLabel(selected.category)} · {mode === 'motion' ? 'Animated' : 'Static'}{' '}
                   icon
                 </DialogDescription>
@@ -361,21 +285,7 @@ export function IconGallery() {
                   </button>
                 )}
               </div>
-              <CodeSnippet code={importCode} label="Copy import" />
-              <CodeSnippet code={usageCode} label="Copy usage" />
-              <p className="icons-detail-note">
-                {mode === 'motion' ? (
-                  <>
-                    For a button-wide trigger, add <code>data-icon-trigger</code> to its parent
-                    button. Hover and keyboard focus both play the animation.
-                  </>
-                ) : (
-                  <>
-                    Icons inherit their text color. Add <code>title=&quot;…&quot;</code> when the
-                    icon carries meaning on its own.
-                  </>
-                )}
-              </p>
+              <CodeSnippet code={`${importCode}\n\n${usageCode}`} label="Copy code" />
             </>
           )}
         </DialogContent>
