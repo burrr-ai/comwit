@@ -2,7 +2,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   devIndicators: false,
-  transpilePackages: ['@comwit/ui', '@comwit/ui-templates'],
+  transpilePackages: ['@comwit/icons', '@comwit/ui', '@comwit/ui-templates'],
   async redirects() {
     return [
       { source: '/state', destination: '/state/docs', permanent: true },

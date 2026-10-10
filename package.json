@@ -33,13 +33,14 @@
     "storybook": "pnpm --filter storybook dev",
     "stories": "pnpm --filter storybook stories",
     "registry": "pnpm --filter comwit-ui build:registry",
-    "build:packages": "pnpm --filter @comwit/state build && pnpm --filter @comwit/ui build && pnpm registry",
+    "build:packages": "pnpm --filter @comwit/icons build && pnpm --filter @comwit/state build && pnpm --filter @comwit/ui build && pnpm registry",
     "build": "pnpm --filter docs build",
-    "test": "pnpm --filter @comwit/state test && node --test scripts/workspace.test.mjs",
+    "test": "pnpm --filter @comwit/icons test && pnpm --filter @comwit/state test && node --test scripts/workspace.test.mjs",
     "typecheck": "pnpm build:packages && pnpm --filter docs gen && pnpm stories && pnpm -r --if-present typecheck",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "format:staged": "lint-staged"
+    "format:staged": "lint-staged",
+    "test:icons": "pnpm --filter @comwit/icons test"
   },
   "lint-staged": {
     "*.{js,cjs,mjs,jsx,ts,tsx,json,yaml,yml,md,mdx,css,scss,html}": [
