@@ -108,7 +108,8 @@ export function ThemeEditor() {
                 onMouseEnter={() => setActive(k.name)}
               >
                 <span className="text-label font-semibold text-foreground">{k.label}</span>
-                <input
+                <Input
+                  bare
                   type="range"
                   min={k.min}
                   max={k.max}
@@ -149,7 +150,8 @@ export function ThemeEditor() {
                         className="relative size-7 shrink-0 overflow-hidden rounded-lg border border-border"
                         style={{ background: value }}
                       >
-                        <input
+                        <Input
+                          bare
                           type="color"
                           value={toHex(value)}
                           onChange={(e) => set(t.name, e.target.value)}
@@ -161,7 +163,8 @@ export function ThemeEditor() {
                         <p className="truncate font-mono text-caption text-foreground">
                           --{t.name}
                         </p>
-                        <input
+                        <Input
+                          bare
                           type="text"
                           aria-label={`${t.name} value`}
                           value={value}

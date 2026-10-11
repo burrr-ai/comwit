@@ -1,5 +1,7 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
+import { Input } from '@comwit/ui-templates/input'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useId, useRef, useState } from 'react'
@@ -96,7 +98,8 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
         <label className="sr-only" htmlFor={inputId}>
           Find a documentation page
         </label>
-        <input
+        <Input
+          bare
           ref={input}
           id={inputId}
           type="search"
@@ -118,7 +121,9 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
           }}
         />
         {query && (
-          <button
+          <Button
+            variant="plain"
+            size="none"
             type="button"
             aria-label="Clear page search"
             onClick={() => {
@@ -126,8 +131,8 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
               input.current?.focus()
             }}
           >
-            <XIcon size={15} aria-hidden="true" />
-          </button>
+            <XIcon className="size-[15px]" size={15} aria-hidden="true" />
+          </Button>
         )}
       </div>
       <div ref={scrollArea} className="docs-nav-scroll">
@@ -176,7 +181,9 @@ export function MobileNavProvider({ children }: { children: React.ReactNode }) {
 export function MobileNavButton() {
   const { open, setOpen } = useContext(MobileNavContext)
   return (
-    <button
+    <Button
+      variant="plain"
+      size="none"
       type="button"
       className="docs-menu-button"
       aria-label={open ? 'Close documentation menu' : 'Open documentation menu'}
@@ -184,8 +191,12 @@ export function MobileNavButton() {
       aria-controls="docs-mobile-nav"
       onClick={() => setOpen(!open)}
     >
-      {open ? <XIcon size={22} aria-hidden="true" /> : <ListIcon size={22} aria-hidden="true" />}
-    </button>
+      {open ? (
+        <XIcon className="size-[22px]" size={22} aria-hidden="true" />
+      ) : (
+        <ListIcon className="size-[22px]" size={22} aria-hidden="true" />
+      )}
+    </Button>
   )
 }
 

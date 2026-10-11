@@ -29,6 +29,15 @@ pnpm build
 
 ## Documentation design
 
+Docs UI must use `Button`, `Input`, `Select`, and `Textarea` from
+`@comwit/ui-templates` instead of native `<button>`, `<input>`, `<select>`, or
+`<textarea>`. `pnpm --filter docs lint` enforces `docs/no-native-interactive` in
+docs JavaScript/TypeScript only; library implementations and MDX code samples
+are unaffected. Generated gallery source keeps its existing lint exclusion.
+Native `input` types `file` and `hidden` are allowed for nonvisual form plumbing,
+matching the template rule. Use `Button variant="plain" size="none"` or `Input bare`
+when a surrounding docs layout already owns the control's styling.
+
 Documentation puts the working example and useful controls first. The icon gallery at `/ui/icons` follows this rule.
 
 - Use a plain page title, then the content. Omit eyebrows, slogans, decorative badges, specification ribbons, and promotional footers.

@@ -1,5 +1,7 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
+import { Input } from '@comwit/ui-templates/input'
 import { useState, useCallback } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 
@@ -42,16 +44,25 @@ export function DemoTodo() {
       <div className="rounded-lg border border-border bg-white overflow-hidden">
         {/* Input */}
         <div className="flex border-b border-border">
-          <input
+          <Input
+            bare
             type="text"
+            aria-label="New todo"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && add()}
             placeholder="Add a todo..."
             className="flex-1 bg-transparent px-4 py-2.5 text-[13px] text-foreground/80 placeholder:text-foreground/25 outline-none"
           />
-          <button onClick={add} className="px-3 text-muted transition-colors hover:text-foreground">
+          <Button
+            variant="plain"
+            size="none"
+            onClick={add}
+            aria-label="Add todo"
+            className="px-3 text-muted transition-colors hover:text-foreground"
+          >
             <svg
+              className="size-3.5"
               width="14"
               height="14"
               viewBox="0 0 24 24"
@@ -63,7 +74,7 @@ export function DemoTodo() {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-          </button>
+          </Button>
         </div>
 
         {/* List */}
@@ -78,8 +89,12 @@ export function DemoTodo() {
                 transition={{ duration: 0.2 }}
                 className="flex items-center gap-3 px-4 py-2 group"
               >
-                <button
+                <Button
+                  variant="plain"
+                  size="none"
                   onClick={() => toggle(todo.id)}
+                  aria-label={`Mark ${todo.text} ${todo.done ? 'incomplete' : 'complete'}`}
+                  aria-pressed={todo.done}
                   className={`w-4 h-4 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors ${
                     todo.done
                       ? 'border-foreground bg-foreground/10'
@@ -96,12 +111,12 @@ export function DemoTodo() {
                       strokeWidth="3"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="text-foreground"
+                      className="size-2 text-foreground"
                     >
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
-                </button>
+                </Button>
                 <span
                   className={`flex-1 text-[13px] transition-colors ${
                     todo.done ? 'text-foreground/30 line-through' : 'text-foreground/70'
@@ -109,11 +124,15 @@ export function DemoTodo() {
                 >
                   {todo.text}
                 </span>
-                <button
+                <Button
+                  variant="plain"
+                  size="none"
                   onClick={() => remove(todo.id)}
+                  aria-label={`Remove ${todo.text}`}
                   className="text-foreground/0 group-hover:text-foreground/30 hover:!text-foreground/60 transition-colors"
                 >
                   <svg
+                    className="size-3"
                     width="12"
                     height="12"
                     viewBox="0 0 24 24"
@@ -125,7 +144,7 @@ export function DemoTodo() {
                     <line x1="18" y1="6" x2="6" y2="18" />
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
-                </button>
+                </Button>
               </motion.li>
             ))}
           </AnimatePresence>

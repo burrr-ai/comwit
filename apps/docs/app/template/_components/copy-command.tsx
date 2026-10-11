@@ -1,9 +1,10 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
 import * as React from 'react'
 import { Check, Copy } from 'lucide-react'
 
-/** The install line with a copy button. Local to Template so the section imports nothing from UI. */
+/** The template install line with a shared UI copy button. */
 export function CopyCommand({ command }: { command: string }) {
   const [copied, setCopied] = React.useState(false)
   React.useEffect(() => {
@@ -20,7 +21,9 @@ export function CopyCommand({ command }: { command: string }) {
         </span>
         {command}
       </code>
-      <button
+      <Button
+        variant="plain"
+        size="none"
         type="button"
         aria-label={copied ? 'Copied' : 'Copy command'}
         onClick={async () => {
@@ -36,7 +39,7 @@ export function CopyCommand({ command }: { command: string }) {
         <span className="sr-only" role="status">
           {copied ? 'Copied to clipboard' : ''}
         </span>
-      </button>
+      </Button>
     </div>
   )
 }
