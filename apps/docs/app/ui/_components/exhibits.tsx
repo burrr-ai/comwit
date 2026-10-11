@@ -383,7 +383,7 @@ function CollectionCard({ collection, onOpen }: { collection: Collection; onOpen
       size="none"
       type="button"
       onClick={onOpen}
-      className="flex flex-col gap-2 text-left"
+      className="flex flex-col items-stretch gap-2 text-left"
     >
       <div className="grid aspect-square w-full grid-cols-2 grid-rows-2 gap-[2px] overflow-hidden rounded-card bg-muted">
         {covers.map((p) => (
@@ -419,7 +419,7 @@ function CollectionsTab({ onOpen }: { onOpen: (collection: Collection) => void }
             key={label}
             type="button"
             onClick={() => toast(label)}
-            className="flex items-center gap-3 rounded-pill bg-muted px-4 py-3 text-left text-label font-medium text-foreground transition-colors duration-fast hover:bg-accent"
+            className="flex items-center justify-start gap-3 rounded-pill bg-muted px-4 py-3 text-left text-label font-medium text-foreground transition-colors duration-fast hover:bg-accent"
           >
             <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
             {label}
@@ -783,7 +783,7 @@ function SearchSheet({
                   size="none"
                   type="button"
                   onClick={() => toast(term)}
-                  className="flex w-full items-center gap-3 rounded-control px-2 py-2.5 text-left text-label text-foreground transition-colors duration-fast hover:bg-accent"
+                  className="flex w-full items-center justify-start gap-3 rounded-control px-2 py-2.5 text-left text-label text-foreground transition-colors duration-fast hover:bg-accent"
                 >
                   <Clock className="size-4 text-muted-foreground" aria-hidden="true" />
                   {term}
