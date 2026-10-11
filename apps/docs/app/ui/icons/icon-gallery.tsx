@@ -1,5 +1,14 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
+import { Input } from '@comwit/ui-templates/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@comwit/ui-templates/select'
 import * as React from 'react'
 import { Icon, SearchIcon } from '@comwit/icons'
 import { AnimatedIcon } from '@comwit/icons/animated'
@@ -48,9 +57,15 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 
   return (
     <span className="icons-copy-control">
-      <button type="button" className="icons-small-button" onClick={copy}>
+      <Button
+        variant="plain"
+        size="none"
+        type="button"
+        className="icons-small-button"
+        onClick={copy}
+      >
         {status === 'copied' ? 'Copied' : label}
-      </button>
+      </Button>
       <span className={status === 'error' ? 'icons-copy-error' : 'sr-only'} role="status">
         {status === 'copied'
           ? `${label} copied to clipboard.`
@@ -108,7 +123,8 @@ export function IconGallery() {
       <section aria-label="Browse icons" className="icons-browser">
         <div className="icons-search">
           <SearchIcon size={21} />
-          <input
+          <Input
+            bare
             ref={searchRef}
             type="search"
             aria-label="Search icons by name or keyword"
@@ -117,7 +133,9 @@ export function IconGallery() {
             onChange={(event) => setQuery(event.target.value)}
           />
           {query && (
-            <button
+            <Button
+              variant="plain"
+              size="none"
               type="button"
               className="icons-clear"
               onClick={() => {
@@ -127,36 +145,42 @@ export function IconGallery() {
               aria-label="Clear icon search"
             >
               Clear
-            </button>
+            </Button>
           )}
         </div>
 
         <div className="icons-toolbar">
-          <label className="icons-select-label">
-            <span className="sr-only">Category</span>
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
-              <option value="all">All icons</option>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger aria-label="Category" className="icons-select-trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All icons</SelectItem>
               {categories.map((item) => (
-                <option key={item} value={item}>
+                <SelectItem key={item} value={item}>
                   {categoryLabel(item)}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-          </label>
+            </SelectContent>
+          </Select>
           <div className="icons-preview-controls">
-            <label className="icons-select-label">
-              <span className="sr-only">Size</span>
-              <select value={size} onChange={(event) => setSize(Number(event.target.value))}>
+            <Select value={String(size)} onValueChange={(value) => setSize(Number(value))}>
+              <SelectTrigger aria-label="Size" className="icons-select-trigger">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
                 {[24, 32, 40, 48].map((value) => (
-                  <option key={value} value={value}>
+                  <SelectItem key={value} value={String(value)}>
                     {value}px
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </label>
+              </SelectContent>
+            </Select>
             <div className="icons-colors" role="group" aria-label="Icon color">
               {colors.map((item) => (
-                <button
+                <Button
+                  variant="plain"
+                  size="none"
                   key={item.name}
                   type="button"
                   title={item.name}
@@ -167,24 +191,28 @@ export function IconGallery() {
                   onClick={() => setColor(item.value)}
                 >
                   <span />
-                </button>
+                </Button>
               ))}
             </div>
             <div className="icons-mode" role="group" aria-label="Preview mode">
-              <button
+              <Button
+                variant="plain"
+                size="none"
                 type="button"
                 aria-pressed={mode === 'static'}
                 onClick={() => setMode('static')}
               >
                 Static
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="plain"
+                size="none"
                 type="button"
                 aria-pressed={mode === 'motion'}
                 onClick={() => setMode('motion')}
               >
                 Motion
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -197,7 +225,9 @@ export function IconGallery() {
           <ul className="icons-grid">
             {visible.map((definition) => (
               <li key={definition.name}>
-                <button
+                <Button
+                  variant="plain"
+                  size="none"
                   type="button"
                   data-icon-trigger
                   className="icons-card"
@@ -213,24 +243,34 @@ export function IconGallery() {
                   <span className="icons-card-stage">
                     {mode === 'motion' ? (
                       <AnimatedIcon
+                        className="size-(--preview-icon-size)"
+                        style={{ '--preview-icon-size': `${size}px` } as React.CSSProperties}
                         definition={definition}
                         size={size}
                         color={color}
                         animateOn="hover"
                       />
                     ) : (
-                      <Icon definition={definition} size={size} color={color} />
+                      <Icon
+                        className="size-(--preview-icon-size)"
+                        style={{ '--preview-icon-size': `${size}px` } as React.CSSProperties}
+                        definition={definition}
+                        size={size}
+                        color={color}
+                      />
                     )}
                   </span>
                   <span className="icons-card-name">{labelFor(definition.name)}</span>
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
         ) : (
           <div className="icons-empty">
             <p>No icons found.</p>
-            <button
+            <Button
+              variant="plain"
+              size="none"
               className="icons-small-button"
               type="button"
               onClick={() => {
@@ -240,7 +280,7 @@ export function IconGallery() {
               }}
             >
               Reset filters
-            </button>
+            </Button>
           </div>
         )}
       </section>
@@ -275,14 +315,16 @@ export function IconGallery() {
                   <Icon definition={selected} size={64} color={color} />
                 )}
                 {mode === 'motion' && (
-                  <button
+                  <Button
+                    variant="plain"
+                    size="none"
                     className="icons-replay"
                     type="button"
                     onClick={() => setReplayKey((key) => key + 1)}
                     aria-label={`Replay ${labelFor(selected.name)} animation`}
                   >
                     ↻ Replay
-                  </button>
+                  </Button>
                 )}
               </div>
               <CodeSnippet code={`${importCode}\n\n${usageCode}`} label="Copy code" />

@@ -54,16 +54,13 @@
   gap: 12px;
   margin: 16px 0 24px;
 }
-.icons-select-label {
-  display: flex;
-}
-.icons-select-label select {
+.icons-select-trigger {
   max-width: 175px;
   min-height: 38px;
   background: var(--background);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 0 28px 0 12px;
+  padding: 0 12px;
   color: var(--foreground);
   font-size: var(--text-body-sm);
 }

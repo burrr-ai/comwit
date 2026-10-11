@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:lint": "node --test eslint-rules/*.test.mjs",
     "predev": "pnpm --filter @comwit/icons build && pnpm --filter @comwit/state build && pnpm --filter @comwit/ui build && pnpm gen",
     "prebuild": "pnpm --filter @comwit/icons build && pnpm --filter @comwit/state build && pnpm --filter @comwit/ui build && pnpm gen",
     "gen": "pnpm --filter comwit-ui build:registry && node scripts/gen-ui.mjs",

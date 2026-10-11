@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
 import { useEffect, useRef, useState } from 'react'
 
 export function CopyButton({
@@ -34,7 +35,14 @@ export function CopyButton({
   }
 
   return (
-    <button type="button" onClick={copy} className={className} aria-label={label}>
+    <Button
+      variant="plain"
+      size="none"
+      type="button"
+      onClick={copy}
+      className={className}
+      aria-label={label}
+    >
       <span aria-hidden={status !== 'idle'}>
         {status === 'copied' ? 'Copied!' : status === 'error' ? 'Try again' : children}
       </span>
@@ -45,6 +53,6 @@ export function CopyButton({
             ? 'Could not copy. Try again.'
             : ''}
       </span>
-    </button>
+    </Button>
   )
 }
