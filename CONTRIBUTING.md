@@ -16,7 +16,12 @@ Use the existing tests and add regression coverage when behavior changes. The wo
 
 `apps/docs` is the only public documentation app. State MDX lives in `content/state`; UI guides and the gallery layout (`content/ui/gallery.mjs`: groups, order and one-line summaries) live in `content/ui`. The site has shared navigation and separate product routes.
 
-State agent guidance lives in `public/state/llms.txt` and `public/state/llm/`; update it when State's public API changes. UI agent guidance is `public/ui/llms.txt`, kept to installation and a catalog of what each component is for: the generator fills `content/ui/llms-template.txt` (install steps and setup rules) with the groups and summaries from `gallery.mjs`. Edit the template or the gallery, not the output; usage details belong in the installation guide and the component source.
+`public/llms.txt` is the hand-written index of the agent guides (plus the prompt for existing projects); keep it to routing. State agent guidance lives in `public/state/llms.txt` and `public/state/llm/`; update it when State's public API changes. The template guide, `public/template/llms.txt`, carries the migration procedure for existing projects; update it when the snapshot's rule files, lint rules or Storybook setup change. UI agent guidance is `public/ui/llms.txt`, kept to installation and a catalog of what each component is for: the generator fills `content/ui/llms-template.txt` (install steps and setup rules) with the groups and summaries from `gallery.mjs`. Edit the template or the gallery, not the output; usage details belong in the installation guide and the component source.
+
+Keep `llms.txt` and its linked agent references focused on when and how to use public APIs:
+selection criteria, setup, examples, and constraints that affect callers. Omit implementation
+mechanics such as internal snapshots, render/commit activation, and transport encoding. Keep
+those details in source comments and maintainer-facing PR descriptions.
 
 UI examples are generated from `apps/storybook/specs/*.mjs`; the story marked `gallery: true` is the one shown on the gallery card, and `docsOnly: true` specs produce docs examples without a Storybook story. The registry comes from the actual template files. Every template component must appear once in `gallery.mjs`; the generator warns about gaps. Run `pnpm --filter docs gen` after changing specs or template source. Do not hand-edit `app/ui/_generated`, `public/ui/llms.txt` or `packages/ui/cli/registry`.
 
@@ -52,4 +57,4 @@ Before publishing a package, build/typecheck it and inspect its packed contents.
 State was imported from `burrr-ai/comwit` at `477113cc24db0e5b3222905177cdbef36ce63df7` (v2.4.0).
 UI was imported from the local `comwit-ui` checkout based on `f34fff2`, including the existing uncommitted template/token refinements. The original UI checkout was left unchanged. Public package names and versions are retained.
 
-Old `/docs/*`, `/llms.txt`, and `/llm/*` URLs redirect to their State equivalents. The `comwit` compatibility package is removed from this workspace; existing registry publications are not unpublished.
+Old `/docs/*` and `/llm/*` URLs redirect to their State equivalents; `/llms.txt` is served from `public/` as the index and must not be redirected. The `comwit` compatibility package is removed from this workspace; existing registry publications are not unpublished.

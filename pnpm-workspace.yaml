@@ -3,6 +3,7 @@ packages:
   - packages/state/*
   - packages/ui/*
   - packages/template
+  - packages/icons
 
 allowBuilds:
   esbuild: true

@@ -23,6 +23,9 @@
 /public/sw.js
 /public/version.json
 
+# Storybook static preview output
+/storybook-static/
+
 # misc
 .DS_Store
 *.pem

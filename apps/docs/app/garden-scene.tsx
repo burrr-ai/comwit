@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
 import Image from 'next/image'
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
@@ -191,7 +192,9 @@ export function GardenScene({ children }: { children: React.ReactNode }) {
           <Fireflies active={active} />
         </div>
         {children}
-        <button
+        <Button
+          variant="plain"
+          size="none"
           type="button"
           className="motion-toggle"
           aria-pressed={paused}
@@ -204,7 +207,7 @@ export function GardenScene({ children }: { children: React.ReactNode }) {
           }}
         >
           {reducedMotion ? 'Reduced motion' : paused ? 'Play motion' : 'Pause motion'}
-        </button>
+        </Button>
       </section>
     </GardenContext.Provider>
   )

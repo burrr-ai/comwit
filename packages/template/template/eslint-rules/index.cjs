@@ -27,11 +27,13 @@ const apiActionError = require('./api-action-error.cjs');
 const betterAuthRequiredOptions = require('./better-auth-required-options.cjs');
 const noDirectApiActionImport = require('./no-direct-api-action-import.cjs');
 const drizzleNodeConfig = require('./drizzle-node-config.cjs');
+const serverConfigGetters = require('./server-config-getters.cjs');
 
 module.exports = {
   rules: {
     'auth-hydration-boundary': authHydrationBoundary,
     'drizzle-node-config': drizzleNodeConfig,
+    'server-config-getters': serverConfigGetters,
     'state-structure': stateStructure,
     'api-structure': apiStructure,
     'app-structure': appStructure,

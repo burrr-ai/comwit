@@ -50,6 +50,14 @@ page/layout/
   - No slicing like `.slice(0, N)` → use limit/order by in the API
   - Reason: with pagination, you only have current-page data, which produces incorrect numbers; processing partial (not whole) data is always wrong
 
+## Storybook
+
+- 페이지 작업 시 [`.storybook/stories/.ai.md`](../../.storybook/stories/.ai.md)를 읽는다.
+- 실제 서비스 레이아웃을 포함한 페이지 스토리를 `.storybook/stories/{service}/`에 유지한다.
+- 최상위는 디자인 시스템과 사용자 유형, 하위는 페이지와 상태다. 컴포넌트/레이아웃 단독 스토리나 `/design` 라우트는 만들지 않는다.
+- Storybook 데이터는 **API 경계에서만 mock**한다. 실제 state/query/action과 페이지·레이아웃을 사용하고,
+  store를 직접 주입해 로딩·빈 목록·오류를 만들지 않는다. 서버 인증 결과인 layout의 `initialUser`만 고정 fixture로 전달한다.
+
 ## Design
 
 - **[`design.md`](./design.md)(같은 폴더) 가 디자인 톤의 SSOT** — 페이지 작업 전 **가장 먼저 참고**하고, 톤이 정해지거나 바뀌면 **가장 먼저 그 문서를 수정**한다. (컨셉·현재 시스템·수정 위치 가이드가 거기 있다)

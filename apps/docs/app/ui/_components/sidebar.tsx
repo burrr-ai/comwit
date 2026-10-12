@@ -17,6 +17,7 @@ const GALLERY = '/ui/components'
 const guides = [
   { href: '/ui', label: 'Overview' },
   { href: '/ui/docs/installation', label: 'Installation' },
+  { href: '/ui/icons', label: 'Icons' },
   { href: '/ui/theming', label: 'Tokens and theming' },
   { href: '/ui/docs/primitives', label: 'Headless primitives' },
 ]

@@ -52,6 +52,7 @@ const CHOSEN: { name: string; note?: string; code?: boolean }[] = [
   { name: 'comwit-ui', note: 'installed as source, Tailwind v4 tokens', code: true },
   { name: 'Better Auth + Drizzle' },
   { name: 'Oxlint' },
+  { name: 'Storybook', note: 'page-level stories, api mocked at the boundary' },
 ]
 
 const YOURS: React.ReactNode[] = [

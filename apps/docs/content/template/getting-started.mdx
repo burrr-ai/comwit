@@ -16,7 +16,8 @@ pnpm run dev
 `npx create-comwit@latest my-app` does the same. The CLI copies the kit, sets
 the package name, installs dependencies with pnpm and makes an initial commit.
 Then open `AGENTS.md`, hand the project to your coding agent, and describe the
-product.
+product. Already have a Next.js project? See
+[Migrate an existing project](/template/docs/migrate).
 
 ## Options
 
@@ -37,6 +38,7 @@ my-app/
   AGENTS.md                     the rules file every coding agent reads (CLAUDE.md imports it)
   .agents/skills/               app-setup · auth-setup · seo-optimize
   eslint-rules/                 Oxlint rules that enforce the layer boundaries
+  .storybook/                   page-level stories, api mocks and their rules (stories/.ai.md)
   src/
     app/                        Next.js App Router — routing only
     services/
@@ -55,6 +57,7 @@ my-app/
 | Forms, tables, editor, dates | react-hook-form + zod, TanStack Table, Tiptap, react-day-picker (wrapped by the UI kit)             |
 | Auth                         | Better Auth on Drizzle, installed by the `auth-setup` skill once a database is connected            |
 | Lint                         | Oxlint with project rules for every layer boundary                                                  |
+| Storybook                    | real pages, layouts and state in page-level stories; only the api boundary is mocked                |
 
 Not decided for you: the database, the object storage and the hosting
 platform. Repositories start on in-memory rows in `_data/`; connect a Drizzle
@@ -69,6 +72,9 @@ database when the product needs one and only the repository bodies change.
 | `pnpm run build`                       | service worker, version file, then `next build`                 |
 | `pnpm ui add <name>`                   | install a comwit-ui component as source                         |
 | `pnpm agents:test`                     | check that Claude Code skill stubs mirror `.agents/skills/`     |
+| `pnpm storybook`                       | Storybook on port 6006: pages with the api boundary mocked      |
+| `pnpm validate:storybook`              | Storybook's own typecheck, lint and mock-boundary test          |
+| `pnpm build-storybook`                 | static Storybook in `storybook-static/`                         |
 | `pnpm run preview` / `pnpm run deploy` | `--opennext` projects only: build and run or publish the Worker |
 
 ## Cloudflare Workers with `--opennext`

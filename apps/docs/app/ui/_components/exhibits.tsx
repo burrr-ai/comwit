@@ -295,14 +295,16 @@ function TopAppBar({
           <Bell />
           <span className="absolute top-2 right-2.5 size-2 rounded-full bg-destructive" />
         </Button>
-        <button
+        <Button
+          variant="plain"
+          size="none"
           type="button"
           aria-label="Account"
           onClick={() => toast('Account')}
           className="ml-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-caption font-semibold text-primary-foreground"
         >
           D
-        </button>
+        </Button>
       </AppBarActions>
     </AppBar>
   )
@@ -344,7 +346,9 @@ function PhotoGrid({
   return (
     <div className="grid grid-cols-3 gap-[2px] bg-background">
       {photos.map((p) => (
-        <button
+        <Button
+          variant="plain"
+          size="none"
           key={p.id}
           type="button"
           aria-label={p.description ?? p.takenAt}
@@ -360,7 +364,7 @@ function PhotoGrid({
             data-hero-exit-key={keyed ? p.id : undefined}
             data-zoom-exit-key={keyed ? p.id : undefined}
           />
-        </button>
+        </Button>
       ))}
     </div>
   )
@@ -374,7 +378,13 @@ function PhotosTab({ onOpen }: { onOpen: (photo: Photo) => void }) {
 function CollectionCard({ collection, onOpen }: { collection: Collection; onOpen: () => void }) {
   const covers = collectionPhotos(collection).slice(0, 4)
   return (
-    <button type="button" onClick={onOpen} className="flex flex-col gap-2 text-left">
+    <Button
+      variant="plain"
+      size="none"
+      type="button"
+      onClick={onOpen}
+      className="flex flex-col items-stretch gap-2 text-left"
+    >
       <div className="grid aspect-square w-full grid-cols-2 grid-rows-2 gap-[2px] overflow-hidden rounded-card bg-muted">
         {covers.map((p) => (
           <Img key={p.id} src={p.thumb} loading="lazy" className="h-full w-full object-cover" />
@@ -387,7 +397,7 @@ function CollectionCard({ collection, onOpen }: { collection: Collection; onOpen
         <p className="truncate text-label font-medium text-foreground">{collection.name}</p>
         <p className="text-caption text-muted-foreground">{collection.photoIds.length}</p>
       </div>
-    </button>
+    </Button>
   )
 }
 
@@ -403,15 +413,17 @@ function CollectionsTab({ onOpen }: { onOpen: (collection: Collection) => void }
     <div className="space-y-4 px-gutter py-4">
       <div className="grid grid-cols-2 gap-3">
         {UTILITIES.map(([label, Icon]) => (
-          <button
+          <Button
+            variant="plain"
+            size="none"
             key={label}
             type="button"
             onClick={() => toast(label)}
-            className="flex items-center gap-3 rounded-pill bg-muted px-4 py-3 text-left text-label font-medium text-foreground transition-colors duration-fast hover:bg-accent"
+            className="flex items-center justify-start gap-3 rounded-pill bg-muted px-4 py-3 text-left text-label font-medium text-foreground transition-colors duration-fast hover:bg-accent"
           >
             <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
             {label}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -457,7 +469,9 @@ function CreateTab({ onCollage }: { onCollage: () => void }) {
         <h4 className="mb-3 text-title-md text-foreground">My tools</h4>
         <div className="grid grid-cols-2 gap-3">
           {TOOLS.map(({ label, Icon, tint, enabled }) => (
-            <button
+            <Button
+              variant="plain"
+              size="none"
               key={label}
               type="button"
               disabled={!enabled}
@@ -476,7 +490,7 @@ function CreateTab({ onCollage }: { onCollage: () => void }) {
                   Soon
                 </span>
               )}
-            </button>
+            </Button>
           ))}
         </div>
       </section>
@@ -628,7 +642,9 @@ function CollagePage({ onClose }: { onClose: () => void }) {
               {photos.map((p) => {
                 const on = picked.includes(p.id)
                 return (
-                  <button
+                  <Button
+                    variant="plain"
+                    size="none"
                     key={p.id}
                     type="button"
                     aria-pressed={on}
@@ -652,7 +668,7 @@ function CollagePage({ onClose }: { onClose: () => void }) {
                     >
                       {on && <Check className="size-3" strokeWidth={3} aria-hidden="true" />}
                     </span>
-                  </button>
+                  </Button>
                 )
               })}
             </div>
@@ -762,14 +778,16 @@ function SearchSheet({
           {RECENT.map((term) => (
             <li key={term}>
               <BottomSheetClose asChild>
-                <button
+                <Button
+                  variant="plain"
+                  size="none"
                   type="button"
                   onClick={() => toast(term)}
-                  className="flex w-full items-center gap-3 rounded-control px-2 py-2.5 text-left text-label text-foreground transition-colors duration-fast hover:bg-accent"
+                  className="flex w-full items-center justify-start gap-3 rounded-control px-2 py-2.5 text-left text-label text-foreground transition-colors duration-fast hover:bg-accent"
                 >
                   <Clock className="size-4 text-muted-foreground" aria-hidden="true" />
                   {term}
-                </button>
+                </Button>
               </BottomSheetClose>
             </li>
           ))}

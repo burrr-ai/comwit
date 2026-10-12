@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import localFont from "next/font/local";
 import { Noto_Sans_KR, Noto_Sans_Mono } from "next/font/google";
 import "./globals.css";
+// Client Component SSR의 `.suspend()` queryFn이 Server Function을 같은 요청 scope로 실행하게 한다.
+import "@/lib/server-action/ssr-bridge";
 import { RootLayout } from "@/lib/layout";
 import { AppVersionGuard } from "@/lib/components/app-version-guard";
 import { ServiceWorkerRegister } from "@/lib/components/service-worker-register";
@@ -83,7 +86,10 @@ export default function Layout({
       <body
         className={`${pretendard.variable} ${notoSansKr.variable} ${notoSansMono.variable} antialiased`}
       >
-        <RootLayout>{children}</RootLayout>
+        <RootLayout>
+          {/* 전역 동적 경계 — 서비스 레이아웃·페이지가 요청 시점 데이터를 읽어도 정적 셸이 깨지지 않게 한다. */}
+          <Suspense fallback={null}>{children}</Suspense>
+        </RootLayout>
         <AppVersionGuard />
         <ServiceWorkerRegister />
       </body>

@@ -39,6 +39,9 @@ export default function UiOverview() {
             <Button size="lg" variant="secondary" asChild>
               <Link href="/ui/docs/installation">Installation</Link>
             </Button>
+            <Button size="lg" variant="secondary" asChild>
+              <Link href="/ui/icons">Explore icons</Link>
+            </Button>
           </div>
         </div>
         <div className="flex justify-center">

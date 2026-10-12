@@ -50,7 +50,7 @@ export type PostComment = { id: string; postId: string; body: string }
 export type PostState = {
   posts: Query<Post[]> // keyed query data
   comments: Query<PostComment[], string> // second generic = queryFn arg type
-  current: Query<Post | null, string> // hydrate the resolved Server Component value
+  current: Query<Post | null, string> // server data: hydrate() or experimental .suspend(slug)
 }
 
 export type PostActions = {
@@ -68,10 +68,12 @@ export type PostActions = {
 - `Local<Data, Arg>` for an exact IndexedDB resource without a remote query function
 - Plain types for client-owned state
 
-For view-owned requests, call `s.posts.load(arg)` for non-suspending client loading. When a Server
-Component owns the resolved value, call `usePost.hydrate(...)` in a small client route adapter before
-the actual UI reads the domain hook. Keep a `loadPosts()` action when fetching is part of a command,
-multi-query sequence, preload, or user event.
+For view-owned requests, call `s.posts.load(arg)` for non-suspending client loading. Server-rendered
+data takes one of two paths: when a Server Component owns the resolved value, call
+`usePost.hydrate(...)` in a small client route adapter before the actual UI reads the domain hook;
+when `queryFn` can run on both sides, the experimental `s.current.suspend(slug)` lets the reading
+component inside `<Suspense>` fetch, stream, and hydrate in one place. Keep a `loadPosts()` action
+when fetching is part of a command, multi-query sequence, preload, or user event.
 
 ## Public entry point
 

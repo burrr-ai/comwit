@@ -11,7 +11,8 @@ pnpm dev:docs
 - `/state/docs` — original animated panda landing alongside the documentation sidebar; `/state/docs/*` for guides and APIs. `/state` redirects here.
 - `/ui` — UI overview, installation, components, examples and theming.
 - `/template` — template overview and guides (`content/template/*.mdx`): architecture, folder structure, layers, agents.
-- `public/state/llms.txt`, `public/ui/llms.txt`, `public/template/llms.txt` — independent agent guides. The UI one is generated (install + component catalog) from `content/ui/llms-template.txt` and `gallery.mjs`.
+- `public/llms.txt` — hand-written index of the agent guides and the prompt for existing projects.
+- `public/state/llms.txt`, `public/ui/llms.txt`, `public/template/llms.txt` — independent agent guides; the template one carries the migration procedure. The UI one is generated (install + component catalog) from `content/ui/llms-template.txt` and `gallery.mjs`.
 - `content/state/` — State MDX.
 - `content/ui/` — UI editorial docs and component metadata.
 - `scripts/gen-ui.mjs` — UI examples, source and `public/ui/llms.txt` generated from Storybook specs, the CLI registry and the gallery.
@@ -19,10 +20,30 @@ pnpm dev:docs
 
 The development and production build scripts build the runtime packages and generate UI content first. Theme editing is isolated at `/preview/ui/theme` inside an iframe. Site CSS tokens use `--site-*` names.
 
-Legacy State docs and agent links are redirected in `next.config.ts`. Keep these redirects when reorganizing content.
+Legacy State docs and agent links (`/docs/*`, `/llm/*`) are redirected in `next.config.ts`. Keep these redirects when reorganizing content; `/llms.txt` is a static file and must stay unredirected.
 
 ```bash
 pnpm --filter docs lint
 pnpm --filter docs typecheck
 pnpm build
 ```
+
+## Documentation design
+
+Docs UI must use `Button`, `Input`, `Select`, and `Textarea` from
+`@comwit/ui-templates` instead of native `<button>`, `<input>`, `<select>`, or
+`<textarea>`. `pnpm --filter docs lint` enforces `docs/no-native-interactive` in
+docs JavaScript/TypeScript only; library implementations and MDX code samples
+are unaffected. Generated gallery source keeps its existing lint exclusion.
+Native `input` types `file` and `hidden` are allowed for nonvisual form plumbing,
+matching the template rule. Use `Button variant="plain" size="none"` or `Input bare`
+when a surrounding docs layout already owns the control's styling.
+
+Documentation puts the working example and useful controls first. The icon gallery at `/ui/icons` follows this rule.
+
+- Use a plain page title, then the content. Omit eyebrows, slogans, decorative badges, specification ribbons, and promotional footers.
+- Do not add a sentence to explain an obvious search field, filter, card, or copy button. Show contextual feedback only when an action needs it.
+- Keep essential labels readable at the existing body/label token sizes. Avoid miniature metadata and uppercase microcopy as decoration.
+- Put code in the selected example's detail view; keep browsing surfaces focused on the examples.
+- Preserve accessible names, live status, and keyboard guidance with semantic markup or visually hidden text when they do not need to be visible.
+- Technical guides still contain explanations needed to use an API; decorative commentary does not belong around the documentation interface.

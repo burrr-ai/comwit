@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
 import * as React from 'react'
 import { Check, Copy } from 'lucide-react'
 import { cn } from '@comwit/ui-templates/lib/utils'
@@ -20,7 +21,9 @@ export function CopyButton({
     return () => clearTimeout(timer)
   }, [copied])
   return (
-    <button
+    <Button
+      variant="plain"
+      size="none"
       type="button"
       aria-label={copied ? 'Copied' : label}
       onClick={async () => {
@@ -40,6 +43,6 @@ export function CopyButton({
       <span className="sr-only" role="status">
         {copied ? 'Copied to clipboard' : ''}
       </span>
-    </button>
+    </Button>
   )
 }

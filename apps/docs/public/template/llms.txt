@@ -2,9 +2,9 @@
 
 `create-comwit` scaffolds a Next.js 16 project whose structure is the documentation:
 services sliced by domain, four layers that depend one way, an `.ai.md` rulebook beside
-every layer, and skills for the one-time setups. Two positions: AI-native (the rules an
-agent needs ship with the project) and Next.js as the full stack (the api layer is the
-backend).
+every layer, Storybook for page-level review, and skills for the one-time setups. Two
+positions: AI-native (the rules an agent needs ship with the project) and Next.js as the
+full stack (the api layer is the backend). All Comwit guides: https://library.comwit.io/llms.txt
 
 ## Create a project
 
@@ -16,6 +16,8 @@ cd my-app && pnpm run dev
 Flags: `--opennext` (Cloudflare Workers via OpenNext: wrangler.jsonc, open-next.config.ts, `preview`/`deploy` scripts) ·
 `--name <pkg>` · `--pm pnpm|npm|yarn|bun` · `--no-install` · `--no-git` · `--dry`.
 
+Already have a Next.js project? See "Migrate an existing project" below.
+
 ## Inside a generated project
 
 Read these before writing code, in this order:
@@ -25,7 +27,8 @@ Read these before writing code, in this order:
 3. The `.ai.md` of the layer you are about to touch: `src/services/api.ai.md`,
    `src/services/state.ai.md`, `src/services/page.ai.md`, `src/server/repository/.ai.md`,
    `src/app/.ai.md`, `src/services/admin/.ai.md`.
-4. `src/services/design.md` before any visual decision.
+4. `src/services/design.md` before any visual decision, then `.storybook/stories/.ai.md`
+   before any screen work.
 
 Dependency flow `page → state → api → repository`; write order is the reverse. All data
 goes through `src/server/repository/` (in-memory rows in `_data/` until a database is
@@ -33,12 +36,213 @@ connected; connecting one changes only repository bodies). The api layer's `'use
 functions are wrapped in `createAction` and exported through `resolveActions`; the build
 turns them into the kit's own transport (one POST route handler, parallel calls, only
 `ActionError` messages reach the browser), not native Server Actions — keep the source
-convention and call the api only through a domain's `index.ts`.
+convention and call the api only through a domain's `index.ts`. Server settings are
+getters on `src/server/config.ts` that read the environment on access.
+
+Storybook (`pnpm storybook`, http://localhost:6006) runs the real pages inside their
+service layouts with the real state and actions; only the api layer's public objects are
+replaced by the mocks in `.storybook/mocks/api/{service}-{domain}.ts`. Stories are
+page-level, one file per page under `.storybook/stories/{service}/`, states as named
+exports, sidebar order design system → user type → page. A missing mock or a server
+import fails the Storybook build, never the app: `pnpm validate:storybook` and
+`pnpm build-storybook` stay separate from `pnpm run validate`.
 
 Skills in `.agents/skills/`: `app-setup` (tabs, detail screens, PWA — before the first app
-screen), `auth-setup` (Better Auth per service — after a database), `seo-optimize`,
-`pnpm run validate` after every change; the
-Oxlint rules in `eslint-rules/` enforce every boundary above.
+screen), `auth-setup` (Better Auth per service — after a database), `seo-optimize`.
+`pnpm run validate` after every change; the Oxlint rules in `eslint-rules/` enforce every
+boundary above.
+
+## Migrate an existing project
+
+Use this when a Next.js App Router project already exists and should end up like a
+generated one: the same layers, rule files, lint rules, shared code, comwit-ui
+components, design system and Storybook. The goal is the template's structure, not a
+thin layer over the old code. Work through every step; be as thorough as each step says.
+A Pages Router project moves to the App Router first; that migration is not covered here.
+
+### 1. Scaffold the reference into a temporary folder, outside the project
+
+```bash
+REF="$(mktemp -d)/comwit-ref"
+npx create-comwit@latest "$REF" --no-install --no-git   # add --opennext when the project deploys to Cloudflare Workers
+```
+
+Never scaffold into the project (the CLI refuses a non-empty directory). Treat `$REF`
+as read-only reference material, keep it until the last step, then delete it.
+`npx create-comwit@latest x --dry` lists every file it would write.
+
+### 2. Inventory the project before changing anything
+
+Write down, in a scratch note: package manager; Next.js version; `src/` or not; import
+alias; tsconfig (decorators?); lint tool and config; test runner; CI commands; ORM and
+database; auth; object storage; hosting; env/config module; UI library, Tailwind version,
+tokens, fonts; locale and timezone; how data is fetched and cached today (SWR, React
+Query, Redux, fetch in effects, Server Actions); existing agent files (AGENTS.md,
+CLAUDE.md, .cursorrules, GEMINI.md, copilot-instructions); and every route with the
+components and utils it uses. The route list drives steps 6–8.
+
+### 3. Rule files: copy them, then rewrite every line that is not true here
+
+From `$REF`: `AGENTS.md` (merge into the existing rules file, do not overwrite; keep
+one canonical file and make `CLAUDE.md` import it with `@AGENTS.md`),
+`.agents/rules/project-instructions.md` (Antigravity only), `src/services/.ai.md`,
+`src/services/api.ai.md`, `src/services/state.ai.md`, `src/services/page.ai.md`,
+`src/services/design.md`, `src/services/admin/.ai.md` (only with an operator service),
+`src/app/.ai.md`, `src/server/repository/.ai.md`, `.storybook/stories/.ai.md`, and the
+comments of `.env.example` (never `.env`). Each `.ai.md` sits beside the folder it
+governs.
+
+Adapt: the package manager and every command; folder names and the alias; the tech
+stack table (database, auth, storage, deploy, lint runner); the locale (Korean UI copy
+and the KST time helpers become the project's); `design.md`'s project concept, filled
+with the real brand (voice, mood, tokens, fonts); and remove the sections for things the
+project will not adopt, writing the decision into `AGENTS.md`. When you are done, every
+path named in a copied file exists in the project.
+
+### 4. Lint rules: copy `eslint-rules/`, `.oxlintrc.json` and `scripts/lint.mjs`
+
+- The rules use the ESLint rule API. Run them with Oxlint through the copied
+  `.oxlintrc.json` (recommended), or register `eslint-rules/index.cjs` as a local plugin
+  in an ESLint flat config and copy the `custom/*` entries into its rules. Keep the
+  project's existing rules.
+- The rules assume `src/app`, `src/services/{service}/{api,state,page}/{domain}`,
+  `src/server/repository`, the `@/` alias and `@/lib/components/ui`. Move the code to
+  that layout rather than editing path constants; if a constant must change, change the
+  rule, its message and the matching `.ai.md` together.
+- Classify every rule as adopted, adapted or dropped, with the reason in `AGENTS.md`.
+  Infra-tied rules: `drizzle-node-config` (Drizzle only); `better-auth-required-options`
+  and `auth-hydration-boundary` (the Better Auth `getMe()` boundary); `no-db-in-api` and
+  `server-only-import` (keep; point the database import pattern at the project's ORM);
+  `api-structure`, `api-create-action`, `api-action-error`, `api-only-server-action` and
+  `server-actions` (need the transport from step 5); `server-config-getters` (needs
+  `src/server/config.ts`); `no-native-interactive` (needs the comwit-ui components);
+  `no-next-image` and `no-anchor-tag` (template opinions: keep or drop deliberately).
+- Run lint over the whole project once. A rule with existing violations starts as
+  `warn` and becomes `error` when its layer is migrated. Add a `validate` script
+  (typecheck + lint), keep the project's scripts, and put `validate` in CI.
+- Prove that every adopted custom rule fires: write a deliberate violation in a scratch
+  file, see the error, delete the file.
+
+### 5. Shared code: bring `src/lib` and `src/server` scaffolding, replace the equivalents
+
+Copy from `$REF` and wire. Where the project has its own version of the same thing,
+replace it with the template's and delete the old one; never keep two.
+
+- `src/lib/utils/` (`cn`, `createAction`, `resolveActions`, `ActionError`, the http
+  client), `src/lib/popup.tsx`, `src/lib/interaction.ts`, `src/lib/overlay-motion.tsx`,
+  `src/lib/ui-text.ts`, `src/lib/kst.ts` (or a locale-correct equivalent),
+  `src/lib/admin-routes.ts` (with an admin service).
+- The api transport: `src/lib/server-action/`, `next.config.ts` exported through
+  `withServerFn(...)`, the `imports["#comwit-server-fn-runtime"]` map in `package.json`,
+  `src/app/api/internal/server-fn/[...slug]/route.ts` and the `ssr-bridge` import in the
+  root layout. Adopt it whole or do not adopt the api rules; not half.
+- State wiring: `@comwit/state` installed, `experimentalDecorators` and
+  `emitDecoratorMetadata` in tsconfig, `src/lib/state/` (StateProvider) and
+  `src/lib/layout/` (StateProvider, OverlayProvider, Toaster) mounted once in the root
+  layout, with a `<Suspense fallback={null}>` around the routed content.
+- `src/server/config.ts` as getters, `src/server/repository/{types.ts,id.ts,schema.dbml}`
+  and `_data/`; the repository rules rewritten around the project's ORM.
+- Service worker, offline page, version guard and `scripts/*.mjs`: only when the product
+  wants PWA behaviour.
+- Versions: keep the project's Next.js (never downgrade it); install the kit packages at
+  the pins in `$REF/package.json`; copy `pnpm-workspace.yaml` if pnpm's minimum release
+  age blocks them.
+
+### 6. UI: install comwit-ui and replace the project's components with it
+
+- `npx comwit-ui@latest init` (`--locale ko` only for Korean UI) with aliases that match
+  the project; it writes `comwit.json`, `comwit-tokens.css` and the base dependencies.
+  Set `--font-pretendard` on `<html>` or the project's font.
+- For every component in the inventory with a comwit-ui equivalent (button, input,
+  text-field, select, dialog, sheet, bottom-sheet, form, data-table, toast, popup, tabs,
+  dropdown-menu, …): `npx comwit-ui@latest add <name>`, port every call site, delete the
+  old component. Keep a project-specific component only when nothing in the kit covers
+  it, and then rebuild it from kit parts and tokens inside `src/lib/components/`.
+- Libraries the kit wraps (sonner, overlay-kit, react-hook-form, TanStack Table, tiptap,
+  react-day-picker, SSGOI) are used through the kit's files, never imported directly.
+- Move the brand into token overrides in `globals.css`, then delete the old theme and
+  global styles. Guide: https://library.comwit.io/ui/llms.txt
+
+### 7. Design system: apply `design.md` to everything you touch
+
+- Before any screen: fill the project concept in `design.md` (voice, mood) from the
+  existing brand, and map every visual decision to a token (`--brand`, `--radius-scale`,
+  `--display-font`, …) set in `globals.css`. Components are edited last.
+- Every migrated screen is restyled to `design.md`, not reproduced in new components:
+  tokens instead of hardcoded colours and sizes, `px-gutter` for page margins, one message
+  per section, no eyebrows or helper captions, no muted body text, no card stacking, UI
+  copy in `ui-text.ts`. Behaviour (gestures, scroll, focus, IME) stays in the kit.
+
+### 8. Screens and data: move to services and domains, one domain at a time
+
+- Order inside a domain: `repository → api → state → page`, as `src/services/.ai.md`
+  says. Start with the domain behind the first route in the inventory; finish it (lint
+  clean, story written, old files deleted) before the next.
+- repository: every data access becomes `src/server/repository/{entity}.ts` on the
+  project's real database (`server-only`, soft delete, uuid v7 ids). The api never
+  touches the database.
+- api: one domain per screen, `createAction` + `resolveActions`, `ActionError`,
+  screen-shaped responses with display labels; route handlers and client `fetch` calls
+  are replaced by api calls through state.
+- state: SWR, React Query, Redux and effect-based fetching are replaced by `@comwit/state`
+  domain hooks (`types.ts → model.ts → actions/*.ts → index.ts`); side effects (toast,
+  popup, navigation) move into actions. Guide: https://library.comwit.io/state/llms.txt
+- page: `src/services/{service}/page/{route}/` split into sections, `'use client'`,
+  `<Link>` for internal links, `<img>` instead of `next/image`; `src/app` routes only
+  import pages.
+- Existing auth: keep it, and implement the `getMe()` + hydration adapter boundary from
+  `page.ai.md` on top of it; run `auth-setup` only when adopting Better Auth on Drizzle.
+- Delete the old folder as each domain lands; the same screen never lives in two places.
+
+### 9. Storybook: set it up from `$REF`, write a story per migrated page
+
+- Copy `.storybook/` (main.ts, preview.tsx, preview.css, next.config.ts, tsconfig.json,
+  api-mocks.mjs, mocks/, stories/shell.tsx, stories/.ai.md, the design-system story),
+  `.agents/tests/storybook-api-mocks.test.mjs`, the `storybook`, `validate:storybook` and
+  `build-storybook` scripts and the `storybook`, `@storybook/nextjs-vite` and `vite`
+  devDependencies. Exclude `.storybook` and `storybook-static` from the app tsconfig,
+  add the `.storybook/**` override to `.oxlintrc.json`, gitignore `storybook-static/`.
+- Adapt `stories/shell.tsx` to the project's real service layouts and `mocks/session.ts`
+  to its user type.
+- For every migrated page: one story file under `stories/{service}/`, real layout,
+  states as named exports, the api mocked in `mocks/api/{service}-{domain}.ts`. Extend
+  the design-system overview with the project's tokens and controls.
+- `pnpm validate:storybook` and `pnpm build-storybook` pass and stay separate from
+  `validate`.
+
+### 10. Skills and agent config
+
+Copy only the skills that apply, each with its `.claude/skills/<name>/` stub,
+`.agents/scripts/cleanup-skill.mjs`, `.agents/tests/skills.test.mjs` and the
+`agents:test` script: `app-setup` for app-like products without a shell yet,
+`auth-setup` only when adopting Better Auth on Drizzle, `seo-optimize` in most projects.
+Rewrite their text for the project's package manager and paths.
+
+### 11. Finish
+
+- `validate`, `agents:test`, `validate:storybook`, `build-storybook` and the production
+  build pass; every adopted lint rule has been proven to fire.
+- Grep the copied files for `pnpm`, `Drizzle`, `Better Auth`, `/관리자`, `KST`, `my-app`,
+  `src/services`, `comwit-ui` and `.storybook`, and resolve every hit deliberately.
+- Delete `$REF`. Record in `AGENTS.md`: the template version and date adopted, what was
+  adapted or skipped and why, and the backlog of domains not moved yet.
+- Report what was replaced, what was kept and what is left.
+
+Prompt to hand an agent:
+
+```text
+Read https://library.comwit.io/template/llms.txt. This is an existing Next.js project.
+Follow "Migrate an existing project" as thoroughly as it says: scaffold the template
+into a temporary folder outside this repo with create-comwit; bring over the rule files
+(AGENTS.md, every .ai.md, design.md, skills), the eslint-rules and lint config, the
+shared lib code, the comwit-ui components and the Storybook setup; then refactor this
+project to the template's structure, replacing our components and utils with the
+template's, applying the design system to every screen you touch and writing stories as
+you go. Adapt every copied file to this project's real package manager, folder layout,
+database, auth, storage, hosting and locale; leave no template default that is not true
+here. Finish with validate, agents:test and build-storybook passing, and report what was
+replaced, what was kept and what is left.
+```
 
 ## Reference
 
@@ -46,6 +250,8 @@ Oxlint rules in `eslint-rules/` enforce every boundary above.
 - Folder structure and lint rules: https://library.comwit.io/template/docs/structure
 - Design decisions (server-function transport, caching, auth boundary): https://library.comwit.io/template/docs/decisions
 - The four layers: https://library.comwit.io/template/docs/layers
-- Agents, guides and skills: https://library.comwit.io/template/docs/agents
+- Agents, guides, Storybook and skills: https://library.comwit.io/template/docs/agents
+- Migration guide for humans: https://library.comwit.io/template/docs/migrate
 - State library: https://library.comwit.io/state/llms.txt
 - UI library: https://library.comwit.io/ui/llms.txt
+- All guides: https://library.comwit.io/llms.txt

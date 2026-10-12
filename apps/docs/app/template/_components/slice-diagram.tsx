@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
 import * as React from 'react'
 
 type Domain = {
@@ -117,7 +118,9 @@ export function SliceDiagram() {
           const lit = active === domain.name
           return (
             <React.Fragment key={domain.name}>
-              <button
+              <Button
+                variant="plain"
+                size="none"
                 type="button"
                 className="slice-head"
                 style={place(index)}
@@ -132,7 +135,7 @@ export function SliceDiagram() {
                 onClick={() => setPinned(domain.name)}
               >
                 {domain.name}
-              </button>
+              </Button>
               <span className="slice-outline" style={place(index)} data-lit={lit} aria-hidden />
             </React.Fragment>
           )

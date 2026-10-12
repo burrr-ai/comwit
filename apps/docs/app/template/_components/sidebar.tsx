@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
 import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -72,15 +73,21 @@ export function MobileNav({ docs }: { docs: TemplateDocMeta[] }) {
   // Close the panel after navigation; NavContent's links call onNavigate, so no effect is needed.
   return (
     <>
-      <button
+      <Button
+        variant="plain"
+        size="none"
         type="button"
         className="template-menu-button"
         aria-label={open ? 'Close navigation' : 'Open navigation'}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        {open ? <XIcon size={20} aria-hidden="true" /> : <ListIcon size={20} aria-hidden="true" />}
-      </button>
+        {open ? (
+          <XIcon className="size-5" size={20} aria-hidden="true" />
+        ) : (
+          <ListIcon className="size-5" size={20} aria-hidden="true" />
+        )}
+      </Button>
       {open && (
         <div className="template-mobile-nav">
           <NavContent docs={docs} onNavigate={() => setOpen(false)} />

@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useSyncExternalStore } from 'react'
@@ -207,7 +208,10 @@ export function ExhibitionLanding() {
         <div>
           <Link href="/blog">RELEASES ↗</Link>
           <a href="https://github.com/burrr-ai/comwit/blob/latest/LICENSE">MIT</a>
-          <button
+          <a href="/llms.txt">LLMS.TXT</a>
+          <Button
+            variant="plain"
+            size="none"
             type="button"
             aria-label={!allowed ? 'Motion disabled' : paused ? 'Play motion' : 'Pause motion'}
             aria-pressed={paused || !allowed}
@@ -215,12 +219,12 @@ export function ExhibitionLanding() {
             onClick={() => setPaused(!paused)}
           >
             {paused || !allowed ? (
-              <PlayIcon size={12} weight="fill" aria-hidden="true" />
+              <PlayIcon className="size-3" size={12} weight="fill" aria-hidden="true" />
             ) : (
-              <PauseIcon size={12} weight="fill" aria-hidden="true" />
+              <PauseIcon className="size-3" size={12} weight="fill" aria-hidden="true" />
             )}
             <span>{!allowed ? 'STATIC' : paused ? 'PLAY' : 'PAUSE'}</span>
-          </button>
+          </Button>
         </div>
       </footer>
     </div>

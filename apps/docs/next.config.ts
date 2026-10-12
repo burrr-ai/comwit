@@ -2,7 +2,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   devIndicators: false,
-  transpilePackages: ['@comwit/ui', '@comwit/ui-templates'],
+  transpilePackages: ['@comwit/icons', '@comwit/ui', '@comwit/ui-templates'],
   async redirects() {
     return [
       { source: '/state', destination: '/state/docs', permanent: true },
@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
       },
       { source: '/docs/api/silent', destination: '/state/docs/guide/nextjs', permanent: true },
       { source: '/docs/:path*', destination: '/state/docs/:path*', permanent: true },
-      { source: '/llms.txt', destination: '/state/llms.txt', permanent: true },
+      // /llms.txt itself is the static index in public/ — never redirect it.
       { source: '/llm/:path*', destination: '/state/llm/:path*', permanent: true },
       { source: '/components/:name', destination: '/ui/components#:name', permanent: true },
       { source: '/components', destination: '/ui/components', permanent: true },

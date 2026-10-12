@@ -1,5 +1,5 @@
 // @vitest-environment node
-import React from 'react'
+import React, { Suspense } from 'react'
 import { renderToReadableStream } from 'react-dom/server'
 import { describe, expect, test, vi } from 'vitest'
 import { ComwitProvider, model, query, useModel } from '../src'
@@ -43,6 +43,48 @@ describe('query selector suspend streaming SSR', () => {
     const html = await new Response(stream).text()
 
     expect(html).toContain('<strong>server value</strong>')
+    expect(queryFn).toHaveBeenCalledOnce()
+  })
+
+  test('passive readers in the same server render see the first resolved key', async () => {
+    const queryFn = vi.fn(async () => ({ id: 'u1' }))
+    const session = model({
+      me: query<{ id: string } | null>({ initialData: null, queryFn }),
+    })
+
+    // A layout shell owns the request; siblings and nested boundaries read passively.
+    function Shell({ children }: { children: React.ReactNode }) {
+      useModel(session, (state) => state.me.suspend().isSuccess)
+      return <>{children}</>
+    }
+    function Header() {
+      const me = useModel(session, (state) => state.me.data)
+      return <header>{me ? me.id : 'anonymous'}</header>
+    }
+    function Nav() {
+      const me = useModel(session, (state) => state.me.data)
+      return <nav>{me ? 'member' : 'guest'}</nav>
+    }
+
+    const stream = await renderToReadableStream(
+      <ComwitProvider>
+        <Suspense fallback={null}>
+          <Shell>
+            <Header />
+            <Suspense fallback={<nav>pending</nav>}>
+              <Nav />
+            </Suspense>
+          </Shell>
+        </Suspense>
+      </ComwitProvider>
+    )
+    await stream.allReady
+    const html = await new Response(stream).text()
+
+    expect(html).toContain('<header>u1</header>')
+    expect(html).toContain('<nav>member</nav>')
+    expect(html).not.toContain('anonymous')
+    expect(html).not.toContain('guest')
     expect(queryFn).toHaveBeenCalledOnce()
   })
 })

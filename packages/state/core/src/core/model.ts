@@ -387,17 +387,39 @@ export function useModel<T extends object, R>(
 
   const readSelectedSnapshot = useCallback(
     (server: boolean) => {
-      const raw =
+      const readRaw = () =>
         server && store.getServerSnapshot ? store.getServerSnapshot() : store.getSnapshot()
-      const loads: QuerySelectorLoad[] = []
-      const selectable =
-        queryBag?.size && queryRegistry
-          ? createQuerySelectorState(raw, queryController, queryBag, queryRegistry, loads, hookId)
-          : raw
+      const select = (raw: T, loads: QuerySelectorLoad[], mayInitialize: boolean) => {
+        const selectable =
+          queryBag?.size && queryRegistry
+            ? createQuerySelectorState(
+                raw,
+                queryController,
+                queryBag,
+                queryRegistry,
+                loads,
+                hookId,
+                mayInitialize
+              )
+            : raw
+        return selectorRef.current
+          ? selectorRef.current(selectable as SelectableResourceState<T>)
+          : selectable
+      }
+
+      // Like useHydrateModel: a model nobody has read yet may be initialized before its first
+      // snapshot. The selector learns which streamed `.suspend()` keys apply, so it runs first.
+      const mayInitialize = !store.hasReadSnapshot()
+      let loads: QuerySelectorLoad[] = []
+      let next = select(readRaw(), loads, mayInitialize)
+      if (loads.some((load) => load.initialized)) {
+        // The restored result is already in the proxy; re-read so passive fields of this same
+        // selector observe it in the hydrating render.
+        store.refreshServerSnapshot?.()
+        loads = []
+        next = select(readRaw(), loads, false)
+      }
       queryLoadsRef.current = loads
-      const next = selectorRef.current
-        ? selectorRef.current(selectable as SelectableResourceState<T>)
-        : selectable
 
       if (
         prevRef.current !== null &&

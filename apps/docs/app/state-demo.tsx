@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@comwit/ui-templates/button'
 import { useRef, useState } from 'react'
 import { action, ComwitProvider, create, model } from '@comwit/state'
 import { CopyButton } from './copy-button'
@@ -43,7 +44,9 @@ function Counter() {
           {count}
         </motion.span>
       </output>
-      <button
+      <Button
+        variant="plain"
+        size="none"
         type="button"
         className="increment-button"
         onClick={() => {
@@ -52,10 +55,16 @@ function Counter() {
         }}
       >
         one up
-      </button>
-      <button type="button" className="reset-button" onClick={actions.reset}>
+      </Button>
+      <Button
+        variant="plain"
+        size="none"
+        type="button"
+        className="reset-button"
+        onClick={actions.reset}
+      >
         reset
-      </button>
+      </Button>
     </div>
   )
 }
@@ -83,7 +92,9 @@ export function StateDemo({ examples }: { examples: DemoExample[] }) {
           <div className="code-toolbar">
             <div role="tablist" aria-label="Counter example" className="code-tabs">
               {examples.map((item, index) => (
-                <button
+                <Button
+                  variant="plain"
+                  size="none"
                   type="button"
                   key={item.title}
                   role="tab"
@@ -109,7 +120,7 @@ export function StateDemo({ examples }: { examples: DemoExample[] }) {
                   }}
                 >
                   {item.title}
-                </button>
+                </Button>
               ))}
             </div>
             <CopyButton
