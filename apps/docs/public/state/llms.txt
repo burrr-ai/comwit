@@ -336,5 +336,6 @@ await search(snapshot(this.m.filters))
 - https://library.comwit.io/state/llm/search-param.txt
 - https://library.comwit.io/state/llm/history.txt
 - https://library.comwit.io/state/docs
+- All Comwit guides (UI, template): https://library.comwit.io/llms.txt
 
 Feedback: `gh issue create --repo burrr-ai/comwit --title '...' --body '...'`

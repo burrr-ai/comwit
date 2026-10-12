@@ -1,0 +1,81 @@
+---
+title: Migrate an existing project
+group: Install
+order: 2
+description: Bring a Next.js project you already have up to the template, domain by domain, with your agent.
+---
+
+# Migrate an existing project
+
+`create-comwit` only writes into an empty folder. An existing Next.js App Router
+project reaches the same place the long way: the template is scaffolded into a
+temporary folder next to it, and your coding agent refactors the project to match,
+one domain at a time. The agent procedure is the "Migrate an existing project"
+section of the [template `llms.txt`](/template/llms.txt). This page is what it does
+and what you decide.
+
+## Hand it to your agent
+
+```text
+Read https://library.comwit.io/template/llms.txt. This is an existing Next.js project.
+Follow "Migrate an existing project" as thoroughly as it says: scaffold the template
+into a temporary folder outside this repo with create-comwit; bring over the rule files
+(AGENTS.md, every .ai.md, design.md, skills), the eslint-rules and lint config, the
+shared lib code, the comwit-ui components and the Storybook setup; then refactor this
+project to the template's structure, replacing our components and utils with the
+template's, applying the design system to every screen you touch and writing stories as
+you go. Adapt every copied file to this project's real package manager, folder layout,
+database, auth, storage, hosting and locale; leave no template default that is not true
+here. Finish with validate, agents:test and build-storybook passing, and report what was
+replaced, what was kept and what is left.
+```
+
+## What the agent does
+
+1. **Scaffolds a reference copy** with `npx create-comwit@latest` into a temporary
+   folder outside the repository and reads it, never writes into it.
+2. **Inventories the project**: package manager, Next.js version, folder layout, lint,
+   database, auth, storage, hosting, UI library, locale, how data is fetched, and every
+   route with the components it uses.
+3. **Copies the rule files** (`AGENTS.md`, each `.ai.md`, `design.md`, the Storybook
+   rules) and rewrites every line that is not true for the project: commands, paths,
+   stack table, locale, brand.
+4. **Copies the lint rules** (`eslint-rules/`, `.oxlintrc.json`) into the project's lint
+   setup, classifies each rule as adopted, adapted or dropped, and proves the adopted
+   ones fire.
+5. **Brings the shared code**: utilities, the server-function transport, the State
+   provider and root layout, `config.ts`, the repository scaffolding, replacing the
+   project's own versions.
+6. **Installs comwit-ui** and replaces the project's components with the kit's,
+   rebuilding what the kit does not cover from kit parts and tokens.
+7. **Applies the design system**: `design.md` filled with the real brand, tokens in
+   `globals.css`, and every migrated screen restyled to the guide rather than copied.
+8. **Moves screens and data into services and domains**, `repository → api → state →
+page`, finishing one domain (lint clean, story written, old files deleted) before the
+   next.
+9. **Sets up Storybook** from the reference copy and writes a page-level story, with the
+   api mocked at the boundary, for every migrated page.
+10. **Copies the skills that apply**, runs every check, deletes the temporary folder and
+    records in `AGENTS.md` what was adopted, adapted, skipped and what is still left.
+
+## What you decide
+
+| Decision | Default the agent takes unless you say otherwise                              |
+| -------- | ----------------------------------------------------------------------------- |
+| Database | Keeps your ORM and database; rewrites the repository rules around them        |
+| Auth     | Keeps your auth and builds the `getMe()` hydration boundary on top of it      |
+| Hosting  | Keeps your hosting; `--opennext` on the reference copy for Cloudflare Workers |
+| Locale   | Replaces the Korean UI copy and KST helpers with the project's locale         |
+| Order    | Starts with the domain behind the first route in the inventory                |
+| Scope    | Everything, domain by domain; tell it which domains to leave for later        |
+
+Say these in the prompt when you already know them. The agent asks only when it
+cannot choose sensibly.
+
+## What done looks like
+
+`validate`, `agents:test`, `validate:storybook`, `build-storybook` and the production
+build pass. `src/app` only routes. Every screen lives in one `src/services/{service}/page/`
+folder and nowhere else. The old component library, theme and data-fetching code are
+gone. `AGENTS.md` names the template version adopted and the backlog that remains, so
+the next session continues where this one stopped.

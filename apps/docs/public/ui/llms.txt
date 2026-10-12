@@ -110,3 +110,5 @@ The everyday parts, styled with the same tokens.
 - Headless primitives (@comwit/ui without the styled files): https://library.comwit.io/ui/docs/primitives
 - Page transition rules and presets (SSGOI, same config shape): https://ssgoi.dev/llms.txt
 - State (separate library): https://library.comwit.io/state/llms.txt
+- Template (Next.js project with State and UI pre-wired): https://library.comwit.io/template/llms.txt
+- All Comwit guides: https://library.comwit.io/llms.txt
