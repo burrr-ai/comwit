@@ -30,7 +30,7 @@ pnpm storybook      # http://localhost:6006 — pages with the API boundary mock
 | `src/services/{service}/page/{route}/` | Page components split into sections. |
 | `src/server/repository/` | The only gateway to data. Starts as mock rows in `_data/`. |
 | `src/lib/` | Shared components (installed `comwit-ui` source), hooks and utilities. |
-| `.agents/` | Skills (`app-setup`, `auth-setup`, `seo-optimize`, `refactoring`), scripts and rules for coding agents. |
+| `.agents/` | Skills (`app-setup`, `auth-setup`, `seo-optimize`), scripts and rules for coding agents. |
 | `.storybook/` | Page-level stories (design system → user → admin), API mocks and the rules in `stories/.ai.md`. |
 
 Read `AGENTS.md` first, then the `.ai.md` next to each layer. Architecture
@@ -47,6 +47,7 @@ typecheck, lint and boundary test; `pnpm build-storybook` writes
 
 ## Connecting a database or storage
 
-The template runs on mock data until the product needs persistence. `AGENTS.md`
-section 6 describes how to add a Drizzle database and an S3-compatible bucket;
-`auth-setup` installs Better Auth once a database is connected.
+The template runs on mock data until the product needs persistence. Connect a
+Drizzle database or an S3-compatible bucket when the product needs one: only
+the repository bodies change (`src/server/repository/.ai.md`), and `auth-setup`
+installs Better Auth once a database is connected.
