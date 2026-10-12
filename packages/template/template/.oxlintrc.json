@@ -34,6 +34,7 @@
   "rules": {
     "custom/auth-hydration-boundary": "error",
     "custom/drizzle-node-config": "error",
+    "custom/server-config-getters": "error",
     "no-array-constructor": "error",
     "no-unused-expressions": "warn",
     "custom/state-structure": "error",
@@ -183,6 +184,14 @@
       ],
       "rules": {
         "custom/no-native-interactive": "error"
+      }
+    },
+    {
+      "files": [
+        ".storybook/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "custom/no-root-app-folder": "off"
       }
     }
   ]

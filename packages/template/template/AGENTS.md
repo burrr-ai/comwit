@@ -22,6 +22,9 @@ this file; Codex and Antigravity read it directly.
    reads the stub in `.claude/skills/<name>/` that points there. Change both
    together (`node .agents/scripts/cleanup-skill.mjs <name>` removes a one-time
    skill); `pnpm agents:test` checks they match.
+5. **Storybook.** Read `.storybook/stories/.ai.md` before screen work. Stories
+   are page-level, grouped design system → user type → page → state, and mock
+   only the api boundary: real pages, layouts, state and actions run as is.
 
 ---
 
@@ -36,11 +39,13 @@ this file; Codex and Antigravity read it directly.
 | File Naming | kebab-case (`hero-section.tsx`) |
 | Image | `<img />`, not `<Image />` |
 | Loading | Auth user is hydrated once at the service root (`src/services/page.ai.md`); other data loads lazily via query + `isLoading` |
-| Env | Server config goes through `src/server/config.ts`; `.env` is gitignored. Never expose secrets to the client, args, output or logs. Exception: the Better Auth `{SERVICE}_AUTH_SECRET` that `auth-setup` writes into `config.ts` |
+| Env | Server config goes through `src/server/config.ts`: every `config` entry is a getter that reads the environment on access, never a value captured at module load (consumers keep `config.KEY`); `.env` is gitignored. Never expose secrets to the client, args, output or logs. Exception: the Better Auth `{SERVICE}_AUTH_SECRET` that `auth-setup` writes into `config.ts` |
 
 ### Checks
 
 - After every code change run `pnpm run validate` and fix all errors.
+- Storybook checks are separate: `pnpm validate:storybook` / `pnpm build-storybook`.
+  A missing or incomplete API mock must never fail service `validate` or `build`.
 - Mutation testing runs only when the user explicitly asks for it — never as
   part of tests, validate, build or CI.
 
@@ -51,6 +56,7 @@ this file; Codex and Antigravity read it directly.
 ```
 .agents/                - Skills, scripts, rules (the only copy)
 .claude/skills/         - Claude Code stubs pointing at .agents/skills/
+.storybook/             - Page-level stories, API mocks and their rules (stories/.ai.md)
 eslint-rules/           - Oxlint rules that enforce the layer boundaries
 src/
   services/             - One folder per user type (default: app, admin)

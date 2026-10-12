@@ -1,0 +1,64 @@
+# Comwit
+
+Open-source building blocks for Next.js products built with coding agents: a State
+library, a UI kit and a project template. Each one has its own agent guide. Read only
+the guide for what you are about to use. State and UI are independent of each other;
+the template uses both.
+
+## Guides
+
+- State — `@comwit/state`: domain models, queries, local data, URL state and actions
+  for React and Next.js. https://library.comwit.io/state/llms.txt
+- UI — `comwit-ui`: styled components copied into your project as source, on the
+  headless `@comwit/ui` engine, with Tailwind v4 tokens. https://library.comwit.io/ui/llms.txt
+- Template — `create-comwit`: a Next.js 16 project whose folder structure is the
+  documentation: services sliced by domain, four one-way layers, an `.ai.md`
+  rulebook beside every layer, lint rules that enforce it, Storybook and skills.
+  https://library.comwit.io/template/llms.txt
+
+State's full API references live under https://library.comwit.io/state/llm/. A project
+file that links here for `@comwit/state` details means the State guide.
+
+## New project
+
+```bash
+npm create comwit@latest my-app
+```
+
+Then follow the template guide inside the project (`AGENTS.md` first).
+
+## Existing project
+
+To bring an existing Next.js project up to the template — rule files, lint rules,
+shared code, comwit-ui components, the design system and Storybook — follow the
+"Migrate an existing project" section of the template guide:
+https://library.comwit.io/template/llms.txt
+
+In short: scaffold the template into a temporary folder outside the repo with
+`create-comwit`, bring over its `eslint-rules/` with the lint config and every
+`.md` / `.ai.md` rule file, and adapt each one to the project's real package
+manager, folder layout, database, auth, storage, hosting and locale. Then refactor
+domain by domain: replace the project's components and utils with the template's,
+apply the design system to every screen you touch, and write a Storybook story per
+migrated page. Be thorough. Nothing copied may stay a template default that is not
+true for the project.
+
+Prompt to give your agent:
+
+```text
+Read https://library.comwit.io/template/llms.txt. This is an existing Next.js
+project. Follow "Migrate an existing project" as thoroughly as it says: scaffold the
+template into a temporary folder outside this repo with create-comwit; bring over the
+rule files (AGENTS.md, every .ai.md, design.md, skills), the eslint-rules and lint
+config, the shared lib code, the comwit-ui components and the Storybook setup; then
+refactor this project to the template's structure, replacing our components and utils
+with the template's, applying the design system to every screen you touch and writing
+stories as you go. Adapt every copied file to this project's real package manager,
+folder layout, database, auth, storage, hosting and locale; leave no template default
+that is not true here. Finish with validate, agents:test and build-storybook passing,
+and report what was replaced, what was kept and what is left.
+```
+
+## Feedback
+
+`gh issue create --repo burrr-ai/comwit --title '...' --body '...'`

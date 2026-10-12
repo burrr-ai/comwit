@@ -2,7 +2,7 @@
 title: Working with coding agents
 group: How it works
 order: 6
-description: AGENTS.md, the .ai.md guides, the bundled skills and the workflow they assume.
+description: AGENTS.md, the .ai.md guides, Storybook, the bundled skills and the workflow they assume.
 ---
 
 # Working with coding agents
@@ -23,16 +23,17 @@ them out of the api, state and page code.
 
 ## `.ai.md` beside every layer
 
-| Guide                          | Read before                                                              |
-| ------------------------------ | ------------------------------------------------------------------------ |
-| `src/app/.ai.md`               | touching routes, layouts or the auth boundary                            |
-| `src/services/.ai.md`          | any work under services — import rules, layer dependencies               |
-| `src/services/api.ai.md`       | writing server actions                                                   |
-| `src/services/state.ai.md`     | writing models, actions or hooks                                         |
-| `src/services/page.ai.md`      | writing screens; lists the installed components                          |
-| `src/services/design.md`       | any visual decision — voice, mood, type scale, token usage               |
-| `src/services/admin/.ai.md`    | admin routes, account rules and how to tell the user the entry URL       |
-| `src/server/repository/.ai.md` | repository rules, CRUD naming, in-memory rows and the move to a database |
+| Guide                          | Read before                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------- |
+| `src/app/.ai.md`               | touching routes, layouts or the auth boundary                                      |
+| `src/services/.ai.md`          | any work under services — import rules, layer dependencies                         |
+| `src/services/api.ai.md`       | writing server actions                                                             |
+| `src/services/state.ai.md`     | writing models, actions or hooks                                                   |
+| `src/services/page.ai.md`      | writing screens; lists the installed components                                    |
+| `src/services/design.md`       | any visual decision — voice, mood, type scale, token usage                         |
+| `src/services/admin/.ai.md`    | admin routes, account rules and how to tell the user the entry URL                 |
+| `src/server/repository/.ai.md` | repository rules, CRUD naming, in-memory rows and the move to a database           |
+| `.storybook/stories/.ai.md`    | writing or changing a page story: sidebar structure, the api-mock boundary, states |
 
 The guides are short because the structure carries most of the meaning. They
 state the few things a folder tree cannot: write order, naming suffixes,
@@ -63,6 +64,18 @@ and keeps the hydration boundary intact. It needs a connected database first.
 **`seo-optimize`** — installs `src/lib/seo` with a site config,
 `buildMetadata`, JSON-LD, sitemap and robots, then wires the root layout.
 Absolute URLs come from `SITE_URL`.
+
+## Storybook as the review surface
+
+`pnpm storybook` renders the real pages inside their service layouts with the
+real state and actions. Only the api layer's public objects are swapped for the
+mocks in `.storybook/mocks/api/{service}-{domain}.ts`; a missing mock or a
+server import fails the Storybook build, never the app. Stories are page-level,
+one file per page under `.storybook/stories/{service}/`, with each state of the
+page as a named export and the design-system overview at the top of the
+sidebar. The agent writes or updates the story whenever it touches a page, and
+`pnpm validate:storybook` runs Storybook's own typecheck, lint and boundary test
+apart from `pnpm run validate`.
 
 ## Lint as the last reader
 

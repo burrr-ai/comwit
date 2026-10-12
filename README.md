@@ -17,6 +17,8 @@ Open-source State and UI libraries used in Comwit templates, and the template it
 | **UI**       | Headless behavior and editable component sources you install into your project.                        | [Docs](https://library.comwit.io/ui) · [Source](packages/ui)                 |
 | **Template** | A Next.js 16 project sliced by domain, with one-way layers, `.ai.md` rules per layer and agent skills. | [Docs](https://library.comwit.io/template) · [Source](packages/template)     |
 
+Coding agent? Give it the index, [library.comwit.io/llms.txt](https://library.comwit.io/llms.txt), or the guide for the one library you use.
+
 ## State
 
 ```bash
@@ -41,7 +43,7 @@ npm create comwit@latest my-app
 npm create comwit@latest my-app -- --opennext   # Cloudflare Workers via OpenNext
 ```
 
-`create-comwit` scaffolds the Next.js template: services sliced by domain, `page → state → api → repository`, an `.ai.md` guide beside every layer, Oxlint rules that enforce the boundaries, and skills for the app shell, auth and SEO. State and UI come pre-wired; the database, storage and hosting stay your choice. Read [why the folders look this way](https://library.comwit.io/template/docs/architecture) or give your agent [Template's llms.txt](https://library.comwit.io/template/llms.txt).
+`create-comwit` scaffolds the Next.js template: services sliced by domain, `page → state → api → repository`, an `.ai.md` guide beside every layer, Oxlint rules that enforce the boundaries, and skills for the app shell, auth and SEO. State and UI come pre-wired; the database, storage and hosting stay your choice. Storybook ships set up. Read [why the folders look this way](https://library.comwit.io/template/docs/architecture), give your agent [Template's llms.txt](https://library.comwit.io/template/llms.txt), or [migrate an existing project](https://library.comwit.io/template/docs/migrate).
 
 ## Workspace
 

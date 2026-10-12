@@ -112,16 +112,7 @@ export async function handleServerFnPost(
   }
 
   const id = serverFnPathToId(segments)
-  const loadModule = id ? manifest[id] : undefined
-  if (!id || !loadModule) {
-    return response(
-      {
-        ok: false,
-        error: { type: 'internal', message: '서버 함수를 찾을 수 없어요' },
-      },
-      404,
-    )
-  }
+  if (!id || !manifest[id]) return response(NOT_FOUND, 404)
 
   let body: unknown
   try {
@@ -147,28 +138,46 @@ export async function handleServerFnPost(
     )
   }
 
+  const result = await executeServerFn(id, body.args, manifest)
+  return response(result.body, result.status)
+}
+
+const NOT_FOUND: ServerFnFailure = {
+  ok: false,
+  error: { type: 'internal', message: '서버 함수를 찾을 수 없어요' },
+}
+
+/**
+ * manifest가 허용한 Server Function 하나를 실행해 wire 응답 본문과 HTTP status를 만든다.
+ * POST Route Handler와 SSR dispatcher(`ssr-bridge.ts`)가 같은 오류 규약을 공유한다.
+ */
+export async function executeServerFn(
+  id: string,
+  args: unknown[],
+  manifest: Readonly<Record<string, ServerFnModuleLoader>> = serverFnManifest,
+): Promise<{ body: ServerFnSuccess | ServerFnFailure; status: number }> {
+  const loadModule = manifest[id]
+  if (!loadModule) return { body: NOT_FOUND, status: 404 }
+
   try {
     // 정적 manifest가 허용한 모듈만 import한다. 요청값으로 임의 파일을 import하지 않는다.
     const action = await loadModule()
-    return response({ ok: true, data: await action(...body.args) })
+    return { body: { ok: true, data: await action(...args) }, status: 200 }
   } catch (error) {
     if (error instanceof ActionError) {
-      return response(
-        {
-          ok: false,
-          error: { type: 'action', message: error.message },
-        },
-        400,
-      )
+      return {
+        body: { ok: false, error: { type: 'action', message: error.message } },
+        status: 400,
+      }
     }
 
     console.error(`[server-fn] action failed: ${id}`, error)
-    return response(
-      {
+    return {
+      body: {
         ok: false,
         error: { type: 'internal', message: '서버 요청을 처리하지 못했어요' },
       },
-      500,
-    )
+      status: 500,
+    }
   }
 }

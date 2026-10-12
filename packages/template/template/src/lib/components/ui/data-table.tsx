@@ -76,6 +76,10 @@ function DataTable<TData, TValue>({
   toolbar,
   labels,
 }: DataTableProps<TData, TValue>) {
+  // TanStack Table v8의 내부 가변 상태는 자동 메모이제이션과 호환되지 않는다.
+  // 컴파일러 호환 API로 전환하면 이 지시문을 제거한다.
+  'use no memo'
+
   const { data: pageable, isLoading, isFetching, isSuccess, isError } = queryData
   const { items, total, totalPages, limit } = pageable
   const [page, setPage] = React.useState(pageable.page)
@@ -85,7 +89,7 @@ function DataTable<TData, TValue>({
     setPage(pageable.page)
   }, [pageable.page])
 
-  // eslint-disable-next-line react-hooks/incompatible-library
+  // eslint-disable-next-line react-hooks-js/incompatible-library -- 위의 'use no memo'로 이 컴포넌트의 자동 최적화를 제외했다.
   const table = useReactTable({
     data: items,
     columns,
