@@ -310,6 +310,19 @@ test('generated docs consume the moved registry and expose separate agent guides
   assert.doesNotMatch(ui, /@comwit\/state/)
   assert.match(state, /@comwit\/state/)
   assert.doesNotMatch(state, /library\.comwit\.io\/(docs|llm)\//)
+  // The root index routes agents to the three guides and to the migration procedure. It is a
+  // static file, so next.config.ts must not redirect /llms.txt (redirects win over public/).
+  const index = readFileSync(join(root, 'apps/docs/public/llms.txt'), 'utf8')
+  for (const product of ['state', 'ui', 'template'])
+    assert.match(index, new RegExp(`https://library\\.comwit\\.io/${product}/llms\\.txt`))
+  assert.match(index, /Migrate an existing project/)
+  const template = readFileSync(join(root, 'apps/docs/public/template/llms.txt'), 'utf8')
+  assert.match(template, /^## Migrate an existing project$/m)
+  assert.match(template, /\.storybook\/stories\/\.ai\.md/)
+  assert.doesNotMatch(
+    readFileSync(join(root, 'apps/docs/next.config.ts'), 'utf8'),
+    /source: '\/llms\.txt'/
+  )
 })
 
 test('create-comwit scaffolds a project that carries no platform-specific files', () => {
@@ -335,6 +348,8 @@ test('create-comwit scaffolds a project that carries no platform-specific files'
       '.agents/skills/app-setup/SKILL.md',
       '.agents/skills/auth-setup/SKILL.md',
       '.claude/skills/auth-setup/SKILL.md',
+      '.storybook/main.ts',
+      '.storybook/stories/.ai.md',
       'src/services/app/page/home/index.tsx',
     ])
       assert.ok(existsSync(join(app, rel)), `${rel} should be scaffolded`)

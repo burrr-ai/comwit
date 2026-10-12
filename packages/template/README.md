@@ -32,6 +32,7 @@ src/
   lib/                      shared code; comwit-ui components installed as source
   server/repository/        the only gateway to data
 .agents/skills/             app-setup · auth-setup · seo-optimize
+.storybook/                 page-level stories, api mocks, stories/.ai.md
 eslint-rules/               Oxlint rules that enforce the layer boundaries
 AGENTS.md                   the rules file every coding agent reads
 ```
@@ -39,6 +40,7 @@ AGENTS.md                   the rules file every coding agent reads
 - **Next.js 16** App Router with Cache Components, a service worker and offline page.
 - **@comwit/state** domain hooks, **comwit-ui** components you own, Tailwind v4 tokens.
 - **Better Auth + Drizzle** wired by the `auth-setup` skill once a database is connected.
+- **Storybook** set up: real pages and layouts, the api boundary mocked, one story per page.
 - **No infrastructure lock-in.** The template does not assume a database, a bucket
   or a hosting platform; `AGENTS.md` explains how to add each. `--opennext` opts
   into Cloudflare Workers (`@opennextjs/cloudflare` + wrangler) up front.
@@ -59,3 +61,6 @@ AGENTS.md                   the rules file every coding agent reads
 
 Why the folders look this way, the layer rules and the agent workflow:
 https://library.comwit.io/template
+
+Existing project? The agent guide has a migration procedure:
+https://library.comwit.io/template/llms.txt

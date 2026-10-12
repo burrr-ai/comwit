@@ -48,6 +48,15 @@ api/{domain}/
 2. actions/*.ts — implement the server action
 3. index.ts — create the typed client
 
+## Storybook API boundary
+
+- 페이지 스토리는 실제 state를 거쳐 이 레이어의 공개 API 객체를 호출한다.
+  `.storybook/mocks/api/{service}-{domain}.ts`에 동일 export·인자·응답 계약의 mock을 둔다.
+- Storybook resolver는 API mock이 없거나 실제 서버 구현이 import되면 실패한다.
+  mock에서 실제 API·action·repository를 runtime import하지 않는다. 계약 참조는 `import type`만 쓴다.
+- 로딩·빈 목록·오류는 API 응답으로 재현하고 mock은 매 스토리 시작 시 초기화한다.
+  자세한 작성·검증 규칙은 [`.storybook/stories/.ai.md`](../../.storybook/stories/.ai.md)를 따른다.
+
 ## types.ts
 
 - Define API interface with JSDoc

@@ -1,0 +1,10 @@
+@font-face {
+  font-family: 'Storybook Pretendard';
+  src: url('../src/app/fonts/PretendardVariable.woff2') format('woff2');
+  font-weight: 45 920;
+  font-display: swap;
+}
+
+:root {
+  --font-pretendard: 'Storybook Pretendard';
+}

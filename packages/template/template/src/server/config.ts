@@ -4,6 +4,8 @@ import "server-only";
  * Server-side configuration
  *
  * Read ordinary server settings here (API keys, secrets, etc.).
+ * Define every config entry as a getter; read env inside it so values are
+ * resolved on access instead of being captured when this module is imported.
  * Database/storage server-only modules may read process.env directly.
  * Node configuration such as drizzle.config.ts must not import this module.
  * This file is protected by 'server-only' - it cannot be imported in client components.
@@ -14,11 +16,15 @@ import "server-only";
  */
 
 export const config = {
-  NODE_ENV: process.env.NODE_ENV ?? "production",
+  get NODE_ENV() {
+    return process.env.NODE_ENV ?? "production";
+  },
 
   // 배포 주소 — og:image·sitemap 같은 절대 URL의 기준. 배포 환경(필요하면 로컬 .env)의
   // SITE_URL 로 정한다. 비어 있으면 seo-optimize 가 상대 경로로 둔다.
-  SITE_URL: process.env.SITE_URL,
+  get SITE_URL() {
+    return process.env.SITE_URL;
+  },
 } as const;
 
 export type ServerConfigKey = keyof typeof config;

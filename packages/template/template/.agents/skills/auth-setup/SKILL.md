@@ -69,7 +69,9 @@ again.
 Before adding auth secrets, ensure `config` exposes `NODE_ENV`:
 
 ```ts
-NODE_ENV: process.env.NODE_ENV ?? "production",
+get NODE_ENV() {
+  return process.env.NODE_ENV ?? "production";
+},
 ```
 
 Add it only when the project does not already define `NODE_ENV`. The project
@@ -78,11 +80,14 @@ value, including a missing value on the hosting platform, uses HTTPS. No site
 URL environment variable is needed because the auth server detects the hosted
 domain from the incoming request.
 
-Then add one entry per service inside the `} as const;` block, using the secret
-from step 1:
+Then add one getter per service inside the `} as const;` block, using the secret
+from step 1. Every `config` entry must be a getter (`custom/server-config-getters`);
+keep environment reads inside getters, never in module-level snapshots:
 
 ```ts
-{SERVICE}_AUTH_SECRET: "<secret>",
+get {SERVICE}_AUTH_SECRET() {
+  return "<secret>";
+},
 ```
 
 Use `Edit`, not `sed`, so you can place it exactly before `} as const;`.

@@ -17,6 +17,7 @@ pnpm run validate   # typecheck + lint (run after every change)
 pnpm run build      # service worker + next build
 pnpm start
 pnpm ui add <name>  # install a comwit-ui component as source
+pnpm storybook      # http://localhost:6006 — pages with the API boundary mocked
 ```
 
 ## Where things go
@@ -30,9 +31,19 @@ pnpm ui add <name>  # install a comwit-ui component as source
 | `src/server/repository/` | The only gateway to data. Starts as mock rows in `_data/`. |
 | `src/lib/` | Shared components (installed `comwit-ui` source), hooks and utilities. |
 | `.agents/` | Skills (`app-setup`, `auth-setup`, `seo-optimize`, `refactoring`), scripts and rules for coding agents. |
+| `.storybook/` | Page-level stories (design system → user → admin), API mocks and the rules in `stories/.ai.md`. |
 
 Read `AGENTS.md` first, then the `.ai.md` next to each layer. Architecture
 notes: https://library.comwit.io/template/docs/architecture
+
+## Storybook
+
+`pnpm storybook` runs the real pages inside their service layouts with the
+real state and actions; only the api layer's public objects are replaced by
+the mocks in `.storybook/mocks/api/`. A missing mock or a server import fails
+the Storybook build, never the app. `pnpm validate:storybook` runs its own
+typecheck, lint and boundary test; `pnpm build-storybook` writes
+`storybook-static/`. Rules: `.storybook/stories/.ai.md`.
 
 ## Connecting a database or storage
 

@@ -130,3 +130,12 @@ function restoreUndefined(value: unknown): unknown {
   }
   return value
 }
+
+/**
+ * Client Component SSR에서 쓰는 같은 프로세스 dispatcher의 전역 키.
+ * RSC graph(`ssr-bridge.ts`)가 등록하고, SSR의 client facade가 읽는다.
+ */
+export const SERVER_FN_SSR_DISPATCH = Symbol.for('comwit.server-fn.ssr-dispatch')
+
+/** HTTP 왕복 없이 응답 wire 문자열을 돌려주는 dispatcher. */
+export type ServerFnSsrDispatch = (id: string, args: unknown[]) => Promise<string>
