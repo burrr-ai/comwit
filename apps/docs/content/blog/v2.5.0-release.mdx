@@ -1,0 +1,108 @@
+---
+title: 'comwit v2.5.0 — Streaming Suspense for Next.js'
+date: '2026-10-12'
+description: 'v2.5.0 promotes the 2.5 beta line to the stable @comwit/state release: a query resolved by .suspend() during the Next.js server render hydrates in the browser without a second request.'
+author: 'Claude'
+---
+
+```bash
+npm install @comwit/state
+```
+
+v2.5.0 brings the 2.5 beta line to the stable `@comwit/state` channel. Every API from 2.4.0 keeps
+its behavior and there is no migration step. From this release on there is no separate beta
+channel: the next features ship as regular minor releases.
+
+## A Suspense boundary that hydrates with its data
+
+`.suspend(arg)` runs a query during render and throws the pending Promise, so a `<Suspense>`
+boundary streams its fallback and then its content. In 2.4 the browser had a separate cache and ran
+`queryFn` again while hydrating. Now the provider carries each result resolved on the server into
+the browser cache, so the boundary hydrates with the same data and no second request.
+
+Pass the Next.js hook to the provider. Nothing else changes:
+
+```tsx
+'use client'
+
+import { ComwitProvider } from '@comwit/state'
+import { useRouter, useServerInsertedHTML } from 'next/navigation'
+import { getServerSearchParams } from './get-server-search-params'
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  return (
+    <ComwitProvider
+      context={{ router }}
+      getServerSearchParams={getServerSearchParams}
+      useServerInsertedHTML={useServerInsertedHTML}
+    >
+      {children}
+    </ComwitProvider>
+  )
+}
+```
+
+```tsx
+// Server Component
+export default function ProductPage({ id }: { id: string }) {
+  return (
+    <Suspense fallback={<ProductSkeleton />}>
+      <ProductDetail id={id} />
+    </Suspense>
+  )
+}
+
+// Client Component
+function ProductDetail({ id }: { id: string }) {
+  const product = useProduct((s) => s.detail.suspend(id))
+  return product.data ? <ProductView product={product.data} /> : <NotFound />
+}
+```
+
+```text
+server: suspend(id) → queryFn → boundary HTML, preceded by an inert JSON script
+browser: hydrating suspend(id) reads the script → same snapshot, no queryFn → active after commit
+```
+
+The framework function is injected, the same way as `getServerSearchParams`; there is no
+Next.js-specific provider. On the server, `useServerInsertedHTML` inserts a
+`<script type="application/json" data-comwit-suspend>` ahead of each flushed chunk with the results
+resolved since the previous flush. In the browser the hydrating selector reads that script before
+its first snapshot, the entry becomes active after commit with the server's fetch time, and
+`staleTime` applies as if the browser had fetched it. Results are keyed by the selecting hook's tree
+position, so nested providers and repeated components cannot cross-hydrate, and no executable inline
+script is emitted.
+
+The requirements are in the
+[Next.js guide](/state/docs/guide/nextjs#streaming-suspense-experimental): `queryFn` must run in
+both environments (no Server Functions, absolute `fetch` URLs on the server), results must be
+JSON-serializable, and `hydrate()` remains the default for data that must stay on the server.
+
+## The first `.suspend()` result activates the resource
+
+A `.suspend()` result used to live only in the key cache until the selecting tree committed. On the
+server there is no commit, so a sibling or nested component reading `state.field.data` rendered
+`initialData` (a logged-out header next to a signed-in page) while the suspend caller rendered the
+data, and the browser then reported hydration mismatches.
+
+Since 2.5.0 the first resolved `.suspend()` result of a never-queried resource becomes the proxy
+value immediately, the same "initialize before the first snapshot" rule `hydrate()` follows. The
+streamed restore does the same during hydration, and `useModel` re-reads its snapshot so passive
+fields in the same selector observe the restored value. A key staged over an already-active resource
+still waits for commit, so an abandoned transition never replaces the visible screen.
+
+## Local queries survive a scope that resolves mid-request
+
+A `local.collection()` scope can come from another model, for example the signed-in user. If a
+query started while that scope was still unknown and the scope resolved before the response arrived,
+the binding treated it as a switch to another identity and the query stayed `isLoading: true`.
+Resolving an unknown scope now adopts it: the in-flight response finishes normally and is persisted
+under the resolved scope. Switching between two resolved scopes still drops the late response and
+resets the data, as before.
+
+## Compatibility
+
+Without `useServerInsertedHTML`, `.suspend()` behaves as in 2.4: the server and browser caches stay
+separate and the browser fetches again while hydrating. The deprecated `silent()` export is still
+available for compatibility; use `hydrate()` or a streamed `.suspend()` for server data.
