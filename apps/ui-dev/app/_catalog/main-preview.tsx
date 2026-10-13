@@ -4,9 +4,7 @@ import { Button } from '@comwit/ui-templates/button'
 import { Chip } from '@comwit/ui-templates/chip'
 
 /**
- * 메인 페이지 프리뷰 — 레이아웃과 토큰의 "느낌"만 보여주는 **빈 플레이스홀더**.
- * 베이스 템플릿이라 실제 콘텐츠·브랜드는 비워둔다. 프로젝트가 정해지면
- * services/app/page 에서 채운다.
+ * Empty main-page preview showing layout and tokens. Add real content and branding in services/app/page when the project is defined.
  */
 
 function Line({ w }: { w: string }) {
@@ -37,15 +35,15 @@ export function MainPagePreview() {
         <div className="h-8 w-72 max-w-full rounded-md bg-muted" />
         <div className="mt-3 h-4 w-96 max-w-full rounded bg-muted" />
         <div className="mt-6 flex items-center gap-2">
-          <Button>기본 버튼</Button>
-          <Button variant="outline">보조 버튼</Button>
+          <Button>Primary button</Button>
+          <Button variant="outline">Secondary button</Button>
         </div>
         <div className="mt-5 flex items-center gap-2">
           <Chip size="sm" selected>
-            전체
+            All
           </Chip>
-          <Chip size="sm">카테고리</Chip>
-          <Chip size="sm">카테고리</Chip>
+          <Chip size="sm">Category</Chip>
+          <Chip size="sm">Category</Chip>
         </div>
       </div>
 

@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils/cn'
 
-// 뱃지 = 정보 라벨. 인터랙션 없이 상태 5토큰을 옅은 surface 로 노출한다.
+// Badge: a noninteractive information label showing five status tokens on subtle surfaces.
 const badgeVariants = cva(
   cn(
     'inline-flex w-fit shrink-0 items-center justify-center gap-1 whitespace-nowrap',

@@ -1,11 +1,11 @@
 // ─────────────────────────────────────────────────────────────────────────
-// docs 코드젠 — 단일 소스에서 문서 데이터를 뽑는다(컴포넌트 코드 복제 없음).
-//   · 배치:   content/ui/gallery.mjs (그룹 · 순서 · 한 줄 요약)
-//   · 예시:   storybook specs/*.mjs → 라이브 예시 모듈 + 복붙 코드
-//   · 소스/deps/CLI/파트: packages/ui/cli/registry/*.json
-//   · 토큰:   packages/ui/templates/src/styles/globals.css (:root / .dark)
-//   · llms:   content/ui/llms-template.txt 에 갤러리 카탈로그를 끼워 넣는다
-// 산출: app/ui/_generated/{catalog.ts, examples/<name>.tsx, examples/index.tsx}, public/ui/llms.txt
+// Generate docs from canonical sources without duplicating component implementations.
+// Layout: content/ui/gallery.mjs (groups, order, and summaries).
+// Examples: Storybook specs/*.mjs become live modules and copyable code.
+// Source, dependencies, CLI metadata, and exports: packages/ui/cli/registry/*.json.
+// Tokens: packages/ui/templates/src/styles/globals.css (:root and .dark).
+// Agent guide: insert the gallery catalog into content/ui/llms-template.txt.
+// Outputs: app/ui/_generated/{catalog.ts, examples/<name>.tsx, examples/index.tsx} and public/ui/llms.txt.
 // ─────────────────────────────────────────────────────────────────────────
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, rmSync, existsSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -30,7 +30,7 @@ const indent = (code, pad) =>
     .map((l) => (l ? pad + l : l))
     .join('\n')
 
-/* ── 1. specs (slug/covers 로 컴포넌트에 매핑) ── */
+/* 1. Specs mapped to components through slug/covers. */
 const specsByName = {}
 for (const f of readdirSync(specsDir).filter((f) => f.endsWith('.mjs'))) {
   const mod = await import(pathToFileURL(join(specsDir, f)).href)
@@ -43,7 +43,7 @@ for (const f of readdirSync(specsDir).filter((f) => f.endsWith('.mjs'))) {
   }
 }
 
-/* ── 2. registry (소스/deps) + 파트(export 목록) + 소비 토큰 ── */
+/* 2. Registry source and dependencies, exported parts, and consumed tokens. */
 function registryOf(name) {
   const p = join(registryDir, `${name}.json`)
   if (!existsSync(p)) return { npmDeps: [], registryDeps: [], source: '', path: '' }
@@ -56,7 +56,7 @@ function registryOf(name) {
   }
 }
 
-/** 공개 컴포넌트/함수 이름 — `export { A, B }` 와 `export function A` 를 모두 본다. */
+/** Read public names from both export lists and exported function declarations. */
 function exportedParts(source) {
   const names = new Set()
   for (const m of source.matchAll(/^export\s*\{([^}]*)\}/gm))
@@ -72,8 +72,9 @@ function exportedParts(source) {
   return [...names].filter((n) => /^[A-Za-z]/.test(n) && !/Variants$/.test(n))
 }
 
-/* ── 3. 토큰 (L0 프리미티브·노브 + L1 시맨틱, 라이트/다크 동시)
-   주석을 먼저 지우고 실제 at-rule 을 기준으로 자른다(주석 속 "@theme" 글자에 속지 않게). ── */
+/*
+ * 3. Light and dark tokens: L0 primitives/controls and L1 semantics. Remove comments before splitting at actual at-rules so @theme in comments cannot match.
+ */
 const css = readFileSync(tokensCss, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 function parseTokens() {
   const cut = css.search(/^@theme\b/m)
@@ -82,7 +83,7 @@ function parseTokens() {
   const ruleRe = /([^{}]+)\{([^{}]*)\}/g
   let r
   while ((r = ruleRe.exec(prefix))) {
-    // 첫 규칙 앞의 @import·@custom-variant 문장은 셀렉터가 아니다 — 마지막 `;` 뒤만 셀렉터다.
+    // Leading @import and @custom-variant statements are not selectors; use only text after the last semicolon.
     rules.push({ selector: r[1].split(';').pop().trim().replace(/\s+/g, ' '), body: r[2] })
   }
   const decls = (body) => {
@@ -103,7 +104,7 @@ function parseTokens() {
     if (isDark) Object.assign(dark, d)
     if (isRoot && isDark) for (const k of Object.keys(d)) semantic.add(k)
   }
-  // alias(`var(--ink)`)를 실제 값으로 풀어 스와치가 색을 그릴 수 있게 한다
+  // Resolve aliases such as var(--ink) to concrete swatch colors.
   const resolve = (value, vars, depth = 0) =>
     depth > 6
       ? value
@@ -138,7 +139,7 @@ function tokenGroup(name, isSemantic) {
   return 'Sizes'
 }
 
-// 유틸 → 토큰 이름. bg-primary/90 → primary · rounded-card → radius card · shadow-panel …
+// Map utilities to tokens: bg-primary/90 to primary, rounded-card to radius-card, shadow-panel, and so on.
 const colorNames = new Set([...css.matchAll(/--color-([\w-]+):/g)].map((m) => m[1]))
 function tokensUsed(source) {
   const color = new Set()
@@ -160,7 +161,7 @@ function tokensUsed(source) {
   return { colorTokens: [...color].sort(), scaleTokens: [...scale].sort() }
 }
 
-/* ── 4. 예시 모듈 ── */
+/* 4. Example modules. */
 function renderExpr(story) {
   if (story.renderFn) return `() => {\n${indent(story.renderFn, '    ')}\n  }`
   const r = story.render
@@ -215,14 +216,14 @@ ${items}
 `
 }
 
-/* ── 5. 조립 ── */
+/* 5. Assembly. */
 rmSync(genDir, { recursive: true, force: true })
 mkdirSync(exDir, { recursive: true })
 
 const tokens = parseTokens()
 const withExamples = []
 const components = []
-// 그룹과 항목은 같은 페이지의 앵커다(/ui/components#id) — 겹치면 사이드바가 엉뚱한 곳으로 간다.
+// Groups and items share /ui/components#id anchors; duplicate IDs send the sidebar to the wrong place.
 const itemNames = new Set(groups.flatMap((g) => g.items.map((i) => i.name)))
 for (const group of groups)
   if (itemNames.has(group.id))
@@ -253,7 +254,7 @@ for (const group of groups) {
       ...tokensUsed(reg.source),
       npmDeps: reg.npmDeps,
       registryDeps: reg.registryDeps,
-      // 큐레이팅 크레딧 — 이 컴포넌트가 직접 의존하는 라이브러리 + 엔진(@comwit/ui)이 대신 감싼 라이브러리.
+      // Credits include direct component dependencies and libraries wrapped by @comwit/ui.
       credits: [
         ...new Set(
           [...reg.npmDeps, ...(engineCredits[item.name] ?? [])]
@@ -272,7 +273,7 @@ for (const group of groups) {
   }
 }
 
-// 커버리지 — 갤러리에 빠진 템플릿 컴포넌트 / 없는 이름 / 예시 없는 항목을 알린다.
+// Report template components missing from the gallery, unknown names, and entries without examples.
 const listed = new Set(components.map((c) => c.name))
 const templates = readdirSync(templatesUi)
   .filter((f) => f.endsWith('.tsx'))
@@ -280,17 +281,18 @@ const templates = readdirSync(templatesUi)
 const unlisted = templates.filter((n) => !listed.has(n))
 const unknown = components.filter((c) => !c.source).map((c) => c.name)
 const noExamples = components.filter((c) => !c.examples.length).map((c) => c.name)
-if (unlisted.length) console.warn(`  ⚠ gallery.mjs 에 없는 템플릿: ${unlisted.join(', ')}`)
-if (unknown.length) console.warn(`  ⚠ registry 에 없는 갤러리 항목: ${unknown.join(', ')}`)
-if (noExamples.length) console.warn(`  ⚠ 예시(spec) 없는 항목: ${noExamples.join(', ')}`)
+if (unlisted.length) console.warn(`  ⚠ Templates missing from gallery.mjs: ${unlisted.join(', ')}`)
+if (unknown.length)
+  console.warn(`  ⚠ Gallery entries missing from the registry: ${unknown.join(', ')}`)
+if (noExamples.length) console.warn(`  ⚠ Entries without example specs: ${noExamples.join(', ')}`)
 
-// 토큰 → 컴포넌트 역인덱스
+// Reverse index from tokens to components.
 const tokenMap = {}
 for (const c of components) {
   for (const t of [...c.colorTokens, ...c.scaleTokens]) (tokenMap[t] ??= []).push(c.name)
 }
 
-/* ── 6. examples/index.tsx (라이브 렌더 맵) ── */
+/* 6. examples/index.tsx: live render map. */
 writeFileSync(
   join(exDir, 'index.tsx'),
   `'use client'
@@ -311,7 +313,7 @@ ${withExamples.map((n) => `  ${JSON.stringify(n)}: ${ident(n)},`).join('\n')}
 `
 )
 
-/* ── 7. catalog.ts (서버-세이프 데이터) ── */
+/* 7. catalog.ts: server-safe data. */
 writeFileSync(
   join(genDir, 'catalog.ts'),
   `// AUTO-GENERATED by scripts/gen-ui.mjs — DO NOT EDIT.
@@ -342,7 +344,7 @@ export type Group = {
   specimen: boolean
   items: string[]
 }
-/** value/dark 는 alias(var(--ink))를 실제 값으로 푼 결과. raw 는 선언 원문. */
+/** value/dark resolve aliases such as var(--ink) to actual values. raw preserves the original declaration. */
 export type TokenDef = {
   name: string
   value: string
@@ -369,14 +371,14 @@ export const components: Component[] = ${JSON.stringify(components, null, 2)}
 
 export const tokens: TokenDef[] = ${JSON.stringify(tokens, null, 2)}
 
-/** 토큰(유틸 이름) → 그 토큰을 소비하는 컴포넌트 name[] */
+/** Token utility name → names of components consuming that token. */
 export const tokenMap: Record<string, string[]> = ${JSON.stringify(tokenMap, null, 2)}
 
 export const byName: Record<string, Component> = Object.fromEntries(components.map((c) => [c.name, c]))
 `
 )
 
-/* ── 8. public/ui/llms.txt — 설치 + 용도 카탈로그만. 사용법 상세는 설치 가이드와 복사된 소스가 맡는다. ── */
+/* 8. public/ui/llms.txt: installation and purpose catalog. Detailed usage belongs in the installation guide and copied sources. */
 const catalogText = groups
   .map((g) => {
     const lines = components

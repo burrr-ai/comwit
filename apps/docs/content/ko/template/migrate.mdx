@@ -1,0 +1,66 @@
+---
+title: 기존 프로젝트 마이그레이션
+group: Install
+order: 2
+description: 에이전트와 함께 기존 Next.js 프로젝트를 도메인별로 템플릿 구조에 맞춥니다.
+---
+
+<a id="migrate-an-existing-project"></a>
+
+# 기존 프로젝트 마이그레이션
+
+`create-comwit`은 빈 폴더에만 씁니다. 기존 Next.js App Router 프로젝트는 옆의 임시 폴더에 템플릿을 생성한 뒤 코딩 에이전트가 도메인 하나씩 구조를 맞춰 리팩터링하는 방식으로 같은 상태에 도달합니다. 에이전트 절차는 [템플릿 `llms.txt`](/template/llms.txt)의 “Migrate an existing project” 섹션에 있습니다. 이 페이지는 에이전트가 하는 일과 사용자가 결정할 사항을 설명합니다.
+
+<a id="hand-it-to-your-agent"></a>
+
+## 에이전트에 전달하기
+
+```text
+Read https://library.comwit.io/template/llms.txt. This is an existing Next.js project.
+Follow "Migrate an existing project" as thoroughly as it says: scaffold the template
+into a temporary folder outside this repo with create-comwit; bring over the rule files
+(AGENTS.md, every .ai.md, design.md, skills), the eslint-rules and lint config, the
+shared lib code, the comwit-ui components and the Storybook setup; then refactor this
+project to the template's structure, replacing our components and utils with the
+template's, applying the design system to every screen you touch and writing stories as
+you go. Adapt every copied file to this project's real package manager, folder layout,
+database, auth, storage, hosting and locale; leave no template default that is not true
+here. Finish with validate, agents:test and build-storybook passing, and report what was
+replaced, what was kept and what is left.
+```
+
+<a id="what-the-agent-does"></a>
+
+## 에이전트가 하는 일
+
+1. **참고용 복사본 생성.** `npx create-comwit@latest`로 저장소 밖의 임시 폴더에 생성한 뒤 읽기만 하고 수정하지 않습니다.
+2. **프로젝트 현황 조사.** 패키지 관리자, Next.js 버전, 폴더 구성, 린트, 데이터베이스, 인증, 저장소, 호스팅, UI 라이브러리, 로케일, 데이터 가져오기 방식, 모든 라우트와 사용 컴포넌트를 파악합니다.
+3. **규칙 파일 복사.** `AGENTS.md`, 각 `.ai.md`, `design.md`, Storybook 규칙을 복사하고 명령, 경로, 스택 표, 로케일, 브랜드 등 프로젝트와 맞지 않는 모든 줄을 다시 씁니다.
+4. **린트 규칙 복사.** `eslint-rules/`, `.oxlintrc.json`을 프로젝트의 린트 설정에 통합하고 각 규칙을 채택, 수정, 제외로 분류한 뒤 채택한 규칙이 실제로 동작함을 확인합니다.
+5. **공유 코드 도입.** 유틸리티, 서버 함수 전송, State 프로바이더와 루트 레이아웃, `config.ts`, 리포지토리 뼈대로 프로젝트의 기존 구현을 교체합니다.
+6. **comwit-ui 설치.** 프로젝트 컴포넌트를 키트의 컴포넌트로 교체하고 제공하지 않는 부분은 키트 구성 요소와 토큰으로 다시 만듭니다. 이전 Comwit 프로젝트를 갱신할 때는 현재 컴포넌트를 설치하기 전에 `@comwit/ui` 0.6.0과 `comwit-ui` 0.7.0 또는 그보다 새로운 호환 버전 쌍을 사용하세요. CLI는 기존 의존성 버전 고정을 유지하므로 해당 버전을 명시적으로 갱신하세요. `lucide-react` import는 `@comwit/ui/icons`로, 애니메이션 아이콘은 `@comwit/ui/icons/animated`로 바꿉니다. 사용자 정의 컴포넌트 소스를 덮어쓰기 전에 diff를 검토하고, 남아 있는 import가 없어진 후에만 `lucide-react`를 제거하세요.
+7. **디자인 시스템 적용.** 실제 브랜드로 `design.md`를 채우고 `globals.css`의 토큰을 설정하며 마이그레이션한 모든 화면을 단순 복사하는 대신 가이드에 맞게 다시 스타일링합니다.
+8. **화면과 데이터를 서비스 및 도메인으로 이동.** `repository → api → state → page` 순서로 진행합니다. 도메인 하나를 린트 통과, 스토리 작성, 이전 파일 삭제까지 마친 뒤 다음 도메인으로 넘어갑니다.
+9. **Storybook 설정.** 참고 복사본을 바탕으로 구성하고 마이그레이션한 모든 페이지에 api 경계만 모킹하는 페이지 단위 스토리를 작성합니다.
+10. **해당하는 스킬 복사.** 모든 검사를 실행하고 임시 폴더를 삭제한 뒤 채택, 수정, 생략한 내용과 남은 작업을 `AGENTS.md`에 기록합니다.
+
+<a id="what-you-decide"></a>
+
+## 사용자가 결정하는 것
+
+| 결정         | 별도 요청이 없을 때 에이전트가 따르는 기본값                             |
+| ------------ | ------------------------------------------------------------------------ |
+| 데이터베이스 | 기존 ORM과 데이터베이스를 유지하고 리포지토리 규칙을 맞춰 작성           |
+| 인증         | 기존 인증을 유지하고 그 위에 `getMe()` 하이드레이션 경계 구성            |
+| 호스팅       | 기존 호스팅 유지. Cloudflare Workers라면 참고 복사본에 `--opennext` 사용 |
+| 로케일       | 한국어 UI 문구와 KST 도우미를 프로젝트 로케일에 맞게 교체                |
+| 순서         | 현황 목록의 첫 라우트에 해당하는 도메인부터 시작                         |
+| 범위         | 모든 도메인을 하나씩 진행. 나중에 할 도메인은 별도 지정                  |
+
+이미 정한 사항은 프롬프트에 적어 주세요. 에이전트는 합리적으로 선택할 수 없을 때만 질문합니다.
+
+<a id="what-done-looks-like"></a>
+
+## 완료 기준
+
+`validate`, `agents:test`, `validate:storybook`, `build-storybook`, 프로덕션 빌드가 통과합니다. `src/app`은 라우팅만 담당합니다. 모든 화면은 `src/services/{service}/page/`의 폴더 하나에만 존재합니다. 이전 컴포넌트 라이브러리, 테마, 데이터 가져오기 코드는 제거됩니다. `AGENTS.md`에는 채택한 템플릿 버전과 남은 작업을 기록하여 다음 세션이 이어서 진행할 수 있게 합니다.

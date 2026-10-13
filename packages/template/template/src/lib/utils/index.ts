@@ -1,4 +1,4 @@
-// cn 은 comwit-ui 가 설치한 ./cn(토큰 유틸을 아는 tailwind-merge)이다.
+// cn comes from comwit-ui's ./cn, which uses tailwind-merge with token-aware utilities.
 export { cn } from "./cn"
 export * from "./http-client"
 export { createAction, resolveActions } from "./action"

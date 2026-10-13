@@ -1,6 +1,6 @@
 // ============================================================
-// 레퍼런스: src/server/db/plugin/auth/admin-schema.ts
-// 공개 가입을 막은 관리자 인증 + Better Auth admin plugin 전용 스키마.
+// Reference: src/server/db/plugin/auth/admin-schema.ts
+// Schema for admin authentication without public registration and the Better Auth admin plugin.
 // ============================================================
 
 // NOTE: Do NOT add `import 'server-only'` here. drizzle-kit loads this file

@@ -1,0 +1,87 @@
+---
+title: 'comwit v2.5.0 — Next.js 스트리밍 Suspense'
+date: '2026-10-12'
+description: 'v2.5.0은 2.5 베타를 안정 버전 @comwit/state로 올립니다. Next.js 서버 렌더링의 .suspend() 결과가 두 번째 요청 없이 브라우저에서 복원됩니다.'
+author: 'Claude'
+---
+
+```bash
+npm install @comwit/state
+```
+
+v2.5.0은 2.5 베타 기능을 안정 버전 `@comwit/state` 채널로 가져옵니다. 2.4.0의 모든 API 동작을 유지하며 마이그레이션 절차는 없습니다. 이 릴리스부터 별도 베타 채널 없이 새 기능을 일반 마이너 릴리스로 배포합니다.
+
+<a id="a-suspense-boundary-that-hydrates-with-its-data"></a>
+
+## 데이터와 함께 복원되는 Suspense 경계
+
+`.suspend(arg)`는 렌더 중 쿼리를 실행하고 진행 중인 Promise를 던집니다. `<Suspense>` 경계는 폴백을 먼저 스트리밍하고 콘텐츠를 보냅니다. 2.4에서는 브라우저 캐시가 별개라 hydration 중 `queryFn`을 다시 실행했습니다. 이제 Provider가 서버에서 완료된 결과를 브라우저 캐시로 전달해 같은 데이터로 경계를 복원하며 두 번째 요청이 필요하지 않습니다.
+
+Provider에 Next.js 훅을 넘기면 됩니다. 나머지는 같습니다.
+
+```tsx
+'use client'
+
+import { ComwitProvider } from '@comwit/state'
+import { useRouter, useServerInsertedHTML } from 'next/navigation'
+import { getServerSearchParams } from './get-server-search-params'
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  return (
+    <ComwitProvider
+      context={{ router }}
+      getServerSearchParams={getServerSearchParams}
+      useServerInsertedHTML={useServerInsertedHTML}
+    >
+      {children}
+    </ComwitProvider>
+  )
+}
+```
+
+```tsx
+// Server Component
+export default function ProductPage({ id }: { id: string }) {
+  return (
+    <Suspense fallback={<ProductSkeleton />}>
+      <ProductDetail id={id} />
+    </Suspense>
+  )
+}
+
+// Client Component
+function ProductDetail({ id }: { id: string }) {
+  const product = useProduct((s) => s.detail.suspend(id))
+  return product.data ? <ProductView product={product.data} /> : <NotFound />
+}
+```
+
+```text
+server: suspend(id) → queryFn → boundary HTML, preceded by an inert JSON script
+browser: hydrating suspend(id) reads the script → same snapshot, no queryFn → active after commit
+```
+
+`getServerSearchParams`처럼 프레임워크 함수를 주입하며 Next.js 전용 Provider는 없습니다. 서버의 `useServerInsertedHTML`은 마지막 전송 이후 완료된 결과를 담은 `<script type="application/json" data-comwit-suspend>`를 각 청크 앞에 삽입합니다. 브라우저 셀렉터가 첫 스냅샷 전에 이를 읽고, 커밋 후 서버의 가져온 시각으로 항목을 활성화합니다. `staleTime`은 브라우저가 직접 가져온 것처럼 적용됩니다. 선택한 훅의 트리 위치를 키로 사용하므로 중첩 Provider나 반복 컴포넌트가 서로 잘못 복원하지 않으며 실행 가능한 인라인 스크립트를 생성하지 않습니다.
+
+요구사항은 [Next.js 가이드](/state/docs/guide/nextjs#streaming-suspense-experimental)에 있습니다. `queryFn`은 양쪽 환경에서 동작해야 하므로 Server Functions를 사용할 수 없고 서버의 `fetch` URL은 절대 경로여야 합니다. 결과는 JSON 직렬화가 가능해야 하며, 서버에 남아야 하는 데이터를 전달할 때는 계속 `hydrate()`를 기본으로 사용합니다.
+
+<a id="the-first-suspend-result-activates-the-resource"></a>
+
+## 첫 `.suspend()` 결과가 리소스를 활성화합니다
+
+이전에는 선택한 트리가 커밋될 때까지 `.suspend()` 결과가 키 캐시에만 있었습니다. 서버에서는 커밋이 없으므로 `state.field.data`를 읽는 형제나 중첩 컴포넌트는 `initialData`를 렌더링했습니다. 로그인 페이지 옆 헤더만 로그아웃 상태를 표시하는 식입니다. 반면 suspend 호출자는 데이터를 렌더링하여 브라우저에서 hydration 불일치가 발생했습니다.
+
+2.5.0부터 한 번도 조회하지 않은 리소스의 첫 완료 `.suspend()` 결과는 즉시 프록시 값이 됩니다. `hydrate()`와 같은 “첫 스냅샷 전에 초기화” 규칙입니다. 스트리밍 복원도 hydration에서 이를 따르며 `useModel`이 스냅샷을 다시 읽어 같은 셀렉터의 수동 필드도 복원된 값을 관찰합니다. 이미 활성화된 리소스 위에 준비한 새 키는 여전히 커밋을 기다리므로, 취소된 전환이 현재 화면을 바꾸지 않습니다.
+
+<a id="local-queries-survive-a-scope-that-resolves-mid-request"></a>
+
+## 요청 중 스코프가 정해져도 로컬 쿼리가 완료됩니다
+
+`local.collection()` 스코프는 로그인한 사용자처럼 다른 모델에서 가져올 수 있습니다. 스코프를 모르는 상태에서 쿼리를 시작하고 응답 전에 스코프가 정해지면, 이전 연결 로직은 이를 다른 사용자로 전환한 것으로 처리해 `isLoading: true`가 남았습니다. 이제 알 수 없던 스코프가 정해지면 이를 채택하여 진행 중인 응답을 정상 완료하고 해당 스코프에 저장합니다. 이미 정해진 두 스코프 사이의 전환은 기존처럼 늦은 응답을 버리고 데이터를 초기화합니다.
+
+<a id="compatibility"></a>
+
+## 호환성
+
+`useServerInsertedHTML`이 없으면 `.suspend()`는 2.4처럼 서버/브라우저 캐시를 분리하고 hydration 중 브라우저에서 다시 조회합니다. 사용 중단된 `silent()` export는 호환성을 위해 남습니다. 서버 데이터에는 `hydrate()` 또는 스트리밍 `.suspend()`를 사용하세요.

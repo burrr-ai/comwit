@@ -1,0 +1,439 @@
+---
+title: 'local()'
+group: 'Model'
+slug: 'api/local'
+order: 24
+---
+
+# local()
+
+정규화된 엔티티 컬렉션 위에 IndexedDB 기반 리소스를 만듭니다. 로컬 리소스는 독립형, 일반 쿼리 기반, 무한 쿼리 기반으로 사용할 수 있습니다.
+
+```ts
+import { local } from '@comwit/state'
+```
+
+```text
+local()           IndexedDB restore + server/manual set; no API driver
+local.query()     IndexedDB restore + ordinary query revalidation
+local.infinite()  IndexedDB restore + infinite query revalidation
+```
+
+모든 형태는 컬렉션 식별자를 기준으로 정규 엔티티를 공유하고, 직접 수행한 낙관적 변경을 IndexedDB에 반영하며, 기존 리소스 상태 구조를 유지합니다. `local()`은 클라이언트 쿼리에만 제한되지 않습니다.
+
+<a id="one-collection-independent-resources"></a>
+
+## 하나의 컬렉션과 독립적인 리소스
+
+엔티티 타입마다 컬렉션 하나를 만드세요. 기본적으로 문자열 또는 유한한 숫자 `id`를 사용합니다. API가 다른 식별 필드나 파생 식별자를 사용한다면 `getId`를 제공하세요.
+
+```ts
+interface ProductEntity {
+  readonly id: string
+  title: string
+  updatedAt: number
+  description?: string
+}
+
+type ProductListItem = Pick<ProductEntity, 'id' | 'title' | 'updatedAt'>
+type ProductDetail = ProductEntity & { description: string }
+
+const products = local.collection<ProductEntity>({
+  key: 'products',
+  version: 1,
+  revision: (product) => product.updatedAt,
+})
+```
+
+```ts
+type ExternalProduct = { uuid: string; title: string }
+
+const externalProducts = local.collection<ExternalProduct>({
+  key: 'external-products',
+  version: 1,
+  getId: (product) => product.uuid,
+})
+```
+
+`getId`는 같은 엔티티를 나타내는 모든 목록/상세 조각에 대해 같은 문자열 또는 유한한 숫자를 반환해야 합니다.
+
+컬렉션이 자체 영속화 범위를 소유할 수 있습니다. 공개 데이터에는 고정 범위를, 사용자/테넌트 데이터에는 인라인 결정 함수를 사용하세요. 결정 함수는 로컬 리소스가 사용될 때만 실행되므로 참조하는 모델이 나중에 초기화되어도 됩니다.
+
+```ts
+const publicPosts = local.collection<Post>({
+  key: 'posts',
+  version: 1,
+  scope: 'public',
+})
+
+const privateProjects = local.collection<Project>({
+  key: 'projects',
+  version: 1,
+  scope: ({ state }) => {
+    const userId = state(userModel).me?.id
+    return userId ? `user:${userId}` : null
+  },
+})
+```
+
+`null`이나 `undefined`를 반환하면 해당 작업에서 IndexedDB 읽기와 쓰기를 건너뜁니다. 프로바이더/기본 범위로 대체하지 않으므로 범위가 정해지지 않은 비공개 데이터가 공유 캐시에 들어가는 일을 방지합니다.
+
+클라이언트가 원격 로딩을 소유하면 쿼리 어댑터를, 서버 컴포넌트나 액션이 값을 제공하면 독립형 리소스를 사용하세요.
+
+```ts
+export const product = model({
+  list: local.query<ProductListItem[], ProductFilter>({
+    source: products,
+    initialData: [],
+    staleTime: 30_000,
+    queryFn: (filter) => api.product.list(filter),
+  }),
+
+  detail: local<ProductDetail | null, { id: string }>({
+    source: products,
+    initialData: null,
+  }),
+})
+```
+
+`local.query()`는 `.load()`, 실험적 `.suspend()`, `.query()`, `.refetch()`, `.set()`과 일반 쿼리 상태를 유지합니다. 독립형 `local()`은 `.restore()`, `.set()`, `.remove()`와 동일한 데이터/상태 필드를 제공하지만 API 실행기는 없습니다.
+
+<a id="app-router-exact-cached-fallback"></a>
+
+## App Router의 정확한 캐시 대체 화면
+
+일반적인 상세 라우트는 SEO를 위해 서버에서 데이터를 가져옵니다. 서버 `<Suspense>`의 대체 화면은 API를 추가로 요청하면 안 됩니다. 정확히 일치하는 IndexedDB 상세 데이터가 있는지만 확인하고 없으면 스켈레톤을 표시합니다.
+
+<a id="model-and-type"></a>
+
+### 모델과 타입
+
+```ts
+import type { Local } from '@comwit/state'
+
+export type ProductState = {
+  detail: Local<ProductDetail | null, { id: string }>
+}
+
+export const product = model<ProductState>({
+  detail: local<ProductDetail | null, { id: string }>({
+    source: products,
+    initialData: null,
+  }),
+})
+```
+
+<a id="exact-cached-fallback"></a>
+
+### 정확히 일치하는 캐시 대체 화면
+
+`restore(arg)`는 메모리를 확인한 뒤 정확히 일치하는 IndexedDB 뷰를 확인합니다. API를 호출하거나 재검증하지 않으며 Promise를 던지지도 않습니다. 복원 중이거나 캐시가 없으면 스켈레톤을 렌더링하세요.
+
+```tsx
+'use client'
+
+function ProductFallback({ id }: { id: string }) {
+  const detail = useProduct((state) => state.detail.restore({ id }))
+
+  return detail.data ? <ProductView product={detail.data} /> : <ProductSkeleton />
+}
+```
+
+`restore()`에 라우트 식별자를 전달하면 새 URL 아래에 이전 라우트의 활성 상세 데이터가 표시되는 것을 방지합니다.
+
+<a id="server-rendered-remote-data"></a>
+
+### 서버에서 렌더링한 원격 데이터
+
+독립형 `local()`은 IndexedDB 복원만 하며 원격 작업을 시작하지 않습니다. `local.query()` 또는 `local.infinite()`에서는 Server Component에서 원격 데이터를 기다린 뒤 생성된 도메인 훅의 `hydrate()` 메서드로 완료된 항목을 초기화하세요. IndexedDB 조정, 영속화, 엔티티 전파는 라우트 어댑터가 커밋된 후 실행됩니다.
+
+```ts
+detail: local.query<ProductDetail | null, { id: string }>({
+  source: products,
+  initialData: null,
+  queryFn: ({ id }) => api.product.detail(id),
+})
+```
+
+```tsx
+function ProductRoute({ id, initialDetail }: Props) {
+  useProduct.hydrate({ detail: { arg: { id }, data: initialDetail } })
+  return <ProductDetail />
+}
+
+function ProductDetail() {
+  const detail = useProduct((state) => state.detail.data)
+  return detail ? <ProductView product={detail} /> : <NotFound />
+}
+```
+
+독립형 `local()`은 복원 전용이며 `hydrate()` 대상이 아닙니다. 정확히 일치하는 비중단 캐시 대체 화면에는 `.restore(arg)`를 유지하세요. 서버와 클라이언트 양쪽에서 실행 가능한 쿼리 함수를 가진 쿼리 기반 로컬 리소스에는 실험적 `.suspend(arg)`를 사용할 수 있습니다. 렌더링 본문에서 액션을 호출하여 완료된 서버 값을 `.set()`으로 쓰지 마세요.
+
+<a id="standalone-methods"></a>
+
+### 독립형 메서드
+
+| 메서드                | 용도                                                             |
+| --------------------- | ---------------------------------------------------------------- |
+| `.restore(arg)`       | 정확히 일치하는 로컬 뷰 하나를 복원하며 API를 호출하지 않습니다. |
+| `.set(data, { arg })` | 정확히 일치하는 뷰를 초기화하거나 교체하고 저장소에 반영합니다.  |
+| `.remove(arg)`        | 해당 뷰를 `initialData`로 초기화하며 API를 호출하지 않습니다.    |
+| 직접 `.data` 변경     | 정규 엔티티와 로드된 로컬 뷰를 낙관적으로 갱신합니다.            |
+
+`remove()`는 서버 엔티티가 아니라 리소스 뷰를 제거합니다. 서버 삭제는 액션에서 수행하고 영향을 받는 모든 목록을 갱신하거나 다시 가져오세요.
+
+<a id="query-backed-local-resources"></a>
+
+## 쿼리 기반 로컬 리소스
+
+`local.query()`는 일반 쿼리를 위한 로컬 우선 어댑터입니다.
+
+```ts
+list: local.query<ProductListItem[], ProductFilter>({
+  source: products,
+  initialData: [],
+  staleTime: 30_000,
+  queryFn: (filter) => api.product.list(filter),
+})
+```
+
+최신성에는 기존 `staleTime` 옵션을 사용합니다.
+
+```text
+exact local view found and fresh
+→ show it without a network request
+
+exact local view found and stale
+→ show it immediately
+→ isLoading: false, isFetching: true
+→ run queryFn in the background
+→ merge each remote result with canonical entities before observers update
+→ commit canonical entities and current view atomically
+
+exact local view missing
+→ ordinary first-load query behavior
+```
+
+재검증이 실패해도 로컬 데이터는 `isSuccess: true`, `isError: true`인 상태로 계속 보입니다. 서버 응답이 도착하면 표시 중인 필드가 바뀔 수 있습니다. `isFetching`으로 가벼운 갱신 표시를 제공하고, 사용자가 편집 중인 폼은 별도의 초안 상태로 복사하세요.
+
+원격 조각은 관찰 가능해지기 전에 컬렉션의 일반 `merge` 동작을 거칩니다. 모든 `AsyncIterable` 청크에도 적용되므로 스트리밍 목록 재검증이 상세 리소스나 로컬 변경에서만 제공된 필드를 일시적으로 없앨 수 없습니다. 속성을 명시적으로 반환하면 여전히 갱신하거나 지울 수 있고, 속성을 생략하면 정규 값을 유지합니다.
+
+`local.infinite()`는 일반 무한 쿼리 옵션을 받으며 평탄화된 ID 순서, 커서, `hasMore`, 커서 히스토리를 저장합니다.
+
+```ts
+feed: local.infinite<ProductListItem[], ProductFilter>({
+  source: products,
+  initialData: [],
+  queryFn: (filter, { state }) => api.product.feed({ ...filter, cursor: state.cursor }),
+})
+```
+
+`query.realtime()`은 실험적 `.suspend()` 경로에서 지원하지 않습니다.
+
+<a id="slow-initial-loading"></a>
+
+## 느린 초기 로딩
+
+`local.query()` 또는 `local.infinite()`에 `slowLoadingMs: 500`을 설정하면 일반 쿼리 선택자로 `isSlowLoading`을 읽을 수 있습니다. IndexedDB 복원과 캐시 실패 후 원격 가져오기는 하나의 초기 로딩 구간을 공유합니다. 정확한 영속 캐시가 있으면 플래그를 즉시 해제하고, 오래된 데이터의 백그라운드 재검증 중에는 false를 유지합니다. 이 플래그는 영속화되지 않습니다. 독립형 `local()`은 이 옵션을 받지 않습니다. [쿼리 시간 및 렌더링 계약](/state/docs/api/query#slow-initial-loading)을 참고하세요.
+
+<a id="provider-setup"></a>
+
+## 프로바이더 설정
+
+공유 데이터베이스와 선택적 기본 범위를 설정합니다. 컬렉션의 `scope`가 우선합니다. 프로바이더 수준 범위가 바뀌면 프로바이더를 다시 마운트하세요. 모델에서 파생한 컬렉션 범위는 프로바이더를 변경할 필요가 없습니다.
+
+```tsx
+<ComwitProvider
+  key={user.id}
+  defaultOptions={{
+    local: {
+      database: 'my-app',
+      scope: `user:${user.id}`,
+      onError(error, context) {
+        reportError(error, context)
+      },
+    },
+  }}
+>
+  {children}
+</ComwitProvider>
+```
+
+| 프로바이더 옵션 | 타입                       | 기본값           | 용도                                              |
+| --------------- | -------------------------- | ---------------- | ------------------------------------------------- |
+| `database`      | `string`                   | `@comwit/state`  | 전용 IndexedDB 데이터베이스 이름                  |
+| `scope`         | `string`                   | `default`        | 모든 영속 키에 포함되는 사용자/테넌트 경계        |
+| `onError`       | `(error, context) => void` | —                | 저장소/정규화 실패 관찰                           |
+| `indexedDB`     | `IDBFactory`               | 브라우저 전역 값 | 테스트 또는 브라우저 호환 런타임을 위한 고급 주입 |
+
+IndexedDB를 사용할 수 없거나 실패하면 독립형 리소스는 메모리 값을 유지하고 쿼리 어댑터는 일반 쿼리로 동작합니다. 서버 환경은 오류 없이 IndexedDB 생명주기를 건너뜁니다. 선택자의 `.load()`는 여전히 클라이언트 커밋을 기다린 뒤 요청을 시작합니다. 완료된 서버 데이터에는 `hydrate()`를, 렌더링 외의 적절한 작업 흐름에는 명령형 `.query()`를 사용하세요.
+
+<a id="on-demand-normalized-storage"></a>
+
+## 필요할 때 저장하는 정규화 저장소
+
+엔티티와 정확한 리소스 뷰는 별도로 저장됩니다.
+
+```text
+entities
+  product:1 → { id: "1", title: "A", description: "..." }
+
+views
+  list:{status:"active"} → ids: [1], fetchedAt, ordering
+  detail:{id:"1"}        → ids: [1], fetchedAt
+```
+
+영속 뷰 키에는 다음이 포함됩니다.
+
+```text
+scope + collection key + collection version
++ resource key + resource kind + canonical argument
+```
+
+정확히 일치하는 목록 뷰가 증명하는 것은 해당 필터의 구성원뿐입니다. 목록 엔티티가 있다고 상세 데이터가 완전한 것은 아니며, 다른 곳에서 로드한 엔티티가 있다고 아직 보지 않은 필터가 완전해지는 것도 아닙니다. 전체 로컬 데이터베이스가 아니라 필요에 따라 저장하는 방식입니다.
+
+특정 필터 응답에서 빠진 행은 해당 뷰의 구성원 자격만 잃습니다. 다른 목록이나 상세에서 여전히 참조할 수 있으므로 전역 삭제로 취급하지 않습니다.
+
+<a id="response-envelopes"></a>
+
+### 응답 봉투
+
+`{ items, total }` 같은 구조에는 `map.split/join`을 제공하세요.
+
+```ts
+page: local.query<Page<ProductListItem>, ProductFilter>({
+  source: products,
+  initialData: { items: [], total: 0 },
+  queryFn: (filter) => api.product.page(filter),
+  map: {
+    split: (page) => ({
+      rows: page.items,
+      meta: { total: page.total },
+    }),
+    join: (rows, meta) => ({
+      items: rows,
+      total: meta?.total ?? 0,
+    }),
+  },
+})
+```
+
+<a id="collection-identity-versus-view-freshness"></a>
+
+### 컬렉션 식별자와 뷰 최신성
+
+컬렉션은 정규 엔티티의 식별을 나타내며 API 엔드포인트나 응답 하나를 그대로 복제해야 하는 IndexedDB 테이블이 아닙니다. 목록, 상세, 후속 보강 응답의 조각이 같은 엔티티 ID를 사용한다면 모두 같은 컬렉션을 공유할 수 있습니다.
+
+구성원, 순서, 메타데이터, 최신성은 리소스와 정확한 인수가 소유합니다. 뷰마다 복원 또는 재검증 주기가 달라야 하면 컬렉션 하나를 공유하는 별도의 로컬 리소스를 사용하세요. 정규 엔티티를 중복하지 않고 각 리소스마다 `staleTime`을 둘 수 있습니다.
+
+두 번째 요청이 활성 목록을 보강하기만 하고 목록의 최신성을 따라야 한다면 같은 `local.query()` 안에 두세요. 쿼리 함수는 `AsyncIterable`을 반환할 수 있으므로 첫 응답 뒤 목록을 렌더링하고 두 번째 응답 뒤 보강된 엔티티를 받을 수 있습니다.
+
+```ts
+async function* loadProjects(filter: ProjectFilter) {
+  const projects = await api.project.list(filter)
+  yield { data: projects, isLoading: false, isSuccess: true }
+
+  const statuses = await api.project.deploymentStatuses(projects.map((project) => project.id))
+  yield {
+    data: mergeDeploymentStatuses(projects, statuses),
+    isLoading: false,
+    isSuccess: true,
+  }
+}
+
+projects: local.query<Project[], ProjectFilter>({
+  source: projectEntities,
+  initialData: [],
+  staleTime: 5 * 60_000,
+  queryFn: loadProjects,
+})
+```
+
+각 yield는 반응형 쿼리 상태를 갱신합니다. 반복이 끝날 때까지 `isFetching`은 true를 유지하며 완료된 뷰가 IndexedDB에 커밋됩니다. 따라서 다음 최신 캐시 복원에는 별도의 배포 상태 리소스 없이 보강된 필드가 포함됩니다.
+
+두 번째 요청을 예약하려는 이유만으로 엔티티에 수동 `fetchedAt` 필드를 추가하지 마세요. 정확한 뷰의 `staleTime`이 이미 그 정책을 담당합니다. 보강 중에는 선택적 필드의 존재 여부를 이용해 작은 행 단위 로딩 표시를 할 수 있습니다. 독립적인 영속 뷰나 최신성 주기가 실제로 필요한 경우에만 보강 작업을 별도 로컬 리소스로 모델링하세요.
+
+<a id="entity-merging-and-optimistic-edits"></a>
+
+## 엔티티 병합과 낙관적 편집
+
+들어온 자체 필드는 정규 엔티티에 얕게 병합됩니다. 따라서 목록 요약이 생략된 상세 전용 필드를 지우지 않습니다.
+
+```text
+stored detail: { id: 1, title: "A", description: "Detail only" }
+new list row:  { id: 1, title: "B" }
+
+merged entity: { id: 1, title: "B", description: "Detail only" }
+```
+
+명시적인 `null`은 필드를 교체합니다. 사용자 정의 중첩 동작에는 컬렉션의 `merge`를, 오래된 서버 조각을 거부하려면 `revision`을 사용하세요.
+
+리소스를 직접 변경하는 방식은 일반 반응형 프록시 변경과 같습니다.
+
+```ts
+const previous = this.model.detail.data!.title
+this.model.detail.data!.title = title
+
+try {
+  await api.product.update(id, { title })
+  await this.model.list.refetch()
+} catch (error) {
+  this.model.detail.data!.title = previous
+  throw error
+}
+```
+
+변경된 정규 행은 저장소에 반영되고 컬렉션과 ID를 공유하는 모든 로드된 로컬 리소스에 전파됩니다. 더 최신의 로컬 편집 전에 시작된 응답은 최신 필드나 로컬에서 변경된 구성원을 덮어쓸 수 없습니다.
+
+목록 구성원, 순서, 합계, 커서는 뷰가 소유합니다. 이를 바꿀 수 있는 변경 후에는 영향을 받는 쿼리 기반 뷰를 다시 가져오세요. 변경 발신함, 오프라인 재시도 큐, CRDT, 다중 기기 충돌 처리 엔진은 제공하지 않습니다.
+
+<a id="collection-and-resource-options"></a>
+
+## 컬렉션과 리소스 옵션
+
+| 컬렉션 옵션 | 필수 여부               | 설명                                                |
+| ----------- | ----------------------- | --------------------------------------------------- |
+| `key`       | 예                      | 안정적인 영속 엔티티 네임스페이스                   |
+| `version`   | 예                      | 양의 정수 스키마 버전                               |
+| `getId`     | 기본 `id`가 없으면 필수 | 식별자 추출기. 기본값은 엔티티의 `id` 필드          |
+| `merge`     | 아니요                  | 정규 조각의 사용자 정의 병합                        |
+| `revision`  | 아니요                  | 비교 가능한 서버 리비전 추출기                      |
+| `scope`     | 아니요                  | 고정 범위 또는 지연 `({ state }) => string \| null` |
+
+기본 제공 마이그레이션은 없습니다. `version`을 올리면 이전 뷰는 캐시 실패가 되고 같은 범위와 컬렉션의 이전 행은 제거됩니다.
+
+| 리소스 옵션    | 필수 여부 | 설명                                                        |
+| -------------- | --------- | ----------------------------------------------------------- |
+| `source`       | 예        | 공유 `local.collection()`                                   |
+| `initialData`  | 예        | 복원/가져오기 전의 값                                       |
+| `key`          | 아니요    | 안정적인 뷰 식별자 재정의. 기본값은 모델 필드 경로          |
+| `serializeArg` | 아니요    | 인수 직렬화 함수. 충돌에 안전한 안정적 문자열을 반환해야 함 |
+| `map`          | 아니요    | 응답 봉투용 엔티티 어댑터                                   |
+
+<a id="compatibility"></a>
+
+## 호환성
+
+beta.0 래퍼는 더 이상 권장하지 않는 호환성 별칭으로 남아 있습니다.
+
+```ts
+// Deprecated compatibility form
+local(query({ initialData: [], queryFn }), { source: products })
+
+// Preferred
+local.query({ source: products, initialData: [], queryFn })
+```
+
+<a id="persist-versus-local"></a>
+
+## `persist()`와 `local()` 비교
+
+로컬에서 소유하는 환경설정, 초안, UI 상태에는 `persist()`를 사용하세요. IndexedDB에서 복원한 뒤 서버 소스로 초기화하거나 수정할 수 있는 서버 형식의 ID 기반 스냅샷에는 `local()`을 사용하세요.
+
+```text
+persist()            local()
+local-owned value    server-shaped snapshot
+local/sessionStorage IndexedDB
+one value per key    normalized entities + exact argument views
+no server identity   optional query or server-init driver
+```

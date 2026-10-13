@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -7,6 +9,7 @@ import { SquaresFourIcon } from '@phosphor-icons/react/dist/csr/SquaresFour'
 import { TreeStructureIcon } from '@phosphor-icons/react/dist/csr/TreeStructure'
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight'
 import { Brand } from './brand'
+import { LocaleSwitch } from './locale-switch'
 
 const PRODUCTS = {
   state: {
@@ -41,8 +44,7 @@ function GitHubLink() {
 }
 
 /**
- * 첫 진입(랜딩·블로그)에선 두 라이브러리로 가는 길을 보여주고, 라이브러리 안에선 그 라이브러리만의 헤더가 된다 —
- * `comwit. / UI`. 워드마크가 밖으로 나가는 길이고, `menu` 는 좁은 화면에서 내비를 여는 버튼 자리다.
+ * Landing and blog headers link to all libraries. Inside a product, show its identity as `comwit. / UI`; the wordmark returns home and `menu` opens navigation on narrow screens.
  */
 export function SiteHeader({
   home = false,
@@ -53,6 +55,8 @@ export function SiteHeader({
   product?: keyof typeof PRODUCTS
   menu?: React.ReactNode
 }) {
+  const copy = useTranslations('Copy')
+
   const pathname = usePathname()
 
   if (product) {
@@ -69,7 +73,8 @@ export function SiteHeader({
             <span>{label}</span>
           </Link>
         </div>
-        <nav aria-label="Site">
+        <nav aria-label={copy('text105')}>
+          <LocaleSwitch />
           <GitHubLink />
           {menu}
         </nav>
@@ -80,11 +85,12 @@ export function SiteHeader({
   return (
     <header className={`site-header app-header ${home ? 'site-header-home' : ''}`}>
       <Brand />
-      <nav aria-label="Libraries">
+      <nav aria-label={copy('text106')}>
         {(Object.keys(PRODUCTS) as (keyof typeof PRODUCTS)[]).map((key) => (
           <Link
             key={key}
             href={PRODUCTS[key].href}
+            aria-label={PRODUCTS[key].label}
             className="product-nav"
             aria-current={pathname.startsWith(`/${key}`) ? 'page' : undefined}
           >
@@ -92,6 +98,7 @@ export function SiteHeader({
             <span>{PRODUCTS[key].label}</span>
           </Link>
         ))}
+        <LocaleSwitch />
         <GitHubLink />
       </nav>
     </header>

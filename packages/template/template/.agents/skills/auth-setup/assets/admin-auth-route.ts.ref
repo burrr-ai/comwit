@@ -1,10 +1,10 @@
 // ============================================================
-// 레퍼런스: admin Better Auth 라우트 핸들러
-// 위치: src/app/(admin)/admin/api/auth/[...all]/route.ts
+// Reference: admin Better Auth route handler.
+// Location: src/app/(admin)/admin/api/auth/[...all]/route.ts
 // ============================================================
-// 브라우저에는 프로젝트 전용 관리자 경로만 노출한다. Next.js rewrite가
-// 내부 /admin 라우트로 연결한 뒤에도 Better Auth가 자신의 basePath를
-// 올바르게 매칭하도록 요청 URL만 내부 auth 경로로 정규화한다.
+// Expose only the project's public admin path to browsers. After the Next.js rewrite
+// targets the internal /admin route, normalize only the request URL to the internal
+// auth path so Better Auth can match its basePath correctly.
 // ============================================================
 
 import {

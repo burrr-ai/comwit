@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * TabBar — Next.js App Router. `comwit-ui add app-shell` 이 next 를 감지하면 설치한다.
+ * TabBar — Next.js App Router integration, installed when comwit-ui add app-shell detects next.
  *
- * 탭 목록을 BottomNav(플로팅 유리 캡슐)로 그린다. 현재 pathname 이 활성 탭이고, 탭은 <Link> 다.
- * 보통 TabShell(app-shell.tsx)이 그려 주므로 직접 쓸 일은 드물다. 모양은 bottom-nav.tsx 에서 고친다.
+ * Renders tabs with BottomNav, the floating glass capsule. The current pathname determines the active tab;
+ * tabs use Link. Usually rendered by TabShell in app-shell.tsx, so direct use is rare. Edit bottom-nav.tsx for appearance.
  *
  *   const APP_TABS: AppTab[] = [{ href: '/', label: 'Home', icon: House }, …]
  */
@@ -18,7 +18,7 @@ import { BottomNav, BottomNavItem } from '../components/ui/bottom-nav'
 export type AppTab = {
   href: string
   label: string
-  /** 아이콘 컴포넌트(`@comwit/ui/icons` 등) 또는 엘리먼트. */
+  /** Icon component (such as from @comwit/ui/icons) or element. */
   icon: React.ComponentType<{ className?: string }> | React.ReactElement
 }
 
@@ -34,7 +34,7 @@ function TabBar({ tabs, ...props }: TabBarProps) {
   )
 }
 
-/** URL 판독은 Suspense 잎 안에서만 — 정적 셸은 자리만 잡고 프리렌더된다. */
+/** Read the URL only inside a Suspense leaf; the static shell reserves space and prerenders. */
 function ActiveTabBar({ tabs, showLabels = true, ...props }: TabBarProps) {
   const pathname = usePathname() ?? '/'
   return (
@@ -54,7 +54,7 @@ function ActiveTabBar({ tabs, showLabels = true, ...props }: TabBarProps) {
   )
 }
 
-/** 경로가 확정되기 전(정적 셸 프리렌더)에도 탭바 높이를 유지한다. */
+/** Preserve tab-bar height before the path is resolved, including static shell prerendering. */
 function TabBarPlaceholder() {
   return (
     <div

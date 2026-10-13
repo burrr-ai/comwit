@@ -2,29 +2,29 @@ import type { Metadata } from "next";
 import { siteConfig } from "./site-config";
 
 export type MetadataOverrides = {
-  /** 페이지 타이틀. 루트 template에 의해 "타이틀 | 사이트명"으로 합쳐집니다. */
+  /** Page title. The root template combines it as "Title | Site name". */
   title?: string;
-  /** 페이지 설명 */
+  /** Page description. */
   description?: string;
-  /** 페이지 경로 (예: "/about") — canonical / og:url 용 */
+  /** Page path (e.g. "/about") for canonical and og:url. */
   path?: string;
-  /** OG 이미지 덮어쓰기 (절대 또는 상대 경로) */
+  /** Override the OG image with an absolute or relative path. */
   ogImage?: string;
-  /** 검색엔진 노출 차단 (관리자/임시 페이지 등) */
+  /** Prevent search indexing (e.g. admin or temporary pages). */
   noIndex?: boolean;
-  /** og:type — 글/포스트면 "article" */
+  /** og:type; use "article" for posts. */
   type?: "website" | "article";
 };
 
 /**
- * 공통 메타데이터 빌더.
+ * Shared metadata builder.
  *
- * 기본값은 siteConfig에서 가져오고, 넘긴 값만 부분적으로 덮어씁니다.
+ * Read defaults from siteConfig and override only supplied values.
  *
- * 정적 페이지:
- *   export const metadata = buildMetadata({ title: "소개", description: "..." });
+ * Static page:
+ *   export const metadata = buildMetadata({ title: "About", description: "..." });
  *
- * 동적 라우트:
+ * Dynamic route:
  *   export function generateMetadata({ params }) {
  *     return buildMetadata({ title: post.title, description: post.excerpt, path: `/blog/${slug}`, type: "article" });
  *   }
@@ -62,17 +62,17 @@ export function buildMetadata(overrides: MetadataOverrides = {}): Metadata {
 }
 
 /**
- * 루트 레이아웃 전용 메타데이터.
- * - title 템플릿 적용 ("페이지 | 사이트명")
- * - metadataBase = 배포 주소(config.SITE_URL) — og:image 같은 상대 경로를 절대 URL로 바꾼다
- * - canonical·og:url은 페이지가 buildMetadata({ path })로 직접 정한다
- * - 요청 데이터(headers)를 읽지 않는다 — Cache Components의 정적 셸에 그대로 실린다.
+ * Metadata for the root layout.
+ * - Apply the title template ("Page | Site name").
+ * - metadataBase is config.SITE_URL, resolving relative paths such as og:image.
+ * - Pages set canonical and og:url themselves with buildMetadata({ path }).
+ * - Do not read request headers; keep metadata in the static Cache Components shell.
  *
- * src/app/layout.tsx 에서:
+ * In src/app/layout.tsx:
  *   export const metadata = rootMetadata(config.SITE_URL);
  */
 export function rootMetadata(siteUrl?: string): Metadata {
-  // 루트에는 canonical·og:url을 두지 않는다 — 하위 페이지가 물려받으면 모든 페이지가 "/"를 가리키게 된다.
+  // Omit root canonical/og:url; otherwise every child page inherits "/".
   const { alternates: _alternates, openGraph, ...base } = buildMetadata();
   const { url: _url, ...rootOpenGraph } = openGraph ?? {};
   return {

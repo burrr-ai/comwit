@@ -70,7 +70,7 @@ function SelectContent({
         {...props}
         asChild
       >
-        {/* 드롭다운 · 팝오버와 같은 움직임 — lib/overlay-motion */}
+        {/* Same motion as dropdowns and popovers, using lib/overlay-motion. */}
         <OverlayMotion preset="menu">
           <SelectScrollUpButton />
           <SelectPrimitive.Viewport
@@ -113,7 +113,7 @@ function SelectItem({
       )}
       {...props}
     >
-      {/* 체크마크는 브랜드색 — 컴윗 커스텀 룩 */}
+      {/* Brand-colored checkmark for Comwit's custom appearance. */}
       <span className="absolute right-3 flex size-4 items-center justify-center text-primary">
         <SelectPrimitive.ItemIndicator>
           <CheckIcon className="size-4" />

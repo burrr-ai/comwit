@@ -1,3 +1,5 @@
+import remarkStableAnchors from '@/lib/remark-stable-anchors.mjs'
+import { getLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import { getAllDocs, getDocBySlug } from '@/lib/mdx'
@@ -16,14 +18,14 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await params
-  const doc = getDocBySlug(slug.join('/'))
+  const doc = getDocBySlug(slug.join('/'), await getLocale())
   if (!doc) return {}
   return { title: `${doc.title} · Comwit State` }
 }
 
 export default async function DocPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await params
-  const doc = getDocBySlug(slug.join('/'))
+  const doc = getDocBySlug(slug.join('/'), await getLocale())
   if (!doc) notFound()
 
   return (
@@ -32,7 +34,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
         source={doc.content}
         options={{
           mdxOptions: {
-            remarkPlugins: [remarkGfm],
+            remarkPlugins: [remarkGfm, remarkStableAnchors],
             rehypePlugins: [rehypeSlug, rehypeHighlight],
           },
         }}

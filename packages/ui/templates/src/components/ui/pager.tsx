@@ -12,21 +12,21 @@ type PagerProps = {
   totalPages: number
   onChange: (page: number) => void
   className?: string
-  /** true 면 페이지가 1개(또는 0개)여도 비활성 페이저(‹ 1 ›)를 미리 노출한다. */
+  /** When true, show a disabled pager (‹ 1 ›) even with zero or one page. */
   alwaysShow?: boolean
   labels?: {
     nav?: string
     previous?: string
     next?: string
-    /** 번호 버튼의 접근성 이름 — 기본 "Page 3" */
+    /** Accessible name for a numbered button, defaulting to "Page 3". */
     page?: (page: number) => string
   }
 }
 
 /**
- * 번호 페이지네이션 — 좌우 이동 + 번호 알약(현재 강조).
- * 전체 ≤ 7 이면 모두, 그 외엔 `1 … current-1 current current+1 … last`.
- * (마크업을 직접 조립하는 shadcn 식 Pagination 과 달리 page/totalPages 만 주면 끝난다.)
+ * Numbered pagination with previous/next controls and a pill highlighting the current page.
+ * Show all pages when total ≤ 7; otherwise show 1 … current-1 current current+1 … last.
+ * Requires only page/totalPages, unlike manually assembled shadcn-style Pagination markup.
  */
 function Pager({ page, totalPages, onChange, className, alwaysShow = false, labels }: PagerProps) {
   if (totalPages <= 1 && !alwaysShow) return null
@@ -110,7 +110,7 @@ function PageButton({
   )
 }
 
-/** 번호 리스트 — 전체 ≤ 7: 모두 · 그 외: 1 … current±1 … last */
+/** Page numbers: all when total ≤ 7; otherwise 1 … current±1 … last. */
 function computePages(current: number, total: number): (number | '…')[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
   const out: (number | '…')[] = [1]

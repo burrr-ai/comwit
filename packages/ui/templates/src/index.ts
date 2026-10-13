@@ -1,4 +1,4 @@
-// @comwit/ui-templates — 배럴. 개별 컴포넌트는 서브패스로도 import 가능:
+// @comwit/ui-templates barrel. Individual components also support subpath imports:
 //   import { Button } from '@comwit/ui-templates'
 //   import { Button } from '@comwit/ui-templates/button'
 
@@ -51,7 +51,7 @@ export * from './components/ui/textarea'
 export * from './components/ui/time-picker'
 export * from './components/ui/toast'
 
-// ── routers — generic 변형(패키지 소비처용). CLI 는 라우터를 감지해 nextjs · react-router · tanstack-router 변형을 설치한다 ──
+// ── Routers: generic variants for package consumers. The CLI detects and installs nextjs, react-router, or tanstack-router variants. ──
 export * from './routers/app-shell.generic'
 export * from './routers/tab-bar.generic'
 
@@ -59,6 +59,6 @@ export * from './routers/tab-bar.generic'
 export { cn } from './lib/utils'
 export { popup } from './lib/popup'
 export type { SheetApi } from './lib/popup'
-// 훅은 이제 엔진(@comwit/ui)에 산다 — 패키지 소비처 호환을 위해 다시 내보낸다.
+// Hooks now live in the @comwit/ui engine; re-export them for package-consumer compatibility.
 export { useMobile, useMobileDevice, ScrollChromeProvider, useScrollChrome } from '@comwit/ui'
 export type { UseMobileResult } from '@comwit/ui'

@@ -1,6 +1,6 @@
 // ============================================================
-// 레퍼런스: src/server/auth/admin.ts
-// 공개 가입은 차단하고, 명시적으로 요청받은 계정만 서버에서 생성한다.
+// Reference: src/server/auth/admin.ts
+// Block public registration; create only explicitly requested accounts on the server.
 // ============================================================
 
 import 'server-only'

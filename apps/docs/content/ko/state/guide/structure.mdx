@@ -1,0 +1,118 @@
+---
+title: '프로젝트 구조'
+group: 'Guide'
+slug: 'guide/structure'
+order: 2
+---
+
+<a id="project-structure"></a>
+
+# 프로젝트 구조
+
+모든 기능은 `state/` 아래의 독립적인 도메인 폴더로 구성합니다.
+
+<a id="folder-layout"></a>
+
+## 폴더 구성
+
+```
+state/{domain}/
+  ├── types.ts          # State + Actions types
+  ├── model.ts          # model() with initial state
+  ├── actions/
+  │   ├── crud.ts       # CRUD operations
+  │   ├── load.ts       # Optional coordinated or imperative fetching
+  │   ├── init.ts       # Optional imperative initialization
+  │   └── ...           # One file per concern
+  └── index.ts          # create() hook + re-exports
+```
+
+<a id="write-order"></a>
+
+## 작성 순서
+
+항상 **types.ts → model.ts → actions/\*.ts → index.ts** 순서로 파일을 만드세요.
+
+공개 계약부터 정의한 뒤 구현하세요. 컴포넌트는 `index.ts`에서 도메인 훅과 타입을 가져오고, 액션은 모델 정의를 직접 가져옵니다.
+
+<a id="rules"></a>
+
+## 규칙
+
+- **의존성은 한 방향으로 흐릅니다:** pages → state → api
+- **도메인 객체는 통째로 전달합니다:** 개별 속성 대신 `<Card post={post} />`를 사용합니다.
+- **기능마다 도메인 하나를 둡니다:** 서로 다른 도메인의 관심사를 섞지 않습니다.
+- **타입부터 정의합니다:** 타입 파일이 계약이며 각 필드의 JSDoc이 구현을 안내합니다.
+
+## types.ts
+
+타입 파일은 상태 구조와 액션 인터페이스를 정의합니다.
+
+```ts
+import type { Query } from '@comwit/state'
+
+export type Post = { id: string; title: string; body: string }
+export type PostComment = { id: string; postId: string; body: string }
+
+export type PostState = {
+  posts: Query<Post[]> // keyed query data
+  comments: Query<PostComment[], string> // second generic = queryFn arg type
+  current: Query<Post | null, string> // server data: hydrate() or experimental .suspend(slug)
+}
+
+export type PostActions = {
+  /** @description Imperatively fetch posts for coordinated workflows */
+  loadPosts(): Promise<void>
+  /** @description Create a post for the signed-in user */
+  create(title: string): Promise<void>
+  /** @description Toggle like. Optimistic update on list + current */
+  like(postId: string): Promise<void>
+}
+```
+
+- 키가 있는 쿼리 필드에는 `Query<Data>`를 사용합니다. `.data`, `.isLoading`, `.isError`, `.error`를 제공합니다.
+- `Query<Data, Arg>`의 두 번째 제네릭은 `queryFn`의 매개변수 타입입니다.
+- 원격 쿼리 함수 없이 정확한 IndexedDB 리소스를 다루려면 `Local<Data, Arg>`를 사용합니다.
+- 클라이언트가 소유하는 상태에는 일반 타입을 사용합니다.
+
+화면이 소유하는 요청은 `s.posts.load(arg)`로 Suspense 없는 클라이언트 로딩을 수행합니다. 서버 렌더링 데이터는 두 경로 중 하나를 따릅니다. Server Component가 완료된 값을 소유한다면 실제 UI가 도메인 훅을 읽기 전에 작은 클라이언트 라우트 어댑터에서 `usePost.hydrate(...)`를 호출하세요. `queryFn`이 양쪽 환경에서 실행 가능하다면 실험적 `s.current.suspend(slug)`를 통해 `<Suspense>` 안에서 데이터를 읽는 컴포넌트가 가져오기, 스트리밍, 하이드레이션을 한곳에서 처리할 수 있습니다. 데이터 가져오기가 명령, 여러 쿼리의 연속 실행, 미리 로드, 사용자 이벤트의 일부라면 `loadPosts()` 액션을 유지하세요.
+
+<a id="public-entry-point"></a>
+
+## 공개 진입점
+
+```ts
+// state/post/index.ts
+import { create } from '@comwit/state'
+import { post } from './model'
+import { postActions } from './actions/interact'
+import type { PostState, PostActions } from './types'
+
+export const usePost = create<PostState, PostActions>(post, { actions: [postActions] })
+export type { Post, PostState, PostActions } from './types'
+```
+
+앱에 특화된 API 호출은 `api/` 계층에 두세요. 클라이언트 도메인은 브라우저에서 안전한 API 어댑터를 호출할 수 있지만, 서버 전용 데이터베이스 코드는 서버 경계 뒤에 있어야 합니다. 준비된 서버 데이터는 [라우트 어댑터](/state/docs/guide/nextjs)로 전달하세요.
+
+<a id="cross-domain-access"></a>
+
+## 도메인 간 접근
+
+액션은 `state()`로 다른 도메인을 직접 읽을 수 있습니다.
+
+```ts
+const postActions = action<Pick<PostActions, 'create'>, AppContext>(({ state }) => {
+  class Actions {
+    private post = state(post)
+    private user = state(user) // read from user domain
+
+    async create(title: string) {
+      if (!this.user.me) return
+      // ...
+    }
+  }
+  return new Actions()
+})
+```
+
+상태는 한 방향으로 흐르며 순환 의존성을 만들지 않습니다.

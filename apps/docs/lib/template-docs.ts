@@ -2,7 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
 
-const CONTENT_DIR = path.join(process.cwd(), 'content/template')
+const contentDir = (locale: string) =>
+  path.join(process.cwd(), 'content', locale === 'ko' ? 'ko' : '', 'template')
 
 export interface TemplateDocMeta {
   title: string
@@ -17,8 +18,8 @@ export interface TemplateDoc extends TemplateDocMeta {
   content: string
 }
 
-function read(file: string) {
-  const raw = fs.readFileSync(path.join(CONTENT_DIR, file), 'utf-8')
+function read(file: string, locale: string) {
+  const raw = fs.readFileSync(path.join(contentDir(locale), file), 'utf-8')
   const { data, content } = matter(raw)
   return {
     title: data.title as string,
@@ -30,19 +31,19 @@ function read(file: string) {
   }
 }
 
-export function getTemplateDocs(): TemplateDocMeta[] {
+export function getTemplateDocs(locale = 'en'): TemplateDocMeta[] {
   return fs
-    .readdirSync(CONTENT_DIR)
+    .readdirSync(contentDir(locale))
     .filter((file) => file.endsWith('.mdx'))
     .map((file) => {
-      const { title, slug, description, group, order } = read(file)
+      const { title, slug, description, group, order } = read(file, locale)
       return { title, slug, description, group, order }
     })
     .sort((a, b) => a.order - b.order)
 }
 
-export function getTemplateDoc(slug: string): TemplateDoc | null {
+export function getTemplateDoc(slug: string, locale = 'en'): TemplateDoc | null {
   const file = `${slug}.mdx`
-  if (!/^[a-z0-9-]+$/.test(slug) || !fs.existsSync(path.join(CONTENT_DIR, file))) return null
-  return read(file)
+  if (!/^[a-z0-9-]+$/.test(slug) || !fs.existsSync(path.join(contentDir(locale), file))) return null
+  return read(file, locale)
 }

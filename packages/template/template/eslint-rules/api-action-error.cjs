@@ -1,8 +1,8 @@
 /**
- * ESLint rule: api/actions/*.ts 안에서 throw 시 new Error(...) 대신 new ActionError(...) 강제
+ * ESLint rule: require new ActionError(...) instead of new Error(...) in api/actions/*.ts.
  *
- * 클라이언트로 메시지를 노출하려면 ActionError를 써야 한다 (그 외 throw는 Next가 마스킹).
- * 의도치 않게 사용자 메시지가 사라지는 것을 막기 위해 raw Error 사용을 금지한다.
+ * ActionError exposes its message to clients; other throws are masked.
+ * Forbid raw Error so intended user messages are not accidentally lost.
  */
 
 module.exports = {
@@ -15,7 +15,7 @@ module.exports = {
     },
     messages: {
       useActionError:
-        'api/actions/*.ts 에서는 new Error(...) 대신 new ActionError(...)를 사용하세요. 그래야 메시지가 클라이언트에 전달됩니다 (see src/services/api.ai.md)',
+        'Use new ActionError(...) instead of new Error(...) in api/actions/*.ts so the message reaches the client (see src/services/api.ai.md)',
     },
     schema: [],
   },

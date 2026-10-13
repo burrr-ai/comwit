@@ -2,7 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
 
-const BLOG_DIR = path.join(process.cwd(), 'content/blog')
+const contentDir = (locale: string) =>
+  path.join(process.cwd(), 'content', locale === 'ko' ? 'ko' : '', 'blog')
 
 export interface BlogPostMeta {
   title: string
@@ -16,19 +17,19 @@ export interface BlogPost extends BlogPostMeta {
   content: string
 }
 
-function getBlogMdxFiles(): string[] {
-  if (!fs.existsSync(BLOG_DIR)) return []
-  const entries = fs.readdirSync(BLOG_DIR, { withFileTypes: true })
+function getBlogMdxFiles(locale: string): string[] {
+  if (!fs.existsSync(contentDir(locale))) return []
+  const entries = fs.readdirSync(contentDir(locale), { withFileTypes: true })
   return entries
     .filter((entry) => !entry.isDirectory() && entry.name.endsWith('.mdx'))
     .map((entry) => entry.name)
 }
 
-export function getAllBlogPosts(): BlogPostMeta[] {
-  const files = getBlogMdxFiles()
+export function getAllBlogPosts(locale = 'en'): BlogPostMeta[] {
+  const files = getBlogMdxFiles(locale)
   return files
     .map((file) => {
-      const raw = fs.readFileSync(path.join(BLOG_DIR, file), 'utf-8')
+      const raw = fs.readFileSync(path.join(contentDir(locale), file), 'utf-8')
       const { data } = matter(raw)
       const slug = file.replace(/\.mdx$/, '')
       return {
@@ -42,8 +43,9 @@ export function getAllBlogPosts(): BlogPostMeta[] {
     .sort((a, b) => (a.date > b.date ? -1 : 1))
 }
 
-export function getBlogPostBySlug(slug: string): BlogPost | null {
-  const filePath = path.join(BLOG_DIR, `${slug}.mdx`)
+export function getBlogPostBySlug(slug: string, locale = 'en'): BlogPost | null {
+  if (!/^[a-z0-9.-]+$/.test(slug) || slug.includes('..')) return null
+  const filePath = path.join(contentDir(locale), `${slug}.mdx`)
   if (!fs.existsSync(filePath)) return null
   const raw = fs.readFileSync(filePath, 'utf-8')
   const { data, content } = matter(raw)

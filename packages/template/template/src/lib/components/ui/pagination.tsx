@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from '@comwit/ui/icons'
 
 import { cn } from '@/lib/utils/cn'
 import { uiText } from '@/lib/ui-text'
@@ -33,7 +33,9 @@ function PaginationItem({ ...props }: React.ComponentProps<'li'>) {
 
 type PaginationLinkProps = {
   isActive?: boolean
-  /** 첫/끝 페이지의 이전/다음처럼 갈 곳이 없을 때 — 포커스·클릭에서 빠진다 */
+  /**
+   * No available destination, such as previous on the first page or next on the last; excludes the control from focus and clicks.
+   */
   disabled?: boolean
 } & Pick<React.ComponentProps<typeof Button>, 'size'> &
   React.ComponentProps<'a'>
@@ -54,7 +56,7 @@ function PaginationLink({
       data-slot="pagination-link"
       data-active={isActive}
       className={cn(
-        // 현재 페이지는 Pager 와 같은 솔리드 알약
+        // The current page uses the same solid pill as Pager.
         buttonVariants({
           variant: isActive ? 'default' : 'ghost',
           size,

@@ -1,0 +1,86 @@
+---
+title: 'comwit v2.2.0-beta.1 — 독립적인 로컬 리소스'
+date: '2026-08-16'
+description: '두 번째 2.2 베타는 IndexedDB 리소스를 쿼리에서 분리하고, 서버 렌더링 상세 화면의 정확한 로컬 복원과 선택적 쿼리 어댑터를 제공합니다.'
+---
+
+> **안전성 안내:** 렌더 중 `silent()` 초기화는 더 이상 권장하지 않습니다. 서버 렌더링이 기다려야 하는 데이터는 쿼리 기반 리소스로 선언하고 `.suspend(arg)`로 선택하세요.
+
+첫 2.2 베타는 정규화된 IndexedDB 쿼리 뷰를 도입했습니다. 이번에는 경계를 명확히 합니다. `local()`은 독립 리소스이며, `local.query()`와 `local.infinite()`는 클라이언트가 원격 로딩을 소유할 때 사용하는 선택적 어댑터입니다.
+
+<a id="standalone-server-owned-detail"></a>
+
+## 독립적인 서버 소유 상세 데이터
+
+Next.js 상세 페이지는 SEO를 위해 서버에서 가져오는 경우가 많습니다. 이제 Suspense 폴백이 두 번째 API 요청 없이 정확한 IndexedDB 뷰를 복원할 수 있습니다.
+
+```ts
+const products = local.collection<Product>({ key: 'products', version: 1 })
+
+const product = model({
+  detail: local<Product | null, { id: string }>({
+    source: products,
+    initialData: null,
+  }),
+})
+```
+
+```tsx
+function ProductFallback({ id }: { id: string }) {
+  const detail = useProduct((state) => state.detail.restore({ id }))
+  return detail.data ? <ProductView product={detail.data} /> : <ProductSkeleton />
+}
+```
+
+완료된 서버 분기는 같은 인자의 뷰를 초기화합니다.
+
+```ts
+silent(() => {
+  model.detail.set(serverProduct, { arg: { id } })
+})
+```
+
+이 쓰기는 표시 중인 리소스, 컬렉션의 기준 엔티티, 로드된 목록 행, IndexedDB를 갱신합니다. 이전 복원이 아직 진행 중이라면 서버 값이 우선합니다.
+
+<a id="optional-query-adapters"></a>
+
+## 선택적 쿼리 어댑터
+
+클라이언트가 소유하는 목록은 익숙한 쿼리 인터페이스를 유지합니다.
+
+```ts
+list: local.query<Product[], ProductFilter>({
+  source: products,
+  initialData: [],
+  staleTime: 30_000,
+  queryFn: api.product.list,
+})
+```
+
+정확히 일치하는 최신 뷰는 요청을 건너뜁니다. 오래된 뷰는 즉시 표시하고 백그라운드에서 재검증합니다. 캐시가 없으면 일반 최초 로딩으로 동작합니다. 무한 데이터도 `local.infinite()`에서 같은 패턴을 지원합니다.
+
+<a id="lower-query-coupling"></a>
+
+## 쿼리 결합도 낮추기
+
+쿼리 구현은 로컬 저장소, IndexedDB, 컬렉션 코드를 가져오지 않습니다. 일반 리소스 수명 주기만 노출하고 로컬 어댑터가 이 경계에 연결됩니다. 기존 쿼리는 로컬 기능에 의존하지 않고 기존 동작을 유지합니다.
+
+beta.0의 래퍼도 잠시 유지합니다.
+
+```ts
+local(query({ initialData: [], queryFn }), { source: products }) // deprecated
+```
+
+새 코드에서는 명시적인 어댑터를 사용하세요.
+
+```ts
+local.query({ source: products, initialData: [], queryFn })
+```
+
+베타 설치:
+
+```bash
+yarn add @comwit/state@2.2.0-beta.1
+```
+
+저장 식별자, 버전 무효화, 정규화, 낙관적 갱신, Provider 스코프는 전체 [`local()` 레퍼런스](/docs/api/local)를 참고하세요.

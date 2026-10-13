@@ -1,5 +1,8 @@
 'use client'
 
+import { Copy } from '@/i18n/copy'
+import { useTranslations } from 'next-intl'
+
 import { Button } from '@comwit/ui-templates/button'
 import { useRef, useState } from 'react'
 import { action, ComwitProvider, create, model } from '@comwit/state'
@@ -30,11 +33,13 @@ export type DemoExample = {
 }
 
 function Counter() {
+  const copy = useTranslations('Copy')
+
   const garden = useGarden()
   const { count, actions } = useCounter((s) => ({ count: s.count, actions: s.actions }))
   return (
     <div className="live-counter">
-      <output aria-live="polite" aria-label="Counter value">
+      <output aria-live="polite" aria-label={copy('text007')}>
         <motion.span
           key={count}
           initial={garden?.active ? { y: 7, opacity: 0.4, scale: 0.9 } : false}
@@ -54,7 +59,7 @@ function Counter() {
           garden?.nudge()
         }}
       >
-        one up
+        <Copy id="text008" />{' '}
       </Button>
       <Button
         variant="plain"
@@ -63,13 +68,15 @@ function Counter() {
         className="reset-button"
         onClick={actions.reset}
       >
-        reset
+        <Copy id="text009" />{' '}
       </Button>
     </div>
   )
 }
 
 export function StateDemo({ examples }: { examples: DemoExample[] }) {
+  const copy = useTranslations('Copy')
+
   const [active, setActive] = useState(1)
   const garden = useGarden()
   const fallback = useMotionValue(0)
@@ -90,7 +97,7 @@ export function StateDemo({ examples }: { examples: DemoExample[] }) {
         <Counter />
         <div className="code-window">
           <div className="code-toolbar">
-            <div role="tablist" aria-label="Counter example" className="code-tabs">
+            <div role="tablist" aria-label={copy('text010')} className="code-tabs">
               {examples.map((item, index) => (
                 <Button
                   variant="plain"
@@ -119,7 +126,7 @@ export function StateDemo({ examples }: { examples: DemoExample[] }) {
                     tabRefs.current[next]?.focus()
                   }}
                 >
-                  {item.title}
+                  <Copy text={item.title} />
                 </Button>
               ))}
             </div>
@@ -127,9 +134,9 @@ export function StateDemo({ examples }: { examples: DemoExample[] }) {
               key={example.title}
               text={example.code}
               className="code-copy"
-              label={`Copy ${example.title} example`}
+              label={copy('copyExample', { name: example.title })}
             >
-              Copy
+              <Copy id="text011" />{' '}
             </CopyButton>
           </div>
           <div

@@ -29,7 +29,7 @@ interface ConfirmOptions {
   description: string
   confirmText?: string
   cancelText?: string
-  /** 되돌릴 수 없는 작업 — 확인 버튼을 destructive 로 */
+  /** Irreversible action: use the destructive confirm-button style. */
   destructive?: boolean
 }
 
@@ -50,7 +50,7 @@ function PopupShell({
   onUnmount: () => void
   children: React.ReactNode
 }) {
-  // 스크림과 패널이 둘 다 사라진 뒤에 overlay-kit 에서 뺀다 — 먼저 끝난 쪽이 나머지를 끊지 않게.
+  // Remove from overlay-kit only after both scrim and panel disappear, so the first to finish does not interrupt the other.
   const exiting = React.useRef(2)
   const settle = () => {
     exiting.current -= 1
@@ -73,7 +73,7 @@ function PopupShell({
           />
         </DialogPrimitive.Overlay>
         <DialogPrimitive.Content className="pointer-events-none fixed inset-0 z-modal grid place-items-center">
-          {/* dialog.tsx 와 같은 스크림 위 굴절 유리(dense) · 같은 움직임(lib/overlay-motion) */}
+          {/* Same dense glass above the scrim and same lib/overlay-motion animation as dialog.tsx. */}
           <GlassSurface variant="morphing" shape="panel" dense>
             <OverlayMotion
               preset="dialog"
@@ -169,7 +169,7 @@ function alert({
   })
 }
 
-/** 바텀시트 렌더 콜백에 넘기는 제어 API. resolve(value)=값 확정 후 닫기, close()=취소 닫기. */
+/** Control API passed to the bottom-sheet renderer: resolve(value) confirms and closes; close() cancels. */
 export type SheetApi<T> = {
   resolve: (value: T) => void
   close: () => void
@@ -178,17 +178,18 @@ export type SheetApi<T> = {
 interface SheetOptions {
   title: string
   description?: string
-  /** 시트 콘텐츠 최대 폭(태블릿 이상 가운데 정렬). 기본 520. */
+  /** Maximum sheet-content width, centered on tablet and larger screens. Defaults to 520. */
   maxWidth?: number
 }
 
 /**
- * 바텀시트(아래→위) 오버레이 — popup.confirm 과 같은 overlay-kit 임페러티브 패턴. 면은 bottom-sheet 템플릿
- * (핸들을 끌어내려 닫는 시트)이다. 모바일에서 Popover 대신 시트로 띄울 때(예: 캘린더·시간 선택). render 콜백이
- * resolve(값)을 부르면 그 값으로 Promise 가 풀리고, 딤/핸들/드래그/ESC 로 닫으면 undefined 로 풀린다.
+ * Bottom-to-top sheet overlay using the same imperative overlay-kit pattern as popup.confirm. Uses the
+ * bottom-sheet template with a drag-to-dismiss handle. Useful instead of mobile popovers, such as date/time
+ * pickers. Calling resolve(value) from the renderer resolves the Promise with that value. Dismissal through
+ * the scrim, handle, dragging, or Escape resolves it with undefined.
  *
  * @example
- * const ymd = await popup.sheet<string>(({ resolve }) => <CalendarPanel onSelect={resolve} />, { title: '날짜 선택' })
+ * const ymd = await popup.sheet<string>(({ resolve }) => <CalendarPanel onSelect={resolve} />, { title: 'Select date' })
  */
 function sheet<T = void>(
   render: (api: SheetApi<T>) => ReactNode,

@@ -74,7 +74,7 @@ nothing so a sign-out can never replay the server seed. A lint rule
 ## The api layer shapes data for the screen
 
 Domains in the api layer are page-fit, not table-fit. Relative times
-(`30분 전`), formatted dates and display counts are produced in the api with
+(`30 minutes ago`), formatted dates and display counts are produced in the api with
 the shared `kst` helpers, so components never format, filter, aggregate or
 slice. The reason is pagination: a component only has the current page, so
 client-side numbers are wrong by construction.

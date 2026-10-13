@@ -1,20 +1,20 @@
 'use client'
 
 /**
- * comwit-ui — scroll-chrome (헤드리스 · 스타일 0).
+ * comwit-ui — headless, unstyled scroll-chrome.
  *
- * 모바일 앱 크롬(앱바·바텀내비)의 **스크롤 의도**를 한 번만 판정해 공유한다.
- * 앱바와 탭바가 각자 리스너를 달면 감도와 전환 시점이 어긋나므로, 누적 이동량에 히스테리시스를
- * 적용해 `compact` 하나로 묶는다. 라우팅의 스크롤 복원처럼 브라우저가 직접 바꾼 위치는 무시하고,
- * 실제 세로 터치 제스처·휠·키보드 입력이 선행된 스크롤만 반영한다.
+ * Determines mobile app chrome (app bar/bottom navigation) scroll intent once and shares it. Separate listeners
+ * would drift in sensitivity and transition timing, so accumulated movement with hysteresis produces one compact
+ * state. Ignores browser-driven changes such as route scroll restoration, accepting only scroll events preceded
+ * by real vertical touch gestures, wheel input, or keyboard input.
  *
  *   <ScrollChromeProvider scrollRef={mainRef} resetKey={pathname}>…</ScrollChromeProvider>
  *   const { compact, expand } = useScrollChrome()
  *
- * scrollRef 를 생략하면 문서(window) 스크롤을 본다. resetKey 가 바뀌면(라우트 전환) 펼친다.
- * 그 스크롤러 안에 sticky 탭바를 두면 스크롤러가 스태킹과 가로 자르기를 맡고(`relative z-0 overflow-x-clip`),
- * 스크롤러와 탭바 사이에는 overflow 를 가진 조상을 두지 않는다 — 아니면 iOS 에서 스크롤 중 탭바가 떨린다.
- * 프로바이더 아래 `[data-scroll-chrome="compact" | "expanded"]` 요소가 상태를 CSS 에도 알린다.
+ * Omit scrollRef to observe window scrolling. Changing resetKey (route transition) expands the chrome.
+ * For a sticky tab bar inside the scroller, let the scroller own stacking and horizontal clipping
+ * (relative z-0 overflow-x-clip). Avoid overflow ancestors between the scroller and tab bar, which cause iOS jitter.
+ * Elements beneath the provider expose data-scroll-chrome="compact" or "expanded" for CSS.
  */
 
 import * as React from 'react'
@@ -27,9 +27,9 @@ const TOUCH_INTENT_SLOP = 6
 const USER_SCROLL_IDLE_MS = 180
 
 type ScrollChromeValue = {
-  /** 사용자가 아래로 충분히 스크롤했다 — 앱바는 숨고(reveal) 바텀내비는 작아진다. */
+  /** The user scrolled down far enough: hide the reveal app bar and compact the bottom navigation. */
   compact: boolean
-  /** 즉시 원래 크기로 되돌린다(탭바를 누르거나 포커스가 들어올 때). */
+  /** Immediately restore the expanded size when the tab bar is pressed or receives focus. */
   expand: () => void
 }
 
@@ -40,9 +40,9 @@ const ScrollChromeContext = React.createContext<ScrollChromeValue>({
 ScrollChromeContext.displayName = 'ScrollChromeContext'
 
 interface ScrollChromeProviderProps {
-  /** 관찰할 스크롤러. 생략하면 window. */
+  /** Scroller to observe. Defaults to window. */
   scrollRef?: React.RefObject<HTMLElement | null>
-  /** 바뀌면(라우트 전환) 펼친다. */
+  /** Expand when this value changes (for example, a route transition). */
   resetKey?: unknown
   children: React.ReactNode
 }
@@ -162,9 +162,9 @@ function ScrollChromeProvider({ scrollRef, resetKey, children }: ScrollChromePro
       disarm()
     }
     const onWheel = () => {
-      // lastTop 은 건드리지 않는다 — passive 휠은 컴포지터가 먼저 스크롤해버려서, 여기서 다시 읽으면
-      // 이미 움직인 위치가 기준이 되어 한 칸짜리 휠 입력이 통째로 사라진다.
-      // (프로그램 스크롤로 바뀐 위치는 measure 가 매 스크롤마다 lastTop 에 반영해 둔다.)
+      // Do not change lastTop: passive wheel events may arrive after compositor scrolling, so reading it again here
+      // would make the updated position the baseline and swallow a single wheel step entirely.
+      // (measure already updates lastTop on every scroll, including programmatic position changes.)
       if (!userScrollIntent) {
         direction = 0
         distance = 0
@@ -173,7 +173,7 @@ function ScrollChromeProvider({ scrollRef, resetKey, children }: ScrollChromePro
       arm()
       scheduleIntentEnd()
     }
-    // 키보드 스크롤(Space·PageDown·방향키)도 사용자 의도다.
+    // Keyboard scrolling (Space, PageDown, arrow keys) also signals user intent.
     const onKeyDown = (event: Event) => {
       const key = (event as KeyboardEvent).key
       if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End'].includes(key)) {
@@ -214,7 +214,7 @@ function ScrollChromeProvider({ scrollRef, resetKey, children }: ScrollChromePro
 }
 ScrollChromeProvider.displayName = 'ScrollChromeProvider'
 
-/** 가장 가까운 ScrollChromeProvider 의 상태. 프로바이더가 없으면 항상 펼쳐진 상태다. */
+/** State from the nearest ScrollChromeProvider. Always expanded when no provider exists. */
 function useScrollChrome(): ScrollChromeValue {
   return React.useContext(ScrollChromeContext)
 }

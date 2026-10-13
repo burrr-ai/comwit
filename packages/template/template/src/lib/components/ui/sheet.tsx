@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Dialog as SheetPrimitive } from '@comwit/ui'
-import { XIcon } from 'lucide-react'
+import { XIcon } from '@comwit/ui/icons'
 
 import { GlassSurface } from '@/lib/components/ui/glass'
 import { OverlayMotion } from '@/lib/overlay-motion'
@@ -47,15 +47,18 @@ function SheetContent({
   children,
   side = 'right',
   showCloseButton = true,
+  closeLabel = uiText.close,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left'
   showCloseButton?: boolean
+  /** Accessible name for the close button; defaults to the project locale. */
+  closeLabel?: string
 }) {
   return (
     <SheetPortal>
       <SheetOverlay />
-      {/* 스크림 위의 굴절 유리(dense) — 면·보더·그림자는 .glass 가 갖는다. 화면 가장자리에 붙는 변은 보더를 걷는다. */}
+      {/* Dense refractive glass above the scrim: .glass owns surface, border, and shadow. Remove borders on edges attached to the viewport. */}
       <GlassSurface variant="morphing" shape="panel" dense>
         <SheetPrimitive.Content
           data-slot="sheet-content"
@@ -65,14 +68,14 @@ function SheetContent({
             side === 'right' && 'inset-y-0 right-0 h-full w-3/4 border-y-0 border-r-0 sm:max-w-sm',
             side === 'left' && 'inset-y-0 left-0 h-full w-3/4 border-y-0 border-l-0 sm:max-w-sm',
             side === 'top' && 'inset-x-0 top-0 h-auto rounded-b-sheet border-x-0 border-t-0',
-            // 바텀시트: 아래에서 올라오므로 윗모서리만 rounded-sheet
+            // Bottom sheet rises from below, so apply rounded-sheet only to the top corners.
             side === 'bottom' && 'inset-x-0 bottom-0 h-auto rounded-t-sheet border-x-0 border-b-0',
             className
           )}
           {...props}
           asChild
         >
-          {/* 붙은 변 쪽으로 자기 크기만큼(100%) 들어오고 나간다 — lib/overlay-motion */}
+          {/* Enter/exit by one full component size (100%) toward the attached edge using lib/overlay-motion. */}
           <OverlayMotion preset="sheet" side={side}>
             {children}
             {showCloseButton && (
@@ -84,7 +87,7 @@ function SheetContent({
                 )}
               >
                 <XIcon className="size-4" />
-                <span className="sr-only">{uiText.close}</span>
+                <span className="sr-only">{closeLabel}</span>
               </SheetPrimitive.Close>
             )}
           </OverlayMotion>

@@ -1,0 +1,249 @@
+---
+title: 'Next.js와 서버 데이터'
+group: 'Guide'
+slug: 'guide/nextjs'
+order: 3
+---
+
+<a id="server-data-domain-state"></a>
+
+# 서버 데이터와 도메인 상태
+
+서버 데이터는 두 가지 방식 중 하나로 쿼리에 전달됩니다. 어느 쪽이든 사용할 수 있으며, 나머지 UI는 클라이언트 상호작용에 쓰는 것과 같은 도메인 훅을 읽습니다.
+
+```text
+hydrate():            Server Component → resolved data → client route adapter → domain hook → UI
+.suspend() (experimental): <Suspense> → Client Component selects .suspend(arg) → streamed → same component
+```
+
+- [`useDomain.hydrate()`](#3-hydrate-before-the-domain-read)는 안정된 경로입니다. Server Component에서 데이터를 가져와 완료된 값을 작은 Client Component에 전달하고 그곳에서 항목을 초기화합니다. 데이터 가져오기가 서버에서만 이루어져야 할 때 사용하세요.
+- [`.suspend(arg)`](#streaming-suspense-experimental)는 더 원자적인 경로입니다. 스트리밍되는 `<Suspense>` 경계 안의 Client Component 하나가 쿼리를 선택하면 서버 렌더링이 `queryFn`을 실행하고 결과가 경계와 함께 스트리밍되며 브라우저가 같은 컴포넌트에서 하이드레이션합니다. 별도 가져오기 단계와 어댑터를 동기화할 필요가 없지만 `queryFn`은 두 환경 모두에서 실행 가능해야 합니다. 실험적 기능입니다.
+
+두 경로 모두 아래 프로바이더로 시작합니다.
+
+<a id="provider-setup"></a>
+
+## 프로바이더 설정
+
+Next.js가 요청 데이터와 HTML 스트림을 관리하므로 프로바이더는 필요한 프레임워크 함수를 속성으로 받습니다. 프로바이더의 다른 부분은 바뀌지 않으며 두 속성 모두 선택 사항입니다.
+
+```tsx
+// app/providers.tsx
+'use client'
+
+import { ComwitProvider } from '@comwit/state'
+import { useRouter, useServerInsertedHTML } from 'next/navigation'
+import type { ReactNode } from 'react'
+import { getServerSearchParams } from './get-server-search-params'
+
+export function Providers({ children }: { children: ReactNode }) {
+  const router = useRouter()
+
+  return (
+    <ComwitProvider
+      context={{ router }}
+      getServerSearchParams={getServerSearchParams}
+      useServerInsertedHTML={useServerInsertedHTML}
+      defaultOptions={{ query: { staleTime: 30_000 } }}
+    >
+      {children}
+    </ComwitProvider>
+  )
+}
+```
+
+```ts
+// app/get-server-search-params.ts
+import { workUnitAsyncStorage } from 'next/dist/server/app-render/work-unit-async-storage.external.js'
+
+/** Request search for searchParam() fields. Prerendering has no request, so the browser initializes. */
+export function getServerSearchParams(): string | null {
+  if (typeof window !== 'undefined') return null
+  const store = workUnitAsyncStorage.getStore()
+  return store?.type === 'request' ? store.url.search : null
+}
+```
+
+| 속성                    | 서버                                                                                                   | 브라우저                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `getServerSearchParams` | 프로바이더 초기화 시 한 번 읽어 [`searchParam()`](/state/docs/api/router) 필드의 초기 값을 제공합니다. | 호출하지 않으며 하이드레이션은 전달된 값을 읽습니다.                    |
+| `useServerInsertedHTML` | 각 청크를 내보내기 전에 완료된 `.suspend()` 결과의 JSON 스크립트를 삽입합니다.                         | 아무 작업을 하지 않으며 하이드레이션 중인 선택자가 스크립트를 읽습니다. |
+
+위 요청 저장소는 Next.js 내부 모듈입니다. Client Component의 서버 렌더링에서 요청 URL을 동기적으로 읽는 유일한 방법이므로 Next.js 버전에 맞게 고정하고 getter를 한 파일에 유지하세요. `useServerInsertedHTML`은 `next/navigation`의 공개 내보내기입니다. 같은 시그니처로 반환된 요소를 다음 청크 전송 전에 삽입하는 함수라면 이 자리에 전달할 수 있습니다.
+
+<a id="1-define-the-query"></a>
+
+## 1. 쿼리 정의
+
+쿼리 함수는 이후 클라이언트 로드나 액션에 의한 재요청에 사용됩니다. 최초 서버 초기화에서는 호출하지 않습니다.
+
+```ts
+// state/product/index.ts
+import { create, model, query } from '@comwit/state'
+
+export type Product = { id: string; title: string; description: string }
+
+const product = model({
+  detail: query<Product | null, string>({
+    initialData: null,
+    staleTime: 30_000,
+    queryFn: async (id) => {
+      const response = await fetch(`/api/products/${encodeURIComponent(id)}`)
+      if (response.status === 404) return null
+      if (!response.ok) throw new Error('Could not load product')
+      return (await response.json()) as Product
+    },
+  }),
+})
+
+export const useProduct = create(product, { actions: [] })
+```
+
+<a id="2-fetch-on-the-server"></a>
+
+## 2. 서버에서 데이터 가져오기
+
+2단계와 3단계는 `hydrate()` 경로입니다. [실험적 `.suspend()` 경로](#streaming-suspense-experimental)는 두 단계를 컴포넌트 하나로 대체합니다.
+
+아래 `getProduct`는 `Product | null`을 반환하는 서버 측 API 또는 데이터베이스 함수입니다.
+
+```tsx
+// app/products/[id]/page.tsx
+import { notFound } from 'next/navigation'
+import { getProduct } from '@/api/products'
+import { ProductRoute } from './product-route'
+
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const initialProduct = await getProduct(id)
+  if (!initialProduct) notFound()
+
+  return <ProductRoute id={id} initialProduct={initialProduct} />
+}
+```
+
+<a id="3-hydrate-before-the-domain-read"></a>
+
+## 3. 도메인을 읽기 전에 하이드레이션
+
+```tsx
+// app/products/[id]/product-route.tsx
+'use client'
+
+import { useProduct, type Product } from '@/state/product'
+
+export function ProductRoute({ id, initialProduct }: { id: string; initialProduct: Product }) {
+  useProduct.hydrate({ detail: { arg: id, data: initialProduct } })
+  return <ProductDetail />
+}
+
+function ProductDetail() {
+  const product = useProduct((s) => s.detail.data)
+  if (!product) return null
+
+  return (
+    <article>
+      <h1>{product.title}</h1>
+      <p>{product.description}</p>
+    </article>
+  )
+}
+```
+
+모델을 일반적으로 읽기 전에 훅처럼 `hydrate()`를 조건 없이 호출하세요. 반환값은 `void`입니다. 새 항목은 즉시 성공 상태가 되고 `isLoading`과 `isFetching`이 모두 false가 됩니다. 수동적으로 읽는 컴포넌트는 중복 요청을 보내지 않습니다.
+
+<a id="hydration-contract"></a>
+
+## 하이드레이션 계약
+
+```tsx
+// Argument queries require their declared arg.
+useProduct.hydrate({ detail: { arg: id, data: initialProduct } })
+
+// An argument-free Query<number> takes only data.
+useDashboard.hydrate({ count: { data: 42 } })
+
+// Optional seeds keep the call unconditional.
+useProduct.hydrate(seed ?? null)
+```
+
+쿼리 필드만 허용되며 TypeScript가 필드 이름, 인수, 데이터를 추론합니다. 일부 항목만 포함한 맵도 가능합니다. 일반 상태, 실시간 쿼리, 독립형 `local()`은 하이드레이션할 수 없습니다. 무한 쿼리는 데이터 값을 받지만 별도의 커서/히스토리 초기 값은 이 API로 받지 않습니다.
+
+같은 값을 반복해서 전달하면 아무 작업도 하지 않습니다. 아직 읽지 않은 새 항목은 첫 스냅샷 전에 초기화됩니다. 관찰 중인 항목의 변경은 요청한 렌더링의 레이아웃 커밋에서 적용되므로 중단된 전환이 현재 커밋된 화면을 대체할 수 없습니다. 하이드레이션은 이후 `.load()` 또는 `.query()` 호출에 사용할 최신성도 기록합니다. `.refetch()`는 여전히 요청을 강제합니다.
+
+<a id="choose-who-owns-the-request"></a>
+
+## 요청 소유자 선택
+
+| 데이터 소유자                       | 패턴                                                   |
+| ----------------------------------- | ------------------------------------------------------ |
+| 마운트된 Client Component           | `.load(arg)`를 호출하고 로딩/오류 상태 렌더링          |
+| Server Component                    | 데이터를 기다린 후 `useDomain.hydrate(...)` 호출       |
+| 스트리밍되는 `<Suspense>` 경계      | `.suspend(arg)`와 `useServerInsertedHTML` 사용(실험적) |
+| 사용자 이벤트 또는 조율된 작업 흐름 | `.query(arg)` 또는 `.refetch()`를 호출하는 액션        |
+| IndexedDB만 사용하는 대체 화면      | 독립형 `local()`과 `.restore(arg)`                     |
+
+`.load()`는 커밋 후 작업을 시작하므로 SSR 중 요청하지 않습니다. 하이드레이션 뒤에 수동적으로 읽으면 전달된 서버 데이터를 표시합니다. `.load(arg)`를 추가하면 해당 컴포넌트가 이후 클라이언트 로딩과 최신성 검사의 소유자가 됩니다.
+
+[`local.query()`](/state/docs/api/local)와 `local.infinite()`도 같은 하이드레이션 인터페이스를 받습니다. IndexedDB 작업과 정규 엔티티 조정은 커밋 후 시작됩니다. 서버와 브라우저 프로바이더는 메모리가 분리되어 있으며 명시적으로 전달한 초기 값이 첫 렌더링을 연결합니다.
+
+<a id="streaming-suspense-experimental"></a>
+
+## 스트리밍 Suspense(실험적)
+
+2단계와 3단계의 같은 라우트를 컴포넌트 하나로 구성합니다. `.suspend(arg)`는 렌더링 중 `queryFn`을 실행하고 대기 중인 Promise를 던지므로 서버가 데이터를 기다리는 동안 `<Suspense>` 경계가 대체 화면을 표시합니다. 프로바이더에 `useServerInsertedHTML`이 있으면 완료된 결과가 경계의 HTML과 함께 전달되고 브라우저는 `queryFn`을 다시 호출하지 않고 같은 데이터를 하이드레이션합니다. Server Component의 fetch, `initialProduct` 속성, 라우트 어댑터가 따로 필요하지 않으며 데이터를 읽는 컴포넌트가 전체 경로를 담당합니다. `@comwit/state@2.5.0`부터 사용할 수 있습니다.
+
+```tsx
+// app/products/[id]/page.tsx
+import { Suspense } from 'react'
+import { ProductDetail } from './product-detail'
+
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  return (
+    <Suspense fallback={<ProductSkeleton />}>
+      <ProductDetail id={id} />
+    </Suspense>
+  )
+}
+```
+
+```tsx
+// app/products/[id]/product-detail.tsx
+'use client'
+
+import { useProduct } from '@/state/product'
+
+export function ProductDetail({ id }: { id: string }) {
+  // Experimental: fetch, stream and hydrate happen here; nothing else to wire up.
+  const product = useProduct((s) => s.detail.suspend(id))
+  if (!product.data) return <NotFound />
+
+  return (
+    <article>
+      <h1>{product.data.title}</h1>
+      <p>{product.data.description}</p>
+    </article>
+  )
+}
+```
+
+```text
+server render: suspend(id) → queryFn → boundary HTML
+                                  ↘ <script type="application/json" data-comwit-suspend> before that chunk
+browser: hydrate boundary → suspend(id) reads the script → same snapshot, no queryFn → entry active after commit
+```
+
+스트리밍된 항목은 서버에서 가져온 시각을 유지하므로 이후 `.load()`와 `.query()` 호출의 `staleTime`은 브라우저가 직접 가져온 것처럼 적용됩니다. 각 결과는 트리에서 선택한 훅의 위치와 연결되므로 중첩 프로바이더와 반복 컴포넌트가 격리됩니다. 프로바이더 속성이 없으면 서버와 브라우저 캐시가 분리되고 브라우저가 하이드레이션 중 `queryFn`을 다시 실행합니다. 이는 기존 동작과 같습니다.
+
+`queryFn`이 두 환경에서 모두 실행 가능할 때만 이 경로를 사용하세요.
+
+- SSR 중 Client Component 번들 안에서 실행됩니다. 데이터베이스 코드를 가져올 수 없고 Next.js는 렌더링 중 Server Function 호출을 허용하지 않습니다. Route Handler나 외부 API를 호출하세요.
+- 서버의 `fetch`에는 절대 URL이 필요합니다. `fetch('/api/products')` 대신 환경 변수나 요청을 인식하는 도우미로 origin을 구성하세요.
+- 결과는 JSON으로 전달됩니다. 날짜는 문자열로 도착하므로 데이터를 읽는 곳에서 변환하세요.
+- `<Suspense>` 경계는 프로바이더 안에 두세요. 서버 쿼리가 실패하면 경계의 대체 화면이 렌더링되고 브라우저가 같은 오류 경계 규칙에 따라 요청을 재시도합니다.
+- `renderToString`, Pages Router, 실시간 쿼리, 스트리밍 `AsyncIterable` fetcher는 지원 범위에 포함되지 않습니다.
+
+두 경로 모두 유효합니다. `hydrate()`는 안정된 선택이며 서버에만 있어야 하는 데이터에 사용할 수 있는 유일한 경로입니다. `.suspend()`는 로딩 상태를 Suspense 경계가 담당하는 공개 캐시 가능 읽기에 더 원자적인 선택이며 계약이 안정될 때까지 실험적 기능입니다.
+
+렌더링 본문에서 액션을 호출해 상태를 초기화하지 마세요. 완료된 서버 쿼리 데이터는 `hydrate()` 또는 스트리밍 `.suspend()`로 옮기고 일반 액션은 이벤트와 명령형 작업 흐름에 사용하세요.

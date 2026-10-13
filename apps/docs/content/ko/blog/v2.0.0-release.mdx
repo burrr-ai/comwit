@@ -1,0 +1,93 @@
+---
+title: 'comwit v2.0.0 — 패키지 이름이 @comwit/state로 바뀝니다'
+date: '2026-07-03'
+description: 'v2.0.0은 npm 패키지를 comwit에서 @comwit/state로 변경합니다. API는 그대로이며 설치 이름과 import 경로만 바뀝니다. 기존 comwit은 새 패키지를 다시 내보내는 호환 패키지로 남습니다.'
+author: 'Claude Code'
+---
+
+<a id="what-changed"></a>
+
+## 달라진 점
+
+이제 라이브러리는 npm에 `comwit` 대신 **`@comwit/state`**로 게시됩니다.
+
+변경은 이것뿐입니다. **API 변경, export 이름 변경, 동작 차이는 없습니다.** 모든 함수, 데코레이터, 타입은 그대로 동작합니다. 다음 두 가지가 바뀝니다.
+
+1. 설치할 패키지: `comwit` → `@comwit/state`
+2. 가져올 경로: `from 'comwit'` → `from '@comwit/state'`
+
+스코프 이름인 `@comwit/state`는 프로젝트가 확장될 네임스페이스를 제공하고, comwit 생태계의 상태 라이브러리라는 역할을 명확하게 합니다.
+
+---
+
+<a id="migration"></a>
+
+## 마이그레이션
+
+대부분의 프로젝트에서는 두 단계면 됩니다.
+
+<a id="1-swap-the-dependency"></a>
+
+### 1. 의존성 교체
+
+```bash
+yarn remove comwit
+yarn add @comwit/state
+```
+
+npm을 사용한다면:
+
+```bash
+npm uninstall comwit
+npm i @comwit/state
+```
+
+<a id="2-update-your-imports"></a>
+
+### 2. import 수정
+
+```diff
+- import { model, action, query, ComwitProvider } from 'comwit'
++ import { model, action, query, ComwitProvider } from '@comwit/state'
+```
+
+공개 export가 같으므로 프로젝트 전체에서 `from 'comwit'`을 `from '@comwit/state'`로 바꿔도 됩니다.
+
+> `ComwitProvider` 컴포넌트, `library.comwit.io` 문서, GitHub 저장소 이름은 그대로입니다. npm 패키지 식별자만 바뀌었습니다.
+
+---
+
+<a id="you-dont-have-to-migrate-immediately"></a>
+
+## 즉시 이전하지 않아도 됩니다
+
+기존 `comwit`을 게시 취소하면 의존하는 프로젝트가 깨지므로 **게시 취소하지 않았습니다.** 대신 다음과 같이 처리했습니다.
+
+- **`comwit@2.0.0`**은 `@comwit/state`를 다시 내보내는 얇은 호환 패키지입니다. 기존 `import ... from 'comwit'` 코드는 수정 없이 동작합니다.
+- npm의 `comwit`은 **사용 중단 안내**와 함께 `@comwit/state`를 가리켜, 설치하는 사용자가 이름 변경을 알 수 있습니다.
+
+업그레이드로 기존 코드가 깨지지는 않지만, 새 프로젝트는 `@comwit/state`를 직접 설치하고 기존 프로젝트도 편할 때 이전하세요. 호환 패키지는 이전을 돕기 위한 것입니다.
+
+---
+
+<a id="versioning"></a>
+
+## 버전 정책
+
+공개 API는 같아도 설치 이름과 import 경로 변경은 소비자에게 호환성이 깨지는 변경이므로 **메이저 버전 `2.0.0`**으로 배포합니다. `@comwit/state`와 `comwit` 호환 패키지 모두 `2.0.0`으로 게시하며 이후 같은 버전 계열을 따릅니다.
+
+---
+
+<a id="upgrade"></a>
+
+## 업그레이드
+
+새 프로젝트:
+
+```bash
+npm i @comwit/state
+```
+
+기존 프로젝트는 위 [마이그레이션](#migration)을 따르거나 당분간 `comwit`을 유지할 수 있습니다. `@comwit/state@2.0.0`을 다시 내보냅니다.
+
+[GitHub 릴리스](https://github.com/burrr-ai/comwit/releases/tag/v2.0.0) | [npm](https://www.npmjs.com/package/@comwit/state)

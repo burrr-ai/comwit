@@ -60,21 +60,21 @@ this file; Codex and Antigravity read it directly.
 eslint-rules/           - Oxlint rules that enforce the layer boundaries
 src/
   services/             - One folder per user type (default: app, admin)
-    ㄴ .ai.md            - Import rules, layer dependencies
-    ㄴ api.ai.md / state.ai.md / page.ai.md - Per-layer rules
-    ㄴ design.md         - Design tone; read before any screen work
+    └─ .ai.md            - Import rules, layer dependencies
+    └─ api.ai.md / state.ai.md / page.ai.md - Per-layer rules
+    └─ design.md         - Design tone; read before any screen work
     {service}/
       api/{domain}/     - Server Actions
       state/{domain}/   - State (comwit)
       page/{route}/     - Page components
     admin/
-      ㄴ .ai.md          - Admin routes, public prefix proxy, initial account
+      └─ .ai.md          - Admin routes, public prefix proxy, initial account
   app/                  - Next.js App Router (routing only)
-    ㄴ .ai.md
+    └─ .ai.md
   lib/                  - Shared components, hooks, utilities (installed comwit-ui source)
   server/               - Server-only (config, repository)
     repository/         - Single gateway for all data access
-      ㄴ .ai.md
+      └─ .ai.md
 ```
 
 Read the nearest `.ai.md` before working in a folder.

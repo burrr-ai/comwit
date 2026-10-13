@@ -1,12 +1,12 @@
 // ============================================================
-// 레퍼런스: src/server/db/plugin/auth/{service}-schema.ts
-// 서비스별로 이 파일을 참고하여 생성한다.
+// Reference: src/server/db/plugin/auth/{service}-schema.ts
+// Generate one file per service using this reference.
 // ============================================================
-// 치환 대상:
-//   {service}  → app, admin 등
-//   {Service}  → App, Admin 등 (PascalCase)
-//   테이블명: {service}_auth__user, {service}_auth__session 등
-//   export명: {service}AuthUser, {service}AuthSession 등
+// Placeholders:
+//   {service} → app, admin, etc.
+//   {Service} → App, Admin, etc. (PascalCase)
+//   Tables: {service}_auth__user, {service}_auth__session, etc.
+//   Exports: {service}AuthUser, {service}AuthSession, etc.
 // ============================================================
 
 // NOTE: Do NOT add `import 'server-only'` here. drizzle-kit loads this file

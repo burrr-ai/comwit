@@ -36,7 +36,7 @@ function PopoverContent({
           {...props}
           asChild
         >
-          {/* 트리거 쪽에서 0.6 배로 커지며 나타나고 같은 길로 사라진다 — lib/overlay-motion */}
+          {/* Grow from scale 0.6 toward the trigger and exit along the same path using lib/overlay-motion. */}
           <OverlayMotion preset="menu">{children}</OverlayMotion>
         </PopoverPrimitive.Content>
       </GlassSurface>

@@ -45,13 +45,13 @@ function RadioGroupItem({
         }}
         {...props}
       >
-        {/* 도트는 forceMount 로 항상 두고 scale 스프링으로 팝 인/아웃 (해제 시 exit 애니 유지) */}
+        {/* Always mount the dot with forceMount and animate scale with a spring, preserving the exit animation on deselection. */}
         <RadioGroupPrimitive.Indicator
           forceMount
           className="pointer-events-none absolute inset-0 z-raised m-auto size-2.5 scale-0 rounded-full bg-primary transition-transform duration-base ease-emphasized data-[state=checked]:scale-100 data-[disabled]:opacity-disabled"
         />
       </RadioGroupPrimitive.Item>
-      {/* 호버 헤일로 + 센터 리플 — 버튼 뒤에 깔리는 pill 면 */}
+      {/* Hover halo and centered ripple: pill surface behind the button. */}
       <span
         aria-hidden
         className={cn(

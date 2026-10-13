@@ -11,7 +11,7 @@ import { cn } from '../../lib/utils'
 import { uiText } from '../../lib/ui-text'
 
 type MonthPickerLabels = {
-  /** 모바일 바텀시트 제목 */
+  /** Mobile bottom-sheet title. */
   title?: string
   clear?: string
   thisMonth?: string
@@ -26,7 +26,7 @@ type MonthPickerProps = {
   placeholder?: string
   min?: string // YYYY-MM
   max?: string // YYYY-MM
-  /** 표시 로케일(Intl). 'ko-KR' 이면 "2026년 9월". */
+  /** Intl display locale. For example, ko-KR displays the year and month in Korean. */
   locale?: string
   labels?: MonthPickerLabels
   className?: string
@@ -52,8 +52,8 @@ const NAV_CLASS =
   'flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-accent'
 
 /**
- * 월 선택 — 데스크톱은 유리 팝오버, 모바일은 바텀시트(popup.sheet).
- * 연도 페이지·선택/비활성 판정은 @comwit/ui useMonthPanel 이 소유한다.
+ * Month selection: glass popover on desktop, bottom sheet (popup.sheet) on mobile.
+ * @comwit/ui useMonthPanel owns year pages and selected/disabled states.
  */
 export function MonthPicker({
   id,
@@ -90,7 +90,7 @@ export function MonthPicker({
     </>
   )
 
-  // 모바일: 아래에서 올라오는 바텀시트.
+  // Mobile: rising bottom sheet.
   if (detected && isMobile) {
     const openSheet = async () => {
       if (disabled) return
@@ -148,7 +148,7 @@ export function MonthPicker({
   )
 }
 
-/** 연도 네비 + 12개월 그리드 + 지우기/이번 달. 팝오버·바텀시트 공유. 지우기는 빈 문자열을 통지한다. */
+/** Year navigation, 12-month grid, clear, and current-month actions. Shared by popover/sheet. Clearing emits an empty string. */
 function MonthPanel({
   value,
   min,

@@ -4,9 +4,7 @@ import { OverlayProvider } from 'overlay-kit'
 import { Toaster } from '@comwit/ui-templates/toast'
 
 /**
- * 전역 프로바이더 — base-template 의 RootLayoutClient 에서 StateProvider 만 제거한 형태.
- *  - OverlayProvider: popup.confirm / alert / sheet (overlay-kit)
- *  - Toaster: 유리 토스트(엔진 sonner)
+ * Global providers mirror the base template's RootLayoutClient without StateProvider: OverlayProvider for popup.confirm/alert/sheet, and Toaster for glass notifications powered by sonner.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

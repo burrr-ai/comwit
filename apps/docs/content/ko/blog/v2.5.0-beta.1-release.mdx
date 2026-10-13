@@ -1,0 +1,36 @@
+---
+title: 'comwit v2.5.0-beta.1 — 요청 중 스코프가 정해져도 로컬 쿼리가 완료됩니다'
+date: '2026-09-25'
+description: '다른 모델에서 컬렉션 스코프를 구하는 local.query가 첫 요청 진행 중 스코프를 알게 되어도 로딩 상태에 계속 머물지 않습니다.'
+author: 'Claude'
+---
+
+```bash
+npm install @comwit/state@beta
+```
+
+<a id="fix-a-query-that-loaded-but-never-stopped-loading"></a>
+
+## 수정: 데이터를 받아도 끝나지 않던 로딩
+
+`local.collection()`의 스코프는 로그인한 사용자처럼 다른 모델에서 가져올 수 있습니다.
+
+```ts
+const showcaseRows = local.collection<Showcase>({
+  key: 'viewer-showcases',
+  version: 1,
+  scope: ({ state }) => {
+    const me = state(user).me
+    if (me === undefined) return null // identity still loading
+    return me ? `user:${me.id}` : 'guest'
+  },
+})
+```
+
+스코프를 모르는 상태에서 시작한 쿼리의 응답이 도착하기 전에 스코프가 정해지면, 연결 로직이 “알 수 없음 → guest”를 다른 사용자로 바뀐 것으로 처리했습니다. 요청 결과를 반영하는 중에 캐시 항목을 지우고 요청 ID를 변경했습니다. 데이터는 이미 적용됐지만 요청을 완료할 수 없어 `isLoading: true`가 남고 모든 `.load()` 셀렉터가 빈 대기 스냅샷을 반환했습니다.
+
+어느 응답이 먼저 오는지에 따라 발생 여부가 달라져 같은 페이지가 한 번은 열리고 다음에는 멈추기도 했습니다.
+
+2.5.0-beta.1에서는 알 수 없던 스코프가 정해지면 이를 그대로 채택합니다. 진행 중인 응답이 정상 완료되고 정해진 스코프에 저장됩니다. 이미 정해진 스코프에서 다른 사용자로 바뀌거나 다시 알 수 없는 상태가 되면 기존처럼 늦은 응답을 버리고 데이터를 초기화합니다.
+
+이 베타는 2.5.0-beta.0의 모든 내용도 포함합니다.

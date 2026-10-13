@@ -1,18 +1,26 @@
+import { localizeMetadata } from '@/i18n/metadata'
+import { getLocale } from 'next-intl/server'
+
+import { Copy } from '@/i18n/copy'
 import Link from 'next/link'
 import { getAllBlogPosts } from '@/lib/blog'
 import { RelativeTime } from './relative-time'
 
-export const metadata = {
+const metadata = {
   title: 'Blog — comwit',
 }
 
-export default function BlogListPage() {
-  const posts = getAllBlogPosts()
+export default async function BlogListPage() {
+  const posts = getAllBlogPosts(await getLocale())
 
   return (
     <div>
-      <h1 className="blog-title">Blog</h1>
-      <p className="blog-description">Updates, guides, and announcements from comwit.</p>
+      <h1 className="blog-title">
+        <Copy id="text014" />
+      </h1>
+      <p className="blog-description">
+        <Copy id="text015" />
+      </p>
 
       <div className="blog-list">
         {posts.map((post) => (
@@ -23,8 +31,16 @@ export default function BlogListPage() {
           </Link>
         ))}
 
-        {posts.length === 0 && <p className="blog-description">No posts yet.</p>}
+        {posts.length === 0 && (
+          <p className="blog-description">
+            <Copy id="text016" />
+          </p>
+        )}
       </div>
     </div>
   )
+}
+
+export async function generateMetadata() {
+  return localizeMetadata(metadata)
 }

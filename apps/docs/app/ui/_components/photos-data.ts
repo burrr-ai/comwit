@@ -1,5 +1,5 @@
 // Photo seed for the Google Photos-style demos, mirrored from ssgoi's showcase (unsplash images).
-// Generated from ~/work/오픈소스/ssgoi/apps/docs/src/demo/google-photos/api/photo/data.ts — keep in sync by hand.
+// Copied from the SSGOI Google Photos demo's api/photo/data.ts; keep synchronized manually.
 
 export type Photo = {
   id: string

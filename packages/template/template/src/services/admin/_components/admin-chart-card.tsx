@@ -6,15 +6,15 @@ type AdminChartCardProps = {
   title: string
   description?: React.ReactNode
   action?: React.ReactNode
-  /** 범례 — 라벨 + 색(점) */
+  /** Legend: label and color dot. */
   legend?: { label: string; color: string }[]
   className?: string
   children: React.ReactNode
 }
 
 /**
- * 어드민 차트 카드 — elevated 표면 + (제목/설명 | action) 헤더 + 범례 + 차트 본문.
- * 대시보드 추이/분포 차트를 일관된 카드에 담는다.
+ * Admin chart card: elevated surface, title/description and action header, legend, and chart.
+ * Keep dashboard trend and distribution charts in a consistent card.
  */
 export function AdminChartCard({
   title,

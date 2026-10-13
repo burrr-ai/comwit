@@ -1,15 +1,15 @@
 /**
- * 스프링 적분기 — 진행도(0~1)를 스프링으로 움직이고, 그 궤적을 일정 간격 프레임으로 굽는다.
- * 굽힌 프레임은 Web Animations API 키프레임이 되고(합성기가 재생), 도중에 방향이 바뀌면 지금 프레임의
- * 위치·속도를 읽어 반대 목표로 다시 굽는다 — 속도가 이어지므로 되돌아가는 움직임이 튀지 않는다.
+ * Spring integrator: moves progress (0–1) with a spring and samples its trajectory at fixed frame intervals.
+ * The samples become Web Animations API keyframes played by the compositor. If direction changes mid-animation,
+ * read the current frame's position and velocity and resample toward the opposite target. Preserving velocity avoids a jump.
  *
- * 적분은 semi-implicit Euler(Allen Chou) — ssgoi 의 SpringIntegrator 와 같은 식이다.
+ * Integration uses semi-implicit Euler (Allen Chou), the same formula as ssgoi's SpringIntegrator.
  */
 
 /**
- * 스프링 설정. 둘 중 하나로 준다.
- *  - `{ duration, bounce }` — 체감 시간(초)과 튕김(-1~1, 0 = 넘치지 않음). Apple(WWDC23) 매개화.
- *  - `{ stiffness, damping, mass }` — 물리 상수 그대로.
+ * Spring settings accept either form:
+ * - { duration, bounce }: perceived duration in seconds and bounce (-1 to 1; 0 means no overshoot), using Apple's WWDC23 parameterization.
+ * - { stiffness, damping, mass }: physical constants directly.
  */
 type SpringConfig =
   { duration: number; bounce?: number } | { stiffness: number; damping: number; mass?: number }
@@ -18,20 +18,20 @@ type SpringFrame = {
   /** ms */
   time: number
   position: number
-  /** 초당 진행도 */
+  /** Progress per second. */
   velocity: number
 }
 
 const FRAME_MS = 1000 / 60
 const MAX_FRAMES = 600
 /**
- * 진행도가 이만큼 가까워지고 속도가 이만큼 느려지면 멎은 것으로 본다. 0.2% 는 240px 시트에서 0.5px —
- * 더 조이면 눈에 안 보이는 꼬리 동안 닫히는 파트가 남아 클릭을 막는다.
+ * Consider the spring settled when progress and velocity fall within these thresholds. At 240px, 0.2% is 0.5px.
+ * Tighter thresholds keep closing parts mounted and blocking clicks throughout an invisible animation tail.
  */
 const REST_DELTA = 0.002
 const REST_SPEED = 0.02
 
-/** 각진동수(ω)와 감쇠비(ζ). mass 로 나눈 뒤의 값이라 적분식이 단순해진다. */
+/** Angular frequency (ω) and damping ratio (ζ), normalized by mass to simplify integration. */
 function springConstants(config: SpringConfig): { omega: number; zeta: number } {
   if ('stiffness' in config) {
     const mass = config.mass ?? 1
@@ -50,7 +50,7 @@ function springConstants(config: SpringConfig): { omega: number; zeta: number } 
   return { omega, zeta: damping / (2 * omega) }
 }
 
-/** from 에서 초기 속도 velocity 로 출발해 to 에 멎을 때까지의 프레임. 늘 두 프레임 이상이다. */
+/** Frames from the starting position and initial velocity to rest at the target. Always returns at least two frames. */
 function simulateSpring(
   config: SpringConfig,
   from: number,
@@ -75,7 +75,7 @@ function simulateSpring(
   return frames
 }
 
-/** 재생 시각(ms)의 위치·속도 — 프레임 사이는 선형 보간. */
+/** Position and velocity at playback time in milliseconds, with linear interpolation between frames. */
 function sampleSpring(
   frames: SpringFrame[],
   elapsed: number

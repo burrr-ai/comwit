@@ -20,8 +20,8 @@ export const config = {
     return process.env.NODE_ENV ?? "production";
   },
 
-  // 배포 주소 — og:image·sitemap 같은 절대 URL의 기준. 배포 환경(필요하면 로컬 .env)의
-  // SITE_URL 로 정한다. 비어 있으면 seo-optimize 가 상대 경로로 둔다.
+  // Deployment URL: base for absolute URLs such as og:image and sitemap. Read SITE_URL
+  // from deployment environment or local .env. When empty, SEO utilities retain relative paths.
   get SITE_URL() {
     return process.env.SITE_URL;
   },

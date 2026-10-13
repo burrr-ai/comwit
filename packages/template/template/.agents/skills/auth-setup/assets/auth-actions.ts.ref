@@ -1,14 +1,14 @@
 // ============================================================
-// 레퍼런스: services/{service}/state/user/actions/auth.ts
-// 기존 mock을 실제 인증으로 교체할 때 참고한다.
+// Reference: services/{service}/state/user/actions/auth.ts
+// Use this when replacing mock authentication with real authentication.
 // ============================================================
-// 치환 대상:
-//   {service} → app, admin 등
-//   {homePath} → 로그인 성공 후 이동할 expression (app: "/", admin: adminRoutes.dashboard)
-//   {loginPath} → 로그아웃 후 이동할 expression (app: "/login", admin: adminRoutes.login)
+// Placeholders:
+//   {service} → app, admin, etc.
+//   {homePath} → destination expression after sign-in (app: "/", admin: adminRoutes.dashboard)
+//   {loginPath} → destination expression after sign-out (app: "/login", admin: adminRoutes.login)
 //   auth client import: '@/lib/auth-client/{service}'
-//   useUser hook 이름은 서비스에 따라 다름 (useUser, useAdminUser 등)
-//   admin이면 '@/lib/admin-routes'의 adminRoutes도 import
+//   The useUser hook name depends on the service (useUser, useAdminUser, etc.).
+//   For admin, also import adminRoutes from '@/lib/admin-routes'.
 // ============================================================
 
 import { action } from "@comwit/state"
@@ -44,7 +44,7 @@ export const userAuthActions = action<UserAuthActions>(({ state }) => {
           throw new Error(error.message)
         }
 
-        // 세션 쿠키가 설정되었으므로 service home으로 이동해 서버에서 user를 다시 가져옴
+        // The session cookie is set; navigate to the service home to reload the user on the server.
         window.location.href = {homePath}
       } finally {
         this.model.isLoading = false

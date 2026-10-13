@@ -1,9 +1,9 @@
 import { siteConfig } from "./site-config";
 
 /**
- * JSON-LD 구조화 데이터 삽입 컴포넌트.
+ * Insert JSON-LD structured data.
  *
- * layout/page에서:
+ * In a layout/page:
  *   <JsonLd data={websiteJsonLd()} />
  *   <JsonLd data={organizationJsonLd({ url: "https://example.com" })} />
  */
@@ -17,7 +17,7 @@ export function JsonLd({ data }: { data: Record<string, unknown> }) {
   );
 }
 
-/** 사이트 전체를 설명하는 WebSite 스키마 (루트 레이아웃 권장) */
+/** WebSite schema describing the site (recommended in the root layout). */
 export function websiteJsonLd(overrides: Record<string, unknown> = {}) {
   return {
     "@context": "https://schema.org",
@@ -28,7 +28,7 @@ export function websiteJsonLd(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** 운영 주체(회사/팀) Organization 스키마 */
+/** Organization schema for the operating company or team. */
 export function organizationJsonLd(overrides: Record<string, unknown> = {}) {
   return {
     "@context": "https://schema.org",
@@ -38,7 +38,7 @@ export function organizationJsonLd(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** 블로그/뉴스 글용 Article 스키마 */
+/** Article schema for blog posts and news. */
 export function articleJsonLd(article: {
   title: string;
   description?: string;

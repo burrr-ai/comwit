@@ -1,23 +1,23 @@
 'use client'
 
 import { ForesightLink as Link } from '@/lib/components/foresight-link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeftIcon } from '@comwit/ui/icons'
 
 type AdminPageHeaderProps = {
   title: string
   description?: React.ReactNode
-  /** 설정 시 "목록으로" 텍스트 링크가 타이틀 위에 표시됨 */
+  /** When set, show a back-to-list text link above the title. */
   backHref?: string
   backLabel?: string
-  /** 타이틀 우측에 표시할 보조 요소 (배지 등) */
+  /** Supporting content beside the title, such as a badge. */
   badge?: React.ReactNode
-  /** 우측 액션 영역 */
+  /** Action area on the right. */
   action?: React.ReactNode
 }
 
 /**
- * 어드민 페이지 상단 헤더 — Toss 톤.
- * backHref가 있으면 타이틀 위에 작은 "← 목록으로" 링크를 둔다.
+ * Toss-inspired admin page header.
+ * When backHref is set, show a small back-to-list link above the title.
  */
 export function AdminPageHeader({
   title,
@@ -35,7 +35,7 @@ export function AdminPageHeader({
             href={backHref}
             className="mb-2 inline-flex items-center gap-1 text-label font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeftIcon className="h-3.5 w-3.5" />
             {backLabel}
           </Link>
         ) : null}

@@ -2,14 +2,14 @@
 
 import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { X } from 'lucide-react'
+import { XIcon } from '@comwit/ui/icons'
 
 import { useRipple } from '@comwit/ui'
 import { disabledStyle, focusRing, pressable, rippleItemClassName } from '@/lib/interaction'
 import { cn } from '@/lib/utils/cn'
 import { uiText } from '@/lib/ui-text'
 
-// 칩 = 필터·태그·선택. tone×variant 색은 compoundVariants 에서, 인터랙션은 아래 훅에서.
+// Chip: filter, tag, or selection. compoundVariants owns tone × variant colors; hooks below own interaction.
 const chipVariants = cva(
   cn(
     'inline-flex shrink-0 select-none items-center justify-center gap-1 whitespace-nowrap rounded-pill font-semibold',
@@ -37,7 +37,7 @@ const chipVariants = cva(
       },
     },
     compoundVariants: [
-      // solid — 진한 면 + 대비 글자 (neutral 은 먹색)
+      // solid: saturated surface and contrasting text (neutral uses ink).
       { variant: 'solid', tone: 'neutral', class: 'bg-foreground text-background' },
       { variant: 'solid', tone: 'brand', class: 'bg-primary text-primary-foreground' },
       { variant: 'solid', tone: 'success', class: 'bg-success text-success-foreground' },
@@ -48,7 +48,7 @@ const chipVariants = cva(
         class: 'bg-destructive text-destructive-foreground',
       },
       { variant: 'solid', tone: 'info', class: 'bg-info text-info-foreground' },
-      // soft — 옅은 surface 면 + 계열 글자
+      // soft: subtle surface with text from the same color family.
       { variant: 'soft', tone: 'neutral', class: 'bg-secondary text-secondary-foreground' },
       { variant: 'soft', tone: 'brand', class: 'bg-primary-surface text-primary' },
       {
@@ -67,7 +67,7 @@ const chipVariants = cva(
         class: 'bg-destructive-surface text-destructive-surface-foreground',
       },
       { variant: 'soft', tone: 'info', class: 'bg-info-surface text-info-surface-foreground' },
-      // outline — 계열 보더 + 계열 글자
+      // outline: matching border and text from the same color family.
       { variant: 'outline', tone: 'neutral', class: 'border-border text-foreground' },
       { variant: 'outline', tone: 'brand', class: 'border-primary/40 text-primary' },
       {
@@ -99,13 +99,13 @@ const chipVariants = cva(
   }
 )
 
-// selected — data-selected 로 tone/variant 색을 브랜드로 덮는다.
+// selected: data-selected overrides tone/variant colors with the brand color.
 const selectedStyle = cn(
   'data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground',
   'data-[selected=true]:border-transparent'
 )
 
-// 클릭 가능한 칩 — 리플 호스트 + 눌림 + 포커스 링.
+// Clickable chip: ripple host, pressed state, and focus ring.
 const clickableStyle = cn(
   'relative cursor-pointer overflow-hidden',
   focusRing,
@@ -114,11 +114,11 @@ const clickableStyle = cn(
 )
 
 interface ChipProps extends React.HTMLAttributes<HTMLElement>, VariantProps<typeof chipVariants> {
-  // 선택 상태 — aria-pressed + data-selected 로 강조된다.
+  // Selection state is highlighted through aria-pressed and data-selected.
   selected?: boolean
-  // 삭제 콜백 — 있으면 우측에 X 삭제 버튼이 붙는다.
+  // Delete callback. When present, adds an XIcon delete button on the right.
   onDelete?: () => void
-  // 삭제 버튼의 접근성 이름.
+  // Accessible name for the delete button.
   deleteLabel?: string
   disabled?: boolean
 }
@@ -144,7 +144,7 @@ function Chip({
     chipVariants({ variant, tone, size }),
     clickable && clickableStyle,
     selectedStyle,
-    // 삭제 가능한 칩은 바깥이 <div> 라 disabled: 변형이 안 먹는다 — aria-disabled 로 같은 표현을 준다.
+    // A deletable chip has an outer div, so disabled: variants do not apply. Use aria-disabled for the same appearance.
     'aria-disabled:pointer-events-none aria-disabled:opacity-disabled',
     className
   )
@@ -171,7 +171,7 @@ function Chip({
   )
 
   if (onDelete) {
-    // 클릭도 되는 삭제 칩 — 바깥 <div> 가 버튼 역할을 하도록 role·포커스·Enter/Space 를 준다.
+    // Clickable, deletable chip: give the outer div a button role, focusability, and Enter/Space support.
     const interactive = clickable && !disabled
     return (
       <div
@@ -206,7 +206,7 @@ function Chip({
           }}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <X className="size-3.5" />
+          <XIcon className="size-3.5" />
         </button>
       </div>
     )

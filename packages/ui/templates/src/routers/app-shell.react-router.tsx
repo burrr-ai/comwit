@@ -1,21 +1,21 @@
 'use client'
 
 /**
- * AppShell · TabShell — React Router. `comwit-ui add app-shell` 이 react-router 를 감지하면 설치한다.
+ * AppShell / TabShell — React Router integration, installed when comwit-ui add app-shell detects react-router.
  *
- * 모바일 앱 껍데기 한 벌: 폰 틀 · 유일한 스크롤러 <main> · 당겨서 새로고침 · 앱바(reveal)와 탭바(compact)가 공유하는
- * 스크롤 의도 · 페이지 전환 · 뒤로가기 깊이. 동작은 전부 @comwit/ui(AppShell · NavDepth · ScrollChrome)에 있고 여기는
- * 조립과 모양만 갖는다 — 폭(max-w-md)·배경·스피너는 이 파일에서 고친다. 높이(dvh · 설치형 보정)는 globals.css 의
- * [data-slot=app-shell] 규칙이다.
+ * Complete mobile shell: phone frame, one main scroller, pull-to-refresh, shared scroll intent for app-bar
+ * reveal and compact tab-bar behavior, page transitions, and back-navigation depth. @comwit/ui AppShell,
+ * NavDepth, and ScrollChrome own behavior; this layer handles composition and appearance. Edit width
+ * (max-w-md), background, and spinner here. globals.css [data-slot=app-shell] owns dvh height and installed-app adjustments.
  *
- *   // 앱 루트 — 라우팅되는 영역(<Outlet />)을 한 번 감싼다
+ *   // App root: wrap the routed area (Outlet) once.
  *   <AppShell tabs={APP_TABS}><Outlet /></AppShell>
- *   // 탭 화면들의 레이아웃 라우트 — 본문만 바뀌고 탭바는 그대로 선다
+ *   // Layout route for tab screens: only the body changes while the tab bar persists.
  *   <TabShell><Outlet /></TabShell>
  *
- * 경계 정책 — 탭 경로(tabs 의 href)끼리는 바깥 경계의 key 를 공유해 탭바가 살아남고 본문만 가로 축으로 미끄러진다.
- * 그 밖(상세)은 경로마다 교체돼 drill 로 들어오며 탭바가 페이지와 함께 밀려난다. 전환 규칙은 기본 appTransitions —
- * 바꾸려면 transitions 를 준다.
+ * Tab href paths share the outer boundary key, preserving the tab bar while the body slides horizontally.
+ * Other paths (details) replace that boundary, enter with drill, and move the tab bar with the page.
+ * Defaults to appTransitions; supply transitions to customize.
  */
 
 import * as React from 'react'
@@ -33,13 +33,13 @@ import { RouteBoundary } from './route-boundary.react-router'
 import { TabBar, type AppTab } from './tab-bar.react-router'
 
 type AppShellProps = {
-  /** 탭 목록 — 순서가 곧 탭바 순서이자 전환 방향. */
+  /** Tab list: order determines both the tab-bar order and transition direction. */
   tabs: readonly AppTab[]
-  /** 전환 규칙. 기본은 appTransitions(탭 경로): 탭끼리 가로 축, 그 밖은 drill. 규칙 문법: https://ssgoi.dev/llms.txt */
+  /** Transition rules. Defaults to appTransitions(tab paths): horizontal tab transitions, drill elsewhere. Syntax: https://ssgoi.dev/llms.txt */
   transitions?: PageTransitionConfig
-  /** 스크롤러 위에 붙는 것(설치 배너 등). 있으면 상단 safe-area 는 이쪽이 갖는다. */
+  /** Content above the scroller, such as an install banner. When present, it owns the top safe area. */
   top?: React.ReactNode
-  /** 당겨서 새로고침. 없으면 제스처가 꺼진다. */
+  /** Pull-to-refresh callback. Omit to disable the gesture. */
   onRefresh?: () => Promise<unknown> | void
   className?: string
   children: React.ReactNode
@@ -83,7 +83,7 @@ function AppShell({ tabs, transitions, top, onRefresh, className, children }: Ap
               {top}
             </div>
           ) : null}
-          {/* resetKey: 경로가 바뀌면 숨은 앱바·줄어든 탭바를 편다. */}
+          {/* resetKey: expand hidden app bars and compact tab bars when the path changes. */}
           <AppShellPrimitive.Root onRefresh={onRefresh} resetKey={pathname}>
             <PullIndicator />
             <AppShellPrimitive.Scroller>
@@ -105,7 +105,7 @@ type TabShellProps = {
   children: React.ReactNode
 }
 
-/** 탭 화면의 셸 — 본문 경계만 교체되고 탭바는 그대로 선다. 탭들의 레이아웃 라우트에 둔다. */
+/** Tab-screen shell: only the body boundary changes while the tab bar persists. Place in the tabs' layout route. */
 function TabShell({ className, children }: TabShellProps) {
   const { tabs } = React.useContext(AppShellContext)
   return (
@@ -118,7 +118,7 @@ function TabShell({ className, children }: TabShellProps) {
   )
 }
 
-/** 바깥 경계의 id(경로)와 key(DOM 수명) — 탭 경로끼리 key 를 공유해 탭바가 살아남는다. */
+/** Outer boundary ID (path) and key (DOM lifetime). Tab paths share the key to preserve the tab bar. */
 function resolveAppBoundary(pathname: string, tabPaths: readonly string[]) {
   return { id: pathname, key: tabPaths.includes(pathname) ? 'app-tabs' : pathname }
 }

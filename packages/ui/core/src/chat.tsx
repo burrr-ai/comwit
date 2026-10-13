@@ -1,37 +1,7 @@
 'use client'
 
 /**
- * comwit-ui — chat 프리미티브 (헤드리스 · 스타일 0 · 앱 비의존).
- *
- * 대화 화면의 **동작**을 전부 소유한다. 시각은 소비 레이어(@comwit/ui-templates chat.tsx)가 className 과
- * data-* 로 입힌다.
- *
- *  - List         react-virtuoso 가상화 + `mode` 별 스크롤 규칙 + 안 읽음 카운트 + 처음 열 때 마지막 메시지.
- *                   messenger  내 메시지는 언제나 바닥으로, 상대 메시지는 바닥에 있을 때만 따라간다.
- *                   assistant  내 메시지를 뷰포트 상단에 붙이고(아래는 --chat-tail-space 여백) 답변이 그 밑에 흐른다.
- *  - ScrollToBottom 바닥이 아닐 때만 렌더되는 버튼. data-unread 로 안 읽은 개수를 알린다.
- *  - Message/Bubble 정렬·톤을 data-align / data-tone 으로 방출한다(end → primary · start → muted · assistant 는 plain).
- *  - Composer     값(제어/비제어)·전송·Enter/Shift+Enter·IME 조합 가드·자동 높이·pending ↔ Stop 전환.
- *
- *   <Chat.Root mode="messenger">
- *     <Chat.Title>Ava</Chat.Title>
- *     <Chat.List items={messages} isOwn={(m) => m.mine}>
- *       {(m) => (
- *         <Chat.Message align={m.mine ? 'end' : 'start'}>
- *           <Chat.MessageContent><Chat.Bubble>{m.text}</Chat.Bubble></Chat.MessageContent>
- *         </Chat.Message>
- *       )}
- *     </Chat.List>
- *     <Chat.ScrollToBottom>{({ unread }) => (unread ? `${unread} new` : '↓')}</Chat.ScrollToBottom>
- *     <Chat.Composer onSend={send} pending={streaming} onStop={stop}>
- *       <Chat.ComposerInput />
- *       <Chat.ComposerStop>■</Chat.ComposerStop>
- *       <Chat.ComposerSubmit>↑</Chat.ComposerSubmit>
- *     </Chat.Composer>
- *   </Chat.Root>
- *
- * data-* (소비 CSS 훅): Root data-mode · ScrollToBottom data-unread/data-state · Message·MessageContent·Bubble
- * data-align/data-tone · Composer data-pending/data-disabled · ComposerSubmit data-disabled.
+ * Headless chat owns behavior while templates style className/data attributes. List uses react-virtuoso with unread counts and initial scrolling to the latest message. Messenger mode follows own messages and follows incoming messages only while at the bottom; assistant mode pins the user's message at the top with --chat-tail-space below it. ScrollToBottom appears away from the bottom and exposes data-unread. Message/MessageContent/Bubble expose alignment and tone (end: primary, start: muted, assistant: plain). Composer supports controlled/uncontrolled input, send, Enter/Shift+Enter, IME guards, auto-height, and pending/Stop behavior. Compose Root, Title, List with a message renderer, ScrollToBottom, and Composer with Input/Stop/Submit. Root exposes data-mode; scroll controls expose unread/state; messages expose align/tone; Composer exposes pending/disabled and Submit exposes disabled.
  */
 
 import * as React from 'react'
@@ -77,13 +47,13 @@ type ChatStateContextValue = ListState & {
   scrollToBottom: (behavior?: ScrollBehaviorOption) => void
 }
 
-// 두 컨텍스트로 나눈다 — List 는 안정된 Root 컨텍스트만 읽고 상태를 "쓴다". 바닥/안 읽음 상태가 바뀔 때
-// 리렌더되는 건 그걸 읽는 ScrollToBottom 뿐이다(목록 자체는 다시 그리지 않는다).
+// Separate contexts: List reads stable Root context and writes scroll state;
+// only ScrollToBottom subscribes to bottom/unread changes, avoiding list rerenders.
 const [ChatRootProvider, useChatRootContext] = createContext<ChatRootContextValue>(CHAT_NAME)
 const [ChatStateProvider, useChatStateContext] = createContext<ChatStateContextValue>(CHAT_NAME)
 
 interface ChatRootProps extends PrimitiveDivProps {
-  /** 스크롤 규칙과 말풍선 기본 톤. `List` 의 `mode` 로 개별 덮기 가능. */
+  /** Scroll rules and default bubble tone. List can override mode. */
   mode?: ChatMode
 }
 
@@ -134,9 +104,9 @@ const ChatRoot = React.forwardRef<HTMLDivElement, ChatRootProps>((props, forward
 })
 ChatRoot.displayName = CHAT_NAME
 
-/* -------------------------------------------------------------------------------------------------
- * ChatTitle · ChatDescription — Root 의 접근성 이름/설명
- * -----------------------------------------------------------------------------------------------*/
+/*
+ * ChatTitle and ChatDescription supply Root's accessible name and description.
+ */
 
 const TITLE_NAME = 'ChatTitle'
 type PrimitiveHeadingProps = React.ComponentPropsWithoutRef<typeof Primitive.h2>
@@ -170,9 +140,9 @@ const ChatDescription = React.forwardRef<HTMLParagraphElement, PrimitiveParagrap
 )
 ChatDescription.displayName = DESCRIPTION_NAME
 
-/* -------------------------------------------------------------------------------------------------
- * ChatList — 가상화 + 스크롤 규칙
- * -----------------------------------------------------------------------------------------------*/
+/*
+ * ChatList: virtualization and scroll rules.
+ */
 
 const LIST_NAME = 'ChatList'
 
@@ -189,27 +159,27 @@ type ListContext = {
 
 interface ChatListProps<T> extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
   items: readonly T[]
-  /** 메시지 하나를 그린다. */
+  /** Render one message. */
   children: (item: T, index: number) => React.ReactNode
-  /** 리스트 키. 기본은 `item.id`, 없으면 index. */
+  /** List key; defaults to item.id, then index. */
   itemKey?: (item: T, index: number) => React.Key
-  /** "내가 보낸 메시지" 판정 — 스크롤 규칙이 이걸 본다. 기본 `item.role === 'user'`. */
+  /** Identify own messages for scroll rules; defaults to item.role === 'user'. */
   isOwn?: (item: T) => boolean
-  /** `Root` 의 mode 를 덮는다. */
+  /** Override Root's mode. */
   mode?: ChatMode
-  /** 메시지가 하나도 없을 때 목록 대신 그릴 내용. */
+  /** Content displayed instead of the list when there are no messages. */
   empty?: React.ReactNode
-  /** 첫 메시지 위에 붙는 내용(여백 등). 목록과 함께 스크롤된다. */
+  /** Content before the first message, scrolling with the list. */
   header?: React.ReactNode
-  /** 마지막 메시지 아래에 붙는 내용(타이핑 표시 등). 가상화 밖이라 항상 그려진다. */
+  /** Content after the last message, such as typing status; outside virtualization and always rendered. */
   footer?: React.ReactNode
-  /** assistant 모드에서 상단에 붙는 메시지와 뷰포트 윗변 사이 간격(px). 기본 0. */
+  /** Gap in pixels above the pinned message in assistant mode. Default: 0. */
   pinOffset?: number
-  /** 바닥 판정 여유(px). 기본 24. */
+  /** Bottom-detection tolerance in pixels. Default: 24. */
   atBottomThreshold?: number
-  /** 뷰포트 위·아래로 미리 그려 두는 높이(px). 기본 320. */
+  /** Prerender distance above and below the viewport in pixels. Default: 320. */
   overscan?: number
-  /** 스크롤러 요소. */
+  /** Scroller element. */
   ref?: React.Ref<HTMLDivElement>
 }
 
@@ -224,7 +194,7 @@ function defaultKey(item: unknown, index: number): React.Key {
   return index
 }
 
-// Virtuoso 의 Header/Footer/Item 은 안정된 컴포넌트여야 한다(바뀌면 리마운트) — 내용은 context 로 흘린다.
+// Keep Virtuoso Header/Footer/Item component identities stable to avoid remounts; pass changing content through context.
 function ListHeader({ context }: { context?: ListContext }) {
   return <>{context?.header ?? null}</>
 }
@@ -232,7 +202,7 @@ function ListFooter({ context }: { context?: ListContext }) {
   return (
     <>
       <div ref={context?.footerRef}>{context?.footer}</div>
-      {/* assistant 모드가 내 메시지를 상단에 붙일 때 아래를 채우는 빈 공간. 변수는 스크롤러에 산다. */}
+      {/* Assistant-mode space below the pinned user message. Its variable lives on the scroller. */}
       <div aria-hidden="true" style={{ height: `var(${TAIL_SPACE_VAR}, 0px)` }} />
     </>
   )
@@ -283,16 +253,16 @@ function ChatList<T>({
   const modeRef = React.useRef(mode)
   modeRef.current = mode
 
-  // ── 바닥으로 내려가기 — DOM 이 안정된 뒤에 실제 scrollHeight 로 ──
-  // Virtuoso 의 내부 총높이는 같은 커밋에서 푸터(타이핑 표시)가 사라지고 항목이 붙으면 한 박자 늦게 맞는다.
-  // 그래서 목표는 Virtuoso 의 인덱스 계산이 아니라 스크롤러의 실제 높이로 잡고, 높이가 두 프레임 연속 같아질 때 내린다.
-  // 커밋 직후의 DOM 높이로 즉시 내리고(백그라운드 탭에서 rAF 가 1fps 로 늦어져도 바닥은 맞는다), 높이가 두 프레임
-  // 연속 같아지면(이미지 로드 등) 한 번 더 맞춘다. 내려가는 동안(`following`) 온 메시지는 안 읽음으로 세지 않는다.
+  // Scroll to the actual DOM scrollHeight after layout settles.
+  // Virtuoso's total height can lag when a footer disappears and an item is appended in the same commit.
+  // Use the scroller's real height instead of index calculations, then adjust after two equal-height frames.
+  // Scroll immediately after commit so throttled background-tab rAF does not delay bottom alignment;
+  // adjust again after two stable-height frames, including image loads. Do not count messages received while following as unread.
   const scrollFrame = React.useRef(0)
   const following = React.useRef(false)
   const followingTimer = React.useRef(0)
-  // assistant 모드에서 내 메시지가 상단으로 **올라가는 동안**(smooth) 참. 이 사이에 총높이가 바뀌어도(여백·타이핑 표시)
-  // 바닥으로 즉시 붙이지 않는다 — 즉시 붙이면 목적지가 같아 애니메이션이 통째로 사라진다.
+  // True while assistant mode smoothly moves the user's message to the top. Height changes during this movement
+  // must not force immediate bottom alignment, which would cancel the animation to the same destination.
   const pinning = React.useRef(false)
   const pinningTimer = React.useRef(0)
   const scrollToEnd = React.useCallback((behavior: ScrollBehaviorOption) => {
@@ -335,9 +305,9 @@ function ChatList<T>({
     []
   )
 
-  // ── assistant 모드: 상단에 붙인 내 메시지(pinned) 아래를 채우는 여백 ──
-  // pinned 인덱스부터 끝까지(+ footer)의 높이를 재서, 뷰포트에서 남는 만큼을 --chat-tail-space 로 준다.
-  // 답변이 길어지면 여백이 그만큼 줄어 총 높이가 그대로다 → 스크롤이 튀지 않는다. 리렌더 없이 CSS 변수만 움직인다.
+  // Assistant mode: fill the space below the pinned user message.
+  // Measure from the pinned index through the footer and fill unused viewport height with --chat-tail-space.
+  // As the answer grows, reduce tail space to keep total height and scroll stable. Update CSS without rerendering.
   const [pinned, setPinned] = React.useState<number | null>(null)
   const pinnedRef = React.useRef<number | null>(null)
   pinnedRef.current = pinned
@@ -358,9 +328,9 @@ function ChatList<T>({
       if (key === 'footer' || key >= index) tail += height
     const space = Math.max(0, element.clientHeight - pinOffsetRef.current - tail)
     element.style.setProperty(TAIL_SPACE_VAR, `${space}px`)
-    // 여백이 실제로 생긴 뒤에 올려야 맨 위까지 간다(그 전엔 스크롤 한계에 걸린다). 여백이 뷰포트를 정확히 채우므로
-    // "붙인 메시지가 상단" = "스크롤 바닥" — Virtuoso 의 scrollToIndex 대신 스크롤러를 직접 smooth 로 내린다
-    // (scrollToIndex 는 목록이 다시 재는 동안 이동을 미루고 다시 쏴서, 올라가는 모션이 늦거나 끊긴다).
+    // Wait until tail space exists before scrolling, otherwise the scroll limit prevents alignment.
+    // With space filling the viewport, pinning the message to the top equals reaching the bottom. Smooth-scroll the DOM directly
+    // because Virtuoso scrollToIndex can delay and repeat movement while remeasuring.
     if (pending.current?.target === 'pin') {
       const behavior = pending.current.behavior
       pending.current = null
@@ -382,8 +352,7 @@ function ChatList<T>({
   }, [applyTailSpace])
 
   /**
-   * 키별로 안정된 ref 콜백 — 매 렌더 새 함수를 주면 옵저버가 붙었다 떨어지길 반복한다.
-   * 가상화로 내려간(언마운트) 항목의 높이는 지우지 않고 마지막 값을 쓴다 — 지우면 위로 올라가 읽는 동안 여백이 부푼다.
+   * Stable ref callbacks per key prevent observer churn. Retain the last measured height of virtualized, unmounted items so tail space does not grow while reading earlier messages.
    */
   const tailRef = React.useCallback(
     (key: TailKey) => {
@@ -411,7 +380,7 @@ function ChatList<T>({
     return () => ro?.disconnect()
   }, [])
 
-  // 뷰포트 크기가 바뀌면(키보드·창 크기) 여백도 다시 잰다.
+  // Remeasure tail space when the viewport changes, including keyboard and window resizing.
   const setScroller = React.useCallback(
     (element: HTMLElement | Window | null) => {
       scroller.current = element instanceof HTMLElement ? element : null
@@ -430,14 +399,14 @@ function ChatList<T>({
   React.useEffect(() => {
     applyTailSpace()
   }, [pinned, pinOffset, applyTailSpace])
-  // 목록이 통째로 바뀌어 짧아지면(다른 대화) 붙임을 푼다. 대화를 바꿀 땐 `key` 로 리마운트하는 편이 낫다.
+  // Release the pin when a replacement conversation is shorter. Prefer remounting with key when switching conversations.
   const count = items.length
   if (pinned !== null && pinned >= count) setPinned(null)
 
-  // ── 새 메시지가 붙으면 스크롤 의도를 정한다 ──
-  // Virtuoso 의 followOutput 은 자기 atBottom 판정이 참일 때만 불려(내려가는 도중엔 아예 안 온다) 쓰지 않는다.
-  // 개수 변화는 레이아웃 이펙트가 항상 본다. 새 항목의 DOM 은 Virtuoso 가 다음 렌더에서 그리므로,
-  // 이동은 즉시 한 번 + 높이가 안정된 뒤 한 번 더(scrollToEnd) · 잰 뒤 한 번 더(totalListHeightChanged) 맞춘다.
+  // Choose scroll intent when new messages arrive.
+  // Do not use Virtuoso followOutput: it only runs when its own atBottom is true and skips an in-progress scroll.
+  // The layout effect always observes count changes, but Virtuoso renders new item DOM on its next pass;
+  // adjust immediately, again after height stabilizes in scrollToEnd, and after totalListHeightChanged measurement.
   const prevCount = React.useRef(items.length)
   useLayoutEffect(() => {
     const added = count - prevCount.current
@@ -446,14 +415,14 @@ function ChatList<T>({
     if (added <= 0) return
     const list = itemsRef.current
     if (wasEmpty) {
-      // 처음 채워지는 목록(히스토리 로드) — 마지막 메시지로 즉시.
+      // Initial history load: jump immediately to the latest message.
       scrollToEnd('auto')
       return
     }
     if (isOwnRef.current(list[count - 1])) {
       setListState((state) => (state.unread === 0 ? state : { ...state, unread: 0 }))
       if (mode === 'assistant') {
-        // 상단 고정 — 여백(applyTailSpace)이 생긴 뒤 그쪽이 smooth 로 올린다. 올라가는 동안은 바닥 추종을 멈춘다.
+        // Pin after applyTailSpace creates room, then smooth-scroll upward and suspend bottom following during movement.
         pinning.current = true
         window.clearTimeout(pinningTimer.current)
         pinningTimer.current = window.setTimeout(() => {
@@ -478,8 +447,8 @@ function ChatList<T>({
   const onTotalListHeightChanged = React.useCallback(() => {
     const element = scroller.current
     if (!element) return
-    // assistant 모드에서 방금 붙은 내 메시지는 상단 고정 대상이다. Virtuoso 의 이 콜백은 자식 이펙트라 우리 레이아웃
-    // 이펙트(pin 예약)보다 먼저 올 수 있으므로, 예약 여부와 무관하게 "아직 안 붙인 내 메시지"면 바닥 추종을 건너뛴다.
+    // A new own message in assistant mode must be pinned. This child effect may run before our layout effect schedules it,
+    // so skip bottom following whenever an own message is not yet pinned, regardless of the pending flag.
     const list = itemsRef.current
     const last = list.length - 1
     const ownLanding =
@@ -488,14 +457,14 @@ function ChatList<T>({
       isOwnRef.current(list[last]) &&
       (pinnedRef.current !== last || pinning.current)
     if (pending.current?.target === 'pin') {
-      // 여백까지 반영된 높이 변화가 최종 위치를 정한다(여백 전엔 스크롤 한계에 걸린다).
+      // The final height including tail space determines the target; without it, the scroll limit prevents alignment.
       if (element.style.getPropertyValue(TAIL_SPACE_VAR)) {
         const behavior = pending.current.behavior
         pending.current = null
         scrollToEnd(behavior)
       }
     } else if (!ownLanding && (atBottomRef.current || following.current)) {
-      // 바닥에서 마지막 메시지가 자라면(스트리밍 답변·이미지 로드) 따라간다.
+      // Follow a growing last message at the bottom, including streamed answers and image loads.
       element.scrollTop = element.scrollHeight - element.clientHeight
     }
   }, [scrollToEnd])
@@ -506,7 +475,7 @@ function ChatList<T>({
       if (atBottom) {
         following.current = false
         window.clearTimeout(followingTimer.current)
-        // 붙인 메시지 아래 여백이 뷰포트를 채우므로, 다 올라가면 곧 바닥이다.
+        // Tail space fills the viewport, so completing the pin also reaches the bottom.
         pinning.current = false
         window.clearTimeout(pinningTimer.current)
       }
@@ -565,15 +534,15 @@ function ChatList<T>({
 }
 ChatList.displayName = LIST_NAME
 
-/* -------------------------------------------------------------------------------------------------
- * ChatScrollToBottom — 바닥이 아닐 때만 렌더되는 버튼
- * -----------------------------------------------------------------------------------------------*/
+/*
+ * ChatScrollToBottom renders only away from the bottom.
+ */
 
 const SCROLL_TO_BOTTOM_NAME = 'ChatScrollToBottom'
 
 type ChatScrollState = { unread: number; atBottom: boolean }
 interface ChatScrollToBottomProps extends Omit<PrimitiveButtonProps, 'children'> {
-  /** 바닥에 있어도 렌더한다(직접 숨김 처리할 때). */
+  /** Render even at the bottom for consumer-controlled visibility. */
   forceMount?: true
   behavior?: ScrollBehaviorOption
   children?: React.ReactNode | ((state: ChatScrollState) => React.ReactNode)
@@ -583,7 +552,7 @@ const ChatScrollToBottom = React.forwardRef<HTMLButtonElement, ChatScrollToBotto
   (props, forwardedRef) => {
     const { forceMount, behavior = 'smooth', children, ...buttonProps } = props
     const state = useChatStateContext(SCROLL_TO_BOTTOM_NAME)
-    // 첫 바닥 도달 전(마운트 직후 초기 스크롤 중)에는 그리지 않는다 — 이때 버튼이 깜빡이지 않게.
+    // Hide during initial scrolling until the first bottom arrival to prevent a button flash.
     if (!forceMount && (!state.settled || state.atBottom)) return null
     const content =
       typeof children === 'function'
@@ -605,9 +574,9 @@ const ChatScrollToBottom = React.forwardRef<HTMLButtonElement, ChatScrollToBotto
 )
 ChatScrollToBottom.displayName = SCROLL_TO_BOTTOM_NAME
 
-/* -------------------------------------------------------------------------------------------------
- * ChatMessage · ChatMessageContent · ChatBubble — 정렬과 톤을 data-* 로
- * -----------------------------------------------------------------------------------------------*/
+/*
+ * ChatMessage, ChatMessageContent, and ChatBubble expose alignment and tone through data attributes.
+ */
 
 const MESSAGE_NAME = 'ChatMessage'
 
@@ -618,9 +587,9 @@ const [ChatMessageProvider, useChatMessageContext] = createContext<ChatMessageCo
 )
 
 interface ChatMessageProps extends PrimitiveDivProps {
-  /** end = 내 메시지 · start = 상대/AI. */
+  /** end is the user's message; start is another participant or the assistant. */
   align?: ChatAlign
-  /** 이 메시지 안 말풍선의 기본 톤. 생략하면 정렬과 모드가 정한다. */
+  /** Default bubble tone for this message; otherwise derived from alignment and mode. */
   tone?: ChatTone
 }
 
@@ -640,7 +609,7 @@ ChatMessage.displayName = MESSAGE_NAME
 
 const MESSAGE_CONTENT_NAME = 'ChatMessageContent'
 
-/** 아바타 옆에 서는 세로 묶음(말풍선 · 메타). 정렬·톤을 그대로 물려받는다. */
+/** Vertical bubble/metadata stack beside the avatar, inheriting alignment and tone. */
 const ChatMessageContent = React.forwardRef<HTMLDivElement, PrimitiveDivProps>(
   (props, forwardedRef) => {
     const { align, tone } = useChatMessageContext(MESSAGE_CONTENT_NAME)
@@ -652,7 +621,7 @@ ChatMessageContent.displayName = MESSAGE_CONTENT_NAME
 const BUBBLE_NAME = 'ChatBubble'
 
 interface ChatBubbleProps extends PrimitiveDivProps {
-  /** 메시지의 기본 톤을 덮는다. */
+  /** Override the message's default tone. */
   tone?: ChatTone
 }
 
@@ -671,9 +640,9 @@ const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>((props, for
 })
 ChatBubble.displayName = BUBBLE_NAME
 
-/* -------------------------------------------------------------------------------------------------
- * ChatComposer — 값 · 전송 · 키보드 · pending
- * -----------------------------------------------------------------------------------------------*/
+/*
+ * ChatComposer: value, submission, keyboard handling, and pending state.
+ */
 
 const COMPOSER_NAME = 'ChatComposer'
 
@@ -694,17 +663,17 @@ const [ChatComposerProvider, useChatComposerContext] =
 
 type PrimitiveFormProps = React.ComponentPropsWithoutRef<typeof Primitive.form>
 interface ChatComposerProps extends Omit<PrimitiveFormProps, 'onSubmit' | 'defaultValue'> {
-  /** 제어형 값. 생략하면 내부 상태. */
+  /** Controlled value; omit for internal state. */
   value?: string
   defaultValue?: string
   onValueChange?: (value: string) => void
-  /** 보내기 — 트림한 텍스트를 받는다. 호출 직후 입력은 비워진다. */
+  /** Receive trimmed text on send; clear input immediately after calling. */
   onSend?: (text: string) => void | Promise<void>
-  /** 답변 생성 중. `onStop` 이 있으면 Submit 대신 Stop 이 렌더된다. Enter 는 그대로 보낸다(큐잉은 소비처 몫). */
+  /** Response generation is pending. With onStop, Stop replaces Submit. Enter still sends; consumers own queuing. */
   pending?: boolean
   onStop?: () => void
   disabled?: boolean
-  /** Enter 로 보내고 Shift+Enter 로 줄바꿈(기본). false 면 ⌘/Ctrl+Enter 로만 보낸다. */
+  /** Default: Enter sends and Shift+Enter inserts a newline. false requires Cmd/Ctrl+Enter to send. */
   submitOnEnter?: boolean
 }
 
@@ -777,11 +746,11 @@ ChatComposer.displayName = COMPOSER_NAME
 const COMPOSER_INPUT_NAME = 'ChatComposerInput'
 
 interface ChatComposerInputProps extends Omit<TextareaProps, 'value' | 'defaultValue'> {
-  /** 내용에 맞춰 높이를 자동으로 키운다(기본). 상한은 소비 CSS 의 max-height 가 잡는다. */
+  /** Auto-grow to content by default, bounded by consumer CSS max-height. */
   autoGrow?: boolean
 }
 
-/** 컴포저의 textarea. Enter 보내기는 한글·일본어 조합 중(isComposing / keyCode 229)엔 무시한다. */
+/** Composer textarea ignores send-on-Enter during Korean/Japanese IME composition, using isComposing or keyCode 229. */
 function ChatComposerInput({
   autoGrow = true,
   rows = 1,
@@ -795,7 +764,7 @@ function ChatComposerInput({
   const { value, setValue, send, submitOnEnter, inputRef } = context
   const composedRef = useComposedRefs(ref, inputRef)
 
-  // 값이 바뀔 때마다 scrollHeight 로 높이를 맞춘다. CSS max-height 가 상한을 잡고 넘치면 안에서 스크롤.
+  // Resize to scrollHeight after value changes. CSS max-height caps the height and enables internal scrolling.
   useLayoutEffect(() => {
     const element = inputRef.current
     if (!autoGrow || !element) return
@@ -814,7 +783,7 @@ function ChatComposerInput({
       onChange={composeEventHandlers(onChange, (event) => setValue(event.currentTarget.value))}
       onKeyDown={composeEventHandlers(onKeyDown, (event) => {
         if (event.key !== 'Enter') return
-        // 조합 중의 Enter 는 조합 확정이다(Safari 는 keyCode 229 로만 알린다).
+        // Enter commits IME composition; Safari reports this only through keyCode 229.
         if (event.nativeEvent.isComposing || event.keyCode === 229) return
         const modifier = event.metaKey || event.ctrlKey
         if (modifier || (submitOnEnter && !event.shiftKey && !event.altKey)) {
@@ -830,11 +799,11 @@ ChatComposerInput.displayName = COMPOSER_INPUT_NAME
 const COMPOSER_SUBMIT_NAME = 'ChatComposerSubmit'
 
 interface ChatComposerSubmitProps extends PrimitiveButtonProps {
-  /** pending 중 Stop 이 자리를 차지해도 렌더한다. */
+  /** Render even while Stop occupies the pending slot. */
   forceMount?: true
 }
 
-/** 보내기 버튼(submit). 보낼 수 없으면 disabled, `pending` + `onStop` 이면 Stop 에 자리를 내준다. */
+/** Submit is disabled when sending is unavailable and yields to Stop when pending with onStop. */
 const ChatComposerSubmit = React.forwardRef<HTMLButtonElement, ChatComposerSubmitProps>(
   (props, forwardedRef) => {
     const { forceMount, disabled, ...buttonProps } = props
@@ -860,7 +829,7 @@ interface ChatComposerStopProps extends PrimitiveButtonProps {
   forceMount?: true
 }
 
-/** 중단 버튼. `pending` 이고 `onStop` 이 있을 때만 렌더된다. */
+/** Stop renders only while pending with an onStop callback. */
 const ChatComposerStop = React.forwardRef<HTMLButtonElement, ChatComposerStopProps>(
   (props, forwardedRef) => {
     const { forceMount, ...buttonProps } = props
