@@ -1,16 +1,14 @@
-# @comwit/icons
+# Icons (`@comwit/ui/icons`)
 
-Original Comwit icons: 109 familiar shapes on a 24 × 24 grid, with optional spring motion for each one. MIT licensed. The collection follows the most-used Lucide names in the Comwit app, plus everyday interface glyphs (theme toggle, visibility, media, sharing); its SVG geometry and motion are authored here, not re-exported from Lucide.
-
-**Preview:** this package is prepared for its first release. The npm install command becomes available after publishing; this repository uses the workspace package today.
+Original Comwit icons: 109 familiar shapes on a 24 × 24 grid, with optional spring motion for each one. They ship inside `@comwit/ui` as subpath exports, so there is nothing extra to install and bundlers tree-shake the icons a project does not use. MIT licensed. The collection follows the most-used Lucide names in the Comwit app, plus everyday interface glyphs (theme toggle, visibility, media, sharing); its SVG geometry and motion are authored here, not re-exported from Lucide.
 
 ```sh
-pnpm add @comwit/icons
+npm i @comwit/ui
 ```
 
 ```tsx
-import { SearchIcon, CheckIcon } from '@comwit/icons'
-import { AnimatedBellIcon } from '@comwit/icons/animated'
+import { SearchIcon, CheckIcon } from '@comwit/ui/icons'
+import { AnimatedBellIcon } from '@comwit/ui/icons/animated'
 
 <SearchIcon size={20} />
 <CheckIcon title="Saved" color="var(--success)" />
@@ -37,7 +35,7 @@ Add `data-icon-trigger` to the enclosing button or link to make its entire area 
 'use client'
 
 import { useState } from 'react'
-import { AnimatedCopyIcon } from '@comwit/icons/animated'
+import { AnimatedCopyIcon } from '@comwit/ui/icons/animated'
 
 export function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(0)
@@ -68,33 +66,33 @@ Every gesture is driven by a spring. A part is pushed toward a pose (a few grid 
 
 A hover that arrives while the visible part of a gesture is still playing is ignored rather than snapping the drawing back; once only the settling tail remains, it plays again. Motion is finite (including the loader preview), ends at the resting drawing, and stops immediately when the user enables reduced motion. Event listeners and animations are cleaned up on unmount. Browsers without Web Animations keep the static drawing. An animated component forwards its ref to the SVG; static named components intentionally do not expose a ref prop.
 
-`/catalog` contains metadata and all drawings for galleries. Application code should use named imports from the root or `/animated` so bundlers can remove unused icons. Static imports also omit animation keyframes.
+`@comwit/ui/icons/catalog` contains metadata and all drawings for galleries. Application code should use named imports from `@comwit/ui/icons` or `@comwit/ui/icons/animated` so bundlers can remove unused icons. Static imports also omit animation keyframes.
 
 ## Design and contribution
 
 - 24 × 24 canvas; primarily 3–21 safe drawing bounds, with optical adjustments.
 - 1.65-unit stroke, rounded caps and joins, open interiors, restrained corner radii.
 - Use meaningful moving groups: a bell's body, a document's lines, a bin's lid. Give hinges and axles a `pivot`.
-- Compose motion from the gestures in `src/definitions/kit.ts` — `nudge` (wind up, travel, return), `push`, `pop`, `swing`, `turn`, `write`, `enter`, `fly` — and its spring presets instead of hand-written keyframes. Travel 2–3 grid units, turn 10–25°, scale 1.08–1.2.
+- Compose motion from the gestures in `src/icons/definitions/kit.ts` — `nudge` (wind up, travel, return), `push`, `pop`, `swing`, `turn`, `write`, `enter`, `fly` — and its spring presets instead of hand-written keyframes. Travel 2–3 grid units, turn 10–25°, scale 1.08–1.2.
 - Only write on (`write`) strokes that carry meaning, such as a check or a document's lines; never erase and redraw an icon's main outline.
 - `turn` may end on a pose that draws exactly like rest (a quarter turn of a plus, a gear's tooth pitch); everything else returns to rest. Keep the moving part inside the 24 × 24 frame, including the stroke.
 - Avoid whole-grid autoplay.
 - Keep English names compatible with the audited imports, adding `Icon` to static exports and `Animated…Icon` to animated ones. Similar Lucide names are not automatic aliases.
 
-Edit the category files in `src/definitions/`, then run:
+Edit the category files in `src/icons/definitions/`, then run from the repository root:
 
 ```sh
-pnpm --filter @comwit/icons build
-pnpm --filter @comwit/icons typecheck
-pnpm --filter @comwit/icons test
+pnpm --filter @comwit/ui build       # scripts/generate-icons.mjs, then the library build
+pnpm --filter @comwit/ui typecheck
+pnpm --filter @comwit/ui test        # icon tests + scripts/verify-icons.mjs
 ```
 
 The generator produces independently tree-shakeable definitions and named exports. Do not edit generated files by hand. View `/ui/icons` in Docs for both light/dark preview, size/color controls, search, and usage snippets.
 
-The 109 icons cover 836 of 931 named runtime imports (90%) and 100 of 175 distinct names in the audited app. The selection audit is in `usage-audit.json`: it counts named runtime imports across the app's `src`, not rendered instances. Refresh against a local application with:
+The 109 icons cover 836 of 931 named runtime imports (90%) and 100 of 175 distinct names in the audited app. The selection audit is in `scripts/icon-usage-audit.json`: it counts named runtime imports across the app's `src`, not rendered instances. Refresh against a local application with:
 
 ```sh
-node packages/icons/scripts/audit-usage.mjs /path/to/application/src > packages/icons/usage-audit.json
+node packages/ui/core/scripts/audit-icon-usage.mjs /path/to/application/src > packages/ui/core/scripts/icon-usage-audit.json
 ```
 
-This package does not migrate the Comwit application or replace the UI templates' existing Lucide imports. It provides the first independent collection for evaluation and gradual adoption.
+The icon set does not migrate the Comwit application or replace the UI templates' existing Lucide imports. It is the first original collection, for evaluation and gradual adoption.

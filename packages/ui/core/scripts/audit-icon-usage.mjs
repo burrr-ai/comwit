@@ -3,7 +3,7 @@ import { resolve, join } from 'node:path'
 import ts from 'typescript'
 
 const directory = process.argv[2]
-if (!directory) throw new Error('Usage: node scripts/audit-usage.mjs /path/to/app/src')
+if (!directory) throw new Error('Usage: node scripts/audit-icon-usage.mjs /path/to/app/src')
 const counts = new Map()
 let files = 0
 function visit(directory) {

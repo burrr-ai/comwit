@@ -10,9 +10,9 @@ import {
   SelectValue,
 } from '@comwit/ui-templates/select'
 import * as React from 'react'
-import { Icon, SearchIcon } from '@comwit/icons'
-import { AnimatedIcon } from '@comwit/icons/animated'
-import { iconCatalog } from '@comwit/icons/catalog'
+import { Icon, SearchIcon } from '@comwit/ui/icons'
+import { AnimatedIcon } from '@comwit/ui/icons/animated'
+import { iconCatalog } from '@comwit/ui/icons/catalog'
 import {
   Dialog,
   DialogContent,
@@ -111,7 +111,7 @@ export function IconGallery() {
     )
   })
   const componentName = selected ? `${mode === 'motion' ? 'Animated' : ''}${selected.name}Icon` : ''
-  const importCode = `import { ${componentName} } from '@comwit/icons${mode === 'motion' ? '/animated' : ''}'`
+  const importCode = `import { ${componentName} } from '@comwit/ui/icons${mode === 'motion' ? '/animated' : ''}'`
   const usageCode = `<${componentName}\n  size={${size}}${color !== 'currentColor' ? `\n  color="${color}"` : ''}${mode === 'motion' ? '\n  animateOn="hover"' : ''}\n/>`
 
   return (

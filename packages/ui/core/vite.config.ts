@@ -15,17 +15,32 @@ const external =
   /^react($|\/)|^react-dom($|\/)|^@floating-ui\/|^react-aria($|\/)|^react-stately($|\/)|^@react-aria\/|^@tiptap\/|^react-virtuoso($|\/)/
 
 export default defineConfig({
-  plugins: [react(), dts({ insertTypesEntry: true })],
+  // Icon definitions are authoring helpers evaluated by scripts/generate-icons.mjs; their types are not public.
+  plugins: [react(), dts({ insertTypesEntry: true, exclude: ['src/icons/definitions/**'] })],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'ComwitUI',
-      fileName: (format) => (format === 'es' ? 'index.js' : 'index.cjs'),
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        // The icon set is a separate subpath (`@comwit/ui/icons`) so a bundle that only uses the
+        // primitives never carries the drawings, and `/icons` (static) never carries the motion
+        // runtime of `/icons/animated`. Within an entry, bundlers tree-shake unused icons.
+        'icons/index': resolve(__dirname, 'src/icons/index.ts'),
+        'icons/animated': resolve(__dirname, 'src/icons/animated.ts'),
+        'icons/catalog': resolve(__dirname, 'src/icons/catalog.ts'),
+      },
       formats: ['es', 'cjs'],
+      fileName: (format, name) => `${name}.${format === 'es' ? 'js' : 'cjs'}`,
     },
     rollupOptions: {
       external: (id) => external.test(id),
-      output: { exports: 'named' },
+      output: {
+        exports: 'named',
+        // Rollup removes module directives. Restore the client boundary on the animated icon entry.
+        banner: (chunk) =>
+          /icons\/(?:animated|create-animated-icon)\.tsx?$/.test(chunk.facadeModuleId ?? '')
+            ? '"use client";'
+            : '',
+      },
     },
   },
 })

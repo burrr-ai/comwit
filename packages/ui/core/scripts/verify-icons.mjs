@@ -5,23 +5,28 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
 import { build } from 'esbuild'
-import * as icons from '../dist/index.js'
-import * as animated from '../dist/animated.js'
-import { iconCatalog } from '../dist/catalog.js'
+import * as icons from '../dist/icons/index.js'
+import * as animated from '../dist/icons/animated.js'
+import { iconCatalog } from '../dist/icons/catalog.js'
 
 for (const { name } of iconCatalog) {
   assert.equal(typeof icons[`${name}Icon`], 'function', `static export: ${name}`)
   assert.ok(animated[`Animated${name}Icon`], `animated export: ${name}`)
 }
 const require = createRequire(import.meta.url)
-assert.equal(typeof require('../dist/index.cjs').BellIcon, 'function')
-assert.ok(require('../dist/animated.cjs').AnimatedBellIcon)
-assert.match(readFileSync('dist/animated.js', 'utf8'), /^"use client"/)
-assert.match(readFileSync('dist/create-animated-icon.js', 'utf8'), /^"use client"/)
+assert.equal(typeof require('../dist/icons/index.cjs').BellIcon, 'function')
+assert.ok(require('../dist/icons/animated.cjs').AnimatedBellIcon)
+// The animated entry keeps its client boundary; the static entry and the primitives entry stay neutral.
+assert.match(readFileSync('dist/icons/animated.js', 'utf8'), /^"use client"/)
+assert.doesNotMatch(readFileSync('dist/icons/index.js', 'utf8'), /^"use client"/)
+assert.doesNotMatch(readFileSync('dist/index.js', 'utf8'), /data-comwit-icon/)
 
 async function bundle(name, entry) {
   const { outputFiles } = await build({
-    stdin: { contents: `export { ${name} } from './dist/${entry}.js'`, resolveDir: process.cwd() },
+    stdin: {
+      contents: `export { ${name} } from './dist/icons/${entry}.js'`,
+      resolveDir: process.cwd(),
+    },
     bundle: true,
     write: false,
     minify: true,
@@ -45,7 +50,7 @@ assert.doesNotMatch(
   /keyframes|matchMedia|useEffect/,
   'static imports omit motion data and runtime'
 )
-const url = pathToFileURL(resolve('dist/index.js')).href
+const url = pathToFileURL(resolve('dist/icons/index.js')).href
 execFileSync(
   process.execPath,
   [
@@ -61,5 +66,5 @@ execFileSync(
   { stdio: 'pipe' }
 )
 console.log(
-  `Package checks passed: ${iconCatalog.length} exports, ESM/CJS/RSC, client boundaries. Single Bell: ${still.length} bytes static / ${moving.length} bytes animated (minified, React external).`
+  `@comwit/ui/icons checks passed: ${iconCatalog.length} exports, ESM/CJS/RSC, client boundary, primitives entry icon-free. Single Bell: ${still.length} bytes static / ${moving.length} bytes animated (minified, React external).`
 )
