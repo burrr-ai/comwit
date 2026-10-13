@@ -1,5 +1,8 @@
 'use client'
 
+import { Copy, useCopy } from '@/i18n/copy'
+import { useTranslations } from 'next-intl'
+
 import * as React from 'react'
 import {
   ArchiveIcon,
@@ -90,10 +93,10 @@ import {
 
 /* ── Device ─────────────────────────────────────────────────────────── */
 
-// 폰 화면 요소. 시트·스크림처럼 body 로 포털되는 오버레이가 기기 안에 뜨도록 `container` 로 넘긴다.
+// Pass the phone screen as the portal container to keep sheets and scrims inside the device.
 const PhoneScreenContext = React.createContext<HTMLDivElement | null>(null)
 export const usePhoneScreen = () => React.useContext(PhoneScreenContext)
-/** 스크롤러 높이(px): 화면 592 − 상태바 34. 풀스크린 캔버스가 이 값을 쓴다. */
+/** Scroller height: 592px screen minus 34px status bar. Fullscreen canvases use this value. */
 const SCREEN_H = 558
 
 export function PhoneFrame({
@@ -105,9 +108,11 @@ export function PhoneFrame({
   label: string
   className?: string
 }) {
+  const localize = useCopy()
+
   const [screen, setScreen] = React.useState<HTMLDivElement | null>(null)
   return (
-    <div className={cn('phone', className)} role="group" aria-label={label}>
+    <div className={cn('phone', className)} role="group" aria-label={localize(label)}>
       <div ref={setScreen} className="phone-screen">
         <div className="phone-status" aria-hidden="true">
           <span>9:41</span>
@@ -126,8 +131,7 @@ export function PhoneFrame({
 }
 
 /**
- * 갤러리 카드 위의 폰 무대 — 모든 폰 전시물이 같은 골격(폰 + 아래 한 줄)을 갖는다.
- * 아래 줄은 높이가 고정이라(h-9) 컨트롤이 오든 캡션이 오든 카드 높이가 같다.
+ * Shared phone exhibit frame. The fixed h-9 footer keeps card heights equal whether it contains controls or a caption.
  */
 function PhoneStage({
   label,
@@ -138,19 +142,21 @@ function PhoneStage({
   footer?: React.ReactNode
   children: React.ReactNode
 }) {
+  const localize = useCopy()
+
   return (
     <div className="flex flex-col items-center gap-5">
-      <PhoneFrame label={label}>{children}</PhoneFrame>
+      <PhoneFrame label={localize(label)}>{children}</PhoneFrame>
       {footer !== undefined && (
         <div className="flex h-9 items-center justify-center text-center text-caption text-muted-foreground">
-          {footer}
+          {typeof footer === 'string' ? localize(footer) : footer}
         </div>
       )}
     </div>
   )
 }
 
-/** 폰 안의 스크롤러 — 앱바·바텀내비가 같은 스크롤 의도(ScrollChrome)를 본다. */
+/** The phone scroller shares ScrollChrome intent with its app bar and bottom navigation. */
 function PhoneScreen({
   children,
   onRefresh,
@@ -160,14 +166,14 @@ function PhoneScreen({
   children: React.ReactNode
   onRefresh?: () => Promise<unknown>
   resetKey?: unknown
-  /** 페이지 전환이 스크롤을 직접 복원·초기화하는 화면에서는 끈다. */
+  /** Disable when page transitions manage scroll restoration and resets themselves. */
   resetScroll?: boolean
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   React.useEffect(() => {
     if (resetScroll) scrollRef.current?.scrollTo({ top: 0 })
   }, [resetKey, resetScroll])
-  // 스크롤러는 flex 컨테이너가 아니다 — 안의 페이지가 콘텐츠만큼 자라야 sticky 앱바·탭바가 제 흐름 위치를 갖는다.
+  // The scroller is not a flex container: pages grow with content so sticky app and tab bars retain their flow positions.
   return (
     <ScrollChromeProvider scrollRef={scrollRef} resetKey={resetKey}>
       <PullToRefresh
@@ -184,8 +190,7 @@ function PhoneScreen({
 /* ── Mobile shell — one phone, many pages, no router ────────────────── */
 
 /**
- * 라우터 대신 쓰는 아주 작은 히스토리. path 가 곧 현재 페이지고, push/back 이 스택을 움직인다.
- * 실제 앱에서는 이 자리가 라우터의 pathname 이고 RouteBoundary 가 그 값을 경계에 넣는다.
+ * Minimal router substitute: path identifies the page and push/back update the stack. Real apps use the router pathname through RouteBoundary.
  */
 function useMiniRouter(initial: string) {
   const [stack, setStack] = React.useState<string[]>([initial])
@@ -197,8 +202,7 @@ function useMiniRouter(initial: string) {
 }
 
 /**
- * 폰 안의 앱 쉘: 스크롤러 + 전환 프로바이더 + 라우트 경계 하나. `path` 가 바뀌면 경계(key)가 바뀌고,
- * 나가는 페이지는 엔진이 붙잡아 애니메이션한다. 살아남는 탭 쉘은 `routeKey` 를 고정하고 안쪽에 경계를 하나 더 둔다.
+ * Phone shell: scroller, transition provider, and route boundary. Changing path replaces the boundary key while the engine animates the outgoing page. Persistent tab shells keep routeKey fixed and nest another boundary.
  */
 function MobileShell({
   label,
@@ -217,10 +221,12 @@ function MobileShell({
   footer?: React.ReactNode
   children: React.ReactNode
 }) {
+  const localize = useCopy()
+
   return (
-    <PhoneStage label={label} footer={footer}>
+    <PhoneStage label={localize(label)} footer={footer}>
       <PhoneScreen resetKey={path} resetScroll={false} onRefresh={onRefresh}>
-        {/* 쉘은 최소 화면 높이(min-h-full)에서 콘텐츠만큼 자란다. 페이지는 flex-1 로 짧을 때만 화면을 채운다. */}
+        {/* The shell grows from min-h-full to fit content. flex-1 fills the screen only for short pages. */}
         <PageTransition config={config} className="flex min-h-full flex-col">
           <PageBoundary
             path={path}
@@ -242,7 +248,7 @@ function Img(props: React.ComponentProps<'img'>) {
   return <img alt="" decoding="async" {...props} />
 }
 
-/** 4색 바람개비 로고. */
+/** Four-color pinwheel logo. */
 function Pinwheel({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
@@ -260,11 +266,11 @@ const TABS = [
   { value: '/create', label: 'Create', icon: <SparklesIcon /> },
 ]
 const isTab = (path: string) => TABS.some((t) => t.value === path)
-/** 탭바의 네 번째 칸. 앱 쉘에서는 페이지가 아니라 검색 시트를 연다. */
+/** The fourth tab slot opens a search sheet instead of navigating. */
 const SEARCH_TAB = { value: '/search', label: 'Search', icon: <SearchIcon /> }
 const NAV_TABS = [...TABS, SEARCH_TAB]
 
-/** 탭 쉘의 상단 바 — 로고 · 추가 · 알림 · 프로필. */
+/** Tab-shell app bar: logo, add, notifications, and profile. */
 function TopAppBar({
   onAdd,
   behavior = 'pinned',
@@ -272,25 +278,31 @@ function TopAppBar({
   onAdd?: () => void
   behavior?: AppBarBehavior
 }) {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   return (
     <AppBar behavior={behavior}>
       <Pinwheel className="ml-1 size-7 shrink-0" />
-      <AppBarTitle className="text-label font-medium text-soft-foreground">Photos</AppBarTitle>
+      <AppBarTitle className="text-label font-medium text-soft-foreground">
+        <Copy id="text164" />
+      </AppBarTitle>
       <AppBarActions>
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Add"
-          onClick={onAdd ?? (() => toast('Add'))}
+          aria-label={copy('text165')}
+          onClick={onAdd ?? (() => toast(localize('Add')))}
         >
           <PlusIcon />
         </Button>
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Notifications"
+          aria-label={copy('text166')}
           className="relative"
-          onClick={() => toast('Backup complete')}
+          onClick={() => toast(localize('Backup complete'))}
         >
           <BellIcon />
           <span className="absolute top-2 right-2.5 size-2 rounded-full bg-destructive" />
@@ -299,8 +311,8 @@ function TopAppBar({
           variant="plain"
           size="none"
           type="button"
-          aria-label="Account"
-          onClick={() => toast('Account')}
+          aria-label={copy('text167')}
+          onClick={() => toast(localize('Account'))}
           className="ml-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-caption font-semibold text-primary-foreground"
         >
           D
@@ -310,7 +322,7 @@ function TopAppBar({
   )
 }
 
-/** 유리 캡슐 탭바(BottomNav) — 세 탭 + 검색. 검색은 선택 값을 바꾸지 않고 시트를 연다. */
+/** Glass BottomNav capsule: three tabs plus search. Search opens a sheet without changing the selected value. */
 function PhotosNav({
   value,
   onChange,
@@ -320,20 +332,24 @@ function PhotosNav({
   onChange: (path: string) => void
   onSearch: () => void
 }) {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   return (
     <BottomNav
-      aria-label="Sections"
+      aria-label={copy('text169')}
       value={value}
       onValueChange={(next) => (next === SEARCH_TAB.value ? onSearch() : onChange(next))}
     >
       {NAV_TABS.map((t) => (
-        <BottomNavItem key={t.value} value={t.value} label={t.label} icon={t.icon} />
+        <BottomNavItem key={t.value} value={t.value} label={localize(t.label)} icon={t.icon} />
       ))}
     </BottomNav>
   )
 }
 
-/** 3열 정사각 그리드. 각 사진이 hero/zoom 의 출발 쪽 키를 단다. */
+/** Three-column square grid. Each image carries the source key for hero/zoom transitions. */
 function PhotoGrid({
   photos,
   onOpen,
@@ -343,6 +359,8 @@ function PhotoGrid({
   onOpen: (photo: Photo) => void
   keyed?: boolean
 }) {
+  const localize = useCopy()
+
   return (
     <div className="grid grid-cols-3 gap-[2px] bg-background">
       {photos.map((p) => (
@@ -351,7 +369,7 @@ function PhotoGrid({
           size="none"
           key={p.id}
           type="button"
-          aria-label={p.description ?? p.takenAt}
+          aria-label={localize(p.description ?? p.takenAt)}
           onClick={() => onOpen(p)}
           className="relative block aspect-square bg-muted"
         >
@@ -374,7 +392,7 @@ function PhotosTab({ onOpen }: { onOpen: (photo: Photo) => void }) {
   return <PhotoGrid photos={PHOTOS} onOpen={onOpen} />
 }
 
-/** 컬렉션 카드 — 2×2 미니 그리드, 이름, 개수. */
+/** Collection card: 2x2 preview grid, name, and count. */
 function CollectionCard({ collection, onOpen }: { collection: Collection; onOpen: () => void }) {
   const covers = collectionPhotos(collection).slice(0, 4)
   return (
@@ -394,7 +412,9 @@ function CollectionCard({ collection, onOpen }: { collection: Collection; onOpen
         ))}
       </div>
       <div className="px-1">
-        <p className="truncate text-label font-medium text-foreground">{collection.name}</p>
+        <p className="truncate text-label font-medium text-foreground">
+          <Copy text={collection.name} />
+        </p>
         <p className="text-caption text-muted-foreground">{collection.photoIds.length}</p>
       </div>
     </Button>
@@ -409,6 +429,8 @@ const UTILITIES = [
 ] as const
 
 function CollectionsTab({ onOpen }: { onOpen: (collection: Collection) => void }) {
+  const localize = useCopy()
+
   return (
     <div className="space-y-4 px-gutter py-4">
       <div className="grid grid-cols-2 gap-3">
@@ -418,11 +440,11 @@ function CollectionsTab({ onOpen }: { onOpen: (collection: Collection) => void }
             size="none"
             key={label}
             type="button"
-            onClick={() => toast(label)}
+            onClick={() => toast(localize(label))}
             className="flex items-center justify-start gap-3 rounded-pill bg-muted px-4 py-3 text-left text-label font-medium text-foreground transition-colors duration-fast hover:bg-accent"
           >
             <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
-            {label}
+            <Copy text={label} />
           </Button>
         ))}
       </div>
@@ -464,13 +486,15 @@ function CreateTab({ onCollage }: { onCollage: () => void }) {
     <div className="space-y-6 px-gutter py-4">
       <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-card bg-linear-to-br from-[#8E5BE8] via-[#7B5BE8] to-[#5F76F5]">
         <span className="rounded-pill bg-white/95 px-5 py-2 text-label font-semibold text-black shadow-raised">
-          Create
+          <Copy id="text170" />{' '}
         </span>
         <span className="absolute -top-6 -left-6 size-24 rounded-full bg-white/10" />
         <span className="absolute -right-4 -bottom-4 size-20 rounded-full bg-white/15" />
       </div>
       <section>
-        <h4 className="mb-3 text-title-md text-foreground">My tools</h4>
+        <h4 className="mb-3 text-title-md text-foreground">
+          <Copy id="text171" />
+        </h4>
         <div className="grid grid-cols-2 gap-3">
           {TOOLS.map(({ label, Icon, tint, enabled }) => (
             <Button
@@ -488,10 +512,12 @@ function CreateTab({ onCollage }: { onCollage: () => void }) {
               <span className={cn('flex size-10 items-center justify-center rounded-full', tint)}>
                 <Icon className="size-5" aria-hidden="true" />
               </span>
-              <span className="text-label font-medium text-foreground">{label}</span>
+              <span className="text-label font-medium text-foreground">
+                <Copy text={label} />
+              </span>
               {!enabled && (
                 <span className="absolute top-3 right-3 rounded-pill bg-border px-2 py-0.5 text-micro font-medium text-muted-foreground">
-                  Soon
+                  <Copy id="text172" />{' '}
                 </span>
               )}
             </Button>
@@ -502,14 +528,16 @@ function CreateTab({ onCollage }: { onCollage: () => void }) {
   )
 }
 
-/** 사진 상세 — 뒤로가기 원, 풀스크린 캔버스(hero/zoom 의 도착 쪽), 아래로 스크롤하면 메타. */
+/** Photo detail: back button, fullscreen hero/zoom destination, and metadata below the fold. */
 function PhotoDetailPage({ photo, onBack }: { photo: Photo; onBack: () => void }) {
+  const copy = useTranslations('Copy')
+
   return (
     <div className="relative flex flex-1 flex-col bg-background">
       <GlassButton
         shape="circle"
         shadow={false}
-        aria-label="Back"
+        aria-label={copy('text173')}
         onClick={onBack}
         className="absolute top-3 left-3 z-raised size-10"
       >
@@ -527,28 +555,46 @@ function PhotoDetailPage({ photo, onBack }: { photo: Photo; onBack: () => void }
       </section>
       <section className="space-y-6 border-t border-border px-5 pt-8 pb-12">
         {photo.description && (
-          <h4 className="text-title-md text-foreground">{photo.description}</h4>
+          <h4 className="text-title-md text-foreground">
+            <Copy text={photo.description} />
+          </h4>
         )}
         <dl className="grid grid-cols-[110px_1fr] gap-y-3 text-body-sm text-foreground">
-          <dt className="text-muted-foreground">Date</dt>
+          <dt className="text-muted-foreground">
+            <Copy id="text174" />
+          </dt>
           <dd>{photo.takenAt}</dd>
           {photo.location && (
             <>
-              <dt className="text-muted-foreground">Location</dt>
-              <dd>{photo.location}</dd>
+              <dt className="text-muted-foreground">
+                <Copy id="text175" />
+              </dt>
+              <dd>
+                <Copy text={photo.location} />
+              </dd>
             </>
           )}
-          <dt className="text-muted-foreground">Dimensions</dt>
+          <dt className="text-muted-foreground">
+            <Copy id="text176" />
+          </dt>
           <dd>
             {photo.width} × {photo.height}
           </dd>
-          <dt className="text-muted-foreground">File size</dt>
+          <dt className="text-muted-foreground">
+            <Copy id="text177" />
+          </dt>
           <dd>{photo.fileSize}</dd>
-          <dt className="text-muted-foreground">Storage</dt>
-          <dd>{photo.storage}</dd>
+          <dt className="text-muted-foreground">
+            <Copy id="text178" />
+          </dt>
+          <dd>
+            <Copy text={photo.storage} />
+          </dd>
           {photo.device && (
             <>
-              <dt className="text-muted-foreground">Device</dt>
+              <dt className="text-muted-foreground">
+                <Copy id="text179" />
+              </dt>
               <dd>{photo.device}</dd>
             </>
           )}
@@ -558,7 +604,7 @@ function PhotoDetailPage({ photo, onBack }: { photo: Photo; onBack: () => void }
   )
 }
 
-/** 컬렉션 상세 — 뒤로·더보기 바, 큰 제목과 개수, 3열 그리드. */
+/** Collection detail: back/more bar, title and count, and a three-column grid. */
 function CollectionDetailPage({
   collection,
   onBack,
@@ -570,20 +616,33 @@ function CollectionDetailPage({
   onOpen: (photo: Photo) => void
   behavior?: AppBarBehavior
 }) {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const photos = collectionPhotos(collection)
   return (
     <>
       <AppBar behavior={behavior}>
         <AppBarBackButton onClick={onBack} />
         <AppBarActions>
-          <Button variant="ghost" size="icon" aria-label="More" onClick={() => toast('More')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={copy('text180')}
+            onClick={() => toast(localize('More'))}
+          >
             <MoreVerticalIcon />
           </Button>
         </AppBarActions>
       </AppBar>
       <div className="px-5 pb-4">
-        <h4 className="text-display-sm text-foreground">{collection.name}</h4>
-        <p className="mt-1 text-caption text-muted-foreground">{photos.length} items</p>
+        <h4 className="text-display-sm text-foreground">
+          <Copy text={collection.name} />
+        </h4>
+        <p className="mt-1 text-caption text-muted-foreground">
+          {photos.length} <Copy id="text181" />
+        </p>
       </div>
       <PhotoGrid photos={photos} onOpen={onOpen} />
     </>
@@ -592,8 +651,12 @@ function CollectionDetailPage({
 
 const COLLAGE_SECTIONS = ['Today', 'Yesterday', 'Thursday'] as const
 
-/** 콜라주 만들기 — Create 탭 위로 시트로 올라온다. 사진을 눌러 고르고 Create. */
+/** Collage creation sheet above the Create tab. Select photos, then Create. */
 function CollagePage({ onClose }: { onClose: () => void }) {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const [picked, setPicked] = React.useState<string[]>([])
   const toggle = (id: string) =>
     setPicked((list) =>
@@ -607,28 +670,32 @@ function CollagePage({ onClose }: { onClose: () => void }) {
     <div className="relative flex flex-1 flex-col bg-background">
       <AppBar behavior="pinned">
         <Button variant="ghost" size="sm" onClick={onClose}>
-          Cancel
+          <Copy id="text182" />{' '}
         </Button>
-        <AppBarTitle className="flex-1 text-center">New collage</AppBarTitle>
+        <AppBarTitle className="flex-1 text-center">
+          <Copy id="text183" />
+        </AppBarTitle>
         <AppBarActions className="pl-0">
           <Button
             variant="ghost"
             size="sm"
             disabled={picked.length === 0}
             onClick={() => {
-              toast.success(`Collage of ${picked.length} photos created`)
+              toast.success(copy('collageCreated', { count: picked.length }))
               onClose()
             }}
           >
-            Create
+            <Copy id="text170" />{' '}
           </Button>
         </AppBarActions>
       </AppBar>
       <div className="px-gutter">
-        <p className="text-center text-caption text-muted-foreground">Select 1–6 photos</p>
+        <p className="text-center text-caption text-muted-foreground">
+          <Copy id="text184" />
+        </p>
         <div className="mt-3 flex h-11 items-center gap-2 rounded-pill bg-muted px-4 text-label text-muted-foreground">
           <SearchIcon className="size-4" aria-hidden="true" />
-          SearchIcon your photos
+          <Copy id="text185" />{' '}
         </div>
       </div>
       <div className="flex-1 pb-24">
@@ -640,7 +707,9 @@ function CollagePage({ onClose }: { onClose: () => void }) {
                 strokeWidth={1.75}
                 aria-hidden="true"
               />
-              <h4 className="text-title-md text-foreground">{label}</h4>
+              <h4 className="text-title-md text-foreground">
+                <Copy text={label} />
+              </h4>
             </div>
             <div className="grid grid-cols-3 gap-[2px] bg-background">
               {photos.map((p) => {
@@ -652,7 +721,7 @@ function CollagePage({ onClose }: { onClose: () => void }) {
                     key={p.id}
                     type="button"
                     aria-pressed={on}
-                    aria-label={p.description ?? p.takenAt}
+                    aria-label={localize(p.description ?? p.takenAt)}
                     onClick={() => toggle(p.id)}
                     className="relative aspect-square bg-muted"
                   >
@@ -683,8 +752,8 @@ function CollagePage({ onClose }: { onClose: () => void }) {
         <Button
           variant="secondary"
           size="icon"
-          aria-label="Resize"
-          onClick={() => toast('Resize')}
+          aria-label={copy('text186')}
+          onClick={() => toast(localize('Resize'))}
           className="absolute right-4 bottom-6 size-12 rounded-card shadow-raised"
         >
           <Maximize2Icon />
@@ -729,12 +798,16 @@ function CreateSheet({
   onOpenChange: (open: boolean) => void
   onCollage?: () => void
 }) {
+  const localize = useCopy()
+
   const screen = usePhoneScreen()
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
       <BottomSheetContent container={screen ?? undefined}>
         <BottomSheetHeader>
-          <BottomSheetTitle>Create new</BottomSheetTitle>
+          <BottomSheetTitle>
+            <Copy id="text187" />
+          </BottomSheetTitle>
         </BottomSheetHeader>
         <div className="grid gap-1 px-3 pb-4">
           {CREATE_ITEMS.map(([label, Icon]) => (
@@ -742,10 +815,12 @@ function CreateSheet({
               <Button
                 variant="ghost"
                 className="justify-start"
-                onClick={() => (label === 'Collage' && onCollage ? onCollage() : toast(label))}
+                onClick={() =>
+                  label === 'Collage' && onCollage ? onCollage() : toast(localize(label))
+                }
               >
                 <Icon />
-                {label}
+                <Copy text={label} />
               </Button>
             </BottomSheetClose>
           ))}
@@ -762,22 +837,30 @@ function SearchSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const localize = useCopy()
+
   const screen = usePhoneScreen()
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
       <BottomSheetContent container={screen ?? undefined} className="h-[440px]">
         <BottomSheetHeader>
-          <BottomSheetTitle>Search</BottomSheetTitle>
-          <BottomSheetDescription>People, places and things in your photos</BottomSheetDescription>
+          <BottomSheetTitle>
+            <Copy id="text188" />
+          </BottomSheetTitle>
+          <BottomSheetDescription>
+            <Copy id="text189" />
+          </BottomSheetDescription>
         </BottomSheetHeader>
         <div className="flex shrink-0 flex-wrap gap-2 px-5 pb-3">
           {SEARCH_CHIPS.map((c) => (
-            <Chip key={c} size="sm" onClick={() => toast(c)}>
-              {c}
+            <Chip key={c} size="sm" onClick={() => toast(localize(c))}>
+              <Copy text={c} />
             </Chip>
           ))}
         </div>
-        <p className="px-5 pb-1 text-caption font-semibold text-muted-foreground">Recent</p>
+        <p className="px-5 pb-1 text-caption font-semibold text-muted-foreground">
+          <Copy id="text190" />
+        </p>
         <ul className="phone-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-4">
           {RECENT.map((term) => (
             <li key={term}>
@@ -786,11 +869,11 @@ function SearchSheet({
                   variant="plain"
                   size="none"
                   type="button"
-                  onClick={() => toast(term)}
+                  onClick={() => toast(localize(term))}
                   className="flex w-full items-center justify-start gap-3 rounded-control px-2 py-2.5 text-left text-label text-foreground transition-colors duration-fast hover:bg-accent"
                 >
                   <ClockIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-                  {term}
+                  <Copy text={term} />
                 </Button>
               </BottomSheetClose>
             </li>
@@ -803,9 +886,9 @@ function SearchSheet({
 
 /* ── Overview hero — the whole app in one phone ─────────────────────── */
 
-// 전환 규칙 (ssgoi 의 Google Photos 쇼케이스 그대로):
-//  탭 셋은 shared-axis(y) 로 섞이고, 컬렉션 상세는 드릴인, 콜라주는 Create 탭 위로 시트로 오르고,
-//  사진 그리드 ↔ 사진 상세는 같은 키를 단 이미지가 hero 로 이어지며 주변 크롬은 페이드한다.
+// Transition rules from the SSGOI Google Photos showcase:
+// The three tabs share the y axis, collections drill in, and the collage sheet rises over Create.
+// Matching image keys connect the grid and photo detail through a hero transition while surrounding controls fade.
 const APP_TRANSITIONS: PageTransitionConfig = {
   transitions: [
     {
@@ -819,6 +902,8 @@ const APP_TRANSITIONS: PageTransitionConfig = {
 }
 
 export function AppShellExhibit() {
+  const copy = useTranslations('Copy')
+
   const router = useMiniRouter('/')
   const { path } = router
   const [create, setCreate] = React.useState(false)
@@ -827,7 +912,7 @@ export function AppShellExhibit() {
 
   return (
     <MobileShell
-      label="Photos app — switch tabs, open a photo or a collection, make a collage"
+      label={copy('text191')}
       path={path}
       routeKey={isTab(path) ? 'tabs' : undefined}
       config={APP_TRANSITIONS}
@@ -851,8 +936,8 @@ export function AppShellExhibit() {
       ) : path === '/collage' ? (
         <CollagePage onClose={router.back} />
       ) : (
-        // 탭 쉘 — 상단 바와 떠 있는 탭바가 살아남고, 안쪽 경계가 탭 페이지를 바꾼다.
-        // 상단 바가 안쪽 경계 위에 있으므로 경계는 자기만의 relative 부모 안에 둔다.
+        // Persistent tab shell: app bar and floating tab bar survive while the inner boundary switches pages.
+        // The app bar sits above the inner boundary, which needs its own relative parent.
         <>
           <TopAppBar onAdd={() => setCreate(true)} />
           <div className="relative flex flex-1 flex-col">
@@ -890,6 +975,10 @@ const EFFECTS = {
 type Effect = keyof typeof EFFECTS
 
 export function PageTransitionExhibit() {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const [effect, setEffect] = React.useState<Effect>('hero')
   const router = useMiniRouter('/')
   const config = React.useMemo<PageTransitionConfig>(
@@ -898,16 +987,16 @@ export function PageTransitionExhibit() {
   )
   return (
     <MobileShell
-      label="Page transition demo — open a photo, then go back"
+      label={copy('text192')}
       path={router.path}
       config={config}
       footer={
         <SegmentedControl<Effect>
-          aria-label="Grid to photo effect"
+          aria-label={copy('text193')}
           value={effect}
           onValueChange={setEffect}
           options={(Object.keys(EFFECTS) as Effect[]).map((key) => ({
-            label: EFFECTS[key].label,
+            label: localize(EFFECTS[key].label),
             value: key,
           }))}
         />
@@ -930,11 +1019,15 @@ export function PageTransitionExhibit() {
 const NO_TRANSITIONS: PageTransitionConfig = { transitions: [] }
 
 export function BottomSheetExhibit() {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const [create, setCreate] = React.useState(false)
   const [search, setSearch] = React.useState(false)
   return (
     <MobileShell
-      label="Bottom sheet demo — tap + or Search, then drag the handle down"
+      label={copy('text194')}
       path="/"
       config={NO_TRANSITIONS}
       footer="Tap + or Search. Drag the handle down, or tap it, to close."
@@ -944,7 +1037,7 @@ export function BottomSheetExhibit() {
         <PhotoGrid
           photos={PHOTOS}
           keyed={false}
-          onOpen={(p) => toast(p.description ?? p.takenAt)}
+          onOpen={(p) => toast(localize(p.description ?? p.takenAt))}
         />
       </div>
       <PhotosNav value="/" onChange={() => undefined} onSearch={() => setSearch(true)} />
@@ -957,32 +1050,38 @@ export function BottomSheetExhibit() {
 /* ── App bar ────────────────────────────────────────────────────────── */
 
 export function AppBarExhibit() {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const [mode, setMode] = React.useState<AppBarBehavior>('reveal')
   return (
     <PhoneStage
-      label="App bar demo — scroll inside the phone"
+      label={copy('text195')}
       footer={
         <SegmentedControl<AppBarBehavior>
-          aria-label="App bar behavior"
+          aria-label={copy('text196')}
           value={mode}
           onValueChange={setMode}
           options={[
-            { label: 'Reveal', value: 'reveal' },
-            { label: 'Pinned', value: 'pinned' },
-            { label: 'Flow', value: 'flow' },
+            { label: localize('Reveal'), value: 'reveal' },
+            { label: localize('Pinned'), value: 'pinned' },
+            { label: localize('Flow'), value: 'flow' },
           ]}
         />
       }
     >
       <PhoneScreen resetKey={mode}>
-        {/* 라이브러리 전체 — 화면보다 길어야 앱바가 스크롤을 따라 숨었다 돌아오는 게 보인다. */}
+        {/* The full library is taller than the screen to demonstrate the app bar hiding and revealing on scroll. */}
         <TopAppBar behavior={mode} />
-        <p className="px-gutter pt-1 pb-2 text-title-sm text-foreground">Today</p>
+        <p className="px-gutter pt-1 pb-2 text-title-sm text-foreground">
+          <Copy id="text197" />
+        </p>
         <div className="pb-8">
           <PhotoGrid
             photos={PHOTOS}
             keyed={false}
-            onOpen={(p) => toast(p.description ?? p.takenAt)}
+            onOpen={(p) => toast(localize(p.description ?? p.takenAt))}
           />
         </div>
       </PhoneScreen>
@@ -993,12 +1092,13 @@ export function AppBarExhibit() {
 /* ── Bottom nav ─────────────────────────────────────────────────────── */
 
 export function BottomNavExhibit() {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const [tab, setTab] = React.useState('/')
   return (
-    <PhoneStage
-      label="Bottom nav demo — tap a tab, scroll to shrink the bar"
-      footer="Tap a tab. Scroll to shrink the bar."
-    >
+    <PhoneStage label={copy('text198')} footer="Tap a tab. Scroll to shrink the bar.">
       <PhoneScreen resetKey={tab}>
         <TopAppBar behavior="flow" />
         <div className="flex-1 pb-4">
@@ -1006,36 +1106,36 @@ export function BottomNavExhibit() {
             <PhotoGrid
               photos={PHOTOS}
               keyed={false}
-              onOpen={(p) => toast(p.description ?? p.takenAt)}
+              onOpen={(p) => toast(localize(p.description ?? p.takenAt))}
             />
           ) : tab === '/collections' ? (
-            <CollectionsTab onOpen={(c) => toast(c.name)} />
+            <CollectionsTab onOpen={(c) => toast(localize(c.name))} />
           ) : tab === '/create' ? (
-            <CreateTab onCollage={() => toast('Collage')} />
+            <CreateTab onCollage={() => toast(localize('Collage'))} />
           ) : (
             <div className="space-y-4 px-gutter py-4">
               <div className="flex h-11 items-center gap-2 rounded-pill bg-muted px-4 text-label text-muted-foreground">
                 <SearchIcon className="size-4" aria-hidden="true" />
-                SearchIcon your photos
+                <Copy id="text185" />{' '}
               </div>
               <div className="flex flex-wrap gap-2">
                 {SEARCH_CHIPS.map((c) => (
-                  <Chip key={c} size="sm" onClick={() => toast(c)}>
-                    {c}
+                  <Chip key={c} size="sm" onClick={() => toast(localize(c))}>
+                    <Copy text={c} />
                   </Chip>
                 ))}
               </div>
               <PhotoGrid
                 photos={PHOTOS.slice(0, 9)}
                 keyed={false}
-                onOpen={(p) => toast(p.description ?? p.takenAt)}
+                onOpen={(p) => toast(localize(p.description ?? p.takenAt))}
               />
             </div>
           )}
         </div>
         <BottomNav value={tab} onValueChange={setTab}>
           {NAV_TABS.map((t) => (
-            <BottomNavItem key={t.value} value={t.value} label={t.label} icon={t.icon} />
+            <BottomNavItem key={t.value} value={t.value} label={localize(t.label)} icon={t.icon} />
           ))}
         </BottomNav>
       </PhoneScreen>
@@ -1046,6 +1146,10 @@ export function BottomNavExhibit() {
 /* ── Pull to refresh ────────────────────────────────────────────────── */
 
 export function PullToRefreshExhibit() {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const [photos, setPhotos] = React.useState<Photo[]>(() => PHOTOS.slice(3))
   const next = React.useRef(0)
   const refresh = () =>
@@ -1062,26 +1166,27 @@ export function PullToRefreshExhibit() {
       }, 1100)
     )
   return (
-    <PhoneStage
-      label="Pull to refresh demo — drag down from the top"
-      footer="Drag down from the top with a finger or the mouse."
-    >
+    <PhoneStage label={copy('text199')} footer="Drag down from the top with a finger or the mouse.">
       <PhoneScreen onRefresh={refresh}>
         <AppBar behavior="pinned">
           <Pinwheel className="ml-1 size-7 shrink-0" />
-          <AppBarTitle className="text-label font-medium text-soft-foreground">Photos</AppBarTitle>
+          <AppBarTitle className="text-label font-medium text-soft-foreground">
+            <Copy id="text164" />
+          </AppBarTitle>
           <AppBarActions>
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Back up"
-              onClick={() => toast('Backing up…')}
+              aria-label={copy('text200')}
+              onClick={() => toast(localize('Backing up…'))}
             >
               <CloudUploadIcon />
             </Button>
           </AppBarActions>
         </AppBar>
-        <p className="px-gutter pt-1 pb-2 text-title-sm text-foreground">Today</p>
+        <p className="px-gutter pt-1 pb-2 text-title-sm text-foreground">
+          <Copy id="text197" />
+        </p>
         <div className="grid grid-cols-3 gap-[2px] bg-background pb-8">
           {photos.map((p) => (
             <div
@@ -1121,8 +1226,10 @@ const MATERIALS: { variant: GlassVariant; name: string; use: string }[] = [
   { variant: 'fade', name: 'Fade', use: 'App bars — no edge line' },
 ]
 
-/** 유리 재질 4종을 굴절이 잘 보이는 사진 위에 띄운다. 알약 렌즈는 끌어서(또는 ←/→) 움직인다. */
+/** Four glass materials over photos that reveal refraction. Drag the capsule lens or use the arrow keys. */
 export function GlassExhibit() {
+  const copy = useTranslations('Copy')
+
   const track = React.useRef<HTMLDivElement>(null)
   const [x, setX] = React.useState(0.5)
   const grab = React.useRef<{ id: number; offset: number } | null>(null)
@@ -1135,7 +1242,7 @@ export function GlassExhibit() {
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[clamp(56px,11vw,132px)] leading-none font-bold tracking-tight text-white/85 select-none"
         >
-          Refract
+          <Copy id="text201" />{' '}
         </p>
         <div className="relative grid grid-cols-2 gap-3 md:grid-cols-4">
           {MATERIALS.map((m) => (
@@ -1144,14 +1251,18 @@ export function GlassExhibit() {
               className="relative isolate flex h-36 flex-col justify-end rounded-card p-4"
             >
               <Glass variant={m.variant} shape="panel" />
-              <span className="relative z-raised text-title-sm text-foreground">{m.name}</span>
-              <span className="relative z-raised text-caption text-soft-foreground">{m.use}</span>
+              <span className="relative z-raised text-title-sm text-foreground">
+                <Copy text={m.name} />
+              </span>
+              <span className="relative z-raised text-caption text-soft-foreground">
+                <Copy text={m.use} />
+              </span>
             </div>
           ))}
         </div>
         <div ref={track} className="relative mt-24 h-16 sm:mt-28">
           <GlassButton
-            aria-label="Glass lens. Drag it, or use the left and right arrow keys."
+            aria-label={copy('text202')}
             className="absolute top-1/2 h-14 w-40 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none text-label font-semibold active:cursor-grabbing"
             style={{ left: `${x * 100}%` }}
             onPointerDown={(e) => {
@@ -1171,7 +1282,7 @@ export function GlassExhibit() {
               if (e.key === 'ArrowRight') setX((v) => clamp(v + 0.05))
             }}
           >
-            <HeartIcon className="size-4" /> Drag me
+            <HeartIcon className="size-4" /> <Copy id="text203" />{' '}
           </GlassButton>
         </div>
       </div>
@@ -1218,6 +1329,8 @@ const CHAT_ANSWER =
 const clock = () => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 
 function MessengerScreen() {
+  const copy = useTranslations('Copy')
+
   const [messages, setMessages] = React.useState<ChatNote[]>(CHAT_THREAD)
   const [typing, setTyping] = React.useState(false)
   const next = React.useRef(0)
@@ -1252,10 +1365,12 @@ function MessengerScreen() {
         </Avatar>
         <div className="min-w-0 flex-1">
           <ChatTitle>Ava Chen</ChatTitle>
-          <ChatDescription>Active now</ChatDescription>
+          <ChatDescription>
+            <Copy id="text206" />
+          </ChatDescription>
         </div>
         <ChatHeaderActions>
-          <Button variant="ghost" size="icon" aria-label="Call">
+          <Button variant="ghost" size="icon" aria-label={copy('text207')}>
             <PhoneIcon />
           </Button>
         </ChatHeaderActions>
@@ -1273,24 +1388,32 @@ function MessengerScreen() {
       >
         {(m) =>
           m.from === 'system' ? (
-            <ChatDivider>{m.text}</ChatDivider>
+            <ChatDivider>
+              <Copy text={m.text} />
+            </ChatDivider>
           ) : (
             <ChatMessage
               align={m.from === 'me' ? 'end' : 'start'}
               avatar={m.from === 'ava' ? ava : undefined}
             >
-              <ChatBubble>{m.text}</ChatBubble>
+              <ChatBubble>
+                <Copy text={m.text} />
+              </ChatBubble>
               <ChatMessageMeta>{m.time}</ChatMessageMeta>
             </ChatMessage>
           )
         }
       </ChatMessages>
-      <ChatComposer placeholder="Message Ava" onSend={send} className="pb-7" />
+      <ChatComposer placeholder={copy('text208')} onSend={send} className="pb-7" />
     </Chat>
   )
 }
 
 function AssistantScreen() {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const [turns, setTurns] = React.useState<ChatTurn[]>([
     {
       id: 1,
@@ -1311,7 +1434,7 @@ function AssistantScreen() {
     const id = Date.now()
     setTurns((t) => [...t, { id, role: 'user', text }])
     setPending(true)
-    const words = CHAT_ANSWER.split(' ')
+    const words = localize(CHAT_ANSWER).split(' ')
     let count = 0
     timer.current = window.setTimeout(() => {
       setTurns((t) => [...t, { id: id + 1, role: 'assistant', text: '' }])
@@ -1332,8 +1455,12 @@ function AssistantScreen() {
           <SparklesIcon className="size-4" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <ChatTitle>Trip planner</ChatTitle>
-          <ChatDescription>Your message rises, the answer streams</ChatDescription>
+          <ChatTitle>
+            <Copy id="text209" />
+          </ChatTitle>
+          <ChatDescription>
+            <Copy id="text210" />
+          </ChatDescription>
         </div>
       </ChatHeader>
       <ChatMessages
@@ -1348,12 +1475,14 @@ function AssistantScreen() {
       >
         {(turn) => (
           <ChatMessage align={turn.role === 'user' ? 'end' : 'start'}>
-            <ChatBubble>{turn.text}</ChatBubble>
+            <ChatBubble>
+              <Copy text={turn.text} />
+            </ChatBubble>
           </ChatMessage>
         )}
       </ChatMessages>
       <ChatComposer
-        placeholder="Ask anything"
+        placeholder={copy('text211')}
         onSend={send}
         pending={pending}
         onStop={stop}
@@ -1363,21 +1492,25 @@ function AssistantScreen() {
   )
 }
 
-/** 두 스크롤 모드를 한 폰에서 — 메신저(바닥 고정)와 어시스턴트(내 메시지 상단 고정 + 스트리밍). */
+/** Two chat scroll modes: bottom-pinned messenger and assistant mode with the user's message pinned above streamed output. */
 export function ChatExhibit() {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const [mode, setMode] = React.useState<ChatMode>('messenger')
   return (
     <PhoneStage
-      label="Chat demo — send a message"
+      label={copy('text212')}
       footer={
         <SegmentedControl
           value={mode}
           onValueChange={(v) => setMode(v as ChatMode)}
           options={[
-            { value: 'messenger', label: 'Messenger' },
-            { value: 'assistant', label: 'Assistant' },
+            { value: 'messenger', label: localize('Messenger') },
+            { value: 'assistant', label: localize('Assistant') },
           ]}
-          aria-label="Chat mode"
+          aria-label={copy('text213')}
         />
       }
     >
@@ -1386,7 +1519,7 @@ export function ChatExhibit() {
   )
 }
 
-/** 갤러리 카드에서 스펙 예시 대신 쓰는 전시물 */
+/** Exhibit used in a gallery card instead of a spec example. */
 export const EXHIBITS: Record<string, React.ComponentType> = {
   'app-bar': AppBarExhibit,
   'bottom-nav': BottomNavExhibit,

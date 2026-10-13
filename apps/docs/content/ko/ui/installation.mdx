@@ -1,0 +1,213 @@
+---
+title: 설치
+---
+
+<a id="installation"></a>
+
+# 설치
+
+컴포넌트 소스를 프로젝트에 가져와 다른 코드처럼 수정하세요.
+
+Comwit UI는 검증된 라이브러리를 선별한 키트입니다. 앱 UI의 각 역할(페이지 전환, 토스트, 오버레이, 리치 텍스트, 테이블, 날짜, 폼, 채팅 목록)에 맞는 라이브러리를 고르고 중립적인 이름과 하나의 디자인 시스템으로 감싼 뒤 사용자가 소유하는 소스로 설치합니다. [갤러리](/ui/components)의 모든 컴포넌트 카드는 기반 라이브러리로 연결됩니다.
+
+<a id="set-up"></a>
+
+## 설정
+
+Tailwind CSS v4를 사용하는 React 프로젝트에서 시작하세요. Next.js에서는 App Router를 사용합니다.
+
+```bash
+npx comwit-ui@latest init
+npx comwit-ui@latest add button dialog input
+```
+
+`init`은 `comwit.json`을 만들고 토큰 스타일시트를 추가하며 기본 의존성을 설치합니다. `add`는 요청한 컴포넌트와 로컬 의존성을 프로젝트에 복사합니다.
+
+파일은 `@/` import 별칭이 가리키는 위치에 놓입니다. `tsconfig.json`이 `"@/*"`를 `"./src/*"`에 매핑하면 `init`은 `comwit.json`에 `"srcDir": "src"`를 기록하므로 `components/ui`는 `src/components/ui`가 됩니다. 폴더는 `aliases`로 바꾸세요. `ui`, `lib`, 그리고 선택적으로 `cn()` 파일용 `utils`를 설정할 수 있습니다. 예를 들어 `lib/utils/`에 다른 도우미가 있다면 `"lib/utils/cn"`을 사용합니다.
+
+<a id="language"></a>
+
+## 언어
+
+컴포넌트가 표시하거나 읽어 주는 기본 문구(플레이스홀더, 버튼 라벨, 스크린 리더 이름)와 날짜 선택기의 로케일은 복사된 파일 `lib/ui-text.ts` 하나에 있습니다. 한국어 버전을 설치하려면 `init --locale ko`를 실행하거나 `comwit.json`에 `"locale": "ko"`를 설정하세요. 이 파일을 수정하면 모든 곳의 문구가 바뀝니다. 특정 화면에서는 컴포넌트의 `labels`, `placeholder`, `title` 속성으로 재정의할 수 있습니다. 기존 프로젝트의 언어를 바꾸려면 로케일을 변경하고 `add ui-text --overwrite`를 실행하세요.
+
+<a id="use-a-component"></a>
+
+## 컴포넌트 사용
+
+```tsx
+'use client'
+
+import { Button } from '@/components/ui/button'
+
+export default function SaveButton() {
+  return <Button onClick={() => console.log('Saved')}>Save</Button>
+}
+```
+
+복사한 파일은 프로젝트 소유입니다. `@comwit/ui`는 앱 셸 훅을 포함한 기본 동작을 제공합니다. 앱 바와 하단 내비게이션이 공유하는 스크롤 의도용 `ScrollChromeProvider`, `useScrollChrome`, 그리고 `useMobile`은 복사한 파일이 아니라 `@comwit/ui`에서 가져옵니다. 이 흐름에서는 `@comwit/ui-templates`를 별도로 설치할 필요가 없습니다.
+
+<a id="providers"></a>
+
+## 프로바이더
+
+명령형 대화상자/시트에는 [overlay-kit](https://overlay-kit.slash.page)의 `OverlayProvider`를 클라이언트 프로바이더에 한 번 마운트하세요. 토스트 알림은 CLI로 `toast`를 설치하고 복사된 `Toaster` 컴포넌트를 한 번 마운트한 뒤 `toast()`를 호출합니다. [Sonner](https://sonner.emilkowal.ski)를 통해 유리 효과 토스트를 렌더링합니다. 일반 버튼과 입력에는 어느 프로바이더도 필요하지 않습니다.
+
+<a id="mobile-app-shell"></a>
+
+## 모바일 앱 셸
+
+하단 탭과 전체 화면 상세가 있는 앱에서는 `comwit-ui add app-shell app-screen`이 라우터에 맞는 전체 셸을 설치하므로 배치만 하면 됩니다. `AppShell`은 라우팅 영역을 둘러싼 휴대폰 프레임입니다. 단일 `<main>` 스크롤러(`AppShell` 프리미티브가 구조 스타일을 인라인으로 고정하여 sticky 하단 내비게이션이 흔들리지 않고 퇴장 페이지가 항상 스크롤러에 고정됨), 당겨서 새로고침, 앱 바와 탭 바가 공유하는 스크롤 의도, 페이지 전환, 방문 기록 기반 뒤로 가기를 제공합니다. `TabShell`은 탭 화면의 레이아웃에 두어 탭 바를 유지하면서 본문만 교체합니다. `AppScreen`과 `DetailScreen`은 앱 바와 함께 각 페이지를 감쌉니다.
+
+```tsx
+// app/(app)/layout — once around the routed area
+<AppShell tabs={APP_TABS}>{children}</AppShell>
+// app/(app)/(top-level)/layout.tsx — tab screens
+<TabShell>{children}</TabShell>
+// app/(app)/(detail)/layout.tsx — full-screen details
+{children}
+```
+
+탭 경로(`tabs[].href`)는 탭 바를 유지하고 탭 순서대로 좌우 이동합니다. 다른 라우트는 안쪽으로 진입하며 바도 함께 이동합니다. 기본 동작 위에 시트나 확대 규칙을 추가하려면 `page-transition`의 `transitions={appTransitions(tabPaths, { transitions: [...] })}`를 전달하세요. Next.js 버전은 각 레이아웃에서 선택한 세그먼트를 읽으므로 인터셉트된 `@modal` 라우트 아래에 탭이 유지됩니다. React Router와 TanStack Router 버전은 pathname을 사용하고 일반 버전은 `path`와 `onNavigate`를 받습니다. 복사된 `app-shell.tsx`에 조합이 드러나 있으며 프레임 너비, 배경, 새로고침 다이얼을 직접 스타일링할 수 있습니다.
+
+<a id="page-transitions"></a>
+
+## 페이지 전환
+
+`page-transition`은 다른 컴포넌트처럼 프로바이더, 라우터용 라우트 경계, 프리셋(`drill`, `sheet`, `slide`, `axis`, `zoom`, `hero`, `fade`)을 일반 컴포넌트 소스로 설치합니다. 라우팅 영역을 한 번 감싸세요.
+
+```tsx
+'use client'
+
+import { PageTransition, drill, sheet } from '@/components/ui/page-transition'
+import { RouteBoundary } from '@/components/ui/route-boundary'
+
+const transitions = {
+  transitions: [
+    { on: '/posts/**', except: '/posts', transition: drill() },
+    { on: '/compose', transition: sheet({ type: 'blur' }) },
+  ],
+}
+
+export function AppRoot({ children }: { children: React.ReactNode }) {
+  return (
+    <PageTransition config={transitions}>
+      <RouteBoundary>{children}</RouteBoundary>
+    </PageTransition>
+  )
+}
+```
+
+CLI는 `package.json`을 읽어 Next.js, React Router, TanStack Router용 `RouteBoundary`를 설치합니다. `--router`로 선택하거나 일반 버전에 라우터 pathname을 전달할 수도 있습니다. Next.js와 TanStack Router 버전은 ssgoi의 자체 어댑터(`@ssgoi/react/nextjs`, `@ssgoi/react/tanstack-router`)를 감싸고 `PageBoundary` 기본값만 추가합니다.
+
+전체 계약은 키가 있는 요소 하나입니다. `RouteBoundary`는 React key와 route id가 pathname인 `PageBoundary`를 렌더링합니다. 키가 바뀌면 React가 이전 페이지를 언마운트하고 새 페이지를 마운트합니다. 엔진은 분리된 노드를 유지하고 새 페이지 위에 `position: absolute`로 배치하여 둘 다 애니메이션합니다. 그래서 라우터가 없어도 됩니다. `PageBoundary`가 `path`를 직접 받으므로 `useState` 값도 같은 방식으로 작동합니다. [갤러리](/ui/components#page-transition)의 drill, sheet, hero 데모도 이 방식입니다.
+
+`PageTransition`은 레이아웃 전용 셸(`flex min-h-dvh flex-col`)을 배치합니다. 자체 스크롤러 안에서는 `className="min-h-full"`을 전달하세요. 네이티브 앱 셸처럼 나머지는 스크롤러가 담당합니다. 퇴장 페이지의 기준점(`relative`), 쌓임 범위(`z-0`), 가로 잘림(`overflow-x-clip`)을 제공합니다. 스크롤러에 `relative z-0 overflow-x-clip overflow-y-auto`를 주고 맨 위에 `PageTransition`을 두세요. 문서가 스크롤된다면 `body`에 `relative z-0 overflow-x-clip`을 설정하세요. 스크롤러와 sticky 하단 내비게이션 사이에 자체 overflow가 있는 요소를 두지 말고 스크롤러를 쌓임 맥락으로 유지하세요. 이를 어기면 iOS Safari가 스크롤 중 내비게이션 위치를 늦게 바꾸어 흔들립니다. 요소를 스크롤 컨테이너로 만드는 `overflow-x-hidden` 대신 `clip`을 사용하세요. 모든 페이지에 배경을 지정하세요. `PageBoundary`는 기본 `min-h-full`이므로 짧은 페이지도 퇴장 중 셸 높이를 유지하고 sticky 바가 위로 올라가지 않습니다. 앱 바는 경계 안의 페이지에 속해야 페이지와 함께 이동합니다. 탭 변경 후에도 남는 셸은 하단 내비게이션만 유지합니다. 고정 `routeKey`의 바깥 경계와 페이지를 교체하는 안쪽 경계를 둡니다.
+
+```tsx
+<RouteBoundary routeKey="tabs" className="flex min-h-full flex-col">
+  <RouteBoundary className="flex-1">{children}</RouteBoundary>
+  <BottomNav>…</BottomNav>
+</RouteBoundary>
+```
+
+퇴장 페이지는 가장 가까운 위치 기준 조상의 맨 위에 `position: absolute`로 배치됩니다. 중첩 경계 위에 UI 바를 둔다면 경계에 `relative` 부모를 지정하세요. 그렇지 않으면 바 높이만큼 위로 튑니다.
+
+`hero()`는 두 페이지 사이에 요소 하나를 연결합니다. 떠나는 위치에 `data-hero-exit-key={id}`, 도착 위치에 `data-hero-enter-key={id}`를 지정하고 양쪽에 `data-hero-radius`(px 단위 모서리 반경)를 지정하면 상자와 모서리가 함께 변합니다. 규칙, 모든 프리셋, 유지되는 레이아웃, 스크롤 복원, 문제 해결은 기반 엔진인 [SSGOI](https://ssgoi.dev/llms.txt) 문서에 있습니다. 설정 구조는 같고 컴포넌트 이름만 다릅니다.
+
+<a id="bottom-sheet"></a>
+
+## 바텀 시트
+
+`bottom-sheet`는 잡기 핸들과 함께 아래에서 올라오는 시트를 설치합니다. 핸들을 아래로 끌거나 스크롤러가 맨 위일 때 본문을 끌면 시트가 손가락을 따라옵니다. 높이의 1/4을 넘거나 빠르게 튕기면 닫히고 그렇지 않으면 원위치로 돌아갑니다. 제스처와 임계값은 `@comwit/ui`의 `BottomSheet` 프리미티브에 있고 복사한 파일은 유리 표면과 핸들을 그립니다.
+
+```tsx
+'use client'
+
+import {
+  BottomSheet,
+  BottomSheetContent,
+  BottomSheetDescription,
+  BottomSheetFooter,
+  BottomSheetHeader,
+  BottomSheetTitle,
+  BottomSheetTrigger,
+  BottomSheetClose,
+} from '@/components/ui/bottom-sheet'
+
+;<BottomSheet>
+  <BottomSheetTrigger asChild>
+    <Button variant="outline">Filters</Button>
+  </BottomSheetTrigger>
+  <BottomSheetContent>
+    <BottomSheetHeader>
+      <BottomSheetTitle>Filters</BottomSheetTitle>
+      <BottomSheetDescription>Drag the handle down to dismiss.</BottomSheetDescription>
+    </BottomSheetHeader>
+    <div className="min-h-0 flex-1 overflow-y-auto px-5">…</div>
+    <BottomSheetFooter>
+      <BottomSheetClose asChild>
+        <Button>Apply</Button>
+      </BottomSheetClose>
+    </BottomSheetFooter>
+  </BottomSheetContent>
+</BottomSheet>
+```
+
+긴 본문에는 `min-h-0 flex-1 overflow-y-auto`를 지정하세요. `drag="handle"`은 제스처를 핸들로 제한하고 `closeThreshold`, `velocityThreshold`는 놓았을 때 닫히는 기준을 조정합니다. `container`는 `body` 대신 앱 셸에 시트를 포털로 렌더링합니다. `popup.sheet()`는 같은 컴포넌트를 명령형으로 엽니다.
+
+<a id="chat"></a>
+
+## 채팅
+
+`chat`은 전체 대화 화면을 복합 구성 요소로 담은 파일 하나를 설치합니다. `Chat`은 부모를 채우고 `ChatHeader`는 맨 위에 놓이며 `ChatMessages`는 가상화 목록(`@comwit/ui` 내부의 [React Virtuoso](https://virtuoso.dev) 기반), `ChatComposer`는 입력창입니다. 파일은 스타일만 담당합니다. 스크롤 규칙, 가상화, Enter/IME 처리, 자동 높이 조정은 엔진의 `Chat` 프리미티브가 담당하므로 동작을 건드리지 않고 모든 부분을 다시 스타일링할 수 있습니다. 부모에 높이를 지정한 뒤 조합하세요.
+
+```tsx
+'use client'
+
+import {
+  Chat,
+  ChatBubble,
+  ChatComposer,
+  ChatHeader,
+  ChatMessage,
+  ChatMessages,
+  ChatTitle,
+} from '@/components/ui/chat'
+
+export function Thread({ messages, send }: Props) {
+  return (
+    <div className="h-dvh">
+      <Chat mode="messenger">
+        <ChatHeader>
+          <ChatTitle>Ava Chen</ChatTitle>
+        </ChatHeader>
+        <ChatMessages items={messages} isOwn={(m) => m.mine}>
+          {(m) => (
+            <ChatMessage align={m.mine ? 'end' : 'start'}>
+              <ChatBubble>{m.text}</ChatBubble>
+            </ChatMessage>
+          )}
+        </ChatMessages>
+        <ChatComposer onSend={send} />
+      </Chat>
+    </div>
+  )
+}
+```
+
+`mode`는 스크롤 규칙을 선택합니다. `messenger`(사람 간 대화)는 자신의 메시지를 맨 아래에 표시하고, 이미 맨 아래에 있을 때만 상대 메시지를 따라갑니다. 위로 스크롤했다면 유리 효과 배지가 새 메시지 수를 셉니다. `assistant`(AI)는 보낸 메시지를 위로 올리고 그 아래에 응답을 스트리밍합니다. 두 모드 모두 마지막 메시지에서 시작합니다. 상대가 입력 중이면 `footer={<ChatTyping />}`를, 답변이 스트리밍 중이면 입력창에 `pending`과 `onStop`을 전달하세요. 새 스레드가 자신의 끝에서 시작하도록 `ChatMessages`에 대화별 `key`를 지정하세요. 데이터 구조는 자유롭습니다. `items`에는 어떤 데이터든 사용할 수 있고 `isOwn`은 어떤 메시지가 내 것인지 알려줍니다(기본값은 `role === 'user'` 확인).
+
+<a id="customize"></a>
+
+## 사용자 정의
+
+설치한 컴포넌트 파일을 수정하거나 스타일시트에서 CSS 변수를 재정의하세요. [토큰과 테마](/ui/theming)를 참고하세요.
+
+CLI는 기존 파일을 보존합니다. 로컬 변경을 교체하려는 경우에만 `--overwrite`를 사용하세요. `--dry`는 작업을 미리 보여주고 `--no-install`은 npm 의존성 설치를 건너뜁니다.
+
+<a id="with-an-agent"></a>
+
+## 에이전트와 사용
+
+[Comwit UI의 llms.txt](/ui/llms.txt)를 사용하세요. State에는 별도의 [구현 가이드](/state/llms.txt)가 있습니다.

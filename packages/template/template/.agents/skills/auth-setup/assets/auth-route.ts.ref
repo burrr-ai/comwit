@@ -1,10 +1,10 @@
 // ============================================================
-// 레퍼런스: API 라우트 핸들러
-// 위치: src/app/({service})/{service}/api/auth/[...all]/route.ts
+// Reference: API route handler.
+// Location: src/app/({service})/{service}/api/auth/[...all]/route.ts
 // ============================================================
-// 치환 대상:
-//   {service} → app, admin 등
-//   {Service} → App, Admin 등 (PascalCase)
+// Placeholders:
+//   {service} → app, admin, etc.
+//   {Service} → App, Admin, etc. (PascalCase)
 // ============================================================
 
 import { get{Service}Auth } from "@/server/auth/{service}"

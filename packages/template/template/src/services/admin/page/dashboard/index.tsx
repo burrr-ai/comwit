@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Users, UserCheck, UserMinus } from 'lucide-react'
+import { UsersIcon, UserCheckIcon, UserMinusIcon } from '@comwit/ui/icons'
 
 import { Chip } from '@/lib/components/ui/chip'
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/lib/components/ui/data-table'
 import { AdminPage, AdminPageHeader, AdminStatCard } from '@/services/admin/_components'
 
-// TODO: 실제 데이터 타입으로 교체
+// TODO: Replace with actual data types.
 type Member = {
   id: string
   name: string
@@ -22,7 +22,7 @@ type Member = {
   createdAt: string
 }
 
-// 컬럼 셀은 ui 컴포넌트로 — 상태색은 Chip tone 으로만.
+// Render column cells with UI components; use Chip tone for status colors.
 const columns: ColumnDef<Member>[] = [
   { accessorKey: 'name', header: '이름' },
   { accessorKey: 'email', header: '이메일' },
@@ -60,7 +60,7 @@ const allMockMembers: Member[] = Array.from({ length: 12 }, (_, i) => ({
   createdAt: `2026-0${(i % 4) + 1}-${String((i + 1) * 2).padStart(2, '0')}`,
 }))
 
-// TODO: 실제로는 API 집계값(state)으로 교체 — 클라에서 현재 페이지로 집계하지 말 것.
+// TODO: Replace with API aggregates in state; never aggregate only the current client page.
 const STATS = { total: 12, active: 6, inactive: 6 }
 
 export default function AdminDashboard() {
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
     [page],
   )
 
-  // mock QueryData — 실제로는 comwit query 결과를 그대로 넘긴다
+  // Mock QueryData; pass the actual comwit query result in the integrated implementation.
   const data: QueryData<Member> = {
     data: pageable,
     isLoading: false,
@@ -96,9 +96,9 @@ export default function AdminDashboard() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <AdminStatCard label="전체 사용자" value={STATS.total} icon={Users} />
-        <AdminStatCard label="활성" value={STATS.active} icon={UserCheck} />
-        <AdminStatCard label="비활성" value={STATS.inactive} icon={UserMinus} />
+        <AdminStatCard label="전체 사용자" value={STATS.total} icon={UsersIcon} />
+        <AdminStatCard label="활성" value={STATS.active} icon={UserCheckIcon} />
+        <AdminStatCard label="비활성" value={STATS.inactive} icon={UserMinusIcon} />
       </div>
 
       <DataTable

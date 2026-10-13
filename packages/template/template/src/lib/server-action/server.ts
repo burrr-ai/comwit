@@ -6,8 +6,8 @@ import {
 type ServerFnDefinitions = Readonly<Record<string, string>>
 
 /**
- * 서버/RSC/SSR용 API facade를 만든다. 자기 Route Handler로 HTTP 요청하지 않고 manifest가
- * 허용한 action 모듈을 필요할 때 import해 원본 함수를 직접 실행한다.
+ * Create the server/RSC/SSR API facade. Import manifest-allowed actions on demand
+ * and invoke them directly without sending HTTP requests to our own Route Handler.
  */
 export function resolveCompiledActions(
   definitions: ServerFnDefinitions,

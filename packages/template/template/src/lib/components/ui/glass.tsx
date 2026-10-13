@@ -1,17 +1,17 @@
 'use client'
 
 /**
- * Glass — 굴절 유리 면. 앱바·바텀내비·메뉴·플로팅 버튼이 공유하는 컴윗 시그니처 표면.
+ * Glass — refractive glass surface shared by app bars, bottom navigation, menus, and floating buttons.
  *
- *  - <Glass />         어떤 컨테이너에도 까는 절대배치 레이어. 부모가 `relative isolate` + 반경을 갖고,
- *                      콘텐츠는 `relative z-raised` 형제로 둔다.
- *  - <GlassSurface>    레이어 없이 자식 DOM 자체를 유리 면으로 만든다(메뉴·팝오버 content).
- *  - <GlassButton>     유리 레이어를 기본으로 까는 원형/알약 버튼(앱바 뒤로가기·플로팅 액션).
+ * - Glass: absolutely positioned layer inside any container. Parent uses relative isolate and a radius;
+ *   content is a sibling with relative z-raised.
+ * - GlassSurface: makes the child DOM itself glass, without an extra layer (menu/popover content).
+ * - GlassButton: circular/pill button with a glass layer by default (app-bar back/floating action).
  *
- * variant — morphing(렌즈 가장자리 굴절 · 기본) · blur(강한 블러) · frosted(서리) · fade(아래로 사라짐 · 앱바)
- * 시각은 styles.css 의 `.glass*` 가 전부 갖고, 여기선 클래스·CSS 변수·SVG 필터만 붙인다.
- * 굴절 렌즈의 변위 맵(지원 감지·크기 추적·캔버스 생성)은 @comwit/ui 의 `useGlassLens` 가 만든다 —
- * 안정적으로 도는 Chromium 에서만 켜고, 그 외엔 블러로 폴백한다.
+ * Variants: morphing (edge refraction, default), blur (strong blur), frosted, and fade (downward fade for app bars).
+ * styles.css .glass* owns all visuals; this component adds classes, CSS variables, and SVG filters.
+ * @comwit/ui useGlassLens handles support detection, size tracking, and canvas displacement-map generation.
+ * Enable refraction only in Chromium where it is reliable; otherwise fall back to blur.
  */
 
 import {
@@ -32,16 +32,22 @@ export type GlassShape = 'pill' | 'circle' | 'panel'
 
 type GlassOptions = {
   className?: string
-  /** 유리 면에 섞을 CSS 색. 기본은 --glass-tint 토큰. */
+  /**
+   * CSS color mixed into the glass surface. Defaults to the --glass-tint token.
+   */
   tint?: string
-  /** tint 의 불투명도(0~1). 내부 콘텐츠에는 영향을 주지 않는다. */
+  /**
+   * Tint opacity (0–1), without affecting inner content.
+   */
   opacity?: number
   pressed?: boolean
-  /** 유리 레이어의 그림자. 앱바에 붙는 버튼에서는 끈다. */
+  /**
+   * Glass-layer shadow. Disable for buttons attached to an app bar.
+   */
   shadow?: boolean
   /**
-   * 스크림 위에 뜨는 면(다이얼로그·시트·팝업). 뒤가 어두워지므로 틴트를 오버레이 면 색(--popover)으로,
-   * 불투명도를 올려 본문이 읽히게 한다(`.glass-dense`). 가장자리 굴절과 블러는 그대로다.
+   * Surface above a scrim (dialogs, sheets, popups). The darkened backdrop calls for the overlay surface
+   * color (--popover) and higher tint opacity for readable text (.glass-dense). Edge refraction and blur remain.
    */
   dense?: boolean
   shape?: GlassShape
@@ -55,7 +61,9 @@ const VARIANT_CLASS: Record<GlassVariant, string> = {
   fade: 'glass-fade',
 }
 
-/** 버튼·앱바·탭바 등 어떤 컨테이너에도 놓을 수 있는 유리 시각 레이어. */
+/**
+ * Visual glass layer for any container, including buttons, app bars, and tab bars.
+ */
 function Glass({
   className,
   tint,
@@ -104,7 +112,9 @@ type GlassSurfaceProps = Omit<GlassOptions, 'shape'> & {
   }>
 }
 
-/** 별도 레이어 없이 자식 DOM 자체를 유리 면으로 만든다. */
+/**
+ * Make the child DOM itself glass without an extra layer.
+ */
 function GlassSurface({
   children,
   className,
@@ -125,7 +135,7 @@ function GlassSurface({
 
   return (
     <>
-      {/* Slot 이 자식의 ref 를 유지하면서 우리 ref 도 합친다 — 열릴 때마다 마운트되는 팝오버·다이얼로그 콘텐츠의 렌즈를 그때 만든다. */}
+      {/* Slot preserves the child's ref while merging ours, generating the lens when popover/dialog content mounts on each opening. */}
       <Slot
         ref={attach}
         data-glass={variant}
@@ -142,8 +152,9 @@ function GlassSurface({
       >
         {children}
       </Slot>
-      {/* 렌즈 필터는 면의 형제로 둔다 — 자식이 asChild 로 한 요소에 합쳐지는 파트(오버레이 Content)여도 자식이 하나로 남는다.
-          url(#id) 는 문서 어디의 필터든 가리킨다. 면이 없을 땐(닫힌 서브메뉴 등) 그리지 않는다. */}
+      {/* Keep the lens filter as a sibling of the surface so parts merged into one element with asChild (overlay Content)
+still have exactly one child. url(#id) can reference a filter anywhere in the document. Render no filter
+when the surface is absent, such as a closed submenu. */}
       {hasLens && mounted ? (
         <GlassFilter filterId={filterId} variant={variant} lensMap={lensMap} />
       ) : null}
@@ -154,7 +165,9 @@ function GlassSurface({
 type GlassButtonProps = Omit<ComponentProps<typeof Button>, 'variant' | 'size' | 'children'> & {
   children: ReactNode
   contentClassName?: string
-  /** 버튼 모서리에 겹치는 요소(카운트 배지 등). 콘텐츠 레이어 밖에 그린다. */
+  /**
+   * Element overlapping the button corner, such as a count badge. Rendered outside the content layer.
+   */
   indicator?: ReactNode
   shape?: Exclude<GlassShape, 'panel'>
   glassVariant?: GlassVariant
@@ -163,7 +176,9 @@ type GlassButtonProps = Omit<ComponentProps<typeof Button>, 'variant' | 'size' |
   opacity?: number
 }
 
-/** 유리 레이어를 기본으로 까는 버튼. `aria-pressed` 가 true 면 눌린 테두리로 전환한다. */
+/**
+ * Button with a glass layer by default. aria-pressed=true switches to the pressed border.
+ */
 function GlassButton({
   children,
   className,
@@ -193,8 +208,8 @@ function GlassButton({
         pressed={isPressed}
         shadow={shadow}
       />
-      {/* 부모가 transform 중일 때 WebKit 은 z-index 만으로 backdrop-filter 레이어와 전경을
-          분리하지 못한다 — 전경을 자기 합성 레이어(transform-gpu)에 둔다. */}
+      {/* When a parent is transformed, WebKit cannot separate the backdrop-filter layer and foreground with
+z-index alone. Put the foreground on its own compositing layer using transform-gpu. */}
       <span
         className={cn(
           'relative z-raised inline-flex size-full transform-gpu items-center justify-center gap-1 text-foreground',
@@ -215,7 +230,7 @@ function useGlassVisual({
   variant,
 }: Required<Pick<GlassOptions, 'shape' | 'variant'>> & Pick<GlassOptions, 'opacity' | 'tint'>) {
   const filterId = `glass-${variant}-${useId().replace(/:/g, '')}`
-  // 유리 면 DOM 은 콜백 ref 로 받는다 — 프레즌스로 열고 닫히는 콘텐츠는 마운트 시점이 매번 다르다.
+  // Receive the glass-surface DOM through a callback ref; Presence-controlled content mounts at different times.
   const [element, setElement] = useState<HTMLElement | null>(null)
   const lens = useGlassLens(element, { enabled: variant === 'morphing', shape })
   const clamped = opacity === undefined ? undefined : Math.min(1, Math.max(0, opacity))
@@ -231,8 +246,8 @@ function useGlassVisual({
     mounted: element !== null,
     style,
     lensMap: lens.texture,
-    // 콜백 ref(상태 setter)다. 호출부는 구조 분해해서 쓴다 — 반환 객체째 두고 그 속성을 ref 로 넘기면
-    // React Compiler 가 객체 전체를 ref 로 보고 hasLens · style 읽기까지 "렌더 중 ref 접근" 으로 막는다.
+    // This is a callback ref (state setter). Destructure it at the call site; passing it as an object property causes
+    // React Compiler to treat the whole object as a ref and reject hasLens/style reads as ref access during render.
     attach: setElement as Ref<HTMLElement>,
   }
 }

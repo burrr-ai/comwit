@@ -2,7 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
 
-const CONTENT_DIR = path.join(process.cwd(), 'content/state')
+const contentDir = (locale: string) =>
+  path.join(process.cwd(), 'content', locale === 'ko' ? 'ko' : '', 'state')
 
 export interface DocMeta {
   title: string
@@ -33,11 +34,11 @@ function filePathToSlug(filePath: string): string {
   return filePath.replace(/\.mdx$/, '').replace(/(^|\/)index$/, '')
 }
 
-export function getAllDocs(): DocMeta[] {
-  const files = getMdxFiles(CONTENT_DIR)
+export function getAllDocs(locale = 'en'): DocMeta[] {
+  const files = getMdxFiles(contentDir(locale))
   return files
     .map((file) => {
-      const raw = fs.readFileSync(path.join(CONTENT_DIR, file), 'utf-8')
+      const raw = fs.readFileSync(path.join(contentDir(locale), file), 'utf-8')
       const { data } = matter(raw)
       const slug = (data.slug as string) || filePathToSlug(file)
       return {
@@ -50,10 +51,10 @@ export function getAllDocs(): DocMeta[] {
     .sort((a, b) => a.order - b.order)
 }
 
-export function getDocBySlug(slug: string): Doc | null {
-  const files = getMdxFiles(CONTENT_DIR)
+export function getDocBySlug(slug: string, locale = 'en'): Doc | null {
+  const files = getMdxFiles(contentDir(locale))
   for (const file of files) {
-    const raw = fs.readFileSync(path.join(CONTENT_DIR, file), 'utf-8')
+    const raw = fs.readFileSync(path.join(contentDir(locale), file), 'utf-8')
     const { data, content } = matter(raw)
     const fileSlug = (data.slug as string) || filePathToSlug(file)
     if (fileSlug === slug || (slug === '' && filePathToSlug(file) === 'index')) {

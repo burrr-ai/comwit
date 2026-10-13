@@ -1,3 +1,8 @@
+import rehypeSlug from 'rehype-slug'
+import remarkStableAnchors from '@/lib/remark-stable-anchors.mjs'
+import { getLocale } from 'next-intl/server'
+
+import { Copy } from '@/i18n/copy'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { MDXRemote } from 'next-mdx-remote/rsc'
@@ -12,14 +17,14 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = getBlogPostBySlug(slug)
+  const post = getBlogPostBySlug(slug, await getLocale())
   if (!post) return {}
   return { title: `${post.title} — comwit blog` }
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = getBlogPostBySlug(slug)
+  const post = getBlogPostBySlug(slug, await getLocale())
   if (!post) notFound()
 
   return (
@@ -39,14 +44,18 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <path d="M19 12H5" />
           <path d="m12 19-7-7 7-7" />
         </svg>
-        Back to blog
+        <Copy id="text012" />{' '}
       </Link>
 
       <header className="blog-post-header">
         <h1 className="blog-title">{post.title}</h1>
         <div className="blog-post-meta">
           <time dateTime={post.date}>{post.date}</time>
-          {post.author && <span>by {post.author}</span>}
+          {post.author && (
+            <span>
+              <Copy id="text013" /> {post.author}
+            </span>
+          )}
         </div>
       </header>
 
@@ -55,8 +64,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           source={post.content}
           options={{
             mdxOptions: {
-              remarkPlugins: [remarkGfm],
-              rehypePlugins: [rehypeHighlight],
+              remarkPlugins: [remarkGfm, remarkStableAnchors],
+              rehypePlugins: [rehypeSlug, rehypeHighlight],
             },
           }}
         />

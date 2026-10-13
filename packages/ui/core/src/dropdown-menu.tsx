@@ -1,5 +1,5 @@
 /**
- * comwit-ui — dropdown-menu. Radix Primitives 구현을 그대로 이식한 자체 엔진 (외부 @radix-ui 의존성 없음).
+ * comwit-ui — dropdown-menu. An in-house port of Radix Primitives, with no external @radix-ui dependency.
  */
 import * as React from 'react'
 import { composeEventHandlers } from './internal/compose-event-handlers'
@@ -194,8 +194,8 @@ const DropdownMenuContent = React.forwardRef<DropdownMenuContentElement, Dropdow
           event.preventDefault()
         })}
         onInteractOutside={composeEventHandlers(props.onInteractOutside, (event) => {
-          // 트리거 누름은 바깥이 아니다 — 트리거가 스스로 열고 닫는다. 닫히는 애니메이션 도중 다시 누르면
-          // 트리거가 연 것을 이 레이어가 곧바로 다시 닫아 버리지 않게(열려 있을 땐 바깥 포인터가 막혀 여기까지 오지 않는다).
+          // Pressing the trigger is not an outside interaction: the trigger toggles itself. If pressed during the closing animation,
+          // this layer must not immediately close what the trigger just opened (outside pointers are blocked while open).
           const target = event.target as Node | null
           if (target && context.triggerRef.current?.contains(target)) {
             event.preventDefault()

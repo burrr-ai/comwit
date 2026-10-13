@@ -1,5 +1,5 @@
 /**
- * comwit-ui — avatar. Radix Primitives 구현을 그대로 이식한 자체 엔진 (외부 @radix-ui 의존성 없음).
+ * Avatar engine ported from Radix Primitives without an external @radix-ui dependency.
  */
 'use client'
 import * as React from 'react'

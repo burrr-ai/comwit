@@ -1,6 +1,7 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
+import { useLocale } from 'next-intl'
 import { formatRelativeTime } from '@/lib/relative-time'
 
 function subscribe(callback: () => void) {
@@ -21,11 +22,12 @@ function getServerSnapshot() {
 }
 
 export function RelativeTime({ date }: { date: string }) {
+  const locale = useLocale()
   // Keep static HTML and hydration identical, then use the reader's current time.
   const now = useSyncExternalStore(subscribe, getCurrentMinute, getServerSnapshot)
   return (
     <time dateTime={date} title={date}>
-      {now === null ? date : formatRelativeTime(date, now)}
+      {now === null ? date : formatRelativeTime(date, now, locale)}
     </time>
   )
 }

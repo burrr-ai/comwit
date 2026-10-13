@@ -153,6 +153,12 @@ replace it with the template's and delete the old one; never keep two.
 - `npx comwit-ui@latest init` (`--locale ko` only for Korean UI) with aliases that match
   the project; it writes `comwit.json`, `comwit-tokens.css` and the base dependencies.
   Set `--font-pretendard` on `<html>` or the project's font.
+- Existing Comwit installs must update dependency pins explicitly: the current icon
+  sources require `@comwit/ui` 0.6.0 and `comwit-ui` 0.7.0, or a newer compatible
+  pair. The CLI deliberately keeps dependencies already declared in package.json.
+  Replace `lucide-react` imports with `@comwit/ui/icons` (optional motion lives at
+  `@comwit/ui/icons/animated`). Review diffs before overwriting customized source;
+  remove the old icon dependency only when every remaining import is migrated.
 - For every component in the inventory with a comwit-ui equivalent (button, input,
   text-field, select, dialog, sheet, bottom-sheet, form, data-table, toast, popup, tabs,
   dropdown-menu, …): `npx comwit-ui@latest add <name>`, port every call site, delete the

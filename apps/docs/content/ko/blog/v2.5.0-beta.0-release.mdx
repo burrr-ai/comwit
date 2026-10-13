@@ -1,0 +1,79 @@
+---
+title: 'comwit v2.5.0-beta.0 — Next.js 스트리밍 Suspense'
+date: '2026-09-25'
+description: '2.5 베타는 Next.js 서버 렌더링에서 .suspend()로 완료된 쿼리 결과를 브라우저 캐시에 전달해, 두 번째 요청 없이 Suspense 경계를 복원합니다.'
+author: 'Claude'
+---
+
+```bash
+npm install @comwit/state@beta
+```
+
+<a id="a-suspense-boundary-that-hydrates-with-its-data"></a>
+
+## 데이터와 함께 복원되는 Suspense 경계
+
+실험적 `.suspend(arg)`는 렌더 중 쿼리를 실행하고 진행 중인 Promise를 던집니다. `<Suspense>` 경계는 폴백을 먼저 스트리밍한 뒤 콘텐츠를 보냅니다. 지금까지는 브라우저 캐시가 별개라 hydration에서 `queryFn`을 다시 실행했습니다. 2.5.0-beta.0부터 Provider가 서버에서 완료된 각 결과를 브라우저 캐시로 전달합니다.
+
+Provider에 Next.js 훅을 넘기면 됩니다. 나머지는 같습니다.
+
+```tsx
+'use client'
+
+import { ComwitProvider } from '@comwit/state'
+import { useRouter, useServerInsertedHTML } from 'next/navigation'
+import { getServerSearchParams } from './get-server-search-params'
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  return (
+    <ComwitProvider
+      context={{ router }}
+      getServerSearchParams={getServerSearchParams}
+      useServerInsertedHTML={useServerInsertedHTML}
+    >
+      {children}
+    </ComwitProvider>
+  )
+}
+```
+
+```tsx
+// Server Component
+export default function ProductPage({ id }: { id: string }) {
+  return (
+    <Suspense fallback={<ProductSkeleton />}>
+      <ProductDetail id={id} />
+    </Suspense>
+  )
+}
+
+// Client Component
+function ProductDetail({ id }: { id: string }) {
+  const product = useProduct((s) => s.detail.suspend(id))
+  return product.data ? <ProductView product={product.data} /> : <NotFound />
+}
+```
+
+```text
+server: suspend(id) → queryFn → boundary HTML, preceded by an inert JSON script
+browser: hydrating suspend(id) reads the script → same snapshot, no queryFn → active after commit
+```
+
+`getServerSearchParams`와 같은 방식으로 프레임워크 함수를 주입하며, Next.js 전용 Provider는 없습니다. 서버의 `useServerInsertedHTML`은 마지막 전송 후 완료된 결과를 담은 `<script type="application/json" data-comwit-suspend>`를 각 청크 앞에 삽입합니다. 브라우저의 hydration 셀렉터는 첫 스냅샷 전에 이 스크립트를 읽으므로 마크업이 일치합니다. 커밋 후 서버의 가져온 시각을 유지한 채 항목이 활성화되고, 브라우저가 직접 가져온 것처럼 `staleTime`이 적용됩니다. 결과는 선택한 훅의 트리 위치를 키로 사용하므로 중첩 Provider나 반복 컴포넌트가 서로 잘못 복원하지 않습니다. 실행 가능한 인라인 스크립트는 생성하지 않습니다.
+
+Next.js 16.3과 `cacheComponents: true`에서 검증했습니다. 정적 셸은 사전 렌더링되고, 경계는 요청 시 완료되며, 브라우저가 스트리밍된 결과로 복원됩니다. 설정과 요구사항은 [Next.js 가이드](/state/docs/guide/nextjs#streaming-suspense-experimental)를 확인하세요. `queryFn`은 양쪽 환경에서 실행 가능해야 하며 Server Functions는 사용할 수 없고 서버의 `fetch` URL은 절대 경로여야 합니다. 결과는 JSON 직렬화가 가능해야 합니다. 서버에 남아야 하는 데이터를 전달할 때는 계속 `hydrate()`를 기본으로 사용합니다.
+
+<a id="documentation"></a>
+
+## 문서
+
+- API 사이드바를 설정(`ComwitProvider`, `create()`, 유틸), 모델(`model()`, `query()`, `searchParam()`, `local()`, `persist()`, `computed()`, `$history`), 액션(`action()`, 데코레이터)으로 묶었습니다.
+- 사용 중단된 `silent()` 페이지를 문서와 에이전트 가이드에서 제거했습니다. export는 호환성을 위해 남습니다. 서버 데이터에는 `hydrate()` 또는 스트리밍 `.suspend()`를 사용하세요.
+- `llms.txt`에 두 프레임워크 함수를 전달하는 Provider 설정과 스트리밍 요구사항을 넣었습니다.
+
+<a id="compatibility"></a>
+
+## 호환성
+
+모든 기존 API 동작을 유지합니다. `useServerInsertedHTML`이 없으면 `.suspend()`는 2.4처럼 동작합니다. 서버와 브라우저 캐시가 분리되어 브라우저가 hydration 중 다시 조회합니다.

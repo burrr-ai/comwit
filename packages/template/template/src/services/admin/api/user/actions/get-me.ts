@@ -4,10 +4,10 @@ import { createAction } from '@/lib/utils'
 import type { User } from '@/services/admin/state/user'
 
 /**
- * Get current logged-in admin user
- * TODO(auth-setup): getAdminServerSession()의 session.user 필드 매핑으로 교체한다.
- * 별도 회원/업무 테이블은 별도 API/query로 지연 조회한다. 여기서 조인하지 않는다.
- * 세션 조회 오류는 전파하며 비로그인(null)으로 바꾸지 않는다.
+ * Get the current logged-in admin user.
+ * TODO(auth-setup): Map session.user fields from getAdminServerSession().
+ * Fetch separate member/business tables lazily through separate APIs/queries; do not join here.
+ * Propagate session-read errors instead of converting them to anonymous null.
  */
 async function _getMe(): Promise<User | null> {
   return {

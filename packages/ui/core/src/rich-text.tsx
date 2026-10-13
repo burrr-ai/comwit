@@ -1,12 +1,11 @@
 'use client'
 
 /**
- * rich-text — tiptap 리치텍스트 에디터 헤드리스 엔진.
+ * rich-text — headless tiptap rich-text editor engine.
  *
- * `useEditor(...)` 구성 전부(StarterKit · Placeholder · Link · Image ·
- * immediatelyRender · editorProps.attributes prose 클래스 · onUpdate → onChange)와
- * value→setContent / editable→setEditable 동기화 useEffect 두 개를 소유한다.
- * 시각/툴바(제어 표면)는 소비 레이어(@comwit/ui-templates)가 이 에디터 인스턴스를 구동한다.
+ * Owns all useEditor configuration: StarterKit, Placeholder, Link, Image, immediatelyRender, prose classes in
+ * editorProps.attributes, and onUpdate → onChange. Also owns the value → setContent and editable → setEditable sync effects.
+ * The consumer layer (@comwit/ui-templates) drives this editor instance through its visuals and toolbar.
  */
 
 import * as React from 'react'
@@ -18,12 +17,12 @@ import Image from '@tiptap/extension-image'
 
 export type { TiptapEditor }
 
-// 이 엔진이 구성한 확장들(StarterKit·Link·Image)은 각자의 커맨드
-// (toggleBold/setLink/unsetLink/setImage/undo/redo …)를 `@tiptap/core` 의 module
-// augmentation 으로 등록한다. 위 값(value) import 들은 발행되는 `.d.ts` 에서 지워지므로,
-// 확장의 옵션 '타입'을 여기서 재-export 해 커맨드 augmentation 이 @comwit/ui 발행 타입과
-// 함께 실려가게 한다 → 소비 레이어(templates 툴바)가 tiptap 확장을 직접 import 하지 않고도
-// `editor.chain()/can()` 를 완전히 타입 안전하게 쓴다.
+// The extensions configured here (StarterKit, Link, Image) register their commands
+// (toggleBold/setLink/unsetLink/setImage/undo/redo, etc.) through @tiptap/core module
+// augmentation. Value imports above disappear from published .d.ts files, so
+// re-export the extension option types here to carry those command augmentations
+// alongside the published @comwit/ui types. This lets the consumer template toolbar
+// use editor.chain()/can() with full type safety without importing tiptap extensions directly.
 export type { StarterKitOptions } from '@tiptap/starter-kit'
 export type { LinkOptions } from '@tiptap/extension-link'
 export type { ImageOptions } from '@tiptap/extension-image'
@@ -32,7 +31,7 @@ export function useRichTextEditor(opts: {
   value?: string
   onChange?: (html: string) => void
   placeholder?: string
-  /** 편집 영역(contenteditable)에 얹을 속성 — id·aria-label·aria-labelledby 등 */
+  /** Attributes for the contenteditable area, such as id, aria-label, and aria-labelledby. */
   attributes?: Record<string, string>
   editable?: boolean
 }): TiptapEditor | null {

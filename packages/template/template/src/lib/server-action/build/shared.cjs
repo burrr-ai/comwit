@@ -18,7 +18,7 @@ function projectRelative(projectRoot, filePath) {
   return normalizePath(path.relative(projectRoot, filePath))
 }
 
-/** 파일 경로와 export 이름만으로 환경에 무관한 registry id를 만든다. */
+/** Build an environment-independent registry ID from the file path and export name. */
 function createActionId(projectRoot, filePath, exportName) {
   const relative = projectRelative(projectRoot, filePath)
   const match = relative.match(
@@ -40,7 +40,7 @@ function parseSource(filePath, source) {
   )
 }
 
-/** createAction을 alias import한 경우까지 정확히 추적한다. */
+/** Track createAction accurately, including aliased imports. */
 function findCreateActionAliases(sourceFile) {
   const aliases = new Set()
   for (const statement of sourceFile.statements) {
@@ -68,7 +68,7 @@ function hasExportModifier(statement) {
   )
 }
 
-/** 린트가 허용하는 `export const x = createAction(handler)` 목록을 읽는다. */
+/** Read the lint-approved export const x = createAction(handler) declarations. */
 function getActionExports(filePath, source) {
   const sourceFile = parseSource(filePath, source)
   const aliases = findCreateActionAliases(sourceFile)
@@ -134,8 +134,8 @@ function transpile(filePath, source) {
 }
 
 /**
- * 소스의 `'use server'`는 작성 규약으로만 남긴다. 산출물에서는 Next/React directive 대신
- * `server-only` poison import로 바꿔 action 구현이 서버 graph 밖으로 새면 빌드를 실패시킨다.
+ * Keep 'use server' only as a source convention. Replace the Next/React directive
+ * with a server-only poison import so leaking actions outside the server graph fails the build.
  */
 function replaceUseServerWithServerOnly(source) {
   return source.replace(
@@ -190,7 +190,7 @@ function resolveActionModuleFile(importerPath, moduleSpecifier) {
   return filePath
 }
 
-/** `./actions` barrel의 공개 이름을 최종 createAction 구현 파일까지 추적한다. */
+/** Trace public ./actions barrel names to their final createAction implementation files. */
 function resolveActionBarrelExport(barrelPath, exportName, seen = new Set()) {
   const normalized = normalizePath(barrelPath)
   const visitKey = `${normalized}#${exportName}`
@@ -251,7 +251,7 @@ function resolveActionBarrelExport(barrelPath, exportName, seen = new Set()) {
   )
 }
 
-/** API index의 public method 이름과 실제 action export를 연결한다. */
+/** Map API index public method names to actual action exports. */
 function getApiDefinitions(projectRoot, filePath, source) {
   const sourceFile = parseSource(filePath, source)
   const resolveAliases = findResolveActionsAliases(sourceFile)
@@ -411,7 +411,7 @@ function findActionFiles(directory) {
   return files.sort()
 }
 
-/** 전체 action set을 정적 dynamic-import allowlist로 만든다. */
+/** Build a static dynamic-import allowlist for all actions. */
 function createManifestSource(projectRoot, files) {
   const entries = new Map()
   const sourceRoot = path.join(projectRoot, 'src')

@@ -1,0 +1,52 @@
+---
+title: 'comwit v2.2.0-beta.3 — 컬렉션별 로컬 데이터 스코프'
+date: '2026-08-17'
+description: '네 번째 2.2 베타는 각 로컬 컬렉션이 공개 데이터를 공유하거나 다른 모델에서 사용자와 테넌트 스코프를 지연 계산하도록 지원합니다.'
+---
+
+네 번째 2.2 베타는 로컬 영속화 경계를 컬렉션으로 내립니다. 공개 리소스는 IndexedDB 캐시를 공유하고, 개인화된 리소스는 `ComwitProvider`를 다시 마운트하지 않아도 Provider에 연결된 상태에서 스코프를 구합니다.
+
+<a id="public-and-personalized-collections"></a>
+
+## 공개 컬렉션과 개인화 컬렉션
+
+모든 방문자가 공유하는 콘텐츠에는 정적 스코프를 사용하세요.
+
+```ts
+const posts = local.collection<Post>({
+  key: 'posts',
+  version: 1,
+  scope: 'public',
+})
+```
+
+개인화 데이터에는 인라인 계산 함수를 사용합니다.
+
+```ts
+const projects = local.collection<Project>({
+  key: 'projects',
+  version: 1,
+  scope: ({ state }) => {
+    const userId = state(userModel).me?.id
+    return userId ? `user:${userId}` : null
+  },
+})
+```
+
+리소스를 복원, 조회, 초기화, 변경할 때 계산 함수를 평가합니다. 따라서 컬렉션 모듈을 평가한 뒤에 참조 모델을 초기화해도 됩니다. `null` 또는 `undefined`를 반환하면 공유 스코프로 넘어가지 않고 해당 작업의 IndexedDB 사용을 건너뜁니다.
+
+컬렉션 스코프는 `defaultOptions.local.scope`보다 우선합니다. 기존 Provider 스코프 기반 앱도 호환됩니다.
+
+<a id="scope-transitions"></a>
+
+## 스코프 전환
+
+엔티티 캐시, 정확한 뷰, 낙관적 리비전, 버전 정리, 목록/상세 전파 모두 계산된 컬렉션 스코프별로 분리됩니다. 스코프가 바뀌면 이전 쿼리 캐시를 버립니다. 한 사용자에서 시작한 응답은 다른 사용자의 컬렉션에 반영하지 않습니다.
+
+베타 설치:
+
+```bash
+yarn add @comwit/state@2.2.0-beta.3
+```
+
+독립 리소스, 쿼리 어댑터, 컬렉션 버전, 인자별 뷰, 동기화 동작은 전체 [`local()` 레퍼런스](/docs/api/local)를 참고하세요.

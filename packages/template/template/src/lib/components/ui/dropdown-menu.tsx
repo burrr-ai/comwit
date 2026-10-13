@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { DropdownMenu as DropdownMenuPrimitive } from '@comwit/ui'
-import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
+import { CheckIcon, ChevronRightIcon, CircleIcon } from '@comwit/ui/icons'
 
 import { GlassSurface } from '@/lib/components/ui/glass'
 import { OverlayMotion } from '@/lib/overlay-motion'
@@ -43,7 +43,7 @@ function DropdownMenuContent({
           {...props}
           asChild
         >
-          {/* 트리거 쪽에서 0.6 배로 커지며 나타나고 같은 길로 사라진다 — lib/overlay-motion */}
+          {/* Grow from scale 0.6 toward the trigger and exit along the same path using lib/overlay-motion. */}
           <OverlayMotion preset="menu">{children}</OverlayMotion>
         </DropdownMenuPrimitive.Content>
       </GlassSurface>

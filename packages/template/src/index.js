@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // ─────────────────────────────────────────────────────────────────────────
-// create-comwit — Comwit 템플릿으로 Next.js 프로젝트를 만든다.
+// create-comwit scaffolds a Next.js project from the Comwit template.
 //   npm create comwit@latest my-app
 //   npx create-comwit@latest my-app [--opennext] [--pm pnpm|npm|yarn|bun] [--no-install] [--no-git] [--cwd <dir>]
 //
-// 템플릿은 이 패키지에 통째로 번들돼 있다(template/). zero-dep(Node 내장만).
-// 프로젝트 이름만 package.json / README 에 넣고, 나머지는 그대로 복사한다.
+// The complete template is bundled in template/. Uses only Node built-ins.
+// Substitute the project name in package.json and README; copy other files unchanged.
 // ─────────────────────────────────────────────────────────────────────────
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
@@ -82,7 +82,7 @@ function has(cmd) {
   const r = spawnSync(cmd, ['--version'], { stdio: 'ignore', shell: process.platform === 'win32' })
   return r.status === 0
 }
-// `npm create comwit` 은 npm_config_user_agent 에 호출한 매니저를 남긴다("pnpm/11.3.0 …").
+// npm create comwit exposes the invoking package manager through npm_config_user_agent.
 function invokingManager() {
   const agent = process.env.npm_config_user_agent ?? ''
   const name = agent.split(' ')[0]?.split('/')[0]
@@ -93,7 +93,7 @@ function chooseManager(flag) {
     if (!['pnpm', 'npm', 'yarn', 'bun'].includes(flag)) die(`unknown package manager: ${flag}`)
     return flag
   }
-  // 템플릿은 pnpm 을 전제로 한다(AGENTS.md). 있으면 pnpm, 없으면 호출한 매니저.
+  // The template assumes pnpm in AGENTS.md. Prefer pnpm when available, otherwise use the invoking manager.
   if (has('pnpm')) return 'pnpm'
   return invokingManager() ?? 'npm'
 }
@@ -139,7 +139,7 @@ if (flags.dry) {
   process.exit(0)
 }
 
-// npm 이 .gitignore 를 패키지에서 떨어뜨리므로 _gitignore 로 싣고 여기서 되돌린다.
+// Ship _gitignore because npm omits .gitignore, then restore its filename during scaffolding.
 const RENAME = { _gitignore: '.gitignore' }
 for (const rel of files) {
   const out = join(target, RENAME[rel] ?? rel)
@@ -147,7 +147,7 @@ for (const rel of files) {
   writeFileSync(out, readFileSync(join(TEMPLATE, rel)))
 }
 
-// 이름만 프로젝트 것으로.
+// Substitute the project's name only.
 const pkgPath = join(target, 'package.json')
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
 pkg.name = name
@@ -158,13 +158,13 @@ if (flags.opennext) applyOpenNext(target, name, variantFiles)
 log(c.green('✔ ') + 'files written')
 
 // ── --opennext: Cloudflare Workers overlay ──────────────────────────────
-// variants/opennext/ 는 손으로 관리한다(스냅샷과 달리 생성물이 아님). 파일 추가 + package.json 병합 +
-// next.config.ts 에 dev 초기화 한 줄 + AGENTS.md 의 Deploy 절 교체 + README/.gitignore 덧붙이기.
+// The handwritten variants/opennext overlay adds files, merges package.json,
+// initializes development in next.config.ts, replaces AGENTS.md deployment guidance, and extends README/.gitignore.
 function applyOpenNext(target, name, variantFiles) {
   const dir = join(VARIANTS, 'opennext')
   const read = (rel) => readFileSync(join(target, rel), 'utf8')
   const write = (rel, text) => writeFileSync(join(target, rel), text)
-  // Worker 이름: 소문자·숫자·하이픈만.
+  // Worker names allow only lowercase letters, digits, and hyphens.
   const worker = name
     .replace(/^@/, '')
     .replace(/[^a-z0-9-]+/g, '-')
@@ -183,6 +183,18 @@ function applyOpenNext(target, name, variantFiles) {
     pkg[key] = { ...pkg[key], ...patch[key] }
   write('package.json', `${JSON.stringify(pkg, null, 2)}\n`)
 
+  // workerd installs the platform binary used by Cloudflare development and previews.
+  // Keep both pnpm 10 and pnpm 11 build allowlists in the generated project.
+  const workspace = read('pnpm-workspace.yaml')
+  if (!workspace.includes('onlyBuiltDependencies:\n') || !workspace.includes('allowBuilds:\n'))
+    die('pnpm-workspace.yaml changed shape; the opennext overlay needs updating')
+  write(
+    'pnpm-workspace.yaml',
+    workspace
+      .replace('onlyBuiltDependencies:\n', 'onlyBuiltDependencies:\n  - workerd\n')
+      .replace('allowBuilds:\n', 'allowBuilds:\n  workerd: true\n')
+  )
+
   const nextConfig = read('next.config.ts')
   const exportLine = 'export default withServerFn(nextConfig);'
   if (!nextConfig.includes(exportLine))
@@ -196,17 +208,17 @@ function applyOpenNext(target, name, variantFiles) {
       )
       .replace(
         exportLine,
-        '// `next dev` 에서도 Cloudflare 바인딩(getCloudflareContext)을 쓸 수 있게 한다.\ninitOpenNextCloudflareForDev();\n\n' +
+        '// Enable Cloudflare bindings (getCloudflareContext) during `next dev` too.\ninitOpenNextCloudflareForDev();\n\n' +
           exportLine
       )
   )
 
-  // AGENTS.md 에 Deploy 절이 있으면 그 절을 바꾸고, 없으면(기본 템플릿) 끝에 덧붙인다.
+  // Replace an existing Deploy section in AGENTS.md or append one to the default template.
   const agents = read('AGENTS.md')
   const deployAt = agents.lastIndexOf('## Deploy')
   const before = deployAt < 0 ? agents.trimEnd() + '\n\n---\n\n' : agents.slice(0, deployAt)
   write('AGENTS.md', before + readFileSync(join(dir, 'agents-deploy.md'), 'utf8'))
-  // 조각 파일의 앞뒤 공백은 믿지 않는다(포매터가 지운다) — 항상 빈 줄 하나로 잇는다.
+  // Join fragments with one blank line instead of relying on whitespace that formatters may remove.
   const fragment = (file) => readFileSync(join(dir, file), 'utf8').trim() + '\n'
   write('README.md', read('README.md').trimEnd() + '\n\n' + fragment('readme.md'))
   write('.gitignore', read('.gitignore').trimEnd() + '\n\n' + fragment('gitignore'))

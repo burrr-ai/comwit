@@ -1,0 +1,127 @@
+---
+title: 'persist()'
+group: 'Model'
+slug: 'api/persist'
+order: 25
+---
+
+# persist()
+
+모델 안에 영속화 필드를 선언합니다. 값은 저장소와 자동으로 동기화됩니다.
+
+서버 형식의 ID 기반 스냅샷에서 정규화된 엔티티를 IndexedDB로부터 복원하려면 [`local()`](/state/docs/api/local)을 사용하세요. 클라이언트에서 백그라운드 재검증도 해야 한다면 `local.query()` 어댑터를 추가하세요. `persist()`는 로컬에서 소유하는 환경설정, 초안, UI 값을 위한 것입니다.
+
+URL 쿼리 문자열에 있어야 하는 상태에는 [`searchParam()`](/state/docs/api/router)을 사용하세요. 이 역시 모델 필드에 선언하며 일반 읽기와 액션의 값 할당을 통해 동기화됩니다.
+
+```ts
+import { persist } from '@comwit/state'
+```
+
+<a id="basic-usage"></a>
+
+## 기본 사용법
+
+```ts
+import { model, persist } from '@comwit/state'
+
+export const settings = model<SettingsState>({
+  theme: persist({ key: 'theme', defaultValue: 'light' }),
+  lang: persist({ key: 'lang', defaultValue: 'en', storage: 'sessionStorage' }),
+})
+```
+
+별도의 타입은 필요하지 않습니다. 영속화 필드는 상태 타입에서 일반 값으로 선언합니다.
+
+```ts
+export type SettingsState = {
+  theme: string
+  lang: string
+}
+```
+
+<a id="options"></a>
+
+## 옵션
+
+| 옵션           | 타입                                                   | 설명                                                            |
+| -------------- | ------------------------------------------------------ | --------------------------------------------------------------- |
+| `key`          | `string`                                               | **필수.** 저장소 키입니다.                                      |
+| `defaultValue` | `T`                                                    | **필수.** 저장소가 비었을 때 사용할 값입니다.                   |
+| `storage`      | `'localStorage' \| 'sessionStorage' \| PersistAdapter` | 저장소 백엔드입니다. 기본값은 `'localStorage'`입니다.           |
+| `serialize`    | `(value: T) => string`                                 | 사용자 정의 직렬화 함수입니다. 기본값은 `JSON.stringify`입니다. |
+| `deserialize`  | `(raw: string) => T`                                   | 사용자 정의 역직렬화 함수입니다. 기본값은 `JSON.parse`입니다.   |
+
+<a id="how-it-works"></a>
+
+## 동작 방식
+
+1. **하이드레이션** — 모델 생성 시 저장된 값을 읽습니다. 비어 있으면 `defaultValue`를 사용합니다.
+2. **쓰기 반영** — 프록시 값이 바뀌면 디바운스 후 저장소에 씁니다(기본 100ms).
+3. **탭 간 동기화** — localStorage에서는 다른 탭의 변경을 `StorageEvent`로 자동 반영합니다.
+4. **SSR 안전성** — `window`를 사용할 수 없으면 `defaultValue`를 반환합니다.
+
+<a id="provider-defaults"></a>
+
+## 프로바이더 기본값
+
+디바운스 시간을 전역으로 설정합니다.
+
+```tsx
+<ComwitProvider
+  defaultOptions={{
+    persist: { debounceMs: 200 },
+  }}
+>
+```
+
+<a id="custom-adapter"></a>
+
+## 사용자 정의 어댑터
+
+사용자 정의 저장소 백엔드를 위해 `PersistAdapter<T>`를 구현하세요.
+
+```ts
+import { type PersistAdapter } from '@comwit/state'
+
+const indexedDBAdapter: PersistAdapter<UserPrefs> = {
+  get(key) {
+    /* read from IndexedDB */
+  },
+  set(key, value) {
+    /* write to IndexedDB */
+  },
+  remove(key) {
+    /* delete from IndexedDB */
+  },
+  subscribe(key, callback) {
+    // optional: listen for external changes
+    return () => {
+      /* cleanup */
+    }
+  },
+}
+
+const settings = model({
+  prefs: persist({
+    key: 'user-prefs',
+    defaultValue: { fontSize: 14 },
+    storage: indexedDBAdapter,
+  }),
+})
+```
+
+<a id="in-actions"></a>
+
+## 액션에서 사용
+
+영속화 필드는 일반 상태처럼 동작하며 변경 사항이 자동으로 저장됩니다.
+
+```ts
+class SettingsActions {
+  private s = state(settings)
+
+  setTheme(theme: string) {
+    this.s.theme = theme // automatically persisted
+  }
+}
+```

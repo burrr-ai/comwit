@@ -1,6 +1,6 @@
 'use client'
 
-import { RefreshCw, ServerCrash } from 'lucide-react'
+import { RefreshCwIcon, ServerCrashIcon } from '@comwit/ui/icons'
 
 import { Button } from '@/lib/components/ui/button'
 
@@ -25,14 +25,14 @@ export function ServiceUnavailable({
         role="alert"
       >
         <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-destructive-surface text-destructive-surface-foreground">
-          <ServerCrash aria-hidden="true" className="size-6" />
+          <ServerCrashIcon aria-hidden="true" className="size-6" />
         </div>
         <h1 className="mt-5 text-title-lg font-semibold text-balance">{title}</h1>
         <p className="mt-2 text-body text-soft-foreground text-balance">
           {description}
         </p>
         <Button className="mt-6" onClick={handleRetry} type="button">
-          <RefreshCw aria-hidden="true" />
+          <RefreshCwIcon aria-hidden="true" />
           다시 시도
         </Button>
       </section>

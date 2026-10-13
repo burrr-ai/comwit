@@ -1,3 +1,6 @@
+import { localizeMetadata } from '@/i18n/metadata'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale } from 'next-intl/server'
 import type { Metadata } from 'next'
 import { Inter, Geist_Mono, Manrope } from 'next/font/google'
 import localFont from 'next/font/local'
@@ -14,7 +17,7 @@ const manrope = Manrope({
   subsets: ['latin'],
 })
 
-// UI 라이브러리 기본 서체 — --font-pretendard 를 <html> 에 두어 토큰의 --font-sans 가 :root 에서 풀린다.
+// Set --font-pretendard on html so the library's --font-sans token resolves at :root.
 const pretendard = localFont({
   src: '../../ui-dev/app/fonts/PretendardVariable.woff2',
   variable: '--font-pretendard',
@@ -27,7 +30,7 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
-export const metadata: Metadata = {
+const metadata: Metadata = {
   title: 'Comwit — State & UI',
   description: 'The open-source State and UI libraries behind comwit.io templates.',
   metadataBase: new URL('https://library.comwit.io'),
@@ -40,8 +43,8 @@ export const metadata: Metadata = {
   },
   twitter: { card: 'summary_large_image', images: ['/og/libraries'] },
   other: { llmstxt: 'https://library.comwit.io/llms.txt' },
-  // 마크는 public/icon.svg 하나 — 래스터는 scripts/gen-icons.mjs 가 뽑는다. ico 의 sizes 를 32 로 적어야
-  // 크롬이 ico 대신 SVG 를 고른다. State 는 판다 아이콘으로 덮어쓴다(state/layout.tsx).
+  // Generate raster icons from public/icon.svg with scripts/gen-icons.mjs. Declare the ICO size as 32px
+  // so Chrome selects SVG instead. The State layout overrides this with its panda icon.
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: '32x32' },
@@ -51,16 +54,21 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getLocale()
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={pretendard.variable}>
+    <html lang={locale} data-scroll-behavior="smooth" className={pretendard.variable}>
       <body className={`${inter.variable} ${geistMono.variable} ${manrope.variable} antialiased`}>
-        {children}
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>
   )
+}
+
+export async function generateMetadata() {
+  return localizeMetadata(metadata)
 }

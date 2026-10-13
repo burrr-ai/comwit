@@ -7,8 +7,8 @@ export function AdminLayoutClient({ children, initialUser }: {
   children: React.ReactNode
   initialUser: User | null
 }) {
-  // 이 adapter는 사용자 상태를 구독하지 않는다. 구독/UI는 자식에서 처리한다.
-  // 로그아웃 시 리렌더되며 오래된 서버 seed를 다시 주입하는 경로를 피한다.
+  // This adapter does not subscribe to user state; children own subscriptions and UI.
+  // Avoid rerendering after sign-out and replaying an outdated server seed.
   useAdminUser.hydrate({ me: { data: initialUser } })
   return <AdminLayoutContent>{children}</AdminLayoutContent>
 }

@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '../../lib/utils'
 
-// 콜아웃 = 옅은 surface 면 + 같은 계열 진한 텍스트 + 계열 보더.
+// Callout: a subtle surface, darker text from the same color family, and a matching border.
 const alertVariants = cva(
   cn(
     'relative flex items-start gap-3 rounded-card border p-4 text-body-sm',

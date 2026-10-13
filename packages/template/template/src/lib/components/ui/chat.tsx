@@ -1,14 +1,16 @@
 'use client'
 
 /**
- * Chat — 헤더 · 메시지 · 컴포저의 세로 3단. 부모를 꽉 채운다(부모에 높이가 있어야 한다: `h-dvh`, `flex-1 min-h-0`).
+ * Chat — three vertical sections: header, messages, composer. Fills its parent, which must have a height
+ * such as h-dvh or flex-1 min-h-0.
  *
- * 동작은 전부 @comwit/ui 의 Chat 프리미티브가 갖는다 — 가상화(react-virtuoso)·모드별 스크롤 규칙·안 읽음 카운트·
- * Enter/IME·자동 높이. 여기서는 파트를 조립하고 토큰만 입힌다. 프리미티브가 방출하는 data-* 로 시각을 가른다:
- *   data-tone   primary(내 메시지) · muted(상대) · plain(AI 답변, 면 없음)
- *   data-align  end(오른쪽) · start(왼쪽)
+ * The @comwit/ui Chat primitive owns all behavior: react-virtuoso virtualization, mode-specific scroll rules,
+ * unread counts, Enter/IME handling, and automatic height. This layer assembles parts and applies tokens,
+ * using the primitive's data-* attributes for visuals:
+ *   data-tone: primary (own message), muted (other), plain (AI response without a surface).
+ *   data-align: end (right), start (left).
  *
- *   <Chat mode="messenger">                          // messenger: 바닥 유지 · assistant: 내 메시지 상단 고정
+ *   <Chat mode="messenger"> // messenger: stay at bottom; assistant: anchor own message at the top.
  *     <ChatHeader>
  *       <Avatar>…</Avatar>
  *       <div className="min-w-0 flex-1"><ChatTitle>Ava</ChatTitle><ChatDescription>Active now</ChatDescription></div>
@@ -24,11 +26,12 @@
  *     <ChatComposer onSend={send} />
  *   </Chat>
  *
- * 색·반경·그림자는 전부 토큰이다 — 내 말풍선은 `bg-primary`, 상대는 `bg-muted`, 컴포저 면은 `rounded-sheet` + `shadow-message`.
+ * Colors, radii, and shadows are tokens: own bubbles use bg-primary, others bg-muted, and the composer
+ * surface uses rounded-sheet + shadow-message.
  */
 
 import * as React from 'react'
-import { ArrowDown, ArrowUp, Square } from 'lucide-react'
+import { ArrowDownIcon, ArrowUpIcon, SquareIcon } from '@comwit/ui/icons'
 import { Chat as ChatPrimitive } from '@comwit/ui'
 
 import { Button } from '@/lib/components/ui/button'
@@ -104,21 +107,31 @@ function ChatHeaderActions({ className, ...props }: React.ComponentProps<'div'>)
 /* ── Messages ─────────────────────────────────────────────────── */
 
 type ChatMessagesLabels = {
-  /** 바닥이 아닐 때 뜨는 버튼. 기본 "Jump to latest". */
+  /**
+   * Button shown when away from the bottom. Defaults to "Jump to latest".
+   */
   scrollToBottom?: string
-  /** 안 읽은 메시지가 쌓였을 때. 기본 `n new messages`. */
+  /**
+   * Label when unread messages accumulate. Defaults to n new messages.
+   */
   newMessages?: (count: number) => string
 }
 
 type ChatMessagesProps<T> = React.ComponentProps<typeof ChatPrimitive.List<T>> & {
-  /** 스크롤러 바깥 래퍼의 className(목록 자체는 `className`). */
+  /**
+   * className for the outer scroller wrapper; className itself styles the list.
+   */
   wrapperClassName?: string
-  /** false 면 "Jump to latest" 버튼을 그리지 않는다. */
+  /**
+   * Set false to hide the "Jump to latest" button.
+   */
   scrollToBottomButton?: boolean
   labels?: ChatMessagesLabels
 }
 
-/** 가상화 목록 + 바닥으로 가는 유리 버튼. `empty` 는 가운데에 놓인다. */
+/**
+ * Virtualized list with a glass scroll-to-bottom button. empty content is centered.
+ */
 function ChatMessages<T>({
   className,
   wrapperClassName,
@@ -159,8 +172,8 @@ type ChatScrollToBottomProps = Omit<
 > & { labels?: ChatMessagesLabels }
 
 /**
- * 바닥이 아닐 때 목록 위에 뜨는 유리 버튼. 안 읽은 메시지가 있으면 개수를 단 알약이 된다.
- * `ChatMessages` 가 기본으로 그린다(`scrollToBottomButton={false}` 로 끄고 직접 놓을 수 있다).
+ * Glass button floating above the list when away from the bottom. Becomes a pill with a count when unread
+ * messages exist. ChatMessages renders it by default; set scrollToBottomButton={false} to place your own.
  */
 function ChatScrollToBottom({ className, labels, ...props }: ChatScrollToBottomProps) {
   const text = { ...DEFAULT_LABELS, ...labels }
@@ -181,7 +194,7 @@ function ChatScrollToBottom({ className, labels, ...props }: ChatScrollToBottomP
             contentClassName={cn('text-label font-semibold', pill && 'gap-1.5')}
             {...props}
           >
-            <ArrowDown className="size-4" strokeWidth={2.5} aria-hidden="true" />
+            <ArrowDownIcon className="size-4" strokeWidth={2.5} aria-hidden="true" />
             {pill ? <span>{text.newMessages(unread)}</span> : null}
           </GlassButton>
         )
@@ -193,11 +206,15 @@ function ChatScrollToBottom({ className, labels, ...props }: ChatScrollToBottomP
 /* ── Message · Bubble · Meta · Typing · Divider ───────────────── */
 
 type ChatMessageProps = React.ComponentProps<typeof ChatPrimitive.Message> & {
-  /** 말풍선 옆 아바타. 정렬에 따라 왼쪽/오른쪽에 붙는다. */
+  /**
+   * Avatar beside the bubble, positioned left or right according to alignment.
+   */
   avatar?: React.ReactNode
 }
 
-/** 메시지 한 줄 — 아바타 + (말풍선 · 메타) 세로 묶음. plain 톤(AI 답변)은 전폭을 쓴다. */
+/**
+ * One message row: avatar plus a vertical bubble/metadata group. Plain AI responses use the full width.
+ */
 function ChatMessage({ avatar, className, children, ...props }: ChatMessageProps) {
   return (
     <ChatPrimitive.Message
@@ -229,7 +246,7 @@ function ChatBubble({ className, ...props }: React.ComponentProps<typeof ChatPri
       data-slot="chat-bubble"
       className={cn(
         'min-w-0 [overflow-wrap:anywhere] whitespace-pre-wrap text-label leading-relaxed',
-        // 면이 있는 톤은 카드 반경에, 보낸 쪽 아래 모서리만 살짝 각져 꼬리 느낌을 낸다.
+        // Surfaced tones use the card radius, with a slightly sharper lower corner on the sender's side to suggest a tail.
         'data-[tone=primary]:rounded-card data-[tone=primary]:bg-primary data-[tone=primary]:px-3.5 data-[tone=primary]:py-2 data-[tone=primary]:text-primary-foreground',
         'data-[tone=muted]:rounded-card data-[tone=muted]:bg-muted data-[tone=muted]:px-3.5 data-[tone=muted]:py-2 data-[tone=muted]:text-foreground',
         'data-[align=end]:rounded-br-sm data-[align=start]:rounded-bl-sm',
@@ -241,7 +258,9 @@ function ChatBubble({ className, ...props }: React.ComponentProps<typeof ChatPri
   )
 }
 
-/** 시간·읽음 같은 메타 한 줄. 말풍선 아래, 정렬을 따라간다. */
+/**
+ * One metadata line for time/read status below the bubble, following its alignment.
+ */
 function ChatMessageMeta({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -253,11 +272,15 @@ function ChatMessageMeta({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 type ChatTypingProps = Omit<React.ComponentProps<typeof ChatBubble>, 'children'> & {
-  /** 스크린리더용. 기본 "Typing". */
+  /**
+   * Screen-reader label. Defaults to "Typing".
+   */
   label?: string
 }
 
-/** 입력 중 표시 — 점 셋이 번갈아 뛴다. 말풍선 톤을 그대로 따른다(assistant 모드에선 면 없이). */
+/**
+ * Typing indicator: three alternating bouncing dots. Follows the bubble tone, without a surface in assistant mode.
+ */
 function ChatTyping({ label = uiText.chat.typing, className, ...props }: ChatTypingProps) {
   return (
     <ChatBubble
@@ -279,7 +302,9 @@ function ChatTyping({ label = uiText.chat.typing, className, ...props }: ChatTyp
   )
 }
 
-/** 날짜·시스템 안내 같은 가운데 캡션. 메시지 하나로 넣거나 `footer` 에 둔다. */
+/**
+ * Centered caption for dates or system notices. Add as a message or place in footer.
+ */
 function ChatDivider({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -301,7 +326,9 @@ type ChatComposerLabels = { send?: string; stop?: string }
 type ChatComposerProps = React.ComponentProps<typeof ChatPrimitive.Composer> & {
   placeholder?: string
   labels?: ChatComposerLabels
-  /** 생략하면 기본 배치(입력 + 보내기 버튼). 직접 조립하려면 `ChatComposerInput` · `ChatComposerActions` · `ChatComposerSubmit`. */
+  /**
+   * Omit for the default input/send-button layout. Compose manually with ChatComposerInput, ChatComposerActions, and ChatComposerSubmit.
+   */
   children?: React.ReactNode
 }
 
@@ -313,7 +340,9 @@ const ComposerSkinContext = React.createContext<{
   labels: { send: uiText.chat.send, stop: uiText.chat.stop },
 })
 
-/** 하단 입력 면 — `rounded-sheet` 카드 하나가 보더·포커스 링을 그리고, 안의 textarea 는 bare 다. */
+/**
+ * Bottom composer surface: one rounded-sheet card draws the border/focus ring; the textarea inside is bare.
+ */
 function ChatComposer({
   placeholder = uiText.chat.placeholder,
   labels,
@@ -359,7 +388,9 @@ function ChatComposer({
   )
 }
 
-/** 자동으로 자라는 한 줄 textarea(최대 `max-h-40`). Enter/IME 처리는 프리미티브가 한다. */
+/**
+ * Single-line textarea that grows automatically up to max-h-40. The primitive handles Enter/IME behavior.
+ */
 function ChatComposerInput({ className, ...props }: React.ComponentProps<typeof Textarea>) {
   const { placeholder } = React.useContext(ComposerSkinContext)
   return (
@@ -378,7 +409,9 @@ function ChatComposerInput({ className, ...props }: React.ComponentProps<typeof 
   )
 }
 
-/** 입력 아래 한 줄 — 왼쪽에 첨부·도구, 오른쪽에 `ChatComposerSubmit`. */
+/**
+ * Row below the input: attachments/tools on the left and ChatComposerSubmit on the right.
+ */
 function ChatComposerActions({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -389,7 +422,9 @@ function ChatComposerActions({ className, ...props }: React.ComponentProps<'div'
   )
 }
 
-/** 보내기(↑). `pending` + `onStop` 이면 프리미티브가 중단(■) 버튼을 대신 렌더한다. */
+/**
+ * Send (↑). With pending and onStop, the primitive renders a stop (■) button instead.
+ */
 function ChatComposerSubmit({
   className,
   children,
@@ -409,7 +444,7 @@ function ChatComposerSubmit({
           )}
           {...props}
         >
-          <Square className="size-3.5" fill="currentColor" aria-hidden="true" />
+          <SquareIcon className="size-3.5" fill="currentColor" aria-hidden="true" />
         </Button>
       </ChatPrimitive.ComposerStop>
       <ChatPrimitive.ComposerSubmit asChild>
@@ -420,7 +455,7 @@ function ChatComposerSubmit({
           className={cn('ml-auto', className)}
           {...props}
         >
-          {children ?? <ArrowUp className="size-4" strokeWidth={2.5} aria-hidden="true" />}
+          {children ?? <ArrowUpIcon className="size-4" strokeWidth={2.5} aria-hidden="true" />}
         </Button>
       </ChatPrimitive.ComposerSubmit>
     </>

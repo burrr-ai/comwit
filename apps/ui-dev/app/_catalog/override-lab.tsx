@@ -3,10 +3,7 @@
 import * as React from 'react'
 
 /**
- * Override Lab — 소비처 커스터마이징 모델을 그대로 시연한다.
- *
- * 라이브러리는 테마를 싣지 않는다. 토큰(노브)만 싣고, 쓰는 쪽이 값을 덮는다.
- * 아래 컨트롤은 래퍼에 CSS 변수를 인라인으로 꽂을 뿐인데, 페이지 전체가 리스킨된다.
+ * Override Lab demonstrates consumer customization: the library ships tokens, and inline variable overrides on the wrapper restyle the entire page.
  */
 
 type Overrides = {
@@ -39,7 +36,7 @@ function useOverrideLab() {
   return ctx
 }
 
-/** 지금 상태를 소비처가 그대로 붙여넣을 수 있는 CSS 로 뽑는다. */
+/** Export the current configuration as copyable CSS for consumers. */
 function toCss(ov: Overrides, dark: boolean) {
   const lines: string[] = []
   if (ov.primary !== DEFAULTS.primary) lines.push(`  --primary: ${ov.primary};`)
@@ -48,15 +45,15 @@ function toCss(ov: Overrides, dark: boolean) {
   if (ov.durationBase !== DEFAULTS.durationBase)
     lines.push(`  --duration-base: ${ov.durationBase}ms;`)
 
-  const body = lines.length ? lines.join('\n') : '  /* 기본값 그대로 */'
+  const body = lines.length ? lines.join('\n') : '  /* Keep the defaults. */'
   return [
-    `/* app/globals.css — import 뒤에 두면 같은 특이성에서 나중 선언이 이긴다 */`,
+    `/* app/globals.css — place after imports; later declarations win with equal specificity. */`,
     `@import "@comwit/ui-templates/styles.css";`,
     ``,
     `:root {`,
     body,
     `}`,
-    ...(dark ? [``, `/* 다크는 값이 아니라 스위치 → <html class="dark"> */`] : []),
+    ...(dark ? [``, `/* Dark mode is a switch → <html class="dark"> */`] : []),
   ].join('\n')
 }
 
@@ -64,10 +61,10 @@ const btn =
   'rounded-pill border border-border px-3 py-1.5 text-caption font-medium transition-colors data-[active=false]:text-muted-foreground data-[active=false]:hover:bg-accent data-[active=true]:border-primary data-[active=true]:bg-primary data-[active=true]:text-primary-foreground'
 
 const PRIMARY_PRESETS: [string, string][] = [
-  ['#1d1d1f', '잉크(기본)'],
-  ['#0b68ba', '블루'],
-  ['#6b5bd6', '바이올렛'],
-  ['#ff2dd9', '마젠타'],
+  ['#1d1d1f', 'Ink (default)'],
+  ['#0b68ba', 'Blue'],
+  ['#6b5bd6', 'Violet'],
+  ['#ff2dd9', 'Magenta'],
 ]
 
 function Slider({
@@ -112,7 +109,7 @@ function Slider({
   )
 }
 
-/** 컨트롤 바 — 섹션 01 상단에 박힌다. */
+/** Control bar at the top of section 01. */
 export function OverrideLabControls() {
   const { ov, set, reset, dark, setDark } = useOverrideLab()
   const touched =
@@ -144,12 +141,12 @@ export function OverrideLabControls() {
         <span className="mx-1 h-5 w-px bg-border" aria-hidden />
 
         <button type="button" onClick={() => setDark(!dark)} data-active={dark} className={btn}>
-          {dark ? '다크' : '라이트'}
+          {dark ? 'Dark' : 'Light'}
         </button>
 
         {touched && (
           <button type="button" onClick={reset} data-active={false} className={btn}>
-            되돌리기
+            Reset
           </button>
         )}
       </div>
@@ -188,9 +185,11 @@ export function OverrideLabControls() {
 
       <div>
         <p className="mb-2 text-caption text-muted-foreground">
-          라이브러리는 테마를 싣지 않는다.{' '}
-          <strong className="font-semibold text-foreground">토큰만 싣고 쓰는 쪽이 덮는다.</strong>{' '}
-          아래를 그대로 붙여넣으면 지금 화면이 된다 — 컴포넌트 코드는 0줄 변한다.
+          The library ships no themes.{' '}
+          <strong className="font-semibold text-foreground">
+            It provides tokens for consumers to override.
+          </strong>{' '}
+          Paste the CSS below to reproduce this appearance without changing component code.
         </p>
         <pre className="overflow-x-auto rounded-lg border border-border bg-muted p-3 font-mono text-caption text-foreground">
           {toCss(ov, dark)}
@@ -200,7 +199,7 @@ export function OverrideLabControls() {
   )
 }
 
-/** 전 섹션을 감싸는 래퍼. CSS 변수를 인라인으로 꽂는다 = 소비처의 :root 오버라이드와 같은 일. */
+/** Wrap every section with inline CSS variables, equivalent to consumer :root overrides. */
 export function OverrideLab({ children }: { children: React.ReactNode }) {
   const [ov, setOv] = React.useState<Overrides>(DEFAULTS)
   const [dark, setDark] = React.useState(false)
@@ -213,8 +212,9 @@ export function OverrideLab({ children }: { children: React.ReactNode }) {
 
   const value = React.useMemo(() => ({ ov, set, reset, dark, setDark }), [ov, set, reset, dark])
 
-  /* --primary 는 시맨틱, 나머지는 L0 노브. 전부 var() 로 참조되므로 이 요소에서 치환된다.
-     소비처가 :root 에 쓰는 것과 같은 일 — 다만 여기선 스코프가 이 래퍼일 뿐이다. */
+  /*
+   * --primary is semantic; the remaining values are L0 controls. var() references resolve on this wrapper, just as they would on a consumer's :root.
+   */
   const style = {
     '--primary': ov.primary,
     '--radius-scale': ov.radiusScale,

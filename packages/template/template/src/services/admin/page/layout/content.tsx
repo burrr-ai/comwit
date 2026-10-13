@@ -1,23 +1,23 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { LayoutDashboard, UserRoundCog } from 'lucide-react'
+import { LayoutDashboardIcon, UserRoundCogIcon } from '@comwit/ui/icons'
 
 import { BrandMark } from '@/lib/components/brand-mark'
 import { adminRoutes } from '@/lib/admin-routes'
 import { useAdminUser } from '@/services/admin/state/user'
 import { AdminShell, type AdminNavGroup } from '@/services/admin/_components'
 
-// TODO: 실제 메뉴에 맞게 그룹/항목 추가 — 그룹 라벨은 사이드바에 대문자로 노출된다.
-//   { label: '운영', items: [{ label, href, icon }, ...] }, { label: '설정', items: [...] }
+// TODO: Add real menu groups/items; group labels display uppercase in the sidebar.
+//   { label: 'Operations', items: [{ label, href, icon }, ...] }, { label: 'Settings', items: [...] }
 const navGroups: AdminNavGroup[] = [
   {
     label: '운영',
-    items: [{ label: '대시보드', href: adminRoutes.dashboard, icon: LayoutDashboard }],
+    items: [{ label: '대시보드', href: adminRoutes.dashboard, icon: LayoutDashboardIcon }],
   },
   {
     label: '설정',
-    items: [{ label: '내 계정', href: adminRoutes.account, icon: UserRoundCog }],
+    items: [{ label: '내 계정', href: adminRoutes.account, icon: UserRoundCogIcon }],
   },
 ]
 
@@ -30,7 +30,7 @@ const adminBrand = (
   </span>
 )
 
-/** 사용자 구독과 UI는 hydration adapter의 자식에서만 처리한다. */
+/** Keep user subscriptions and UI in children of the hydration adapter. */
 export function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const adminUser = useAdminUser((state) => ({ actions: state.actions }))

@@ -14,7 +14,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
   return (
     <ComwitProvider
       context={{ router }}
-      // SSR 중 resolve된 .suspend() 결과를 브라우저 캐시로 스트리밍해 하이드레이션 재요청을 막는다.
+      // Stream SSR-resolved .suspend() results into the browser cache to avoid hydration refetches.
       useServerInsertedHTML={useServerInsertedHTML}
       defaultOptions={{
         query: {

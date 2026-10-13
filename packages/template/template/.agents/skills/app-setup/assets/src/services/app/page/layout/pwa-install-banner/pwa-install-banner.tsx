@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Download, Share, X } from 'lucide-react'
+import { DownloadIcon, ShareIcon, XIcon } from '@comwit/ui/icons'
 import { Button } from '@/lib/components/ui/button'
 import { BottomSheet, BottomSheetTrigger } from '@/lib/components/ui/bottom-sheet'
 import { PWA_CONFIG } from '@/lib/pwa'
@@ -37,11 +37,11 @@ function InstallBannerContent({ pwa }: { pwa: ReturnType<typeof usePwaInstall> }
           <p className="min-w-0 flex-1 text-label">{PWA_CONFIG.shortName}을 홈 화면에 추가하세요</p>
           <BottomSheetTrigger asChild>
             <Button size="sm" onClick={(event) => { event.preventDefault(); void install() }} disabled={pwa.pending}>
-              {native ? <Download aria-hidden="true" /> : <Share aria-hidden="true" />}
+              {native ? <DownloadIcon aria-hidden="true" /> : <ShareIcon aria-hidden="true" />}
               {pwa.pending ? '확인 중' : native ? '설치' : '추가 방법'}
             </Button>
           </BottomSheetTrigger>
-          <Button variant="ghost" size="icon" className="size-11" onClick={pwa.dismiss} aria-label="설치 안내 닫기"><X aria-hidden="true" /></Button>
+          <Button variant="ghost" size="icon" className="size-11" onClick={pwa.dismiss} aria-label="설치 안내 닫기"><XIcon aria-hidden="true" /></Button>
         </div>
       </aside>
       <PwaInstallGuide method={pwa.method} />

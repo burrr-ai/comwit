@@ -1,14 +1,13 @@
 /**
- * ESLint rule to enforce createAction / resolveActions usage
+ * ESLint rule to enforce createAction / resolveActions usage.
  *
  * 1. In src/services/{service}/api/{domain}/actions/*.ts:
- *    - All exported functions must be wrapped with createAction
- *    - createAction must be imported from '@/lib/utils'
- *    - Cross-action imports forbidden
- *
+ *    - All exported functions must be wrapped with createAction.
+ *    - Import createAction from '@/lib/utils'.
+ *    - Cross-action imports are forbidden.
  * 2. Everywhere else:
- *    - createAction / resolveActions import 금지
- *    (api layer 전용 — auth, state, page 등에서 사용 불가)
+ *    - Do not import createAction / resolveActions.
+ *    - These belong only to the API layer, never auth, state, or page.
  */
 
 const RESTRICTED_NAMES = ['createAction', 'resolveActions'];
@@ -27,9 +26,9 @@ module.exports = {
       missingCreateActionImport:
         'Server action file must import createAction from "@/lib/utils" (see src/services/api.ai.md)',
       noCrossActionImport:
-        'Action 파일 간 크로스 import 금지. DB 접근은 repository를 통해 각각 구현하고, 공통 로직은 유틸로 분리하세요 (see src/services/api.ai.md)',
+        'Cross-action imports are forbidden. Access data through repositories and extract shared logic into utilities (see src/services/api.ai.md)',
       noCreateActionOutsideApi:
-        '"{{name}}"은 src/services/{service}/api/ 내에서만 사용 가능합니다 (see src/services/api.ai.md)',
+        '"{{name}}" is only allowed inside src/services/{service}/api/ (see src/services/api.ai.md)',
     },
     schema: [],
   },

@@ -1,0 +1,97 @@
+---
+title: 설치
+group: Install
+order: 1
+description: 명령 하나로 프로젝트를 만듭니다. 나머지는 이미 모두 들어 있습니다.
+---
+
+<a id="install"></a>
+
+# 설치
+
+```bash
+npm create comwit@latest my-app
+cd my-app
+pnpm run dev
+```
+
+`npx create-comwit@latest my-app`도 같은 작업을 합니다. CLI는 키트를 복사하고 패키지 이름을 설정하며 pnpm으로 의존성을 설치한 뒤 첫 커밋을 만듭니다. 이후 `AGENTS.md`를 열고 코딩 에이전트에 프로젝트와 만들 제품을 설명하세요. 이미 Next.js 프로젝트가 있다면 [기존 프로젝트 마이그레이션](/template/docs/migrate)을 참고하세요.
+
+<a id="options"></a>
+
+## 옵션
+
+| 플래그                        | 효과                                                            |
+| ----------------------------- | --------------------------------------------------------------- |
+| `--opennext`                  | OpenNext를 통해 Cloudflare Workers 사용(아래 참고)              |
+| `--name <name>`               | 패키지 이름(기본값: 디렉터리 이름)                              |
+| `--pm <pnpm\|npm\|yarn\|bun>` | 패키지 관리자(기본값: 설치된 pnpm, 없으면 실행에 사용한 관리자) |
+| `--no-install`                | 의존성 설치 생략                                                |
+| `--no-git`                    | `git init`과 첫 커밋 생략                                       |
+| `--cwd <dir>`                 | 이 디렉터리를 기준으로 프로젝트 생성                            |
+| `--dry`                       | 작성될 파일 목록 표시                                           |
+
+<a id="what-lands-in-the-folder"></a>
+
+## 폴더에 포함되는 것
+
+```text
+my-app/
+  AGENTS.md                     the rules file every coding agent reads (CLAUDE.md imports it)
+  .agents/skills/               app-setup · auth-setup · seo-optimize
+  eslint-rules/                 Oxlint rules that enforce the layer boundaries
+  .storybook/                   page-level stories, api mocks and their rules (stories/.ai.md)
+  src/
+    app/                        Next.js App Router — routing only
+    services/
+      .ai.md · api.ai.md · state.ai.md · page.ai.md · design.md
+      app/                      end-user service: api/ · state/ · page/ per domain
+      admin/                    separate operator service, own auth and UI
+    lib/                        shared code; comwit-ui components installed as source
+    server/repository/          the only gateway to data
+```
+
+| 역할                     | 선택                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| 프레임워크               | Cache Components, 서비스 워커, 오프라인 페이지를 갖춘 Next.js 16 App Router                |
+| 상태                     | `@comwit/state` — 도메인마다 타입이 지정된 훅 하나                                         |
+| UI                       | 소스로 설치되는 `comwit-ui` 컴포넌트, Tailwind v4 토큰, `src/lib/ui-text.ts`의 한국어 문구 |
+| 폼, 테이블, 에디터, 날짜 | react-hook-form + zod, TanStack Table, Tiptap, react-day-picker(UI 키트가 래핑)            |
+| 인증                     | 데이터베이스 연결 후 `auth-setup` 스킬이 설치하는 Drizzle 기반 Better Auth                 |
+| 린트                     | 모든 계층 경계를 검사하는 프로젝트 규칙을 갖춘 Oxlint                                      |
+| Storybook                | 실제 페이지, 레이아웃, 상태를 사용하는 페이지 단위 스토리. api 경계만 모킹                 |
+
+데이터베이스, 객체 저장소, 호스팅 플랫폼은 미리 결정하지 않습니다. 리포지토리는 `_data/`의 메모리 행으로 시작합니다. 제품에 필요해지면 Drizzle 데이터베이스를 연결하세요. 리포지토리 함수 본문만 바꾸면 됩니다.
+
+<a id="commands"></a>
+
+## 명령
+
+| 명령                                   | 용도                                                        |
+| -------------------------------------- | ----------------------------------------------------------- |
+| `pnpm run dev`                         | 3000 포트 개발 서버                                         |
+| `pnpm run validate`                    | 타입 검사와 린트. 변경 후마다 실행                          |
+| `pnpm run build`                       | 서비스 워커, 버전 파일 생성 후 `next build`                 |
+| `pnpm ui add <name>`                   | comwit-ui 컴포넌트를 소스로 설치                            |
+| `pnpm agents:test`                     | Claude Code 스킬 스텁이 `.agents/skills/`와 일치하는지 검사 |
+| `pnpm storybook`                       | 6006 포트 Storybook. api 경계를 모킹한 페이지               |
+| `pnpm validate:storybook`              | Storybook 전용 타입 검사, 린트, 모킹 경계 테스트            |
+| `pnpm build-storybook`                 | `storybook-static/`에 정적 Storybook 생성                   |
+| `pnpm run preview` / `pnpm run deploy` | `--opennext` 프로젝트 전용. Worker 빌드 후 실행 또는 게시   |
+
+<a id="cloudflare-workers-with---opennext"></a>
+
+## `--opennext`로 Cloudflare Workers 사용
+
+```bash
+npm create comwit@latest my-app -- --opennext
+```
+
+동일한 프로젝트에 OpenNext 어댑터가 추가됩니다. `open-next.config.ts`, `wrangler.jsonc`(프로젝트 이름 기반 Worker 이름, `nodejs_compat`, 정적 자산 바인딩), `.dev.vars.example`, 개발 의존성 `@opennextjs/cloudflare`와 `wrangler`, 어댑터가 지원하는 버전으로 고정된 Next, `next.config.ts`의 `initOpenNextCloudflareForDev()`를 포함합니다. `AGENTS.md`의 배포 섹션은 Worker 흐름으로 바뀝니다.
+
+```bash
+pnpm run preview   # opennextjs-cloudflare build (runs pnpm run build) + local workerd
+pnpm run deploy    # build + wrangler deploy, after `wrangler login`
+```
+
+`next dev`는 계속 `.env`를 읽습니다. Worker는 `wrangler.jsonc`의 `vars`, `wrangler secret put`으로 등록한 비밀 값, 로컬의 `.dev.vars`를 읽습니다. 제품이 증분 캐시(ISR)에 의존하게 되면 KV 또는 R2 바인딩이 필요합니다. 해당 단계는 OpenNext 문서에서 설명합니다.

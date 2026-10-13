@@ -1,30 +1,30 @@
 'use client'
 
 /**
- * 첫 화면 플레이스홀더. 프로젝트의 진짜 홈이 생기면 이 폴더를 그 화면으로 바꾼다.
- * 목적은 하나 — 어디에 무엇을 쓰는지 보여주는 것.
+ * Placeholder home. Replace this folder when the project has a real home screen.
+ * Its purpose is to show which code belongs in each layer.
  */
 
 const LAYERS: { name: string; path: string; role: string }[] = [
   {
     name: 'repository',
     path: 'src/server/repository',
-    role: '데이터 접근의 단일 관문. mock 으로 시작하고, DB 는 필요해질 때 붙인다.',
+    role: 'The single data gateway. Start with mocks and connect a database when needed.',
   },
   {
     name: 'api',
     path: 'src/services/app/api/{domain}',
-    role: '화면에 맞춘 서버 액션. 표시용 가공까지 여기서 끝낸다.',
+    role: 'Server actions shaped for each screen, including display-ready transformations.',
   },
   {
     name: 'state',
     path: 'src/services/app/state/{domain}',
-    role: '도메인 상태와 액션. 부수효과는 전부 액션 안에 둔다.',
+    role: 'Domain state and actions. Keep every side effect inside actions.',
   },
   {
     name: 'page',
     path: 'src/services/app/page/{route}',
-    role: '섹션 단위 화면. 상태를 읽고 액션을 부를 뿐, 데이터를 가공하지 않는다.',
+    role: 'Screens composed from sections. Read state and call actions without processing data.',
   },
 ]
 
@@ -33,11 +33,11 @@ export default function HomePage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-10 px-6 py-20">
       <header className="flex flex-col gap-3">
         <h1 className="text-display-md text-balance text-foreground">
-          화면부터 만들고, 데이터는 나중에 붙입니다.
+          Build screens first. Connect data when you need it.
         </h1>
         <p className="text-body text-soft-foreground">
-          각 폴더의 <code className="font-mono">.ai.md</code> 가 그 레이어의 규칙입니다. 코드를
-          쓰기 전에 <code className="font-mono">AGENTS.md</code> 와 함께 읽으세요.
+          Each folder’s <code className="font-mono">.ai.md</code> explains its layer. Read it
+          alongside <code className="font-mono">AGENTS.md</code> before writing code.
         </p>
       </header>
 

@@ -1,15 +1,15 @@
 'use client'
 
 /**
- * comwit-ui — 유리 렌즈 엔진 (헤드리스).
+ * comwit-ui — headless glass lens engine.
  *
- * 굴절 유리(`Glass`)의 가장자리 렌즈는 SVG `feDisplacementMap` 이 읽는 **변위 맵**으로 만든다.
- * 이 훅이 그 JS 를 소유한다: 지원 감지(SVG backdrop-filter 가 안정적인 Chromium 계열) · 요소 크기에 맞춘
- * 변위 맵 생성(캔버스 · 크기가 바뀔 때만) . SVG 필터 마크업과 시각 파라미터(블러·채도)는 소비 레이어가 갖는다.
+ * The edge lens of refractive glass (Glass) uses a displacement map read by SVG feDisplacementMap.
+ * This hook owns support detection (Chromium browsers with reliable SVG backdrop-filter) and canvas map generation
+ * at the element's size, only when that size changes. The consumer owns SVG filter markup and visual settings such as blur and saturation.
  *
  *   const lens = useGlassLens(element, { enabled: variant === 'morphing', shape: 'pill' })
- *   lens.supported  // 렌즈를 켤 수 있는 브라우저인가
- *   lens.texture    // { url, width, height, scale } — feImage 와 feDisplacementMap scale 에 넣는다
+ *   lens.supported  // Whether this browser can enable the lens.
+ *   lens.texture    // { url, width, height, scale } — pass to feImage and feDisplacementMap scale.
  */
 
 import * as React from 'react'
@@ -18,7 +18,7 @@ type GlassLensShape = 'pill' | 'circle' | 'panel'
 
 type GlassLensTexture = { url: string; width: number; height: number; scale: number }
 
-/** SVG backdrop-filter 가 안정적으로 동작하는 Chromium 계열에서만 굴절 렌즈를 켠다. */
+/** Enable the refractive lens only in Chromium browsers with reliable SVG backdrop-filter support. */
 function useGlassLensSupport() {
   const [supported, setSupported] = React.useState(false)
   React.useEffect(() => {
@@ -27,7 +27,7 @@ function useGlassLensSupport() {
   return supported
 }
 
-/** 크기가 바뀔 때만 렌즈 맵을 다시 만든다. 스크롤·이동에는 캡처 비용이 없다. */
+/** Regenerate the lens map only when dimensions change. Scrolling and movement incur no capture cost. */
 function useGlassLens(
   element: HTMLElement | null,
   { enabled = true, shape = 'pill' }: { enabled?: boolean; shape?: GlassLensShape } = {}
@@ -60,7 +60,7 @@ function useGlassLens(
   return { supported, texture: active ? texture : undefined }
 }
 
-/** 가장자리만 대칭으로 굴절시킨다 — 중앙과 렌즈 밖 픽셀은 고정. */
+/** Refract the edges symmetrically; the center and pixels outside the lens stay fixed. */
 function lensDisplacement(x: number, y: number, width: number, height: number, radius: number) {
   const px = x - width / 2
   const py = y - height / 2
@@ -72,7 +72,7 @@ function lensDisplacement(x: number, y: number, width: number, height: number, r
   const distance = cornerLength - radius
   const rim = Math.min(radius, 18)
   if (distance >= 0 || distance <= -rim) return { x: 0, y: 0 }
-  // 도함수가 1 미만이라 글자가 접히지 않고 휘기만 한다.
+  // The derivative stays below 1, so text bends without folding over itself.
   const bend = Math.sin((-distance / rim) * Math.PI) * rim * 0.3125
   return {
     x: ((Math.sign(px) * outsideX) / cornerLength) * bend,
@@ -80,7 +80,7 @@ function lensDisplacement(x: number, y: number, width: number, height: number, r
   }
 }
 
-/** 모양만으로 만드는 작은 변위 맵. 페이지 캡처·원격 이미지·프레임 캡처 없음. */
+/** A small displacement map generated from the shape alone. No page, remote image, or frame capture. */
 function createLensMap(width: number, height: number, shape: GlassLensShape) {
   const radius =
     shape === 'panel' ? Math.min(16, width / 2, height / 2) : Math.min(width, height) / 2

@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon } from '@comwit/ui/icons'
 import { useCalendarPanel, parseYMD } from '@comwit/ui'
 import { Popover, PopoverContent, PopoverTrigger } from '@/lib/components/ui/popover'
 import { useMobile } from '@comwit/ui'
@@ -11,7 +11,9 @@ import { cn } from '@/lib/utils/cn'
 import { uiText } from '@/lib/ui-text'
 
 type DatePickerLabels = {
-  /** 모바일 바텀시트 제목 */
+  /**
+   * Mobile bottom-sheet title.
+   */
   title?: string
   clear?: string
   today?: string
@@ -26,7 +28,9 @@ type DatePickerProps = {
   placeholder?: string
   min?: string // YYYY-MM-DD
   max?: string // YYYY-MM-DD
-  /** 표시 로케일(Intl). 'ko-KR' 이면 "2026. 9. 24." · "2026년 9월" · 일월화… */
+  /**
+   * Intl display locale. For example, ko-KR uses Korean date/month labels and weekday abbreviations.
+   */
   locale?: string
   labels?: DatePickerLabels
   className?: string
@@ -49,8 +53,8 @@ const TRIGGER_CLASS = cn(
 )
 
 /**
- * 날짜 선택 — 데스크톱은 유리 팝오버, 모바일은 아래에서 올라오는 바텀시트(popup.sheet).
- * 같은 CalendarPanel 을 두 표면이 공유한다. 그리드·선택/비활성 판정은 @comwit/ui 가 소유한다.
+ * Date selection: glass popover on desktop, rising bottom sheet (popup.sheet) on mobile.
+ * Both surfaces share CalendarPanel. @comwit/ui owns the grid and selected/disabled states.
  */
 export function DatePicker({
   id,
@@ -80,11 +84,11 @@ export function DatePicker({
       >
         {selected ? display.format(selected) : placeholder}
       </span>
-      <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
+      <CalendarDaysIcon className="size-4 shrink-0 text-muted-foreground" />
     </>
   )
 
-  // 모바일: 아래에서 올라오는 바텀시트(popup.sheet, overlay-kit).
+  // Mobile: rising bottom sheet (popup.sheet, overlay-kit).
   if (detected && isMobile) {
     const openSheet = async () => {
       if (disabled) return
@@ -116,7 +120,7 @@ export function DatePicker({
     )
   }
 
-  // 데스크톱: 팝오버.
+  // Desktop: popover.
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -145,8 +149,8 @@ const NAV_CLASS =
   'flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-accent'
 
 /**
- * 달력 본문(월 네비 + 그리드 + 지우기/오늘). Popover(데스크톱)·바텀시트(모바일) 공유.
- * onSelect(ymd): 날짜 선택 시 'YYYY-MM-DD', 지우기 시 빈 문자열을 통지한다.
+ * Calendar body: month navigation, grid, clear, and today actions. Shared by desktop popover and mobile sheet.
+ * onSelect(ymd) emits YYYY-MM-DD on selection and an empty string on clear.
  */
 function CalendarPanel({
   value,
@@ -173,7 +177,7 @@ function CalendarPanel({
     const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' })
     return {
       caption: new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' }),
-      // 2023-01-01 은 일요일 — 일요일 시작 7일을 로케일 약칭으로 뽑는다.
+      // 2023-01-01 is a Sunday; format seven consecutive days as localized abbreviations, starting with Sunday.
       weekdays: Array.from({ length: 7 }, (_, i) => weekday.format(new Date(2023, 0, 1 + i))),
     }
   }, [locale])
@@ -193,7 +197,7 @@ function CalendarPanel({
           className={NAV_CLASS}
           aria-label={labels.previousMonth}
         >
-          <ChevronLeft className="size-4" />
+          <ChevronLeftIcon className="size-4" />
         </button>
         <div className="text-body-sm font-semibold text-foreground" aria-live="polite">
           {caption.format(new Date(year, month - 1, 1))}
@@ -205,7 +209,7 @@ function CalendarPanel({
           className={NAV_CLASS}
           aria-label={labels.nextMonth}
         >
-          <ChevronRight className="size-4" />
+          <ChevronRightIcon className="size-4" />
         </button>
       </div>
 

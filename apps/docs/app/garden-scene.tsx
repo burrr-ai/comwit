@@ -1,5 +1,7 @@
 'use client'
 
+import { Copy } from '@/i18n/copy'
+
 import { Button } from '@comwit/ui-templates/button'
 import Image from 'next/image'
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -206,7 +208,7 @@ export function GardenScene({ children }: { children: React.ReactNode }) {
             response.stop()
           }}
         >
-          {reducedMotion ? 'Reduced motion' : paused ? 'Play motion' : 'Pause motion'}
+          <Copy text={reducedMotion ? 'Reduced motion' : paused ? 'Play motion' : 'Pause motion'} />
         </Button>
       </section>
     </GardenContext.Provider>

@@ -1,0 +1,91 @@
+---
+title: 'comwit v0.2.2 — Stage 3 데코레이터와 타입 안전성 개선'
+date: '2026-02-21'
+description: 'v0.2.2 패치 릴리스. 기존 방식과 호환되는 TC39 Stage 3 데코레이터, 프록시 타입 오류 수정, 액션 state()의 BoundResourceState 타입을 제공합니다.'
+author: 'Claude Code'
+---
+
+<a id="whats-new"></a>
+
+## 새로운 기능
+
+<a id="tc39-stage-3-decorator-support"></a>
+
+### TC39 Stage 3 데코레이터 지원
+
+인터셉터와 데코레이터 시스템이 **TC39 Stage 3 데코레이터** 명세를 사용합니다. TypeScript 5.0 이상에서 별도 플래그 없이 기본 지원하는 표준입니다.
+
+```json
+// tsconfig.json — no longer required!
+{
+  "compilerOptions": {
+    // "experimentalDecorators": true  ← DELETE THIS
+  }
+}
+```
+
+모든 기본 데코레이터(`@OnError`, `@OnSuccess`, `@Debounce`, `@Throttle`, `@Retry`, `@Queue`, `@Log`, `@Authorized`, `@Transaction`, `@Validate`)와 핵심 `intercept()` 함수가 Stage 3에서 바로 동작합니다.
+
+**두 방식 모두 호환:** SWC를 사용하는 Next.js처럼 `experimentalDecorators: true`를 유지하는 프로젝트에서도 그대로 동작합니다. 런타임이 호출 규약을 감지해 자동으로 맞춥니다.
+
+```ts
+// Works with Stage 3 (no flag)
+class Actions {
+  @OnError((err) => console.error(err))
+  async fetchUser() { ... }
+}
+
+// Also works with legacy (experimentalDecorators: true)
+class Actions {
+  @OnError((err) => console.error(err))
+  async fetchUser() { ... }
+}
+```
+
+기존 사용자는 마이그레이션할 필요가 없습니다.
+
+<a id="typed-state-in-actions"></a>
+
+### 액션의 `state()` 타입 지원
+
+`action()` 안의 `state(model)`이 원시 `T` 대신 `BoundResourceState<T>`를 반환합니다. 쿼리 필드의 런타임 메서드가 올바른 타입을 갖습니다.
+
+```ts
+const userModel = model({
+  me: query<User>({ ... }),
+})
+
+const userActions = action(({ state }) => ({
+  async loadUser() {
+    // Before: TS error — "Property 'query' does not exist on type 'Query<User>'"
+    // After:  ✅ properly typed as BoundSingleResourceState<User>
+    await state(userModel).me.query()
+  },
+}))
+```
+
+액션 안에서 리소스의 `.query()`, `.refetch()`, `.set()`을 호출할 때 `// @ts-ignore`나 수동 형 변환이 필요하지 않습니다.
+
+<a id="proxy-type-fix"></a>
+
+### 프록시 타입 수정
+
+타입 가드로 좁힌 객체를 `Object.keys()`로 순회할 때 TypeScript 엄격 모드에서 발생하던 `TS7053` 오류(요소가 암시적으로 any 타입을 가짐)를 수정했습니다.
+
+---
+
+<a id="breaking-changes"></a>
+
+## 호환성이 깨지는 변경
+
+없습니다. 완전히 하위 호환되는 패치 릴리스입니다.
+
+<a id="upgrading"></a>
+
+## 업그레이드
+
+```bash
+yarn add comwit@0.2.2
+```
+
+`tsconfig.json`의 `experimentalDecorators: true`는 선택적으로 제거할 수 있습니다. 더 이상 필수는 아니지만 계속 지원합니다.

@@ -1,64 +1,44 @@
 # @comwit/ui
 
-**Comwit 의 헤드리스 UI 프리미티브** — 동작·접근성(a11y)만 소유하고 **시각(스타일)은 0** 인 레이어.
-Radix 처럼 "구조/동작만 있는" 프리미티브를 우리가 직접 소유·확장하기 위한 엔진이다.
-스타일이 입혀진 복붙 컴포넌트는 [`@comwit/ui-templates`](https://www.npmjs.com/package/@comwit/ui-templates) 를 쓴다.
+**Comwit's headless UI primitives** own behavior and accessibility without visual styles. The engine provides primitives whose structure and behavior we can maintain and extend directly. For styled, editable component source, use [`@comwit/ui-templates`](https://www.npmjs.com/package/@comwit/ui-templates).
 
 ```bash
 npm i @comwit/ui
-# peer: react, react-dom
+# Peer dependencies: react, react-dom
 ```
 
-## 아이콘 (`@comwit/ui/icons`)
+## Icons (`@comwit/ui/icons`)
 
-컴윗 원본 아이콘 143개가 같은 패키지의 하위 경로로 들어 있다. 따로 설치하지 않고, 쓰지 않는 아이콘은 번들러가 트리셰이킹으로 걷어낸다.
+Comwit's 143 original icons ship as subpaths of the same package. No separate installation is needed, and unused icons are tree-shaken out.
 
 ```tsx
-import { SearchIcon, CheckIcon } from '@comwit/ui/icons' // 정적 — 순수 SVG, 서버 컴포넌트에서도 동작
-import { AnimatedBellIcon } from '@comwit/ui/icons/animated' // 스프링 모션 — 'use client' 경계 보존
-import { iconCatalog } from '@comwit/ui/icons/catalog' // 갤러리용 메타데이터와 전체 드로잉
+import { SearchIcon, CheckIcon } from '@comwit/ui/icons' // Static SVG; works in Server Components.
+import { AnimatedBellIcon } from '@comwit/ui/icons/animated' // Spring motion; preserves its 'use client' boundary.
+import { iconCatalog } from '@comwit/ui/icons/catalog' // Gallery metadata and complete drawings.
 ```
 
-`size`(기본 24) · `color`(`currentColor`) · `strokeWidth`(기본 1.65) · `title` 과 SVG 속성을 받는다. 모션 prop(`animateOn` · `replayKey`),
-디자인 규칙과 기여 방법은 [`src/icons/README.md`](src/icons/README.md), 갤러리는 https://library.comwit.io/ui/icons.
+Icons accept `size` (default 24), `color` (`currentColor`), `strokeWidth` (default 1.65), `title`, and SVG attributes. Motion props (`animateOn`, `replayKey`), design rules, and contribution instructions are in [src/icons/README.md](src/icons/README.md). Browse the [icon gallery](https://library.comwit.io/ui/icons).
 
-## 설계
+## Design
 
-- **공개 진입점은 배럴 하나** (`@comwit/ui`). 프리미티브는 이름 충돌을 피해 **네임스페이스**로 나간다.
+- **The main barrel is the public entry point** (`@comwit/ui`). Primitives use namespace exports to avoid name collisions.
   ```tsx
   import { Dialog, Select, TextField, Button } from '@comwit/ui'
   // <Dialog.Root> · <Select.Trigger> · <TextField.Root> · <Button>
   ```
-- **엔진 선택 기준**: overlay/disclosure/form-control 동작 = Radix 어댑터(교체 가능), a11y 배선 = React Aria
-  (`text-field`/`autocomplete` 는 `react-aria`/`react-stately` 사용 — 검증된 ARIA 를 자체 구현하지 않는다).
-- **자체 헤드리스**: `Button`(press/ripple/asChild) · `Input`/`Textarea`(IME-safe) · `TextField`(MUI식 compound) · `Autocomplete`(combobox).
-- **앱 셸·제스처·대화**(동작은 여기, 시각은 templates): `AppBar.Root`(flow/pinned/reveal → `data-state`) ·
-  `BottomNav.Root/Item`(선택 · compact · 펼치기) · `DragScroller.Root/Track`(드래그 · 관성 · 휠 · 키보드) ·
-  `PullToRefresh.Root/Scroller/Indicator`(당김 제스처, `--ptr-pull` · `data-state`) ·
-  `AppShell.Root/Scroller/Indicator`(유일한 스크롤러 `<main>` + 스크롤 의도 + 당겨서 새로고침 한 묶음 — 구조 스타일 인라인 강제) ·
-  `NavDepthProvider`/`useBackNavigation`(뒤로가기 깊이 — 앱 안 히스토리면 back, 직접 진입이면 부모로 replace) ·
-  `Chat.Root/List/ScrollToBottom/Message/MessageContent/Bubble/Composer/ComposerInput/ComposerSubmit/ComposerStop`
-  (react-virtuoso 가상화 · messenger/assistant 스크롤 규칙 · Enter/IME · 자동 높이).
-- **훅(flat)**: `ScrollChromeProvider`/`useScrollChrome`(앱바·바텀내비가 공유하는 스크롤 의도) · `useMobile`/`useMobileDevice` ·
-  `useGlassLens`(굴절 유리 변위 맵) · `usePresenceAnimation`(오버레이 파트의 열림·닫힘을 내장 Web Animations API 로 —
-  닫힘 애니메이션이 끝날 때까지 파트를 남기고, 도중에 뒤집히면 지금 자리에서 되돌아간다).
-- **Radix 어댑터**: accordion · avatar · collapsible · dialog · dropdown-menu · label · popover · select · separator · tabs · checkbox · radio-group · switch.
+- **Engine selection:** overlay, disclosure, and form-control behavior uses in-house ports of Radix Primitives. Accessibility wiring uses React Aria; `text-field` and `autocomplete` use `react-aria`/`react-stately` rather than reinventing ARIA.
+- **Custom headless primitives:** `Button` (press/ripple/asChild), `Input`/`Textarea` (IME-safe), `TextField` (compound field), and `Autocomplete` (combobox).
+- **App shells, gestures, and chat:** behavior lives here and visuals in templates. `AppBar.Root` exposes flow/pinned/reveal through `data-state`; `BottomNav.Root/Item` handles selection, compact mode, and expansion; `DragScroller.Root/Track` handles dragging, inertia, wheel, and keyboard scrolling. `PullToRefresh.Root/Scroller/Indicator` exposes pull gestures through `--ptr-pull` and `data-state`. `AppShell.Root/Scroller/Indicator` combines one `<main>` scroller, scroll intent, and pull-to-refresh with required structural inline styles. `NavDepthProvider`/`useBackNavigation` goes back with in-app history or replaces with a parent route after direct entry. `Chat.Root/List/ScrollToBottom/Message/MessageContent/Bubble/Composer/ComposerInput/ComposerSubmit/ComposerStop` provides react-virtuoso virtualization, messenger/assistant scroll rules, Enter/IME handling, and automatic height.
+- **Directly exported hooks:** `ScrollChromeProvider`/`useScrollChrome` shares scroll intent between app bars and bottom navigation; `useMobile`/`useMobileDevice` detects mobile presentation/devices; `useGlassLens` generates refractive-glass displacement maps; `usePresenceAnimation` animates overlay entry/exit with the Web Animations API, retains closing parts until completion, and preserves motion when reversing.
+- **Radix-based primitives:** accordion, avatar, collapsible, dialog, dropdown-menu, popover, select, tabs, checkbox, radio-group, and switch.
 
-## ⚠️ Tailwind 토큰 결합 (오버라이드 지점)
+## Styling boundaries
 
-이 패키지는 **원칙적으로 스타일이 없지만**, 인터랙션/모션 유틸 두 곳은 Tailwind 클래스 문자열에 얇게 결합돼 있다.
-소비 레이어가 자유롭게 **오버라이드/교체**할 수 있도록 아래를 명시한다:
+The core has no Tailwind or design-token contract. Interaction class constants (`focusRing`, `pressable`, `disabledStyle`) live in `@comwit/ui-templates/lib/interaction`. Ripple hooks own positioning, size, and cleanup timing; the consumer supplies color, shape, and animation through `itemClassName`. Structural inline styles needed for scrolling and positioning remain with the behavior they support.
 
-| export                                                          | 결합된 것                                                                        | 오버라이드                                    |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------- |
-| `focusRing`, `pressable`, `disabledStyle` (`utils/interaction`) | 포커스 링·눌림·비활성 **Tailwind 클래스 상수** (`--ring`, `--color-*` 토큰 참조) | 상수를 import 하지 않고 자체 클래스를 쓰면 됨 |
-| `useRipple` / `<Button>` (`utils/ripple`)                       | 리플 컨테이너의 `relative overflow-hidden` **구조 클래스**                       | `<Button disableRipple>` 또는 `asChild` 로 끔 |
+The consumer owns colors and theme values. The standard token contract lives in `@comwit/ui-templates` at `styles/globals.css`.
 
-즉 **색/토큰 계약**(`--ring`, `--primary`, `--color-*` …)은 소비처(Tailwind 테마)가 소유한다.
-프리미티브는 그 토큰을 _참조만_ 하므로, 테마 값만 바꾸면 전체가 리테마된다.
-표준 토큰 세트는 `@comwit/ui-templates` 의 `styles/globals.css` 를 참고/복사한다.
+## Roadmap
 
-## 로드맵
-
-- [ ] Radix re-export 를 프리미티브 단위로 자체 구현 교체 (dialog → popover → …)
-- [ ] 각 프리미티브 개별 서브패스 export
+- [x] Replace external Radix re-exports with in-house primitive implementations.
+- [ ] Add individual primitive subpath exports.

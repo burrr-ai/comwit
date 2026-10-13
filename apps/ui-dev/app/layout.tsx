@@ -24,7 +24,7 @@ const notoSansMono = Noto_Sans_Mono({
 
 export const metadata: Metadata = {
   title: 'Comwit UI — Catalog',
-  description: '@comwit/ui + @comwit/ui-templates 컴포넌트 카탈로그',
+  description: '@comwit/ui + @comwit/ui-templates component catalog',
   robots: { index: false, follow: false },
 }
 

@@ -6,7 +6,7 @@ type RippleItem = { key: number; x: number; y: number; size: number }
 
 let rippleId = 0
 
-/** 리플 컨테이너 — 위치·오버플로만 담당(호스트의 border-radius 를 그대로 상속), 시각은 없음. */
+/** Ripple container: positioning and overflow only, inheriting the host border-radius. No visuals. */
 const RIPPLE_CONTAINER_STYLE: React.CSSProperties = {
   pointerEvents: 'none',
   position: 'absolute',
@@ -15,16 +15,15 @@ const RIPPLE_CONTAINER_STYLE: React.CSSProperties = {
   borderRadius: 'inherit',
 }
 
-/** 중앙 리플(useCenterRipple) 아이템 — 컨테이너를 그대로 채운다(좌표 계산 없음). */
+/** Centered ripple item for useCenterRipple: fills the container without coordinate calculations. */
 const CENTER_ITEM_STYLE: React.CSSProperties = { position: 'absolute', inset: 0 }
 
 /**
- * 눌린 지점에서 퍼지는 리플 (comwit-ui/utils 인터랙션 프리미티브).
+ * Ripple expanding from the pressed point (comwit-ui/utils interaction primitive).
  *
- * 헤드리스: 위치·크기·타이밍(cleanup)만 소유하고 **시각은 0** — 리플 도트가 실제로 보이려면
- * `itemClassName` 으로 색·모양·애니메이션(예: `animate-ripple rounded-full bg-current opacity-0`)을
- * 소비 레이어(템플릿)가 넘겨야 한다. 생략하면 위치만 계산되고 아무것도 렌더링되어 보이지 않는다.
- * 호스트 요소 요구사항: `position: relative; overflow: hidden`.
+ * Headless: owns position, size, and cleanup timing only. Consumers (templates) supply color, shape, and animation
+ * through itemClassName, such as animate-ripple rounded-full bg-current opacity-0. Without those styles,
+ * positions are calculated but nothing is visible. The host requires position: relative; overflow: hidden.
  *
  * @example
  * const { onRippleDown, ripples } = useRipple(disabled, 'animate-ripple rounded-full bg-current opacity-0')
@@ -75,10 +74,10 @@ export function useRipple(disabled?: boolean, itemClassName?: string) {
 }
 
 /**
- * 중앙에서 퍼지는 리플 — 체크박스·라디오처럼 작은 컨트롤의 헤일로 안에서 쓴다.
- * `ripples` 를 원형 헤일로 컨테이너 안에 렌더하면 컨테이너를 정확히 채우며 퍼진다.
- * 좌표 계산이 없어 어떤 크기의 컨테이너에도 맞는다. `itemClassName` 규칙은 {@link useRipple} 과 동일 —
- * 헤드리스이므로 시각(색·모양·애니메이션)은 항상 소비 레이어가 넘긴다.
+ * Centered ripple for halos around small controls such as checkboxes and radio buttons.
+ * Render ripples inside a circular halo container; they expand to fill it exactly. Without coordinate
+ * calculations, this works at any container size. itemClassName follows {@link useRipple}: consumers
+ * always supply the color, shape, and animation for this headless primitive.
  */
 export function useCenterRipple(disabled?: boolean, itemClassName?: string) {
   const [items, setItems] = React.useState<number[]>([])

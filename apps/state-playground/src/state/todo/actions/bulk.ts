@@ -5,12 +5,14 @@ import { todoModel } from '../model'
 import { clearCompletedTodos } from '@/api/todo/index'
 
 function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : '요청 처리 중 알 수 없는 오류가 발생했습니다.'
+  return error instanceof Error
+    ? error.message
+    : 'An unknown error occurred while processing the request.'
 }
 
 function throwAfterToast(context: string, error: unknown) {
   const message = errorMessage(error)
-  toast.error(`${context} 실패`, { description: message })
+  toast.error(`${context} failed`, { description: message })
   throw error
 }
 
@@ -22,9 +24,9 @@ export const todoBulkActions = action<Pick<TodoActions, 'clearCompleted' | 'setF
       constructor(private readonly model: TodoState) {}
 
       @OnSuccess(() => {
-        toast.success('완료 항목 삭제 완료')
+        toast.success('Completed items deleted')
       })
-      @OnError((error: unknown) => throwAfterToast('완료 항목 삭제', error))
+      @OnError((error: unknown) => throwAfterToast('Delete completed items', error))
       async clearCompleted(options?: TodoActionOptions) {
         const previous = [...this.model.todos]
         this.model.todos = this.model.todos.filter((t) => t.status !== 'done')

@@ -1,0 +1,68 @@
+---
+title: 설계 결정
+group: How it works
+order: 5
+description: 서버 함수 연결 방식부터 시작하여 키트의 선택과 그 이유를 설명합니다.
+---
+
+<a id="design-decisions"></a>
+
+# 설계 결정
+
+키트는 두 가지 입장을 취합니다. 에이전트가 필요한 규칙을 프로젝트에 포함하는 **AI 네이티브** 방식이며, api 계층을 백엔드로 삼고 별도 서비스를 두지 않는 **Next.js 풀스택** 방식입니다. 아래 모든 결정은 이 둘에서 이어집니다. 다음 작업자가 같은 고민을 반복하지 않도록 새 결정도 이유와 함께 여기에 기록합니다.
+
+<a id="server-functions-our-own-transport-not-native-server-actions"></a>
+
+## 서버 함수: 네이티브 Server Actions 대신 자체 전송
+
+api 계층은 `createAction`으로 감싼 `'use server'` 파일을 `resolveActions`로 내보내므로 서버 액션처럼 보입니다. 하지만 빌드 시점에 키트가 작동 방식을 바꿉니다(`src/lib/server-action/`, `next.config.ts`의 `withServerFn`으로 연결).
+
+- Turbopack 로더가 `'use server'`를 `import 'server-only'`로 바꾸므로 함수가 네이티브 Next Server Function으로 등록되지 않습니다.
+- 도메인의 `index.ts`는 타입이 지정된 함수 ID 파사드로 대체됩니다. Server Component와 RSC는 `react-server` 내보내기 조건을 사용해 빌드 시점 매니페스트로 액션 모듈을 직접 호출하므로 HTTP 왕복이 없습니다. 클라이언트 코드는 내부 라우트 핸들러 `POST /api/internal/server-fn/[...slug]`에 메서드별로 하나씩 POST하는 클라이언트 런타임을 받습니다.
+- 전송 코덱은 일반 JSON에 `undefined`, `Date`, `bigint`, 유한하지 않은 숫자용 태그를 더한 것입니다. 브라우저와 핸들러에서 같은 코덱이 실행되고 `@comwit/state` 프록시는 그대로 직렬화됩니다.
+
+네이티브 Server Actions를 사용하지 않는 이유는 다음과 같습니다.
+
+- **병렬성.** Next는 클라이언트 하나의 네이티브 액션 호출을 순차 실행합니다. 여기서는 각 메서드가 독립적인 POST이므로 `Promise.all([a.findAll(), a.getStats()])`이 실제로 병렬 실행됩니다.
+- **명시적인 오류.** `ActionError` 메시지만 브라우저로 전달합니다. 나머지 오류는 핸들러가 기록하고 가립니다. 린트 규칙 `api-action-error`가 코드에 이 경계를 드러냅니다.
+- **클로저 캡처 없이 안정적인 ID.** 액션은 렌더링에서 만든 클로저가 아니라 일반 모듈입니다. ID는 불투명한 해시가 아니라 파일 경로에서 만들어지므로 매니페스트를 검토할 수 있습니다.
+- **전송 규칙을 한곳에.** 동일 출처 검사, 본문 크기 제한, `Cache-Control: no-store`를 각 액션 대신 핸들러 하나에 둡니다.
+- **서버 호출은 직접 실행.** 서비스 레이아웃은 RSC에서 HTTP를 거치지 않고 `getMe()`를 기다리므로 하이드레이션에 왕복이 추가되지 않습니다.
+
+사용자가 지킬 규칙은 `'use server'` 소스 관례를 유지하고 api는 `index.ts`를 통해서만 호출하며 API 전송만을 위한 `snapshot()`이나 `deproxy()` 호출을 추가하지 않는 것입니다. 코덱이 이미 열거 가능한 값을 직렬화합니다.
+
+<a id="cache-components-with-a-service-worker-that-respects-the-same-boundary"></a>
+
+## 같은 경계를 지키는 서비스 워커와 Cache Components
+
+`cacheComponents: true`와 `partialPrefetching`은 정적 셸과 요청 시점 데이터를 분리합니다. `staleTimes.static`은 1년이고 `staleTimes.dynamic`은 0입니다. 서비스 워커(`src/app/sw.ts`)는 정적 자산, 정적 RSC 페이로드, 완전한 문서를 캐시하고 `private` 또는 `no-store`인 항목은 캐시하지 않습니다. 배포 ID 하나(`NEXT_DEPLOYMENT_ID` 또는 Git SHA)가 모든 캐시의 네임스페이스를 정합니다. `AppVersionGuard`는 `version.json`을 폴링하고 오래된 클라이언트를 다시 로드합니다. 메타데이터는 요청 데이터를 읽지 않으므로 셸은 정적 상태를 유지하고 소셜 크롤러는 `<head>`에서 태그를 얻습니다.
+
+<a id="auth-resolves-on-the-server-once-with-a-null-boundary"></a>
+
+## null 경계 안에서 서버 인증을 한 번 해결
+
+각 서비스의 라우트 그룹은 `getMe()`를 기다리는 비동기 레이아웃을 `<Suspense fallback={null}>`로 감쌉니다. 작은 클라이언트 어댑터가 소비자가 사용자를 읽기 전에 `useUser.hydrate(...)`를 호출합니다. 스켈레톤, 잠깐 보이는 익명 상태, `useEffect` 초기화가 없으며, 어댑터는 아무것도 구독하지 않아 로그아웃 시 서버 초기 값을 다시 적용하지 않습니다. 린트 규칙 `auth-hydration-boundary`가 어댑터를 간결하게 유지합니다.
+
+<a id="the-api-layer-shapes-data-for-the-screen"></a>
+
+## 화면에 맞게 데이터를 가공하는 api 계층
+
+api 계층의 도메인은 테이블보다 페이지에 맞춥니다. 상대 시간(`30분 전`), 포맷한 날짜, 표시용 개수는 공유 `kst` 도우미를 사용해 api에서 생성합니다. 따라서 컴포넌트는 포맷, 필터링, 집계, 슬라이스를 하지 않습니다. 이유는 페이지네이션입니다. 컴포넌트에는 현재 페이지의 데이터만 있으므로 클라이언트에서 계산한 수치는 구조적으로 잘못됩니다.
+
+<a id="repository-is-the-only-door-to-data"></a>
+
+## 데이터로 가는 유일한 문은 리포지토리
+
+모든 읽기는 정규화된 메모리 행을 다루는 함수로 시작하는 `src/server/repository/`를 거칩니다. ID는 시간순이며 기본 키로 안전한 UUID v7이고 삭제는 소프트 삭제입니다. 행보다 먼저 `schema.dbml`을 작성하여 관계를 나중에 발견하는 대신 먼저 설계합니다. 데이터베이스를 연결할 때는 함수 본문만 바뀝니다.
+
+<a id="admin-lives-on-a-stable-internal-path"></a>
+
+## 안정적인 내부 경로에 있는 관리자
+
+admin 서비스의 라우트 파일은 `/admin` 아래에 유지됩니다. 공개 진입점은 프로젝트별 접두사이며 `src/proxy.ts`가 다시 씁니다. 직접 `/admin/*`을 요청하면 404를 반환합니다. `next.config.ts` 대신 요청 프록시에서 다시 쓰면 RSC 내비게이션과 prefetch가 app의 catch-all을 먼저 선택하는 문제를 방지합니다. 관리자 회원가입은 없습니다. 첫 계정은 명시적인 요청이 있을 때만 서버 전용 관리자 API로 생성합니다.
+
+<a id="rules-are-code"></a>
+
+## 규칙도 코드
+
+위 규칙 중 검사 가능한 것은 모두 `eslint-rules/`의 Oxlint 플러그인이며 `pnpm run validate`로 실행합니다. `.ai.md`는 구조만으로 표현할 수 없는 내용을 설명하고 린트 규칙은 `.ai.md`가 금지한 것을 거부합니다. 에이전트와 사람 모두 리뷰 전에 같은 피드백을 받습니다.

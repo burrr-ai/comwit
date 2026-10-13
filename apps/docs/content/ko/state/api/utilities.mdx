@@ -1,0 +1,97 @@
+---
+title: '유틸리티'
+group: 'Setup'
+slug: 'api/utilities'
+order: 13
+---
+
+<a id="utilities"></a>
+
+# 유틸리티
+
+반응형 프록시를 다루고 개발 중 상태를 검사하기 위해 `@comwit/state`가 내보내는 독립적인 도우미 함수입니다.
+
+```ts
+import { snapshot, isProxy, initDevTools } from '@comwit/state'
+```
+
+## snapshot()
+
+```ts
+function snapshot<T extends object>(state: T): T
+```
+
+comwit 반응형 프록시의 분리된 스냅샷을 반환합니다. 이후 스토어 변경은 스냅샷에 영향을 주지 않습니다. 중첩 반응형 객체도 재귀적으로 스냅샷을 만들며, 속성은 쓰기 불가능하고 객체는 확장 불가능합니다. 결과를 읽기 전용으로 취급하고 상태 변경에는 일반 액션을 사용하세요.
+
+`state`는 프록시여야 합니다(모델 프록시 또는 중첩 프록시 슬라이스). 일반 객체를 전달하면 `Error('Please use proxy object')`가 발생합니다.
+
+```ts
+import { snapshot } from '@comwit/state'
+
+const plain = snapshot(this.model.filter)
+```
+
+<a id="top-level-vs-nested-slices"></a>
+
+### 최상위와 중첩 슬라이스
+
+최상위 모델 프록시에는 `.snapshot()` 메서드도 있으므로 전체 모델은 직접 호출할 수 있습니다.
+
+```ts
+await savePostAction(this.model.snapshot())
+```
+
+**중첩 슬라이스**(예: `state.filter`, `state.list.data`)에는 독립적인 `snapshot()` 도우미를 사용하세요. 이것이 타입 안전한 방법입니다. `state.user = userFromApi` 같은 일반 할당이 계속 동작하도록 `.snapshot()` 타입은 최상위 프록시에만 정의되어 있습니다.
+
+```ts
+import { snapshot } from '@comwit/state'
+
+await fetchCoders({ filter: snapshot(this.model.filter) })
+```
+
+서버 액션이나 직렬화 가능한 데이터가 필요한 API에 프록시를 전달하기 전에 일반 객체로 변환할 때 이 방법을 권장합니다.
+
+## isProxy()
+
+```ts
+function isProxy(value: unknown): boolean
+```
+
+`value`가 comwit 반응형 프록시이면 `true`를 반환합니다. 최상위 모델 프록시와 중첩 프록시 슬라이스 모두 해당합니다. 일반 객체, 원시 값, 스냅샷에는 `false`를 반환합니다.
+
+서버 액션, 로깅, `postMessage`처럼 직렬화 전에 프록시를 일반 객체로 변환해야 하는 경계 코드에서 유용합니다.
+
+```ts
+import { isProxy, snapshot } from '@comwit/state'
+
+function toPlain<T extends object>(value: T): T {
+  return isProxy(value) ? snapshot(value) : value
+}
+```
+
+## initDevTools()
+
+```ts
+function initDevTools(options?: { maxLogSize?: number }): ComwitDevTools | undefined
+```
+
+메모리 기반 개발 도구 인스턴스를 초기화하고 `globalThis.__COMWIT_DEVTOOLS__`에 저장합니다. 등록된 스토어를 추적하고 상태 변경 및 액션 이벤트를 수집하며 최근 액션 로그를 유지합니다.
+
+- `options.maxLogSize` — 보관할 최대 액션 로그 수입니다(기본 `50`). 제한을 넘으면 오래된 항목부터 삭제됩니다.
+- 이미 초기화된 인스턴스가 있으면 기존 인스턴스를 반환합니다(멱등성).
+- `process.env.NODE_ENV === 'production'`이면 아무 작업 없이 `undefined`를 반환합니다.
+
+```ts
+import { initDevTools } from '@comwit/state'
+
+if (process.env.NODE_ENV !== 'production') {
+  initDevTools({ maxLogSize: 100 })
+}
+```
+
+반환된 `ComwitDevTools` 객체는 다음을 제공합니다.
+
+- `stores` — 모델 키를 `{ model, entry, unsubscribe }`에 연결하는 `Map`입니다.
+- `getStoreSnapshot(model)` — 모델의 `{ state, subscriberCount }`를 반환하며, 등록되지 않았으면 `null`을 반환합니다. 참고: 현재 `subscriberCount`는 해당 모델의 구독자 수가 아니라 등록된 전체 스토어 수를 보고합니다.
+- `actionLog` — 최근 액션 항목 배열입니다(`{ name, args, result?, error?, timestamp }`).
+- `subscribe(type, handler)` — `'state-change'`, `'action'`, `'query'` 이벤트를 구독하고 구독 해제 함수를 반환합니다.

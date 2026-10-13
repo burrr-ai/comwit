@@ -1,30 +1,7 @@
 'use client'
 
 /**
- * comwit-ui — bottom-sheet 프리미티브 (헤드리스 · 스타일 0).
- *
- * 아래에서 올라오는 시트. Dialog 엔진(포털·스크림·포커스 트랩·ESC·바깥 클릭·스크롤 잠금) 위에
- * **끌어내려 닫는 제스처**를 얹는다. 핸들이나 시트 본문을 아래로 끌면 시트가 손가락을 따라오고,
- * 놓는 순간 거리(시트 높이 대비)나 속도가 문턱을 넘으면 닫히고, 아니면 제자리로 돌아온다.
- * 본문 안의 스크롤러는 맨 위에 있을 때만 시트를 끈다 — 그 외엔 평소처럼 스크롤된다.
- *
- *   <BottomSheet.Root open={open} onOpenChange={setOpen}>
- *     <BottomSheet.Trigger>Open</BottomSheet.Trigger>
- *     <BottomSheet.Portal>
- *       <BottomSheet.Overlay />
- *       <BottomSheet.Content>
- *         <BottomSheet.Handle />
- *         <BottomSheet.Title>…</BottomSheet.Title>
- *       </BottomSheet.Content>
- *     </BottomSheet.Portal>
- *   </BottomSheet.Root>
- *
- *  - Content   끌린 거리(px)를 `--sheet-drag` 로, 시트 높이 대비 비율(0~1)을 `--sheet-drag-progress` 로 자기 요소에 쓴다.
- *              끄는 동안 `data-dragging=""`. 시각(translate · 되돌아오는 전환 · 열림/닫힘 애니메이션)은 소비 CSS 가 그린다.
- *              드래그로 닫힐 땐 `--sheet-drag` 를 그대로 둔 채 닫힌다 — 닫힘 애니메이션이 끌린 자리에서 이어진다.
- *  - Overlay   같은 `--sheet-drag-progress` · `data-dragging` 을 받는다(끌수록 스크림이 옅어지게).
- *  - Handle    그래버. 탭하면 닫힌다. `touch-action: none` 을 인라인으로 강제한다.
- *  - Trigger · Portal · Title · Description · Close 는 Dialog 의 것과 같다.
+ * Headless bottom sheet adds drag-to-dismiss to Dialog's portal, scrim, focus trap, Escape/outside dismissal, and scroll lock. Drag the handle or body downward; release beyond the distance/velocity threshold to close, otherwise spring back. Nested scrollers yield only at their top. Compose Root, Trigger, Portal, Overlay, Content, Handle, Title, and Close. Content exposes --sheet-drag in pixels, --sheet-drag-progress from 0 to 1, and data-dragging; consumer CSS controls translation and transitions. Keep the final drag offset when dismissing so the exit animation continues from it. Overlay shares progress and dragging state. Handle closes on tap and enforces touch-action: none. Other parts reuse Dialog.
  */
 
 import * as React from 'react'
@@ -39,13 +16,13 @@ import { useControllableState } from './internal/use-controllable-state'
 const ROOT_NAME = 'BottomSheet'
 const DRAG_VAR = '--sheet-drag'
 const PROGRESS_VAR = '--sheet-drag-progress'
-/** 드래그로 인정할 최소 이동(px) — 탭·미세 움직임과 구분한다. */
+/** Minimum movement in pixels distinguishing a drag from a tap or jitter. */
 const DRAG_SLOP = 6
-/** 위로 끌 때 따라오는 최대 거리(px). 시트는 위로는 조금만 늘어난다. */
+/** Maximum upward stretch in pixels. */
 const OVERSHOOT = 28
-/** 놓는 순간의 속도를 재는 최근 샘플 창(ms). */
+/** Recent sample window in milliseconds for release velocity. */
 const VELOCITY_WINDOW = 100
-/** 드래그 직후 딸려오는 클릭(핸들 탭 · 자식 버튼)을 삼키는 시간(ms). */
+/** Suppress follow-up clicks after dragging for this many milliseconds. */
 const CLICK_SWALLOW_MS = 350
 
 type BottomSheetContextValue = {
@@ -56,9 +33,9 @@ type BottomSheetContextValue = {
 const [BottomSheetProvider, useBottomSheetContext] =
   createContext<BottomSheetContextValue>(ROOT_NAME)
 
-/* -------------------------------------------------------------------------------------------------
- * Root — Dialog.Root 를 제어 모드로 감싸고, 제스처가 닫기를 부를 수 있게 onOpenChange 를 컨텍스트에 둔다.
- * -----------------------------------------------------------------------------------------------*/
+/*
+ * Root controls Dialog.Root and exposes onOpenChange through context for gesture dismissal.
+ */
 
 interface BottomSheetRootProps extends DialogPrimitive.DialogProps {}
 
@@ -83,9 +60,9 @@ const BottomSheetRoot: React.FC<BottomSheetRootProps> = (props) => {
 }
 BottomSheetRoot.displayName = ROOT_NAME
 
-/* -------------------------------------------------------------------------------------------------
- * Overlay — 스크림. 드래그 진행도를 받아 소비 CSS 가 옅어지게 그릴 수 있다.
- * -----------------------------------------------------------------------------------------------*/
+/*
+ * Overlay receives drag progress so consumer CSS can fade the scrim.
+ */
 
 const OVERLAY_NAME = 'BottomSheetOverlay'
 
@@ -98,20 +75,19 @@ const BottomSheetOverlay = React.forwardRef<HTMLDivElement, DialogPrimitive.Dial
 )
 BottomSheetOverlay.displayName = OVERLAY_NAME
 
-/* -------------------------------------------------------------------------------------------------
- * Content — Dialog.Content + 끌어내려 닫기.
- * -----------------------------------------------------------------------------------------------*/
+/*
+ * Content combines Dialog.Content with drag-to-dismiss.
+ */
 
 const CONTENT_NAME = 'BottomSheetContent'
 
 interface BottomSheetContentProps extends DialogPrimitive.DialogContentProps {
-  /** 시트 높이 대비 이 비율보다 많이 끌고 놓으면 닫힌다. 기본 0.25. */
+  /** Close when released beyond this fraction of sheet height. Default: 0.25. */
   closeThreshold?: number
-  /** 이 속도(px/ms)보다 빠르게 아래로 튕기면 거리와 무관하게 닫힌다. 기본 0.4. */
+  /** Close on a downward flick faster than this velocity in px/ms, regardless of distance. Default: 0.4. */
   velocityThreshold?: number
   /**
-   * 어디서 끌 수 있는지. 'sheet' 는 시트 어디서든(본문 스크롤이 맨 위일 때), 'handle' 은 핸들에서만.
-   * false 면 제스처를 끈다. 기본 'sheet'.
+   * Gesture area: sheet allows dragging anywhere when nested content is at the top; handle limits dragging to the grabber; false disables gestures. Default: sheet.
    */
   drag?: 'sheet' | 'handle' | false
 }
@@ -126,7 +102,7 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
       ...contentProps
     } = props
     const context = useBottomSheetContext(CONTENT_NAME)
-    // 콘텐츠 DOM 은 열릴 때마다 새로 마운트된다(Presence) — 콜백 ref 로 받아 그때 제스처를 건다.
+    // Presence remounts content on each open; attach gestures when its callback ref receives the DOM node.
     const [content, setContent] = React.useState<HTMLDivElement | null>(null)
     const composedRef = useComposedRefs(forwardedRef, setContent)
     const closeRef = React.useRef(context.onOpenChange)
@@ -162,17 +138,17 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
         }
       }
 
-      /** 이 타깃에서 제스처를 시작해도 되는가. */
+      /** Whether this target can start a gesture. */
       const allowed = (target: EventTarget | null) => {
         const element = target as HTMLElement | null
         if (!element) return false
         if (drag === 'handle') return Boolean(handleRef.current?.contains(element))
-        // 텍스트 입력·선택 위에서는 시작하지 않는다 — 마우스 드래그가 텍스트 선택이어야 한다.
+        // Do not start over text inputs or selectors; mouse dragging must remain text selection.
         return !element.closest(
           'input, textarea, select, [contenteditable]:not([contenteditable="false"])'
         )
       }
-      /** target → content 사이에 위로 스크롤 여지가 있는 스크롤러가 있으면 시트 대신 그쪽이 움직인다. */
+      /** Let a nested scroller between target and content consume the gesture if it can still scroll upward. */
       const yieldsToInnerScroll = (target: EventTarget | null) => {
         let element = target as HTMLElement | null
         while (element && element !== content) {
@@ -185,7 +161,7 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
         return false
       }
 
-      // 드래그 직후 딸려오는 클릭 하나를 삼킨다(핸들 탭 닫기 · 자식 버튼 오작동 방지).
+      // Suppress the click following a drag to avoid handle dismissal or accidental child-button activation.
       const swallowNextClick = () => {
         const done = () => {
           window.clearTimeout(swallowTimer)
@@ -210,7 +186,7 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
         return true
       }
 
-      /** true 를 돌려주면 호출부가 기본 동작(네이티브 스크롤·바운스)을 막는다. 'cancel' 은 이 제스처를 포기한다. */
+      /** true requests prevention of native scrolling/bounce; cancel abandons the gesture. */
       const move = (x: number, y: number, target: EventTarget | null): boolean | 'cancel' => {
         const now = performance.now()
         samples.push({ y, t: now })
@@ -218,14 +194,14 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
         if (!engaged) {
           const dy = y - startY
           const dx = x - startX
-          if (Math.abs(dx) > DRAG_SLOP && Math.abs(dx) > Math.abs(dy)) return 'cancel' // 가로 제스처
+          if (Math.abs(dx) > DRAG_SLOP && Math.abs(dx) > Math.abs(dy)) return 'cancel' // Horizontal gesture.
           if (dy <= DRAG_SLOP) return false
           if (yieldsToInnerScroll(target)) {
-            startY = y // 아직 안쪽이 스크롤 중 — 기준점을 끌어와 맨 위 도달 즉시 0부터 끌린다
+            startY = y // While nested content scrolls, update the origin so sheet dragging starts at zero when it reaches the top.
             return false
           }
           engaged = true
-          startY = y // 발동 순간 튐 방지
+          startY = y // Prevent a jump when the drag activates.
           setDragging(true)
           apply(0)
           return true
@@ -249,7 +225,7 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
         swallowNextClick()
         setDragging(false)
         if (current > 0 && (flungDown || (farEnough && !flungUp))) {
-          // 끌린 자리는 그대로 둔다 — 닫힘 애니메이션이 거기서 이어받는다.
+          // Retain the dragged position for the exit animation to continue from it.
           closeRef.current(false)
         } else {
           apply(0)
@@ -257,7 +233,7 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
         samples = []
       }
 
-      // ── 터치 — touchmove 는 non-passive 여야 네이티브 스크롤·바운스를 막을 수 있다 ──
+      // Touch: use a non-passive touchmove listener to prevent native scroll and bounce.
       const onTouchStart = (event: TouchEvent) => {
         if (event.touches.length !== 1) return
         tracking = begin(event.touches[0].clientX, event.touches[0].clientY, event.target)
@@ -273,7 +249,7 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
         end()
       }
 
-      // ── 마우스 — 데스크톱에서도 같은 제스처로 닫을 수 있게 ──
+      // Mouse: support the same dismissal gesture on desktop.
       const onPointerDown = (event: PointerEvent) => {
         if (event.pointerType !== 'mouse' || event.button !== 0) return
         if (begin(event.clientX, event.clientY, event.target)) mouseId = event.pointerId
@@ -322,7 +298,7 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
       <DialogPrimitive.Content
         {...contentProps}
         ref={composedRef}
-        // 첫 프레임부터 변수가 있어야 `translate-y-(--sheet-drag)` 같은 소비 유틸이 유효하다.
+        // Initialize variables before the first frame so utilities such as translate-y-(--sheet-drag) are valid.
         style={{ [DRAG_VAR]: '0px', [PROGRESS_VAR]: '0', ...style } as React.CSSProperties}
       />
     )
@@ -330,9 +306,9 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
 )
 BottomSheetContent.displayName = CONTENT_NAME
 
-/* -------------------------------------------------------------------------------------------------
- * Handle — 그래버. 장식이라 스크린리더에는 숨기고(닫기는 Close · ESC), 탭하면 닫힌다.
- * -----------------------------------------------------------------------------------------------*/
+/*
+ * Handle is decorative and hidden from screen readers; Close and Escape provide accessible dismissal. Tapping the handle closes the sheet.
+ */
 
 const HANDLE_NAME = 'BottomSheetHandle'
 
@@ -349,7 +325,7 @@ const BottomSheetHandle = React.forwardRef<HTMLDivElement, BottomSheetHandleProp
         aria-hidden="true"
         {...handleProps}
         ref={composedRef}
-        // 핸들 위에서는 브라우저가 스크롤을 가로채지 못하게 한다 — 첫 움직임부터 시트가 따라온다.
+        // Prevent the browser from capturing handle scrolling so the sheet follows the first movement.
         style={{ touchAction: 'none', ...style }}
         onClick={composeEventHandlers(props.onClick, () => context.onOpenChange(false))}
       />

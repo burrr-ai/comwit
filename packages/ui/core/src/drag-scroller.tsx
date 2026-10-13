@@ -1,20 +1,7 @@
 'use client'
 
 /**
- * comwit-ui — drag-scroller 프리미티브 (헤드리스 · 스타일 0).
- *
- * translateX 기반 **수동 가로 스크롤러** — 마우스 드래그·플릭 관성 · 트랙패드/휠 · 터치 · 키보드(←/→) ·
- * 포커스 진입 시 보이게 이동. 네이티브 overflow 대신 transform 을 쓰는 이유:
- *  - 위치가 트랙의 인라인 transform 에 살아 숨겨져도(display:none) 잃지 않고, 리렌더가 덮어쓰지 않는다.
- *  - getBoundingClientRect 가 transform 을 반영해 공유 요소 페이지 전환이 스크롤된 타일의 실제 위치를 잰다.
- *
- *   <DragScroller.Root apiRef={api} onOffsetCommit={save} initialOffset={saved}>
- *     <DragScroller.Track>{tiles}</DragScroller.Track>
- *   </DragScroller.Root>
- *
- * Root 는 구조에 필요한 인라인 스타일(overflow:hidden · touch-action:pan-y · user-select:none)만 강제하고,
- * 드래그 중엔 `data-state="dragging"` 을 단다. 커서·간격·정렬은 소비 레이어의 className 이 정한다.
- * `apiRef` 로 `scrollByAmount(px)` 를 받아 화살표 버튼을 붙일 수 있다.
+ * Headless transform-based horizontal scroller supporting mouse drag/flick momentum, wheel/trackpad, touch, arrow keys, and focus reveal. Inline translateX preserves position across display:none and rerenders; transformed bounds also support shared-element transitions. Compose Root with Track and optionally apiRef, initialOffset, and onOffsetCommit. Root enforces overflow:hidden, touch-action:pan-y, and user-select:none and exposes data-state="dragging". Consumers style cursor, spacing, and alignment; apiRef.scrollByAmount supports arrow buttons.
  */
 
 import * as React from 'react'
@@ -25,22 +12,22 @@ import { createContext } from './internal/context'
 import { Primitive } from './internal/primitive'
 import { useLayoutEffect } from './internal/use-layout-effect'
 
-const FRICTION = 0.95 // 16ms 프레임당 감속(플릭 관성)
-const MIN_VELOCITY = 0.02 // px/ms — 이 아래면 관성 종료
-const DRAG_THRESHOLD = 8 // px — 이 이상 움직여야 "드래그"(클릭 삼킴 + 캡처). 그 아래는 탭
-const LINE_HEIGHT = 16 // px, wheel deltaMode=line 정규화
-const KEY_STEP_RATIO = 0.8 // 방향키 한 번에 뷰포트 너비의 이 비율만큼
-const CLICK_SWALLOW_MS = 350 // 드래그 직후 이 시간 안의 클릭은 삼킨다
-const STEP_DURATION = 350 // ms — 버튼/명령형 스크롤 트윈 길이
+const FRICTION = 0.95 // Momentum decay per 16ms frame.
+const MIN_VELOCITY = 0.02 // Stop momentum below this velocity in px/ms.
+const DRAG_THRESHOLD = 8 // Movement threshold in pixels for drag capture and click suppression; smaller movement remains a tap.
+const LINE_HEIGHT = 16 // Pixel normalization for wheel deltaMode=line.
+const KEY_STEP_RATIO = 0.8 // Fraction of viewport width moved by each arrow-key press.
+const CLICK_SWALLOW_MS = 350 // Suppress clicks during this interval after a drag.
+const STEP_DURATION = 350 // Duration in milliseconds for button/imperative scroll tweens.
 
 const ROOT_NAME = 'DragScroller'
 
 type DragScrollerApi = {
-  /** 트랙을 `px` 만큼 부드럽게 민다(양수 = 끝 쪽으로). */
+  /** Smoothly move by px; positive values move toward the end. */
   scrollByAmount: (px: number) => void
-  /** 절대 위치로 부드럽게 이동한다. */
+  /** Smoothly move to an absolute position. */
   scrollToOffset: (px: number) => void
-  /** 현재 위치(px). */
+  /** Current position in pixels. */
   getOffset: () => number
 }
 
@@ -54,11 +41,11 @@ const [DragScrollerProvider, useDragScrollerContext] =
 type PrimitiveDivProps = React.ComponentPropsWithoutRef<typeof Primitive.div>
 
 interface DragScrollerRootProps extends PrimitiveDivProps {
-  /** 다시 마운트될 때의 시작 위치. 이후 값이 바뀌어도 움직이지 않는다. */
+  /** Initial position on remount; later prop changes do not move the track. */
   initialOffset?: number
-  /** 숨겨지거나 언마운트될 때 현재 위치를 넘긴다(프레임마다 부르지 않는다). */
+  /** Report the current position when hidden or unmounted, not on every frame. */
   onOffsetCommit?: (offset: number) => void
-  /** 명령형 API(화살표 버튼 등). */
+  /** Imperative API for arrow buttons and similar controls. */
   apiRef?: React.Ref<DragScrollerApi>
 }
 
@@ -72,12 +59,12 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
     const [restoredOffset] = React.useState(() =>
       Number.isFinite(initialOffset) ? Math.max(0, initialOffset) : 0
     )
-    const offset = React.useRef(restoredOffset) // 현재 스크롤 양(px); transform = translateX(-offset)
+    const offset = React.useRef(restoredOffset) // Current scroll offset in pixels; transform is translateX(-offset).
     const commitOffset = React.useRef(onOffsetCommit)
-    const vel = React.useRef(0) // px/ms (포인터 관성)
+    const vel = React.useRef(0) // Pointer momentum velocity in px/ms.
     const max = React.useRef(0)
     const raf = React.useRef(0)
-    const dragging = React.useRef(false) // 임계값을 넘어 실제 드래그 중(= 캡처됨)
+    const dragging = React.useRef(false) // The drag has crossed the threshold and captured the pointer.
     const start = React.useRef({ x: 0, off: 0, t: 0, pointerId: -1, pending: false })
 
     const apply = () => {
@@ -88,7 +75,7 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
     const computeMax = () => {
       const viewport = viewportRef.current
       const track = trackRef.current
-      if (!viewport || !track || !viewport.clientWidth) return // display:none → max 유지(위치 보존)
+      if (!viewport || !track || !viewport.clientWidth) return // Preserve max while display:none to retain position.
       max.current = Math.max(0, track.scrollWidth - viewport.clientWidth)
     }
     const setOffset = (v: number) => {
@@ -111,7 +98,7 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
     }, [onOffsetCommit])
 
     useLayoutEffect(() => {
-      // 전환이 위치를 재거나 브라우저가 그리기 전에 복원한다.
+      // Restore before transitions measure positions or the browser paints.
       computeMax()
       if (viewportRef.current?.clientWidth) setOffset(offset.current)
       return () => {
@@ -128,16 +115,16 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
         last = now
         if (Math.abs(vel.current) < MIN_VELOCITY) return void (raf.current = 0)
         const next = clamp(offset.current + vel.current * dt)
-        if (next === offset.current) return void ((vel.current = 0), (raf.current = 0)) // 끝에 닿음
+        if (next === offset.current) return void ((vel.current = 0), (raf.current = 0)) // Reached an edge.
         offset.current = next
         apply()
-        vel.current *= Math.pow(FRICTION, dt / 16) // 프레임레이트 무관 감속
+        vel.current *= Math.pow(FRICTION, dt / 16) // Frame-rate-independent decay.
         raf.current = requestAnimationFrame(step)
       }
       raf.current = requestAnimationFrame(step)
     }
 
-    // 절대 목표까지 부드러운 트윈(화살표 버튼 / 명령형).
+    // Smooth tween to an absolute target for buttons and imperative calls.
     const animateTo = (target: number) => {
       stopMomentum()
       computeMax()
@@ -167,7 +154,7 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
       []
     )
 
-    // 드래그/관성 정지 직후 딸려오는 클릭(자식 <Link> 내비) 하나를 삼킨다. 350ms 뒤 자동 해제.
+    // Suppress one follow-up click after dragging or stopping momentum to prevent child Link navigation. Release after 350ms.
     const swallowNextClick = () => {
       const viewport = viewportRef.current
       if (!viewport) return
@@ -185,10 +172,10 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
       timer = window.setTimeout(done, CLICK_SWALLOW_MS)
     }
 
-    // ── 포인터 드래그 ──
+    // Pointer dragging.
     const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-      if (event.button !== 0) return // 주 버튼 / 터치 / 펜만
-      if (dragging.current || start.current.pending) return // 다른 포인터가 소유 중 → 멀티터치 격리
+      if (event.button !== 0) return // Primary mouse button, touch, or pen only.
+      if (dragging.current || start.current.pending) return // Another pointer owns the gesture; isolate multitouch.
       const wasMoving = raf.current !== 0
       stopMomentum()
       computeMax()
@@ -201,7 +188,7 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
         pointerId: event.pointerId,
         pending: true,
       }
-      if (wasMoving) swallowNextClick() // 관성 중 탭 = 멈추려는 의도, 내비가 아니다
+      if (wasMoving) swallowNextClick() // A tap during inertia means stop, not navigate.
     }
     const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
       const s = start.current
@@ -209,10 +196,10 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
       if (!s.pending && !dragging.current) return
       if (!dragging.current) {
         if (Math.abs(event.clientX - s.x) < DRAG_THRESHOLD) return
-        // 임계값을 넘겨야 캡처한다 — 그래야 탭이 클릭으로 살아남는다
+        // Capture only after crossing the threshold so taps remain clicks.
         dragging.current = true
         s.pending = false
-        s.x = event.clientX // 튐 방지를 위해 현재 지점으로 재기준
+        s.x = event.clientX // Rebase at the current point to avoid a jump.
         s.off = offset.current
         s.t = performance.now()
         viewportRef.current?.setPointerCapture(event.pointerId)
@@ -234,7 +221,7 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
         dragging.current = false
         viewportRef.current?.releasePointerCapture?.(event.pointerId)
         setDragState(false)
-        swallowNextClick() // 내비게이션이 될 클릭을 삼킨다
+        swallowNextClick() // Swallow the click that would navigate.
         if (Math.abs(vel.current) >= MIN_VELOCITY) momentum()
       }
       s.pending = false
@@ -243,7 +230,7 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
     const onPointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
       const s = start.current
       if (event.pointerId !== s.pointerId) return
-      // cancel 은 클릭을 만들지 않는다 — 삼킬 것 없이 가드만 푼다.
+      // Cancel does not produce a click; just release the guard.
       dragging.current = false
       viewportRef.current?.releasePointerCapture?.(event.pointerId)
       setDragState(false)
@@ -251,7 +238,7 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
       s.pointerId = -1
     }
 
-    // ── 키보드(←/→) ──
+    // ── Keyboard (left/right arrows) ──
     const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
       const target = event.target as HTMLElement
@@ -273,7 +260,7 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
       )
     }
 
-    // ── 포커스 진입 시 보이게(Tab 으로 화면 밖 링크에 들어갈 때) ──
+    // ── Reveal on focus (Tab reaches an offscreen link) ──
     const onFocus = (event: React.FocusEvent<HTMLDivElement>) => {
       const viewport = viewportRef.current
       const track = trackRef.current
@@ -288,7 +275,7 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
       if (delta !== 0) setOffset(offset.current + delta)
     }
 
-    // ── 휠/트랙패드 + 리사이즈: 네이티브(non-passive) 리스너 ──
+    // ── Wheel/trackpad + resize: native non-passive listeners ──
     React.useEffect(() => {
       const viewport = viewportRef.current
       if (!viewport) return
@@ -299,11 +286,11 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
         let dx = event.deltaX * unit
         let dy = event.deltaY * unit
         if (event.shiftKey && dx === 0) {
-          dx = dy // shift+휠 → 가로(브라우저가 바꿔주지 않을 때)
+          dx = dy // Shift+wheel scrolls horizontally when the browser does not convert it.
           dy = 0
         }
-        if (Math.abs(dx) <= Math.abs(dy)) return // 세로 의도 → 페이지가 스크롤하게 둔다
-        event.preventDefault() // 가로 의도만 소비
+        if (Math.abs(dx) <= Math.abs(dy)) return // Let the page scroll for vertical intent.
+        event.preventDefault() // Consume horizontal intent only.
         stopMomentum()
         computeMax()
         setOffset(offset.current + dx)
@@ -311,9 +298,9 @@ const DragScrollerRoot = React.forwardRef<HTMLDivElement, DragScrollerRootProps>
       viewport.addEventListener('wheel', onWheel, { passive: false })
 
       const observer = new ResizeObserver(() => {
-        if (!viewport.clientWidth) return // display:none → 위치 유지
+        if (!viewport.clientWidth) return // display:none: keep the current position.
         computeMax()
-        setOffset(offset.current) // 새 max 로 재클램프
+        setOffset(offset.current) // Clamp again against the new maximum.
       })
       observer.observe(viewport)
       if (trackRef.current) observer.observe(trackRef.current)
@@ -350,7 +337,7 @@ DragScrollerRoot.displayName = ROOT_NAME
 
 const TRACK_NAME = 'DragScrollerTrack'
 
-/** 실제로 움직이는 줄. 위치는 인라인 transform 이 갖는다. */
+/** The moving row. Its position is controlled by the inline transform. */
 const DragScrollerTrack = React.forwardRef<HTMLDivElement, PrimitiveDivProps>(
   (props, forwardedRef) => {
     const { style, ...trackProps } = props

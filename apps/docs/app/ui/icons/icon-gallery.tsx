@@ -1,5 +1,8 @@
 'use client'
 
+import { Copy, useCopy } from '@/i18n/copy'
+import { useTranslations } from 'next-intl'
+
 import { Button } from '@comwit/ui-templates/button'
 import { Input } from '@comwit/ui-templates/input'
 import {
@@ -36,6 +39,7 @@ const categoryLabel = (category: string) =>
   category.replace(/[-_]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 
 function CopyButton({ text, label }: { text: string; label: string }) {
+  const copyText = useTranslations('Copy')
   const [status, setStatus] = React.useState<'idle' | 'copied' | 'error'>('idle')
   const request = React.useRef(0)
 
@@ -64,13 +68,13 @@ function CopyButton({ text, label }: { text: string; label: string }) {
         className="icons-small-button"
         onClick={copy}
       >
-        {status === 'copied' ? 'Copied' : label}
+        <Copy text={status === 'copied' ? 'Copied' : label} />
       </Button>
       <span className={status === 'error' ? 'icons-copy-error' : 'sr-only'} role="status">
         {status === 'copied'
-          ? `${label} copied to clipboard.`
+          ? copyText('copiedLabel', { label })
           : status === 'error'
-            ? 'Could not copy. Select the code to copy it manually.'
+            ? copyText('dynamic157')
             : ''}
       </span>
     </span>
@@ -78,10 +82,12 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 }
 
 function CodeSnippet({ code, label }: { code: string; label: string }) {
+  const localize = useCopy()
+
   return (
     <div className="icons-code-block">
       <div className="icons-code-heading">
-        <CopyButton key={code} text={code} label={label} />
+        <CopyButton key={code} text={code} label={localize(label)} />
       </div>
       <pre tabIndex={0}>
         <code>{code}</code>
@@ -91,6 +97,10 @@ function CodeSnippet({ code, label }: { code: string; label: string }) {
 }
 
 export function IconGallery() {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const [query, setQuery] = React.useState('')
   const [category, setCategory] = React.useState('all')
   const [size, setSize] = React.useState(40)
@@ -117,18 +127,20 @@ export function IconGallery() {
   return (
     <div className="icons-page">
       <header className="icons-header">
-        <h1 className="text-display-lg">Icons</h1>
+        <h1 className="text-display-lg">
+          <Copy id="text137" />
+        </h1>
       </header>
 
-      <section aria-label="Browse icons" className="icons-browser">
+      <section aria-label={copy('text138')} className="icons-browser">
         <div className="icons-search">
           <SearchIcon size={21} />
           <Input
             bare
             ref={searchRef}
             type="search"
-            aria-label="Search icons by name or keyword"
-            placeholder="Search icons…"
+            aria-label={copy('text139')}
+            placeholder={copy('text140')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -142,30 +154,32 @@ export function IconGallery() {
                 setQuery('')
                 searchRef.current?.focus()
               }}
-              aria-label="Clear icon search"
+              aria-label={copy('text141')}
             >
-              Clear
+              <Copy id="text142" />{' '}
             </Button>
           )}
         </div>
 
         <div className="icons-toolbar">
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger aria-label="Category" className="icons-select-trigger">
+            <SelectTrigger aria-label={copy('text143')} className="icons-select-trigger">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All icons</SelectItem>
+              <SelectItem value="all">
+                <Copy id="text144" />
+              </SelectItem>
               {categories.map((item) => (
                 <SelectItem key={item} value={item}>
-                  {categoryLabel(item)}
+                  <Copy text={categoryLabel(item)} />
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <div className="icons-preview-controls">
             <Select value={String(size)} onValueChange={(value) => setSize(Number(value))}>
-              <SelectTrigger aria-label="Size" className="icons-select-trigger">
+              <SelectTrigger aria-label={copy('text145')} className="icons-select-trigger">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -176,15 +190,15 @@ export function IconGallery() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="icons-colors" role="group" aria-label="Icon color">
+            <div className="icons-colors" role="group" aria-label={copy('text147')}>
               {colors.map((item) => (
                 <Button
                   variant="plain"
                   size="none"
                   key={item.name}
                   type="button"
-                  title={item.name}
-                  aria-label={`${item.name} icons`}
+                  title={localize(item.name)}
+                  aria-label={copy('iconColor', { color: localize(item.name) })}
                   aria-pressed={color === item.value}
                   className="icons-color"
                   style={{ '--icon-swatch': item.value } as React.CSSProperties}
@@ -194,7 +208,7 @@ export function IconGallery() {
                 </Button>
               ))}
             </div>
-            <div className="icons-mode" role="group" aria-label="Preview mode">
+            <div className="icons-mode" role="group" aria-label={copy('text148')}>
               <Button
                 variant="plain"
                 size="none"
@@ -202,7 +216,7 @@ export function IconGallery() {
                 aria-pressed={mode === 'static'}
                 onClick={() => setMode('static')}
               >
-                Static
+                <Copy id="text149" />{' '}
               </Button>
               <Button
                 variant="plain"
@@ -211,14 +225,14 @@ export function IconGallery() {
                 aria-pressed={mode === 'motion'}
                 onClick={() => setMode('motion')}
               >
-                Motion
+                <Copy id="text150" />{' '}
               </Button>
             </div>
           </div>
         </div>
 
         <span className="sr-only" role="status" aria-live="polite">
-          {visible.length} {visible.length === 1 ? 'icon' : 'icons'}
+          {copy('iconCount', { count: visible.length })}
         </span>
 
         {visible.length ? (
@@ -231,7 +245,7 @@ export function IconGallery() {
                   type="button"
                   data-icon-trigger
                   className="icons-card"
-                  aria-label={`Preview ${labelFor(definition.name)} icon`}
+                  aria-label={copy('previewIcon', { name: labelFor(definition.name) })}
                   aria-haspopup="dialog"
                   onClick={(event) => {
                     lastTrigger.current = event.currentTarget
@@ -267,7 +281,9 @@ export function IconGallery() {
           </ul>
         ) : (
           <div className="icons-empty">
-            <p>No icons found.</p>
+            <p>
+              <Copy id="text151" />
+            </p>
             <Button
               variant="plain"
               size="none"
@@ -279,7 +295,7 @@ export function IconGallery() {
                 searchRef.current?.focus()
               }}
             >
-              Reset filters
+              <Copy id="text152" />{' '}
             </Button>
           </div>
         )}
@@ -287,6 +303,7 @@ export function IconGallery() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
+          closeLabel={copy('closeOverlay')}
           className="icons-detail"
           onCloseAutoFocus={(event) => {
             event.preventDefault()
@@ -298,8 +315,9 @@ export function IconGallery() {
               <DialogHeader>
                 <DialogTitle>{labelFor(selected.name)}</DialogTitle>
                 <DialogDescription className="sr-only">
-                  {categoryLabel(selected.category)} · {mode === 'motion' ? 'Animated' : 'Static'}{' '}
-                  icon
+                  <Copy text={categoryLabel(selected.category)} /> ·{' '}
+                  <Copy text={mode === 'motion' ? 'Animated' : 'Static'} />{' '}
+                  <Copy id="text153" />{' '}
                 </DialogDescription>
               </DialogHeader>
               <div className="icons-detail-stage">
@@ -321,13 +339,13 @@ export function IconGallery() {
                     className="icons-replay"
                     type="button"
                     onClick={() => setReplayKey((key) => key + 1)}
-                    aria-label={`Replay ${labelFor(selected.name)} animation`}
+                    aria-label={copy('replayIcon', { name: labelFor(selected.name) })}
                   >
-                    ↻ Replay
+                    <Copy id="text154" />{' '}
                   </Button>
                 )}
               </div>
-              <CodeSnippet code={`${importCode}\n\n${usageCode}`} label="Copy code" />
+              <CodeSnippet code={`${importCode}\n\n${usageCode}`} label={copy('text155')} />
             </>
           )}
         </DialogContent>

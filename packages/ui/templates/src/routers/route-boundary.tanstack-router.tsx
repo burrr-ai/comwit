@@ -1,17 +1,17 @@
 'use client'
 
 /**
- * RouteBoundary — TanStack Router 용. `comwit-ui add page-transition` 이 @tanstack/react-router 를 감지하면 이 파일을 설치한다.
+ * RouteBoundary — TanStack Router integration, installed when comwit-ui add page-transition detects @tanstack/react-router.
  *
- * 구현은 ssgoi 공식 어댑터(`@ssgoi/react/tanstack-router` 의 SsgoiRouteBoundary)다 — useRouterState 로 현재
- * pathname 을 읽는다. 여기서는 <PageBoundary> 와 같은 기본 클래스(min-h-full grow)만 입힌다.
- * 라우팅되는 영역(<Outlet /> 등)을 한 번 감싼다:
+ * Uses the official ssgoi adapter, SsgoiRouteBoundary from @ssgoi/react/tanstack-router, which reads pathname
+ * through useRouterState. This layer adds only the PageBoundary defaults, min-h-full grow.
+ * Wrap the routed area (such as Outlet) once:
  *
  *   <PageTransition config={transitions}>
  *     <RouteBoundary><Outlet /></RouteBoundary>
  *   </PageTransition>
  *
- * 어댑터·경계 계약의 상세는 https://ssgoi.dev/llms.txt 를 읽는다.
+ * See https://ssgoi.dev/llms.txt for the adapter and boundary contract.
  */
 
 import * as React from 'react'
@@ -21,7 +21,7 @@ import { cn } from '../lib/utils'
 
 export type RouteLocation = { pathname: string }
 
-/** resolve · routeKey · as + 요소 속성. */
+/** resolve, routeKey, as, and element attributes. */
 export type RouteBoundaryProps<T extends React.ElementType = 'div'> = SsgoiRouteBoundaryProps<T>
 
 function RouteBoundary<T extends React.ElementType = 'div'>(props: RouteBoundaryProps<T>) {
@@ -30,7 +30,7 @@ function RouteBoundary<T extends React.ElementType = 'div'>(props: RouteBoundary
     <SsgoiRouteBoundary<T>
       {...(rest as RouteBoundaryProps<T>)}
       data-slot="page-boundary"
-      // grow: 흐름 안에서 쉘(flex 열)을 채운다. min-h-full: 나가는 동안(absolute, 쉘이 기준)에도 쉘 높이를 유지한다.
+      // grow fills the flex-column shell in normal flow; min-h-full preserves shell height while exiting absolutely.
       className={cn('min-h-full grow', className)}
     />
   )

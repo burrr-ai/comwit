@@ -1,17 +1,7 @@
 'use client'
 
 /**
- * comwit-ui — bottom-nav 프리미티브 (헤드리스 · 스타일 0).
- *
- * 하단 탭바의 동작: 선택 값(제어/비제어) · `aria-current` · 스크롤 의도에 따른 compact 상태 ·
- * 누르거나 포커스가 들어오면 즉시 펼치기. 캡슐·인디케이터 스프링 같은 시각은 소비 레이어가 입힌다.
- *
- *   <BottomNav.Root value={tab} onValueChange={setTab}>
- *     <BottomNav.Item value="home">…</BottomNav.Item>
- *     <BottomNav.Item value="feed" asChild><Link href="/feed">…</Link></BottomNav.Item>
- *   </BottomNav.Root>
- *
- * Root 는 data-state="expanded | compact", Item 은 data-state="active | inactive" 를 방출한다.
+ * Headless bottom navigation: controlled/uncontrolled selection, aria-current, scroll-driven compact state, and immediate expansion on press or focus. Consumers own capsule styling and indicator springs. Compose Root with Item; Item supports asChild links. Root exposes data-state="expanded | compact" and Item exposes data-state="active | inactive".
  */
 
 import * as React from 'react'
@@ -37,7 +27,7 @@ interface BottomNavRootProps extends Omit<PrimitiveNavProps, 'defaultValue'> {
   value?: string
   defaultValue?: string
   onValueChange?: (value: string) => void
-  /** 스크롤 의도 대신 호출부가 compact 를 직접 정할 때. */
+  /** Override scroll intent to control compact state directly. */
   compact?: boolean
 }
 

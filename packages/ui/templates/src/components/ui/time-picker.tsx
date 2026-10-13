@@ -15,11 +15,11 @@ type TimePickerProps = {
   value?: string // HH:mm (24h)
   onChange: (value: string) => void
   placeholder?: string
-  /** 슬롯 간격(분). 기본 30분. */
+  /** Slot interval in minutes. Defaults to 30. */
   stepMinutes?: number
-  /** 표시 로케일(Intl). 'ko-KR' 이면 "오후 6:30". */
+  /** Intl display locale. For example, ko-KR uses Korean AM/PM labels. */
   locale?: string
-  /** 모바일 바텀시트 제목 */
+  /** Mobile bottom-sheet title. */
   title?: string
   className?: string
   disabled?: boolean
@@ -35,7 +35,7 @@ const TRIGGER_CLASS = cn(
 function useTimeFormat(locale: string) {
   return React.useMemo(() => {
     const format = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' })
-    /** 'HH:mm' → '6:30 PM' (로케일 표기) */
+    /** HH:mm → localized display, such as 6:30 PM. */
     return (value: string) => {
       const [hh, mm] = value.split(':').map(Number)
       if (Number.isNaN(hh) || Number.isNaN(mm)) return ''
@@ -45,8 +45,8 @@ function useTimeFormat(locale: string) {
 }
 
 /**
- * 시간 선택 — 데스크톱은 유리 팝오버 슬롯 목록, 모바일은 바텀시트.
- * 슬롯 구성·레거시 값 끼워넣기·선택 슬롯 스크롤은 @comwit/ui useTimePanel 이 소유한다.
+ * Time selection: glass popover with time slots on desktop, bottom sheet on mobile.
+ * @comwit/ui useTimePanel owns slot generation, insertion of legacy values, and scrolling to the selected slot.
  */
 export function TimePicker({
   id,
@@ -75,7 +75,7 @@ export function TimePicker({
     </>
   )
 
-  // 모바일: 아래에서 올라오는 바텀시트.
+  // Mobile: rising bottom sheet.
   if (detected && isMobile) {
     const openSheet = async () => {
       if (disabled) return
@@ -107,7 +107,7 @@ export function TimePicker({
     )
   }
 
-  // 데스크톱: 팝오버.
+  // Desktop: popover.
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>

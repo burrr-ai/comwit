@@ -45,7 +45,7 @@ const nextConfig: NextConfig = {
       static: STATIC_SHELL_CACHE_SECONDS,
     },
     serverActions: {
-      bodySizeLimit: "100mb", // 기본값 1mb에서 100mb로 증가 (대용량 이미지 업로드 등을 위해)
+      bodySizeLimit: "100mb", // Increase the default 1 MB limit to 100 MB for large image uploads.
     },
   },
   async headers() {

@@ -2,11 +2,11 @@ import { clsx, type ClassValue } from 'clsx'
 import { extendTailwindMerge } from 'tailwind-merge'
 
 /**
- * 토큰 유틸을 tailwind-merge 에 등록한다. 등록하지 않으면 조용히 깨진다:
- *  1) 모르는 이름을 색으로 오인 — `text-label text-foreground` 에서 크기가, `ring-focus ring-ring`
- *     에서 링 두께가 지워진다(= 전 컴포넌트의 키보드 포커스 링이 사라진다).
- *  2) 같은 그룹인 줄 몰라 둘 다 남는다 — `rounded-control` 을 호출부의 `rounded-lg` 가 못 덮는다.
- * styles/globals.css 의 @theme / @utility 에 이름을 추가하면 여기도 함께 갱신할 것.
+ * Register token utilities with tailwind-merge to avoid silent failures:
+ * 1) Unknown names may be mistaken for colors: text-label text-foreground loses the font size, and
+ *    ring-focus ring-ring loses ring thickness, removing keyboard focus rings across components.
+ * 2) Unrecognized shared groups retain both classes: caller rounded-lg cannot override rounded-control.
+ * Update this registration whenever names are added to styles/globals.css @theme or @utility.
  */
 const merge = extendTailwindMerge({
   extend: {
@@ -44,7 +44,9 @@ const merge = extendTailwindMerge({
   },
 })
 
-/** clsx + tailwind-merge — 조건부 클래스 결합 + 충돌 유틸리티 병합(토큰 유틸 인식). */
+/**
+ * clsx + tailwind-merge: conditional class composition and conflicting utility resolution, including token utilities.
+ */
 export function cn(...inputs: ClassValue[]) {
   return merge(clsx(inputs))
 }

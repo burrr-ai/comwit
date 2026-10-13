@@ -1,3 +1,8 @@
+import remarkStableAnchors from '@/lib/remark-stable-anchors.mjs'
+import { getLocale } from 'next-intl/server'
+
+import { Copy } from '@/i18n/copy'
+import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
@@ -13,16 +18,18 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const doc = getTemplateDoc(slug)
+  const doc = getTemplateDoc(slug, await getLocale())
   if (!doc) return {}
   return { title: doc.title, description: doc.description }
 }
 
 export default async function TemplateDocPage({ params }: { params: Promise<{ slug: string }> }) {
+  const copy = await getTranslations('Copy')
+
   const { slug } = await params
-  const doc = getTemplateDoc(slug)
+  const doc = getTemplateDoc(slug, await getLocale())
   if (!doc) notFound()
-  const docs = getTemplateDocs()
+  const docs = getTemplateDocs(await getLocale())
   const index = docs.findIndex((d) => d.slug === slug)
   const previous = index > 0 ? docs[index - 1] : null
   const next = index < docs.length - 1 ? docs[index + 1] : null
@@ -35,27 +42,33 @@ export default async function TemplateDocPage({ params }: { params: Promise<{ sl
             source={doc.content}
             options={{
               mdxOptions: {
-                remarkPlugins: [remarkGfm],
+                remarkPlugins: [remarkGfm, remarkStableAnchors],
                 rehypePlugins: [rehypeSlug, rehypeHighlight],
               },
             }}
           />
         </article>
-        <nav className="tp-pager" aria-label="Guides">
+        <nav className="tp-pager" aria-label={copy('text102')}>
           {previous ? (
             <Link href={`/template/docs/${previous.slug}`} rel="prev">
-              <span>Previous</span>
+              <span>
+                <Copy id="text103" />
+              </span>
               {previous.title}
             </Link>
           ) : (
             <Link href="/template" rel="prev">
-              <span>Previous</span>
-              Overview
+              <span>
+                <Copy id="text103" />
+              </span>
+              <Copy id="text090" />{' '}
             </Link>
           )}
           {next && (
             <Link href={`/template/docs/${next.slug}`} rel="next" data-next>
-              <span>Next</span>
+              <span>
+                <Copy id="text104" />
+              </span>
               {next.title}
             </Link>
           )}

@@ -10,8 +10,8 @@ import { buttonVariants } from './button'
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
 /**
- * rdp v9 는 modifier 클래스를 <td>(Day 셀)에만 부여하므로,
- * 배경·라운딩이 숫자 버튼과 어긋나지 않도록 modifier 스타일을 버튼 자체에 칠한다.
+ * rdp v9 applies modifier classes only to td day cells, so style the button itself with modifiers
+ * to keep backgrounds and rounded corners aligned with the number button.
  */
 function CalendarDayButton({ day: _day, modifiers, className, ...props }: DayButtonProps) {
   return (

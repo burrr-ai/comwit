@@ -1,5 +1,5 @@
 /**
- * comwit-ui — checkbox. Radix Primitives 구현을 그대로 이식한 자체 엔진 (외부 Radix 패키지 의존성 없음).
+ * Checkbox engine ported from Radix Primitives without external Radix package dependencies.
  */
 import * as React from 'react'
 import { useComposedRefs } from './internal/compose-refs'

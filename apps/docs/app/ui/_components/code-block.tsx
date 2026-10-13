@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import * as React from 'react'
 import hljs from 'highlight.js/lib/core'
 import typescript from 'highlight.js/lib/languages/typescript'
@@ -21,6 +23,8 @@ export function CodeBlock({
   language?: 'tsx' | 'css'
   className?: string
 }) {
+  const copy = useTranslations('Copy')
+
   const html = React.useMemo(() => hljs.highlight(code, { language }).value, [code, language])
   return (
     <div className={cn('ui-code relative overflow-hidden rounded-control', className)}>
@@ -28,7 +32,7 @@ export function CodeBlock({
         <code className="hljs" dangerouslySetInnerHTML={{ __html: html }} />
       </pre>
       <div className="absolute top-1.5 right-1.5">
-        <CopyButton text={code} label="Copy code" />
+        <CopyButton text={code} label={copy('text155')} />
       </div>
     </div>
   )

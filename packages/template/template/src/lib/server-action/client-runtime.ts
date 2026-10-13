@@ -1,6 +1,6 @@
 import { createServerFnClient } from './client'
 
-/** 컴파일된 함수 id를 POST 기반 client API 객체로 바꾼다. */
+/** Turn compiled function IDs into a POST-based client API object. */
 export function resolveCompiledActions(
   definitions: Readonly<Record<string, string>>,
 ): Record<string, (...args: unknown[]) => Promise<unknown>> {

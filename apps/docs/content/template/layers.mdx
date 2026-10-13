@@ -71,7 +71,7 @@ export interface PostAPI {
 import { createAction, ActionError } from '@/lib/utils'
 
 async function _create(request: CreatePostRequest): Promise<void> {
-  if (!request.title) throw new ActionError('제목을 입력해주세요')
+  if (!request.title) throw new ActionError('Enter a title')
   await repository.create(request)
 }
 export const create = createAction(_create)
@@ -81,7 +81,7 @@ What the api layer owns:
 
 - **Screen-shaped responses.** `{ likeCount: 3, userId: 'abc' }` from the
   repository becomes `{ likeCount: 3, isLikedByMe: true, displayCount: '3개' }`.
-  Relative times (`30분 전`) and formatted dates are produced here with the
+  Relative times (`30 minutes ago`) and formatted dates are produced here with the
   shared `kst` helpers, never in components.
 - **Minimal arguments.** The current user comes from the session inside the
   action, not from the caller. Queries return only what the user owns unless
@@ -121,9 +121,9 @@ export const crudActions = action<Pick<ProductActions, 'delete'>>(({ state }) =>
   class CrudActions {
     private model = state(product)
 
-    @OnError((e: unknown) => toast.error(e instanceof Error ? e.message : '실패했어요'))
+    @OnError((e: unknown) => toast.error(e instanceof Error ? e.message : 'Something went wrong'))
     async delete(id: string) {
-      if (!(await popup.confirm({ title: '삭제할까요?', destructive: true }))) return
+      if (!(await popup.confirm({ title: 'Delete this item?', destructive: true }))) return
       const snapshot = [...this.model.products.data.items]
       this.model.products.data.items = snapshot.filter((p) => p.id !== id) // optimistic
       try {

@@ -1,40 +1,7 @@
 'use client'
 
 /**
- * comwit-ui — autocomplete(combobox) 프리미티브 (라딕스식 compound · 스타일 0 · 앱 비의존).
- *
- * radix 엔 combobox 가 없어 **React Aria 를 내부 엔진**으로 삼는다 — 엔진은 구현 세부사항일 뿐,
- * 공개 표면은 다른 프리미티브와 같은 **headless 컴파운드**다. a11y · 키보드 내비게이션 · 필터 ·
- * open 상태 · 포커스 관리는 프리미티브가 전적으로 소유하고(파트가 context 로 받아 각자 배선),
- * 소비 레이어는 파트를 조립하며 className 만 입힌다.
- *
- *   <Autocomplete.Root collection={items.map((it) => <Autocomplete.Item key={it.key}>{it.name}</Autocomplete.Item>)}>
- *     <Autocomplete.Label>과일</Autocomplete.Label>
- *     <Autocomplete.Control>
- *       <Autocomplete.Input placeholder="검색" />
- *       <Autocomplete.Trigger><ChevronIcon /></Autocomplete.Trigger>
- *     </Autocomplete.Control>
- *     <Autocomplete.Content itemIndicator={<CheckIcon />} emptyState="결과 없음" />
- *   </Autocomplete.Root>
- *
- *  - 상태:   react-stately `useComboBoxState({ defaultFilter })` + `useFilter().contains` — Root 소유.
- *  - a11y:   react-aria `useComboBox` → labelProps/inputProps/buttonProps/listBoxProps 를 context 로 분배.
- *  - 컬렉션: react-stately 규약상 Item/Section **마커는 상태 훅에 직접 전달**돼야 한다(렌더 트리가 아니라
- *            데이터). 그래서 chrome(children)과 분리된 **`collection` prop** 으로 받는다. 옵션 li 렌더는
- *            react-aria(useOption)가 소유해야 해서 Content 가 내부 렌더 — per-item 시각은 Content 의
- *            itemClassName/itemIndicator 로 입힌다.
- *  - 라벨:   시각 라벨은 <Label> 파트가 렌더. aria-label/aria-labelledby 가 없으면 엔진에 라벨 존재를
- *            알려 label↔input id 를 연결하므로, **Label 파트를 렌더하거나 aria-label 을 넘겨야** 한다.
- *  - 폴리모피즘: asChild 는 Label/Control 만. Input/Trigger 는 react-aria 가 실제 <input>/<button> 에
- *            요소 특정 prop 을 스프레드하는 계약이라, 요소 교체가 aria 배선을 깨뜨린다(의도적 제외).
- *  - 구조 계약: Input/Trigger 는 Control 안에 두는 걸 권장(팝오버 앵커 + 폭 매칭). Control 이 없으면
- *            앵커는 input 으로 폴백한다.
- *
- * 방출 data-slot: autocomplete / -label / -control / -input / -trigger / -content /
- *                 -listbox / -item / -item-indicator / -empty / -section / -section-heading
- * 방출 data-*: Root·Input·Trigger 에 data-state("open"|"closed") · Root 에 data-disabled/data-invalid
- *              (item): data-focused / data-selected / data-disabled
- * 방출 CSS var(content): --cw-autocomplete-anchor-width (컨트롤 폭 — 팝오버 폭 매칭용)
+ * Headless compound autocomplete powered internally by React Aria. Root owns useComboBoxState/useFilter state and distributes useComboBox accessibility props through context; consumers assemble and style parts. Pass Item/Section collection markers through collection, separately from visual children, because react-stately consumes them as data. Content renders options with useOption; use itemClassName/itemIndicator for their appearance. Render Label or provide aria-label/aria-labelledby. Only Label/Control support asChild: Input and Trigger must remain native input/button elements for ARIA wiring. Place Input and Trigger inside Control for anchoring and width matching; without Control the input is the anchor. Example: <Autocomplete.Root collection={<Autocomplete.Item key="apple">Apple</Autocomplete.Item>}><Autocomplete.Label>Fruit</Autocomplete.Label><Autocomplete.Control><Autocomplete.Input placeholder="Search" /><Autocomplete.Trigger>Open</Autocomplete.Trigger></Autocomplete.Control><Autocomplete.Content emptyState="No results" /></Autocomplete.Root>. Slots cover root, label, control, input, trigger, content, listbox, item, item-indicator, empty, section, and section-heading. Root/Input/Trigger expose open/closed data-state; Root exposes disabled/invalid; items expose focused/selected/disabled. Content receives --cw-autocomplete-anchor-width.
  */
 
 import * as React from 'react'
@@ -64,9 +31,9 @@ import {
 import { Slot } from './slot'
 import { useComposedRefs } from './internal/compose-refs'
 
-/* ── context (파트 간 상태/배선 공유 — 소비처 비노출) ─────────────────── */
+/* Internal context shares state and wiring between parts. */
 
-// context 는 제네릭일 수 없어 T 를 object 로 지운다(내부 전용 — 파트는 아이템 타입을 몰라도 된다).
+// Erase T to object at the context boundary; internal parts do not need the item type.
 type ComboAria = ReturnType<typeof useComboBox<object>>
 
 type AutocompleteContextValue = {
@@ -80,7 +47,7 @@ type AutocompleteContextValue = {
   popoverRef: React.RefObject<HTMLDivElement | null>
   buttonRef: React.RefObject<HTMLButtonElement | null>
   controlRef: React.RefObject<HTMLDivElement | null>
-  /** 팝오버 앵커 — Control 이 있으면 컨트롤 박스, 없으면 input 으로 폴백 */
+  /** Popover anchor: Control when present, otherwise the input. */
   anchorRef: React.RefObject<Element | null>
   anchorWidth: number | undefined
   setAnchorWidth: React.Dispatch<React.SetStateAction<number | undefined>>
@@ -91,9 +58,7 @@ const AutocompleteContext = React.createContext<AutocompleteContextValue | null>
 function useAutocompleteContext(part: string): AutocompleteContextValue {
   const ctx = React.useContext(AutocompleteContext)
   if (!ctx) {
-    throw new Error(
-      `comwit-ui: <Autocomplete.${part}> 는 <Autocomplete.Root> 안에서만 쓸 수 있습니다.`
-    )
+    throw new Error(`comwit-ui: <Autocomplete.${part}> must be used inside <Autocomplete.Root>.`)
   }
   return ctx
 }
@@ -103,11 +68,11 @@ const getState = (open: boolean) => (open ? 'open' : 'closed')
 /* ── Root ────────────────────────────────────────────────────────── */
 
 type RootProps<T extends object = object> = Omit<AriaComboBoxProps<T>, 'children' | 'label'> &
-  // 상태 훅에만 있는(useComboBox 엔 없는) 옵션 — 빈 컬렉션 허용/blur 닫기.
+  // State-hook options absent from useComboBox: empty collections and closing on blur.
   Pick<ComboBoxStateOptions<T>, 'allowsEmptyCollection' | 'shouldCloseOnBlur'> & {
-    /** react-stately 컬렉션 마커(Item/Section) 또는 items 렌더 함수 — 상태 훅에 직접 전달된다. */
+    /** react-stately Item/Section markers or an item renderer, passed directly to the state hook. */
     collection?: ComboBoxStateOptions<T>['children']
-    /** chrome — 소비처가 조립하는 서브파트(Label/Control/Input/Trigger/Content …). */
+    /** Visual children assembled by consumers: Label, Control, Input, Trigger, Content, and other parts. */
     children?: React.ReactNode
     className?: string
     style?: React.CSSProperties
@@ -125,12 +90,12 @@ function Root<T extends object = object>(props: RootProps<T>) {
   const controlRef = React.useRef<HTMLDivElement>(null)
   const [anchorWidth, setAnchorWidth] = React.useState<number>()
 
-  // 시각 라벨은 <Label> 파트가 렌더한다. 엔진엔 존재만 알려(label: true) label↔input id 연결을
-  // 만들게 하고, aria-label(ledby) 가 오면 그것이 이름이므로 켜지 않는다.
+  // Label renders the visible label. Set label: true only to let the engine connect label/input IDs;
+  // an explicit aria-label or aria-labelledby already supplies the accessible name.
   const hasAriaLabel = comboProps['aria-label'] != null || comboProps['aria-labelledby'] != null
   const engineProps = { ...comboProps, label: hasAriaLabel ? undefined : true }
 
-  // 컬렉션 마커(Item/Section)는 렌더 트리가 아니라 상태 훅의 데이터로 들어간다(react-stately 규약).
+  // Collection markers are state-hook data rather than rendered children, as required by react-stately.
   const state = useComboBoxState<T>({
     ...engineProps,
     defaultFilter: contains,
@@ -152,7 +117,7 @@ function Root<T extends object = object>(props: RootProps<T>) {
   } = useComboBox<T>(comboOptions, state)
   const { buttonProps } = useButton(comboButtonProps, buttonRef)
 
-  // 팝오버 앵커: Control 박스 기준, Control 을 안 쓰면 input 으로 폴백(파생 ref — 쓰기 없음).
+  // Anchor to Control, falling back to input through a derived read-only ref.
   const anchorRef = React.useMemo(() => {
     return {
       get current() {
@@ -162,7 +127,7 @@ function Root<T extends object = object>(props: RootProps<T>) {
   }, [])
 
   const ctx: AutocompleteContextValue = {
-    // 제네릭 T 는 context 경계에서 지운다(내부 전용 — 파트는 노드 렌더값만 다룬다).
+    // Erase generic T at the internal context boundary; parts only handle rendered node values.
     state: state as unknown as ComboBoxState<object>,
     labelProps,
     inputProps,
@@ -204,7 +169,7 @@ function Label({ asChild, ...props }: LabelProps) {
   return <Comp data-slot="autocomplete-label" {...mergeProps(ctx.labelProps, props)} />
 }
 
-/* ── Control (input + trigger 를 감싸는 박스 — 팝오버 앵커/폭 기준) ── */
+/* Control wraps input and trigger and defines the popover anchor and width. */
 
 type ControlProps = React.ComponentProps<'div'> & { asChild?: boolean }
 
@@ -212,7 +177,7 @@ function Control({ asChild, ref, ...props }: ControlProps) {
   const { controlRef, setAnchorWidth } = useAutocompleteContext('Control')
   const composedRef = useComposedRefs(controlRef, ref)
 
-  // 컨트롤 폭 측정 → 팝오버 폭 매칭용 CSS var(--cw-autocomplete-anchor-width).
+  // Measure Control width into --cw-autocomplete-anchor-width for popover matching.
   React.useEffect(() => {
     const node = controlRef.current
     if (!node) return
@@ -224,12 +189,12 @@ function Control({ asChild, ref, ...props }: ControlProps) {
     return () => ro.disconnect()
   }, [controlRef, setAnchorWidth])
 
-  // Slot 도 div 와 동일한 prop/ref 계약으로 머지하므로 타입만 div 로 좁힌다(런타임 동일).
+  // Slot merges the same props/ref contract as div; narrow the type without changing runtime behavior.
   const Comp = (asChild ? Slot : 'div') as 'div'
   return <Comp data-slot="autocomplete-control" {...props} ref={composedRef} />
 }
 
-/* ── Input (aria 배선상 실제 <input> 이어야 한다 — asChild 없음) ───── */
+/* Input must be a native input for ARIA wiring; no asChild. */
 
 type InputProps = React.ComponentProps<'input'>
 
@@ -246,7 +211,7 @@ function Input({ ref, ...props }: InputProps) {
   )
 }
 
-/* ── Trigger (aria 배선상 실제 <button> — asChild 없음. 포커스는 input 에 유지) ── */
+/* Trigger must be a native button; no asChild. Keep focus on the input. */
 
 type TriggerProps = React.ComponentProps<'button'>
 
@@ -257,23 +222,23 @@ function Trigger({ ref, ...props }: TriggerProps) {
     <button
       data-slot="autocomplete-trigger"
       data-state={getState(ctx.state.isOpen)}
-      // aria combobox 패턴: 포커스는 input 에 유지 — 소비자가 명시하면 그 값이 우선.
+      // The ARIA combobox pattern keeps input focus; explicit consumer props take precedence.
       {...mergeProps(ctx.buttonProps, { tabIndex: -1 }, props)}
       ref={composedRef}
     />
   )
 }
 
-/* ── Content (open 일 때만 마운트 — usePopover/useListBox 훅은 Impl 에) ── */
+/* Content mounts only while open; Impl owns usePopover and useListBox hooks. */
 
 type ContentProps = Omit<React.ComponentProps<'div'>, 'children'> & {
-  /** 개별 옵션(li) 공통 클래스 — 옵션 렌더는 react-aria(useOption)가 소유해서 Content 가 내부 렌더. */
+  /** Shared class for option li elements rendered internally through React Aria useOption. */
   itemClassName?: string
-  /** 선택된 옵션에 표시할 표식(예: Check 아이콘). */
+  /** Indicator for the selected option, such as a check icon. */
   itemIndicator?: React.ReactNode
-  /** 결과 없음 표시(allowsEmptyCollection 과 함께). */
+  /** Empty-results content, used with allowsEmptyCollection. */
   emptyState?: React.ReactNode
-  /** 리스트 뒤에 붙일 추가 노드(footer 등). */
+  /** Additional content after the list, such as a footer. */
   children?: React.ReactNode
 }
 
@@ -361,7 +326,7 @@ function ContentImpl({
   )
 }
 
-/* ── Section (내부 렌더 — 마커는 Autocomplete.Section) ────────────── */
+/* Internal section renderer; Autocomplete.Section is the collection marker. */
 
 function ListSection<T extends object>({
   section,
@@ -401,7 +366,7 @@ function ListSection<T extends object>({
   )
 }
 
-/* ── Option (내부 렌더 — 마커는 Autocomplete.Item) ─────────────────── */
+/* Internal option renderer; Autocomplete.Item is the collection marker. */
 
 function Option<T extends object>({
   node,
@@ -441,6 +406,6 @@ function Option<T extends object>({
 
 /* ── exports ─────────────────────────────────────────────────────── */
 
-// 컴파운드 파트 + 컬렉션 마커(Item/Section — react-stately 재수출).
+// Compound parts and react-stately Item/Section collection markers.
 export { Root, Label, Control, Input, Trigger, Content, Item, Section }
 export type { RootProps, LabelProps, ControlProps, InputProps, TriggerProps, ContentProps }

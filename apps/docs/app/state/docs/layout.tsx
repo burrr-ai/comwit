@@ -1,3 +1,4 @@
+import { getLocale } from 'next-intl/server'
 import { getAllDocs, type DocMeta } from '@/lib/mdx'
 import { DocsSidebar } from './sidebar'
 import { StateDocsFrame } from './reading'
@@ -14,8 +15,8 @@ function groupDocs(docs: DocMeta[]) {
   return { ungrouped, groups }
 }
 
-export default function DocsLayout({ children }: { children: React.ReactNode }) {
-  const { ungrouped, groups } = groupDocs(getAllDocs())
+export default async function DocsLayout({ children }: { children: React.ReactNode }) {
+  const { ungrouped, groups } = groupDocs(getAllDocs(await getLocale()))
   return (
     <StateDocsFrame navigation={<DocsSidebar ungrouped={ungrouped} groups={groups} />}>
       {children}

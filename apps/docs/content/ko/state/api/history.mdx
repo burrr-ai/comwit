@@ -1,0 +1,154 @@
+---
+title: '$history'
+group: 'Model'
+slug: 'api/history'
+order: 27
+---
+
+# $history
+
+모델 상태의 실행 취소와 다시 실행을 지원합니다. 히스토리는 기본적으로 꺼져 있으며 명시적으로 활성화한 모델에만 존재합니다.
+
+```ts
+import { model } from '@comwit/state'
+
+export const todo = model(
+  {
+    items: [] as Todo[],
+    selectedId: null as string | null,
+  },
+  {
+    history: true,
+  }
+)
+```
+
+<a id="usage"></a>
+
+## 사용법
+
+새 훅이 필요하지 않습니다. [`create()`](/state/docs/api/create)로 만든 기존 훅에서 `$history`를 읽고 호출하세요.
+
+```tsx
+const { items, history } = useTodo((s) => ({
+  items: s.items,
+  history: s.$history,
+}))
+
+return (
+  <div>
+    <button onClick={() => history.undo()} disabled={!history.canUndo}>
+      Undo
+    </button>
+    <button onClick={() => history.redo()} disabled={!history.canRedo}>
+      Redo
+    </button>
+  </div>
+)
+```
+
+<a id="recording"></a>
+
+## 기록
+
+각 액션 메서드 호출은 하나의 히스토리 트랜잭션으로 기록됩니다.
+
+```ts
+const todoActions = action(({ state }) => {
+  const s = state(todo)
+  return {
+    add(title: string) {
+      s.items.push({ id: crypto.randomUUID(), title, done: false })
+      s.selectedId = s.items.at(-1)!.id
+    },
+  }
+})
+```
+
+위의 두 변경은 `s.$history.undo()` 한 번으로 함께 취소됩니다.
+
+## API
+
+```ts
+type HistoryApi = {
+  canUndo: boolean
+  canRedo: boolean
+  isPaused: boolean
+  undo(steps?: number): void
+  redo(steps?: number): void
+  clear(): void
+  pause(): void
+  resume(): void
+  ignore<T>(fn: () => T): T
+  transaction<T>(fn: () => T): T
+  transaction<T>(label: string, fn: () => T): T
+}
+```
+
+<a id="options"></a>
+
+## 옵션
+
+```ts
+const editor = model(
+  { blocks: [] as Block[] },
+  {
+    history: {
+      limit: 100,
+    },
+  }
+)
+```
+
+- `history: false` 또는 생략 — `$history` 필드와 히스토리 추적이 없습니다.
+- `history: true` — 기본 실행 취소 항목 수 제한인 100개로 히스토리를 활성화합니다.
+- `history: { limit }` — 히스토리를 활성화하고 실행 취소 스택 크기를 지정합니다.
+
+<a id="ignoring-changes"></a>
+
+## 변경 기록 제외
+
+다시 렌더링되어야 하지만 실행 취소 대상이 아니어야 하는 상태 변경에는 `$history.ignore()`를 사용하세요.
+
+```ts
+const editorActions = action(({ state }) => {
+  const s = state(editor)
+  return {
+    setDraft(value: string) {
+      s.$history.ignore(() => {
+        s.draft = value
+      })
+    },
+  }
+})
+```
+
+`$history.ignore()`는 히스토리 기록만 건너뜁니다. 내부의 모든 변경은 여전히 구독자에게 알림을 보내고 정상적으로 다시 렌더링합니다. 히스토리 제어에는 이 API를 사용하세요.
+
+<a id="manual-transactions"></a>
+
+## 수동 트랜잭션
+
+액션 메서드는 이미 트랜잭션입니다. 중첩 변경이나 수동 변경을 명시적으로 묶어야 할 때만 `$history.transaction()`을 사용하세요.
+
+```ts
+const editorActions = action(({ state }) => {
+  const s = state(editor)
+  return {
+    bulkRename(ids: string[], title: string) {
+      s.$history.transaction('bulk rename', () => {
+        for (const id of ids) {
+          const block = s.blocks.find((x) => x.id === id)
+          if (block) block.title = title
+        }
+      })
+    },
+  }
+})
+```
+
+<a id="redo-stack"></a>
+
+## 다시 실행 스택
+
+실행 취소 후 새 액션이 커밋되면 다시 실행 스택이 비워집니다. 편집기와 상태 히스토리 시스템에서 사용하는 일반적인 실행 취소/다시 실행 모델을 따릅니다.

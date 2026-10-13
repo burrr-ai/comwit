@@ -1,0 +1,47 @@
+---
+title: 헤드리스 프리미티브
+---
+
+<a id="headless-primitives"></a>
+
+# 헤드리스 프리미티브
+
+모든 스타일과 조합을 직접 관리하려면 `@comwit/ui`를 바로 사용하세요.
+
+엔진은 검증된 도구를 선별합니다. 위치 지정은 [Floating UI](https://floating-ui.com), 자동 완성과 라벨은 [React Aria](https://react-spectrum.adobe.com/react-aria/), 리치 텍스트 편집기는 [Tiptap](https://tiptap.dev), 모달 스크롤 잠금은 [react-remove-scroll](https://github.com/theKashey/react-remove-scroll), 채팅 목록은 [React Virtuoso](https://virtuoso.dev)를 사용합니다.
+
+```bash
+npm install @comwit/ui
+```
+
+```tsx
+'use client'
+
+import { Dialog } from '@comwit/ui'
+
+export function Example() {
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger>Open settings</Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content className="dialog-content">
+          <Dialog.Title>Settings</Dialog.Title>
+          <Dialog.Description>Update your workspace preferences.</Dialog.Description>
+          <Dialog.Close>Close</Dialog.Close>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
+```
+
+오버레이와 콘텐츠에 필요한 CSS를 직접 제공하세요. 프리미티브는 상태, 포커스 처리, 키보드 동작, 접근성 속성을 제공합니다.
+
+복합 컴포넌트는 `Dialog.Root`, `Select.Trigger`, `Tabs.Content` 같은 네임스페이스를 사용합니다. `Button`, `Input`, `Textarea` 같은 기본 컨트롤은 단일 이름으로 내보냅니다.
+
+엔진은 스타일 템플릿이 외형만 입히는 앱 셸과 대화 동작도 소유합니다. `AppBar.Root`(flow / pinned / reveal → `data-state`), `BottomNav.Root` / `Item`(선택, 스크롤 시 축소, 터치 시 확장), `BottomSheet.Root` / `Content` / `Handle`(Dialog와 드래그 닫기, 거리는 `--sheet-drag`, 진행률은 `--sheet-drag-progress`, 손가락이 닿아 있는 동안 `data-dragging`), `DragScroller.Root` / `Track`(드래그, 튕기기 관성, 휠, 방향키), `PullToRefresh.Root` / `Scroller` / `Indicator`(당기기 제스처, 거리는 `--ptr-pull`, 상태는 `data-state`), `AppShell.Root` / `Scroller` / `Indicator`(구조 스타일을 인라인으로 고정한 단일 `<main>` 스크롤러, 공유 스크롤 의도, 새로고침 제스처를 통합), `NavDepthProvider` / `useBackNavigation`(방문 기록 기반 뒤로 가기: 앱 내부에서는 뒤로, 직접 진입했으면 부모로 replace), `Chat.Root` / `List` / `Message` / `Bubble` / `Composer`(가상화 목록, 메신저/어시스턴트 스크롤 규칙, Enter 및 IME 처리)가 포함됩니다. `ScrollChromeProvider` / `useScrollChrome`, `useMobile`, `useGlassLens` 훅은 단일 이름으로 내보냅니다. 각 프리미티브는 `data-*` 속성으로 상태를 알리고 템플릿은 이 속성을 스타일링합니다.
+
+오버레이 구성 요소(`Dialog`, `BottomSheet`, `Popover`, `DropdownMenu`, `Select`의 콘텐츠와 오버레이)는 애니메이션 라이브러리 없이 등장과 퇴장을 애니메이션할 수 있습니다. `asChild`로 요소를 넣고 `usePresenceAnimation({ hidden, visible, enter, exit })`를 적용하세요. 첫 열기부터 브라우저 Web Animations API로 키프레임을 실행하고, 퇴장이 끝날 때까지 마운트를 유지하며, 닫는 중간에 다시 열면 현재 위치에서 되돌아갑니다. 모션 감소 설정에서는 불투명도만 바뀝니다.
+
+바로 수정할 수 있는 스타일이 필요하면 [CLI 설치 흐름](/ui/docs/installation)을 사용하세요. [컴포넌트 예제](/ui/components)에서 스타일 계층을 볼 수 있습니다.

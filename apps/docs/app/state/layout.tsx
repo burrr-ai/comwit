@@ -1,6 +1,7 @@
+import { localizeMetadata } from '@/i18n/metadata'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = {
+const metadata: Metadata = {
   title: 'Comwit State — One domain. One hook.',
   description: 'State, queries, and actions for React. One domain, one typed hook.',
   icons: { icon: '/panda-icon-32.png', apple: '/panda-apple-icon.png' },
@@ -15,4 +16,8 @@ export const metadata: Metadata = {
 
 export default function StateLayout({ children }: { children: React.ReactNode }) {
   return <div className="state-product">{children}</div>
+}
+
+export async function generateMetadata() {
+  return localizeMetadata(metadata)
 }

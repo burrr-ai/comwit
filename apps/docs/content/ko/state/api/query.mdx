@@ -1,0 +1,538 @@
+---
+title: 'query()'
+group: 'Model'
+slug: 'api/query'
+order: 22
+---
+
+# query()
+
+모델 안에 데이터를 가져오는 필드를 선언합니다.
+
+```ts
+import { query } from '@comwit/state'
+```
+
+정확한 인수에 해당하는 값을 IndexedDB에서 먼저 복원한 뒤 오래된 데이터를 백그라운드에서 재검증하려면 [`local.query()`](/state/docs/api/local)를 사용하세요. 쿼리 함수 없이 정확한 IndexedDB 복원만 하려면 독립형 `local()`을 사용할 수 있습니다.
+
+<a id="basic-usage"></a>
+
+## 기본 사용법
+
+```ts
+import { model, query } from '@comwit/state'
+
+export const post = model<PostState>({
+  posts: query<Post[]>({
+    initialData: [],
+    queryFn: () => api.post.findAll(),
+  }),
+  comments: query<Comment[], string>({
+    initialData: [],
+    queryFn: (postId) => api.comment.findAll(postId),
+  }),
+})
+```
+
+상태 타입에는 `Query<Data>`를 사용합니다. queryFn이 인수를 받으면 `Query<Data, Arg>`를 사용하세요.
+
+```ts
+import { Query } from '@comwit/state'
+
+export type PostState = {
+  posts: Query<Post[]>
+  comments: Query<Comment[], string> // string = queryFn arg type
+}
+```
+
+<a id="load-from-a-selector"></a>
+
+## 선택자에서 로드
+
+`useModel()`이나 `create()`로 만든 훅 안에서 `.load(arg)`는 요청을 소유하는 기본 선택자 메서드입니다. 즉시 로딩 상태를 표시하고 커밋 후 요청을 시작합니다.
+
+컴포넌트가 자신의 로딩 상태를 렌더링한다면 `.load(arg)`를 사용하세요.
+
+```tsx
+const list = useProduct((state) => state.products.load({ page, filter }))
+
+if (list.isLoading) return <Skeleton />
+if (list.isError) return <ErrorMessage message={list.error} />
+return <ProductList products={list.data.items} />
+```
+
+인수 타입은 `Query<Data, Arg>`에서 추론됩니다. 인수가 없는 쿼리는 `.load()`를 사용합니다.
+
+`load`는 명시적이며 생명주기에 따라 관리됩니다.
+
+- 첫 렌더링에서 `isLoading: true`를 표시하고 컴포넌트가 커밋된 후 요청을 시작합니다. effect가 액션을 호출하기 전에 빈 상태가 잠깐 보이는 일을 막습니다.
+- 직렬화된 인수가 캐시 키입니다. 인수가 바뀌면 새 키를 로드하며 같은 키의 일반적인 재렌더링은 요청을 다시 시작하지 않습니다.
+- 같은 리소스와 키에 대한 동시 선택자 로드는 진행 중인 요청을 공유합니다.
+- `.load(...)` 없이 `state.products`를 선택하면 수동적으로 읽으며 요청을 시작하지 않습니다.
+- `load`에는 호출 시점 옵션이 없습니다. 기본값은 `query(...)` 또는 `ComwitProvider`에 두고, 명령형 작업 흐름에서는 액션에서 `.query(...)`, `.refetch()`, `.set()`을 사용하세요.
+
+```tsx
+const useDashboard = create(dashboard, { actions: [dashboardActions] })
+
+const total = useDashboard((state) => state.total.load()) // Query<number>
+const list = useDashboard((state) => state.list.load({ page })) // Query<List, { page: number }>
+const cached = useDashboard((state) => state.list) // passive read
+```
+
+기존 effect 기반 액션도 계속 지원합니다. 요청이 마운트된 화면에 속하면 선택자 `load`를, 로딩이 명령, 연속 실행, 미리 로드, 사용자 이벤트의 일부라면 액션의 `.query()`를 사용하세요.
+
+<a id="server-data-hydrate-or-suspend"></a>
+
+## 서버 데이터: hydrate 또는 suspend
+
+Next.js 서버 데이터는 두 가지 방식 중 하나로 쿼리에 전달됩니다. 어느 쪽이든 사용할 수 있으며 라우트별로 선택하세요.
+
+**`hydrate()`** — Server Component에서 기다린 값을 작은 클라이언트 라우트 어댑터에 전달하고 그곳에서 항목을 초기화합니다.
+
+```tsx
+'use client'
+
+function ProductRoute({ slug, initialDetail }: Props) {
+  useProduct.hydrate({ detail: { arg: slug, data: initialDetail } })
+  return <ProductDetail />
+}
+
+function ProductDetail() {
+  const detail = useProduct((state) => state.detail.data)
+  return detail ? <ProductView product={detail} /> : <NotFound />
+}
+```
+
+**`.suspend(arg)`(실험적)** — `<Suspense>` 경계 안의 Client Component 하나가 쿼리를 선택하면 서버 렌더링이 `queryFn`을 실행하고 결과를 스트리밍하며 브라우저가 이를 하이드레이션합니다.
+
+```tsx
+'use client'
+
+// Experimental: needs useServerInsertedHTML on ComwitProvider and an isomorphic queryFn.
+function ProductDetail({ slug }: { slug: string }) {
+  const detail = useProduct((state) => state.detail.suspend(slug))
+  return detail.data ? <ProductView product={detail.data} /> : <NotFound />
+}
+```
+
+`.suspend()`는 더 원자적인 방식입니다. 데이터를 읽는 컴포넌트 하나에서 가져오기, 스트리밍, 브라우저 하이드레이션이 모두 이루어지므로 Server Component의 fetch와 클라이언트 어댑터를 함께 동기화할 필요가 없습니다. `hydrate()`는 안정된 경로이며 데이터베이스 읽기나 Server Function처럼 서버에만 있어야 하는 데이터에 사용할 수 있는 유일한 경로입니다.
+
+일반 도메인 읽기 전에 `hydrate()`를 조건 없이 호출하세요. 반환값은 `void`이며 null을 허용하는 입력을 받고 모든 필드의 인수와 데이터를 추론합니다. `queryFn`을 호출하지 않고 아직 읽지 않은 새 항목을 첫 스냅샷 전에 초기화합니다. 같은 초기 값은 아무 작업도 하지 않으며, 관찰 중인 항목의 변경은 요청한 렌더링이 커밋될 때만 적용됩니다.
+
+지원 필드: `query()`, `query.infinite()`, `local.query()`, `local.infinite()`. 독립형 `local()`, 실시간 쿼리, 일반 상태는 제외됩니다. 전체 [Next.js 예제와 하이드레이션 계약](/state/docs/guide/nextjs)을 참고하세요.
+
+<a id="experimental-selector-suspense"></a>
+
+## 실험적 선택자 Suspense
+
+`.suspend(arg)`는 실험적 기능입니다. 렌더링 중 키에 해당하는 쿼리 Promise를 시작하거나 재사용하고 대기 중이면 던집니다. 추론된 쿼리 인수만 받으며 Promise나 초기 데이터 재정의는 받지 않습니다. Client Component가 렌더링되는 모든 환경에서 `queryFn`을 안전하게 실행할 수 있을 때만 사용하세요. Next.js Server Function은 렌더링 중 호출할 수 없습니다.
+
+프로바이더에 [`useServerInsertedHTML`](/state/docs/api/provider)이 있으면 서버 렌더링 중 완료된 결과가 경계의 HTML보다 먼저 브라우저에 스트리밍되고 하이드레이션 중인 선택자가 두 번째 요청 없이 반환합니다. 이 속성이 없으면 서버와 브라우저 캐시가 분리되어 브라우저가 하이드레이션 중 다시 가져옵니다. [스트리밍 Suspense](/state/docs/guide/nextjs#streaming-suspense-experimental)를 참고하세요.
+
+<a id="methods"></a>
+
+## 메서드
+
+React 선택자에서 쿼리는 `.load(arg?)`와 실험적 `.suspend(arg?)`를 제공합니다. `create()`로 생성한 훅은 `.hydrate(entries)`도 제공합니다. 액션의 `state()`로 접근하면 다음 명령형 메서드를 제공합니다.
+
+| 메서드                 | 위치   | 설명                                                                                   |
+| ---------------------- | ------ | -------------------------------------------------------------------------------------- |
+| `.load(arg?)`          | 선택자 | 중단 없이 로드합니다. 커밋 후 시작하며 로딩 상태를 반환합니다.                         |
+| `.suspend(arg?)`       | 선택자 | **실험적.** 렌더링 중 시작하고 중단합니다. Next.js SSR에서 스트리밍됩니다.             |
+| `useDomain.hydrate()`  | 훅     | 첫 모델 스냅샷 전에 완료된 서버 쿼리 값을 초기화합니다.                                |
+| `.query(arg?)`         | 액션   | 데이터를 가져옵니다. staleTime을 따르며 데이터가 최신이면 건너뜁니다.                  |
+| `.refetch()`           | 액션   | 마지막으로 사용한 인수로 강제로 다시 가져옵니다.                                       |
+| `.set(data, { arg }?)` | 액션   | 데이터를 직접 설정하고 성공으로 표시합니다. `arg`가 정확한 리소스 식별자를 지정합니다. |
+
+<a id="status-flags"></a>
+
+## 상태 플래그
+
+| 플래그           | 타입             | 설명                                                       |
+| ---------------- | ---------------- | ---------------------------------------------------------- |
+| `.data`          | `T`              | 현재 데이터                                                |
+| `.isLoading`     | `boolean`        | 이전 성공/오류가 없는 최초 가져오기에서 true               |
+| `.isSlowLoading` | `boolean`        | 초기 로딩이 지정한 임계 시간에 도달하면 true, 아니면 false |
+| `.isFetching`    | `boolean`        | 데이터를 가져오는 동안 true                                |
+| `.isSuccess`     | `boolean`        | 가져오기에 성공한 뒤 true                                  |
+| `.isError`       | `boolean`        | 가져오기에 실패한 뒤 true                                  |
+| `.error`         | `string \| null` | 실패했을 때의 오류 메시지                                  |
+
+<a id="slow-initial-loading"></a>
+
+## 느린 초기 로딩
+
+쿼리에 `slowLoadingMs`를 선언하면 라이브러리가 관리하는 `isSlowLoading` 불리언을 읽을 수 있습니다. 요청, 데이터, Promise, 기존 `isLoading` / `isFetching` 플래그를 지연시키지 않습니다.
+
+```ts
+const projects = model({
+  list: local.query<Project[]>({
+    source: projectRows,
+    initialData: [],
+    queryFn: () => api.project.list(),
+    slowLoadingMs: 500,
+  }),
+})
+```
+
+```tsx
+const projects = useProjects((state) => state.list.load())
+if (projects.isLoading && !projects.isSuccess) {
+  return projects.isSlowLoading ? <ProjectsSkeleton /> : null
+}
+if (projects.isSuccess) return <ProjectsList items={projects.data} />
+if (projects.isError) return <LoadError error={projects.error} />
+return null
+```
+
+`isSlowLoading: false`가 데이터 준비 완료를 뜻하지는 **않습니다**. 성공한 빈 결과도 준비된 데이터이므로 값의 참/거짓 여부 대신 상태를 확인하세요. 로컬 쿼리에서는 성공 상태가 백그라운드 오류보다 우선합니다. 레이아웃 공간과 스켈레톤 표시 여부는 앱에서 결정합니다.
+
+- 지원 선언: `query()`, `query.infinite()`, `query.realtime()`, `local.query()`, `local.infinite()`. 모든 쿼리는 같은 읽기 전용 불리언을 갖습니다. 옵션을 생략하면 false를 유지하고 로딩 타이머를 만들지 않습니다. 독립형 `local()`, `persist()`, 모델 옵션, 프로바이더 기본값, 호출별 쿼리 옵션에는 이 정책을 지정할 수 없습니다.
+- `0`부터 `2147483647`까지의 유한한 밀리초 값을 받으며 다른 값에는 `RangeError`를 던집니다. `0`이면 브라우저 쿼리가 초기 로딩을 시작하자마자 true가 됩니다. `500`이면 500ms 전에는 false를 유지하고 타이머가 실행될 때도 초기 로딩 중이면 true가 됩니다.
+- 시간 측정은 브라우저 쿼리가 초기 로딩에 들어갈 때 시작됩니다. 선택자의 `.load()`는 커밋 후 작업을 시작하며 그 전의 합성 대기/SSR 스냅샷은 false입니다. 작업을 시작하지 않은 비활성/의존 쿼리에는 시계가 없습니다. 서버 렌더링은 로딩 타이머를 시작하지 않으며 서버 초기 값과 첫 하이드레이션 스냅샷은 false를 유지합니다. 실험적 `.suspend()`는 커밋되지 않은 렌더링 준비 단계의 요청에 대해 시계를 시작하지 않습니다.
+- IndexedDB 복원과 캐시 실패 후 이어지는 가져오기는 하나의 구간을 공유합니다. 복원되거나 원격 요청이 성공한 데이터는 영속 저장 반영이 진행 중이어도 즉시 플래그를 해제합니다. 사용 가능한 오래된 데이터와 백그라운드 재검증은 느린 초기 로딩이 되지 않습니다. `isLoading: false`, 성공 또는 오류가 구간을 끝냅니다. 스트림 청크는 스트림 완료를 기다리지 않고 `isLoading: false` / `isSuccess: true`로 사용 가능한 데이터를 표시할 수 있습니다.
+- 직렬화된 인수가 바뀌거나 다른 로컬 범위가 활성화되면 구간이 초기화됩니다. 같은 키의 겹치는 요청과 내부 재시도/백오프는 연속된 구간을 유지합니다. 확정된 오류 뒤 새 쿼리가 시작되면 새 구간이 됩니다. 오래된 요청이 새 구간을 해제할 수 없습니다. 컴포넌트에는 요청 키, 재시도 횟수, 타이머가 필요하지 않습니다.
+- 같은 프로바이더/쿼리의 소비자는 플래그를 공유합니다. 마지막 모델 관찰자가 떠나면 타이머 알림이 멈추고, 아직 대기 중인 쿼리를 다시 관찰하면 경과 시간을 기준으로 재개합니다. 명령형으로만 사용하는 쿼리는 완료되거나 프로바이더가 해제될 때까지 자체 시계를 유지합니다. 이 규칙은 추가 불리언에만 영향을 주며 요청 취소나 캐시 유지에는 영향을 주지 않습니다.
+- 캐시를 읽을 때 플래그는 초기화되며 IndexedDB에 저장되지 않습니다. 최소 표시 시간은 없고 완료 시 즉시 해제됩니다. 타이머 예약 시간은 하한이며 정확한 밀리초에 화면이 그려진다는 보장은 아닙니다.
+
+<a id="options"></a>
+
+## 옵션
+
+필드나 [`ComwitProvider`](/state/docs/api/provider)에 쿼리 기본값을 설정하세요. 명령형 `.query(arg, options)` 호출은 최신성과 플레이스홀더 설정을 재정의할 수 있습니다.
+
+| 옵션                  | 지정 위치              | 설명                                                            |
+| --------------------- | ---------------------- | --------------------------------------------------------------- |
+| `slowLoadingMs`       | 필드만                 | 초기 로딩 임계 시간. 쿼리 상태에서 `isSlowLoading` 제공         |
+| `staleTime`           | 필드, 프로바이더, 호출 | 캐시를 최신으로 간주하는 밀리초 단위 기간. 기본 `0`             |
+| `gcTime`              | 필드, 프로바이더, 호출 | 마지막 모델 관찰자가 떠난 후 캐시 유지 시간. 기본 `5 * 60_000`  |
+| `placeholderData`     | 필드, 프로바이더, 호출 | 로딩 중 플레이스홀더. `keepPreviousData`로 이전 결과 유지       |
+| `force`               | 호출만                 | 캐시 데이터가 최신이어도 가져오기                               |
+| `enabled`             | 필드만                 | `(modelState) => boolean`. false인 동안 건너뛰기                |
+| `dependsOn`           | 필드만                 | `(modelState) => dependency`. 다른 값이나 쿼리에 따라 요청 허용 |
+| `refetchInterval`     | 필드만                 | 고정 또는 데이터에 따른 폴링 간격                               |
+| `streamBatchInterval` | 단일/무한 쿼리 필드    | 스트림 갱신 사이의 최소 밀리초 간격                             |
+| `suspense`            | 단일/무한 쿼리 필드    | 더 이상 권장하지 않음. 아래 실험적 `.suspend(arg)` 참고         |
+
+```ts
+// In an action: force an exact argument to refresh.
+await this.model.posts.query({ page: 1 }, { force: true })
+```
+
+<a id="arguments-and-cache-identity"></a>
+
+## 인수와 캐시 식별자
+
+모델 필드와 직렬화된 인수가 쿼리 항목을 식별합니다. 일반 객체의 키는 정렬되므로 `{ page: 1, filter: 'all' }`과 `{ filter: 'all', page: 1 }`은 같은 키를 공유합니다. 안정적인 JSON 형태의 인수를 사용하고 요청 데이터를 바꾸는 모든 입력을 포함하세요.
+
+선택자 `.load(arg)`는 입력을 항상 인수로 취급합니다. 명령형 `.query()`에서는 옵션 이름만 포함한 객체를 호출 옵션으로 해석할 수 있습니다. 인수를 명확히 하려면 두 번째 옵션 객체를 전달하세요.
+
+```ts
+// Query<Result, { enabled: boolean }> — a regular argument.
+const result = useSearch((s) => s.result.load({ enabled: true }))
+
+// Query<Result, { force: boolean }> — disambiguate from the force option.
+await this.model.result.query({ force: true }, {})
+```
+
+같은 키의 일반 재렌더링은 요청을 다시 시작하지 않습니다. 다시 마운트하거나 키를 바꾸거나 명령형 쿼리를 호출하면 최신성을 다시 확인할 수 있습니다. 새 인수는 독립적인 캐시 항목을 만들며 `.refetch()`는 활성/마지막 인수를 대상으로 합니다.
+
+<a id="queryfn-context"></a>
+
+## queryFn 컨텍스트
+
+`queryFn`은 `(arg, context)`를 받습니다. `context.state`는 전체 모델이 아니라 해당 쿼리 필드의 읽기 전용 상태입니다.
+
+```ts
+posts: query<Post[]>({
+  initialData: [],
+  queryFn: (_, { state }) => {
+    // state.data, state.isLoading, etc.
+    return api.post.findAll()
+  },
+})
+```
+
+<a id="streaming-results"></a>
+
+## 결과 스트리밍
+
+단일 및 무한 쿼리는 `AsyncIterable`을 받습니다. 단일 쿼리는 데이터 값이나 쿼리 상태 패치를 yield할 수 있습니다. 무한 쿼리는 `data`와 선택적 `cursor` / `hasMore`를 담은 객체를 yield합니다. 값은 `.data`를 교체하므로 점점 늘어나는 결과를 렌더링하려면 청크를 직접 누적하세요.
+
+```ts
+answer: query<string, string>({
+  initialData: '',
+  async *queryFn(prompt) {
+    let text = ''
+    for await (const token of api.ai.stream(prompt)) {
+      text += token
+      yield { data: text, isLoading: false, isSuccess: true }
+    }
+  },
+  streamBatchInterval: 32,
+})
+```
+
+```tsx
+const answer = useChat((s) => s.answer.load(prompt))
+return <p aria-busy={answer.isFetching}>{answer.data}</p>
+```
+
+반복이 끝날 때까지 `isFetching`은 true를 유지합니다. 첫 사용 가능한 결과가 준비되면 `isLoading: false`를 yield하세요. 스트림이 실패하면 마지막으로 받은 데이터를 유지하면서 오류를 제공합니다. 실험적 `.suspend()`는 스트리밍 fetcher를 지원하지 않습니다. 로컬 쿼리도 [점진적 데이터 보강](/state/docs/api/local#collection-identity-versus-view-freshness)을 지원합니다.
+
+---
+
+## query.infinite()
+
+무한 스크롤/페이지네이션용입니다. 타입은 `Query.Infinite<T>`를 사용하세요.
+
+```ts
+import { Query } from '@comwit/state'
+
+// types.ts
+export type PostState = {
+  trending: Query.Infinite<Post[]>
+}
+```
+
+```ts
+// model.ts
+import { query } from '@comwit/state'
+
+export const post = model<PostState>({
+  trending: query.infinite<Post[]>({
+    initialData: [],
+    queryFn: (_, { state }) => api.post.trending(state.cursor),
+  }),
+})
+```
+
+<a id="additional-methods"></a>
+
+### 추가 메서드
+
+| 메서드             | 설명                                                                       |
+| ------------------ | -------------------------------------------------------------------------- |
+| `.nextFetch()`     | 다음 페이지를 가져옵니다. `hasMore`가 false이면 아무 작업도 하지 않습니다. |
+| `.previousFetch()` | 이전 커서로 돌아갑니다.                                                    |
+
+<a id="additional-flags"></a>
+
+### 추가 플래그
+
+| 플래그     | 타입             | 설명                   |
+| ---------- | ---------------- | ---------------------- |
+| `.cursor`  | `string \| null` | 현재 페이지네이션 커서 |
+| `.hasMore` | `boolean`        | 다음 페이지 존재 여부  |
+
+<a id="usage-in-actions"></a>
+
+### 액션에서 사용
+
+```ts
+async loadMoreTrending() {
+  await this.model.trending.nextFetch()
+}
+```
+
+초기 무한 쿼리도 React 선택자에서 `.load(arg?)`로 선언할 수 있습니다. `.nextFetch()`와 `.previousFetch()`는 계속 액션에서 호출하세요.
+
+`queryFn` 반환값에 `cursor`와 `hasMore`를 포함하여 페이지네이션을 제어할 수 있습니다.
+
+```ts
+queryFn: async (_, { state }) => {
+  const res = await api.post.trending(state.cursor)
+  return {
+    data: res.posts,
+    cursor: res.nextCursor,
+    hasMore: res.hasNext,
+  }
+}
+```
+
+---
+
+## query.realtime()
+
+WebSocket/SSE 구독을 사용하는 실시간 데이터용입니다. 타입은 `Query.Realtime<T>`를 사용하세요.
+
+최초 `queryFn` 가져오기가 성공하면 실시간 갱신을 전달할 콜백과 함께 `subscribe` 함수가 호출됩니다.
+
+```ts
+import { Query } from '@comwit/state'
+
+// types.ts
+export type ChatState = {
+  messages: Query.Realtime<Message[], string>
+}
+```
+
+```ts
+// model.ts
+import { query } from '@comwit/state'
+
+export const chat = model<ChatState>({
+  messages: query.realtime<Message[], string>({
+    initialData: [],
+    queryFn: (roomId) => api.chat.history(roomId),
+    subscribe: (callbacks) => {
+      const ws = new WebSocket(`wss://api.example.com/chat`)
+      ws.onmessage = (e) => {
+        callbacks.update((prev) => [...prev, JSON.parse(e.data)])
+      }
+      ws.onopen = () => callbacks.onStatus('connected')
+      ws.onclose = () => callbacks.onStatus('disconnected')
+      ws.onerror = (e) => callbacks.onError(e)
+      return () => ws.close()
+    },
+  }),
+})
+```
+
+<a id="subscribe-callbacks"></a>
+
+### 구독 콜백
+
+`subscribe` 함수는 아래 콜백이 담긴 객체를 받으며 정리 함수를 반환해야 합니다.
+
+| 콜백       | 시그니처                             | 설명                    |
+| ---------- | ------------------------------------ | ----------------------- |
+| `update`   | `(updater: (prev: T) => T) => void`  | 갱신 함수로 데이터 병합 |
+| `set`      | `(data: T) => void`                  | 전체 데이터 교체        |
+| `refetch`  | `() => void`                         | queryFn 다시 실행       |
+| `onStatus` | `(status: ConnectionStatus) => void` | 연결 상태 갱신          |
+| `onError`  | `(error: unknown) => void`           | 오류 상태 설정          |
+
+<a id="additional-methods-1"></a>
+
+### 추가 메서드
+
+| 메서드           | 설명                                                         |
+| ---------------- | ------------------------------------------------------------ |
+| `.unsubscribe()` | 실시간 구독을 중지하고 상태를 `'disconnected'`로 설정합니다. |
+
+<a id="additional-flags-1"></a>
+
+### 추가 플래그
+
+| 플래그              | 타입               | 설명                                                              |
+| ------------------- | ------------------ | ----------------------------------------------------------------- |
+| `.connectionStatus` | `ConnectionStatus` | `'connecting' \| 'connected' \| 'disconnected' \| 'reconnecting'` |
+| `.isConnected`      | `boolean`          | 상태가 `'connected'`이면 true                                     |
+
+<a id="usage-in-actions-1"></a>
+
+### 액션에서 사용
+
+```ts
+async connectChat(roomId: string) {
+  await this.model.messages.query(roomId) // fetches + starts subscription
+}
+
+disconnect() {
+  this.model.messages.unsubscribe()
+}
+```
+
+---
+
+<a id="dependent-queries"></a>
+
+## 의존 쿼리
+
+### enabled
+
+모델 상태에 따라 조건부로 쿼리를 건너뜁니다. `enabled`가 `true`를 반환하기 전까지 `queryFn`은 실행되지 않습니다.
+
+```ts
+const user = model({
+  isLoggedIn: false,
+  profile: query<Profile | null>({
+    initialData: null,
+    queryFn: () => api.user.profile(),
+    enabled: (state) => state.isLoggedIn,
+  }),
+})
+```
+
+`isLoggedIn`이 `false`이면 `profile.query()`를 호출해도 아무 작업도 하지 않습니다. 플래그가 바뀐 뒤 `query()`를 다시 호출하면 가져오기가 실행됩니다.
+
+### dependsOn
+
+다른 쿼리 또는 상태가 준비될 때까지 쿼리를 막습니다. 연쇄 데이터 가져오기에 유용합니다.
+
+```ts
+const post = model({
+  detail: query<Post | null, string>({
+    initialData: null,
+    queryFn: (id) => api.post.findById(id),
+  }),
+  comments: query<Comment[], string>({
+    initialData: [],
+    queryFn: (postId) => api.comment.findAll(postId),
+    dependsOn: (state) => state.detail, // waits for detail.isSuccess
+  }),
+})
+```
+
+`dependsOn`은 다음을 확인합니다.
+
+- 반환값에 `isSuccess`가 있으면(쿼리 필드) — `isSuccess`가 `true`가 될 때까지 기다립니다.
+- 반환값이 `null` 또는 `undefined`이면 — 쿼리를 막습니다.
+- 그 외의 값이면 — 쿼리를 허용합니다. 불리언 조건에는 `enabled`를 사용하세요.
+
+이 옵션들은 요청의 실행을 허용하거나 막으며 의존적인 가져오기 순서를 만들지는 않습니다. 준비된 ID를 `comments.load(postId)`에 전달하거나 액션에서 `detail.query(postId)` 다음에 `comments.query(postId)`가 실행되도록 조율하세요.
+
+---
+
+## refetchInterval
+
+고정 또는 동적인 간격으로 자동 폴링합니다.
+
+```ts
+// Fixed interval (ms)
+notifications: query({
+  initialData: [],
+  queryFn: () => api.notifications.list(),
+  refetchInterval: 5000, // poll every 5 seconds
+})
+```
+
+```ts
+// Dynamic — stop polling on error
+notifications: query({
+  initialData: [],
+  queryFn: () => api.notifications.list(),
+  refetchInterval: (data, error) => {
+    if (error) return false // stop on error
+    return 5000
+  },
+})
+```
+
+폴링을 끄려면 `refetchInterval: false`를 설정하세요.
+
+---
+
+<a id="experimental-suspense-behavior"></a>
+
+## 실험적 Suspense 동작
+
+```tsx
+function PostList() {
+  const posts = usePost((state) => state.posts.suspend())
+  return posts.data.map((post) => <PostCard key={post.id} post={post} />)
+}
+
+;<Suspense fallback={<PostSkeleton />}>
+  <PostList />
+</Suspense>
+```
+
+초기 로딩 중 대체 화면을 표시하려면 데이터를 읽는 컴포넌트를 `ComwitProvider` 아래의 `<Suspense>` 안에 두세요. 최초 쿼리 실패에 대비해 오류 경계도 추가하세요. 이후 다시 가져오는 동안 성공한 데이터는 계속 표시됩니다. 새로고침 표시에는 `isFetching`을 사용하세요. `enabled` 또는 `dependsOn`이 요청을 막으면 선택자는 현재 상태를 반환합니다.
+
+Next.js SSR에서는 [`ComwitProvider`](/state/docs/api/provider)에 `useServerInsertedHTML`을 전달하여 두 번째 브라우저 요청 없이 서버 결과를 재사용하세요. 이 설정이 없으면 브라우저가 하이드레이션 중 다시 가져옵니다. `queryFn`을 서버와 브라우저 모두에서 동작하도록 작성하세요. 데이터 가져오기에 데이터베이스 코드나 Server Function이 필요하면 `hydrate()`를 사용하세요.
+
+지원 대상은 JSON 직렬화 가능한 결과를 값이나 Promise로 반환하는 단일/무한 쿼리와 해당 로컬 어댑터입니다. 실시간 쿼리와 비동기 반복 fetcher는 제외됩니다. React 19 스트리밍 SSR을 지원하며, 레거시 `renderToString()`과 삽입 훅이 없는 프레임워크는 이 계약의 범위 밖입니다.
+
+디스크립터 옵션 `suspense: true`와 `Query.Suspense*` 타입은 더 이상 권장하지 않는 호환성 API입니다. 새 코드는 클라이언트가 소유하는 가져오기에 `.load()`를, 완료된 서버 데이터에 `hydrate()`를 사용합니다. 렌더링 시점 실행이 쿼리 함수와 프레임워크에 적합할 때만 `.suspend()`를 사용하세요.

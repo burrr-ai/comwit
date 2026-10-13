@@ -1,0 +1,180 @@
+---
+title: 'searchParam()'
+group: 'Model'
+slug: 'api/router'
+order: 23
+---
+
+# searchParam()
+
+`model()` 안에서 `persist()`나 `query()` 같은 필드와 함께 URL 기반 상태를 선언합니다. 일반적인 `useModel()`, `create()`, 액션의 상태 접근이 초기화와 동기화를 자동 관리합니다. `@comwit/state@2.4.0`에서 사용할 수 있습니다.
+
+```sh
+npm install @comwit/state@2.4.0
+```
+
+<a id="basic-usage"></a>
+
+## 기본 사용법
+
+```tsx
+import { action, model, searchParam, useAction, useModel } from '@comwit/state'
+
+const location = model({
+  requestedThreadId: searchParam({ key: 'thread' }),
+  page: searchParam({ key: 'page', type: 'number', defaultValue: 1 }),
+  archived: searchParam({ key: 'archived', type: 'boolean' }),
+})
+
+const selectionActions = action(({ state }) => {
+  const current = state(location)
+  return {
+    selectThread(id: string | null) {
+      current.requestedThreadId = id
+    },
+  }
+})
+
+function ThreadPage() {
+  const threadId = useModel(location, (state) => state.requestedThreadId)
+  const actions = useAction([selectionActions])
+  return <button onClick={() => actions.selectThread('thread-2')}>{threadId}</button>
+}
+```
+
+런타임 필드는 일반 값입니다. 이 예제에서는 `string | null`, `number`, `boolean | null`입니다. 모델 필드 선언이 URL 매핑을 정의합니다. 일반 모델 소비자를 마운트하면 동기화가 시작되며 별도의 URL 연결 훅이나 선택자 순서 요구사항은 없습니다. 이벤트 처리기에서 처음 접근하는 경우를 포함해 액션에서만 사용하는 모델도 지원합니다.
+
+<a id="options"></a>
+
+## 옵션
+
+| 옵션           | 타입                                        | 설명                                                                                |
+| -------------- | ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `key`          | `string`                                    | 필수 쿼리 매개변수 이름                                                             |
+| `type`         | `'string' \| 'number' \| 'boolean'`         | 기본 제공 파서와 직렬화기. 기본값은 `'string'`                                      |
+| `defaultValue` | `T`                                         | URL 입력이 없거나 유효하지 않을 때 사용할 선택적 대체 값. 기본값은 `null`           |
+| `history`      | `'replace' \| 'push'`                       | 히스토리 쓰기 모드. 기본값은 `'replace'`                                            |
+| `parse`        | `(raw: string) => T`                        | 선택적 사용자 정의 파서. 쿼리 값이 있을 때만 호출                                   |
+| `serialize`    | `(value: NonNullable<T>) => string \| null` | 사용자 정의 직렬화기. `null`이면 매개변수 제거. 구조화된 값에는 `parse`와 함께 필수 |
+
+<a id="url-values-and-defaults"></a>
+
+## URL 값과 기본값
+
+`defaultValue`는 선택 사항입니다. 유효한 URL 값이 항상 우선합니다. 쿼리 매개변수가 없거나 파싱할 수 없으면 `defaultValue`를 사용하고, 생략했다면 `null`을 사용합니다.
+
+| 선언                                                            | URL 예시                      | 필드 값 |
+| --------------------------------------------------------------- | ----------------------------- | ------- |
+| `searchParam({ key: 'thread' })`                                | `?thread=abc`                 | `'abc'` |
+| `searchParam({ key: 'thread' })`                                | `thread` 매개변수 없음        | `null`  |
+| `searchParam({ key: 'page', type: 'number', defaultValue: 1 })` | `?page=0`                     | `0`     |
+| 같은 page 선언                                                  | `?page=invalid` 또는 없음     | `1`     |
+| `searchParam({ key: 'archived', type: 'boolean' })`             | `?archived=false`             | `false` |
+| 같은 boolean 선언                                               | `?archived=unknown` 또는 없음 | `null`  |
+
+초기 기본값은 URL에 다시 쓰지 않습니다. 예를 들어 `page`가 없어도 `?page=1`을 자동 추가하지 않고 1페이지를 표시할 수 있습니다. 이후 모델 변경은 정상적으로 동기화됩니다. 대체 값이 이미 선택되어 있어도 명시적 `searchParam.set()` 호출로 유효하지 않은 URL을 정규화할 수 있습니다.
+
+<a id="built-in-parsing-and-type-inference"></a>
+
+## 기본 제공 파싱과 타입 추론
+
+| `type`           | 허용하는 URL 입력                                        | 직렬화               |
+| ---------------- | -------------------------------------------------------- | -------------------- |
+| `'string'`(기본) | `''`를 포함한 모든 존재하는 문자열. 디코딩한 텍스트 보존 | 문자열 자체          |
+| `'number'`       | 유한한 십진수/과학적 표기 숫자. 예: `0`, `-1.5`, `1e2`   | 정규화한 숫자 텍스트 |
+| `'boolean'`      | `true`/`false` 또는 `1`/`0`. 앞뒤 공백과 대소문자 무시   | `true` 또는 `false`  |
+
+빈 숫자/불리언 입력, `NaN`, `Infinity`, 16진수, 일부만 숫자인 문자열에는 대체 값을 사용합니다. 불리언 파싱은 JavaScript의 truthiness를 사용하지 않으므로 `"false"`는 `false`가 됩니다. 기본값이 없으면 추론된 필드 타입에 `null`이 포함됩니다. null이 아닌 기본 제공 타입의 기본값이 있으면 필드 타입에도 null이 없습니다. 액션 상태를 통한 할당은 추론된 타입을 유지합니다. nullable 필드를 `null`로 설정하면 해당 쿼리 매개변수가 제거됩니다.
+
+<a id="custom-parsing"></a>
+
+## 사용자 정의 파싱
+
+`parse`로 기본 제공 파서를 재정의할 수 있으며 기본 직렬화기는 계속 사용할 수 있습니다. 예를 들어 문자열을 정규화하거나 엄격한 기본 숫자 파서 대신 JavaScript의 숫자 형식을 허용할 수 있습니다.
+
+```ts
+const filters = model({
+  query: searchParam({ key: 'q', parse: (raw) => raw.trim().toLowerCase() }),
+  page: searchParam({ key: 'page', type: 'number', defaultValue: 1, parse: Number }),
+})
+```
+
+구조화된 형식에는 결정적인 파서와 직렬화기를 모두 제공하세요. 파서는 존재하는 문자열을 받으며, 매개변수가 없으면 바로 대체 값을 사용합니다. 파싱 오류가 발생해도 대체 값을 사용합니다. 기본 제공 타입의 파서는 선택한 타입을 반환해야 하며 유한하지 않은 숫자에는 대체 값을 사용합니다. 사용자 정의 구조화 파서는 자체 구조의 유효성을 직접 검사해야 합니다.
+
+```ts
+const filters = model({
+  selection: searchParam<{ tag: string }>({
+    key: 'filter',
+    defaultValue: { tag: 'all' },
+    parse: (raw) => ({ tag: raw }),
+    serialize: (value) => value.tag,
+  }),
+})
+```
+
+중첩 필드와 배열 위치를 지원합니다. 쿼리 키는 같은 Provider 안의 활성 모델 사이에서 고유해야 합니다.
+
+<a id="initialization-history-and-rendering"></a>
+
+## 초기화, 히스토리, 렌더링
+
+기존 전역 `ComwitProvider`를 유지하세요. 선택적 서버 통합은 다음과 같습니다.
+
+```tsx
+<ComwitProvider context={{ router }} getServerSearchParams={getServerSearchParams}>
+  {children}
+</ComwitProvider>
+```
+
+`getServerSearchParams?: () => string | null`은 앱이 소유하는 동기 요청 getter입니다. Provider 서버 초기화 중 읽고 브라우저에서는 호출하지 않습니다. 빈 문자열은 사용 가능한 검색 데이터이고, `null`은 사용할 수 없다는 뜻입니다. Provider는 결과를 이스케이프된 비실행 JSON으로 내부적으로 하이드레이션에 전달합니다. 페이지 래퍼나 수동 스냅샷은 필요하지 않습니다. 이 getter 자체가 사전 렌더링된 프레임워크 라우트를 요청 시점 렌더링으로 바꾸지는 않습니다.
+
+서버 검색 데이터가 있으면 모델의 첫 접근 전에 선언을 알 수 있습니다. 초기 URL 값은 첫 서버 선택자/액션 읽기와 그에 대응하는 하이드레이션 스냅샷에서 사용할 수 있습니다. getter가 없거나 `null`을 반환하면 SSR과 첫 하이드레이션은 대체 값을 사용합니다. 클라이언트 커밋에서 모델 쓰기 반영을 활성화하기 전에 최신 브라우저 URL을 읽습니다. SSR과 하이드레이션 사이에 브라우저 URL이 바뀌어도 서버 스냅샷은 일관성을 유지하고 커밋 시 새 값을 적용합니다.
+
+라이브러리는 렌더링 중 활성 클라이언트 상태를 변경하지 않습니다. 중단된 소비자는 URL 구독을 설치하지 않습니다. 소비자들은 모델별 연결 하나를 공유하고 마지막 소비자 정리 시 대기 중인 쓰기와 구독을 취소합니다. Provider 해제 시 모든 연결이 해제됩니다. 재활성화된 모델은 현재 URL을 읽고 리비전을 올리므로 오래된 비동기 결과가 이전 생명주기 토큰을 재사용할 수 없습니다.
+
+`history`의 기본값은 `'replace'`이므로 생략할 수 있습니다. 선택이 브라우저 히스토리 항목을 추가해야 할 때만 디스크립터에서 `'push'`로 설정하세요. 뒤로/앞으로 이동과 외부 히스토리 변경은 되쓰기 없이 모델을 갱신합니다. 무관한 쿼리, 반복되는 무관한 값, 해시는 유지됩니다. `%20`이 `+`로 바뀌는 등 쿼리 인코딩은 정규화될 수 있습니다.
+
+URL 쓰기는 문서를 새로 로드하지 않고 네이티브 History API를 사용합니다. 일반 React 반응성도 그대로 적용되어 선택한 값이 바뀌면 구독자가 다시 렌더링됩니다. 같은 값 쓰기와 URL 반영 확인은 동기화 루프를 만들지 않습니다. 해시나 무관한 쿼리 변경은 선택 리비전을 올리지 않습니다. URL 필드를 선언한 모델만 히스토리 구독을 설치하며 일반 모델에는 없습니다. URL 동기화는 앱 데이터를 가져오지 않습니다. 선택한 값에 필요한 데이터는 앱의 일반 액션이나 쿼리 필드로 로드하세요.
+
+<a id="optional-metadata-and-guarded-updates"></a>
+
+## 선택적 메타데이터와 조건부 갱신
+
+기본 읽기와 쓰기에는 일반 선택자와 액션만 필요합니다. 비동기 초기화를 위한 메타데이터도 같은 모델 API로 선택할 수 있습니다.
+
+```tsx
+const selection = useModel(location, (state) => searchParam.getSnapshot(state, 'requestedThreadId'))
+// { ready: boolean, value: string | null, revision: number }
+```
+
+`ready`는 쿼리 없음(`value: null`, `ready: true`)과 아직 커밋되지 않은 URL 초기화(`ready: false`)를 구분합니다. 필드 값이 여전히 null이어도 ready/revision이 바뀌면 메타데이터 선택자를 깨웁니다. 선택자 스냅샷은 불변이며 도우미는 읽기만 합니다.
+
+조건부 쓰기와 호출별 히스토리 재정의에는 액션 상태를 사용하세요.
+
+```ts
+const threadActions = action(({ state }) => {
+  const current = state(location)
+  return {
+    async normalize(projectId: string) {
+      const request = searchParam.getSnapshot(current, 'requestedThreadId')
+      if (!request.ready) return false
+      const threads = await loadThreads(projectId)
+      // Also validate the application's project/request token here.
+      const selected =
+        threads.find((item) => item.id === request.value)?.id ?? threads[0]?.id ?? null
+      return searchParam.set(current, 'requestedThreadId', selected, {
+        history: 'replace',
+        ifRevision: request.revision,
+      })
+    },
+  }
+})
+```
+
+`searchParam.set(state, path, value, { history?, ifRevision? })`는 불리언을 반환하며 불변 선택자 스냅샷이 아닌 액션 상태를 받습니다. 비활성/사용 불가 상태이거나 리비전이 오래되었으면 `false`를 반환합니다. 재정의는 해당 호출에만 적용됩니다. 정규화 결과 변화가 없으면 히스토리에 쓰지 않습니다. 중첩 메타데이터 경로에는 `'filters.page'`, `'items.0.id'` 같은 점 표기법을 사용하세요.
+
+이 도우미들은 바인딩을 등록하거나 활성화하지 않습니다. 모델 선언과 일반 모델 소비자가 이미 담당합니다. effect가 작업을 시작할 때 최신 액션 상태 스냅샷을 사용하고, 하이드레이션/내비게이션 경쟁이 값을 대체할 수 있다면 렌더링에서 캡처한 리비전과 비교하세요.
+
+파싱 가능한 문자열이라고 해서 스레드가 존재한다는 보장은 없습니다. 도메인 유효성 검사와 메시지/세션 로딩은 앱에 유지하세요. 요청된 선택을 별도 필드로 두면 활성 세션이 일시적으로 비워지거나 낙관적 선택이 실패해도 URL이 바뀌지 않습니다.
+
+코딩 에이전트용 일반 텍스트 참고 자료는 [search-param.txt](/llm/search-param.txt)입니다.

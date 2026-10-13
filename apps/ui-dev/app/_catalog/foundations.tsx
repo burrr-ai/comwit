@@ -10,26 +10,26 @@ import { Chip } from '@comwit/ui-templates/chip'
 
 import { GroupLabel } from './section'
 
-/* 커스텀 프로퍼티를 style 로 넘길 때 TS 를 달래는 헬퍼 */
+/* Type helper for custom CSS properties passed through style. */
 const vars = (o: Record<string, string | number>) => o as React.CSSProperties
 
-/* ── 1. 뉴트럴 램프 ─────────────────────────────────────────── */
+/* 1. Neutral ramp. */
 
 const RAMP = Array.from({ length: 12 }, (_, i) => i + 1)
 
 const RAMP_ROLE: Record<number, string> = {
-  1: '앱 배경',
-  2: 'subtle 면',
-  3: '팝오버/skeleton 면',
-  4: 'hover 면',
-  5: 'selected 면',
-  6: '보더',
-  7: '입력 외곽',
-  8: 'hover 보더',
-  9: '포커스 링',
+  1: 'App background',
+  2: 'Subtle surface',
+  3: 'Popover/skeleton surface',
+  4: 'Hover surface',
+  5: 'Selected surface',
+  6: 'Border',
+  7: 'Input outline',
+  8: 'Hover border',
+  9: 'Focus ring',
   10: 'placeholder',
-  11: '보조 텍스트',
-  12: '본문 텍스트',
+  11: 'Secondary text',
+  12: 'Body text',
 }
 
 function Ramp() {
@@ -49,7 +49,7 @@ function Ramp() {
   )
 }
 
-/* ── 2. Semantic 스와치 ─────────────────────────────────────── */
+/* 2. Semantic swatches. */
 
 const SURFACES: [string, string, string][] = [
   ['background', 'bg-background', 'text-foreground'],
@@ -71,11 +71,11 @@ const LINES: [string, string][] = [
 ]
 
 const TEXT_TONES: [string, string, string][] = [
-  ['foreground', 'text-foreground', '핵심 본문·제목'],
-  ['soft-foreground', 'text-soft-foreground', '읽는 설명·회색 본문'],
-  ['muted-foreground', 'text-muted-foreground', '도움말·메타 정보'],
-  ['subtle-foreground', 'text-subtle-foreground', '3차 정보·플레이스홀더'],
-  ['disabled-foreground', 'text-disabled-foreground', '비활성 텍스트·아이콘'],
+  ['foreground', 'text-foreground', 'Primary body and headings'],
+  ['soft-foreground', 'text-soft-foreground', 'Descriptions and gray body text'],
+  ['muted-foreground', 'text-muted-foreground', 'Help and metadata'],
+  ['subtle-foreground', 'text-subtle-foreground', 'Tertiary information and placeholders'],
+  ['disabled-foreground', 'text-disabled-foreground', 'Disabled text and icons'],
 ]
 
 function SemanticSwatches() {
@@ -93,11 +93,11 @@ function SemanticSwatches() {
       </div>
 
       <div>
-        <GroupLabel>텍스트 시멘틱</GroupLabel>
+        <GroupLabel>Text semantics</GroupLabel>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {TEXT_TONES.map(([name, color, role]) => (
             <div key={name} className="rounded-lg border border-border bg-card p-4">
-              <p className={`text-title-sm ${color}`}>가나다 Ag</p>
+              <p className={`text-title-sm ${color}`}>Abc Ag</p>
               <p className={`mt-2 font-mono text-caption ${color}`}>{name}</p>
               <p className="mt-1 text-caption text-muted-foreground">{role}</p>
             </div>
@@ -106,7 +106,7 @@ function SemanticSwatches() {
       </div>
 
       <div>
-        <GroupLabel>선 · 포커스</GroupLabel>
+        <GroupLabel>Lines and focus</GroupLabel>
         <div className="flex flex-wrap gap-6">
           {LINES.map(([name, bg]) => (
             <div key={name} className="flex items-center gap-2">
@@ -124,7 +124,7 @@ function SemanticSwatches() {
   )
 }
 
-/* ── 3. Radius 사다리 (라이브 노브) ─────────────────────────── */
+/* 3. Radius scale with live controls. */
 
 const RADII = [
   ['none', 'rounded-none', '0'],
@@ -134,8 +134,8 @@ const RADII = [
   ['lg', 'rounded-lg', '10px'],
   ['xl', 'rounded-xl', '14px'],
   ['2xl', 'rounded-2xl', '16px'],
-  ['pill', 'rounded-pill', '알약'],
-  ['full', 'rounded-full', '항상 원'],
+  ['pill', 'rounded-pill', 'Pill'],
+  ['full', 'rounded-full', 'Always circular'],
 ] as const
 
 function RadiusLadder() {
@@ -161,7 +161,7 @@ function RadiusLadder() {
           {scale.toFixed(1)}
         </span>
         <span className="text-caption text-muted-foreground">
-          0 = 완전 직각 · 2.6 = 과장된 라운드
+          0 = square corners · 2.6 = exaggerated rounding
         </span>
       </div>
 
@@ -176,16 +176,18 @@ function RadiusLadder() {
       </div>
 
       <p className="text-body-sm text-muted-foreground">
-        <strong className="font-semibold text-foreground">pill 은 각지고 full 은 안 각진다.</strong>{' '}
-        알약(칩·캘린더 셀)은 소비처가 각지게 만들 수 있어야 하고, 아바타·라디오 도트는 어떤
-        커스텀에서도 원이어야 하기 때문이다. 두 개를 한 토큰으로 묶으면 radius-scale 을 0 으로
-        내리는 순간 라디오가 사각형이 된다.
+        <strong className="font-semibold text-foreground">
+          Pill can be squared; full stays circular.
+        </strong>{' '}
+        Consumers can square pills such as chips and calendar cells, while avatars and radio dots
+        must remain circular. Sharing one token would turn radios square when radius-scale becomes
+        0.
       </p>
     </div>
   )
 }
 
-/* ── 4. Elevation (라이트/다크 동시) ────────────────────────── */
+/* 4. Elevation in light and dark modes. */
 
 const ELEVATIONS = [
   'shadow-xs',
@@ -239,26 +241,26 @@ function Typography() {
   return (
     <div className="space-y-8">
       <div>
-        <GroupLabel>제목 슬롯 — 디스플레이 폰트가 자동 상속된다</GroupLabel>
+        <GroupLabel>Heading slots inherit the display font automatically</GroupLabel>
         <div className="rounded-lg border border-border p-6">
-          {/* data-slot="card-title" 이 곧 배선이다. --display-font 를 바꾸면 이 줄만 폰트가 바뀐다. */}
+          {/* data-slot="card-title" connects this heading to --display-font. */}
           <h3 data-slot="card-title" className="text-display-sm text-foreground">
-            제목은 --display-font 를 탄다
+            Headings use --display-font
           </h3>
           <p className="mt-2 text-body-sm text-soft-foreground">
-            본문은 --font-sans 그대로. 소비처가 --display-font 에 세리프를 넣으면 위 제목만 세리프가
-            된다 — 컴포넌트 수정 0.
+            Body text keeps --font-sans. Setting a serif --display-font changes only the heading,
+            without editing components.
           </p>
         </div>
       </div>
 
       <div>
-        <GroupLabel>목적형 스케일</GroupLabel>
+        <GroupLabel>Purpose-based type scale</GroupLabel>
         <div className="space-y-3 rounded-lg border border-border p-6">
           {TYPE.map(([cls, spec]) => (
             <div key={cls} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <span className={`${cls} min-w-0 flex-1 text-foreground`}>
-                다람쥐 헌 쳇바퀴에 타고파
+                The quick brown fox jumps over the lazy dog
               </span>
               <span className="font-mono text-caption text-muted-foreground">{cls}</span>
               <span className="w-28 text-right font-mono text-caption text-muted-foreground">
@@ -270,11 +272,11 @@ function Typography() {
       </div>
 
       <div>
-        <GroupLabel>웨이트 사다리 — --weight-* 노브</GroupLabel>
+        <GroupLabel>Weight scale — --weight-* controls</GroupLabel>
         <div className="flex flex-wrap gap-6 rounded-lg border border-border p-6">
           {WEIGHTS.map((w) => (
             <div key={w} className="flex flex-col gap-1">
-              <span className={`text-title-md text-foreground ${w}`}>디자인 토큰</span>
+              <span className={`text-title-md text-foreground ${w}`}>Design tokens</span>
               <span className="font-mono text-caption text-muted-foreground">{w}</span>
             </div>
           ))}
@@ -284,7 +286,7 @@ function Typography() {
   )
 }
 
-/* ── 6. Border width (라이브 노브) ──────────────────────────── */
+/* 6. Border width with live controls. */
 
 function BorderWidth() {
   const [bw, setBw] = React.useState(1)
@@ -313,18 +315,18 @@ function BorderWidth() {
         style={vars({ '--border-width': `${bw}px` })}
       >
         <div className="border-b border-border px-4 py-3 text-title-sm text-card-foreground">
-          카드 외곽 · 헤더 divider
+          Card outline and header divider
         </div>
         <div className="space-y-3 p-4">
           <p className="text-body-sm text-muted-foreground">
-            bare <code className="font-mono">border</code> 와 방향 보더(
-            <code className="font-mono">border-b</code>)가 같은 노브를 탄다. 컴포넌트는 한 글자도 안
-            바뀌었다.
+            bare <code className="font-mono">border</code> and directional borders (
+            <code className="font-mono">border-b</code>) share the same control. No component code
+            changes.
           </p>
-          <Input placeholder="입력 외곽은 border-input" />
+          <Input placeholder="Input outlines use border-input" />
         </div>
         <div className="border-t border-border px-4 py-3 text-caption text-muted-foreground">
-          푸터 divider
+          Footer divider
         </div>
       </div>
     </div>
@@ -339,20 +341,20 @@ function MotionState() {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="space-y-4 rounded-lg border border-border p-6">
-        <GroupLabel>눌림 · 전환 — --press-scale · --duration-fast</GroupLabel>
+        <GroupLabel>Press and transitions — --press-scale · --duration-fast</GroupLabel>
         <div className="flex flex-wrap items-center gap-3">
-          <Button>눌러보기</Button>
+          <Button>Press me</Button>
           <Button variant="outline">outline</Button>
           <Chip>ripple</Chip>
         </div>
         <p className="text-caption text-muted-foreground">
-          --press-scale 을 1, --duration-base 를 0, --ripple-opacity 를 0 으로 두면 즉시 반응하고 안
-          눌린다.
+          Set --press-scale to 1, --duration-base to 0, and --ripple-opacity to 0 for an immediate
+          response without pressed scaling.
         </p>
       </div>
 
       <div className="space-y-4 rounded-lg border border-border p-6">
-        <GroupLabel>상태 오버레이 — --state-hover · --state-selected</GroupLabel>
+        <GroupLabel>State overlays — --state-hover · --state-selected</GroupLabel>
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-2">
             <Checkbox
@@ -361,13 +363,13 @@ function MotionState() {
               id="fnd-check"
             />
             <label htmlFor="fnd-check" className="text-body-sm text-foreground">
-              헤일로가 currentColor 를 탄다
+              Halos follow currentColor
             </label>
           </div>
           <div className="flex items-center gap-2">
             <Switch defaultChecked id="fnd-switch" />
             <label htmlFor="fnd-switch" className="text-body-sm text-foreground">
-              썸은 --switch-thumb
+              Thumb uses --switch-thumb
             </label>
           </div>
         </div>
@@ -396,13 +398,13 @@ function OverlayGlass() {
         <div key={String(dark)} className={dark ? 'dark' : undefined}>
           <div className="relative h-44 overflow-hidden rounded-xl border border-border bg-background">
             <div className="p-4 text-body-sm text-muted-foreground">
-              {dark ? '다크' : '라이트'} — 아래는 bg-overlay 스크림
+              {dark ? 'Dark' : 'Light'} — bg-overlay scrim below
             </div>
             <div className="absolute inset-0 bg-overlay" />
             <div className="absolute inset-x-6 bottom-6 rounded-lg border border-border bg-popover p-4 shadow-xl">
-              <p className="text-title-sm text-popover-foreground">모달 패널</p>
+              <p className="text-title-sm text-popover-foreground">Modal panel</p>
               <p className="mt-0.5 text-caption text-muted-foreground">
-                다크에선 흰 inset 하이라이트가 윤곽을 만든다
+                White inset highlights define the outline in dark mode
               </p>
             </div>
             <div className="absolute right-3 top-3 rounded-pill border border-border bg-surface-glass px-2.5 py-1 text-caption text-foreground backdrop-blur">
@@ -415,33 +417,33 @@ function OverlayGlass() {
   )
 }
 
-/* ── 조립 ──────────────────────────────────────────────────── */
+/* Assembly. */
 
 export function Foundations() {
   return (
     <div className="space-y-12">
       <div>
-        <GroupLabel>1 · 뉴트럴 램프 (L0 · private)</GroupLabel>
+        <GroupLabel>1 · Neutral ramp (L0 · private)</GroupLabel>
         <p className="mb-4 max-w-2xl text-body-sm text-muted-foreground">
-          Radix 12-step 규약. 유틸이 생성되지 않으므로 컴포넌트가 직접 못 쓴다 — raw 색 사용을
-          구조적으로 차단한다. 톤 전체를 갈아끼우려면 <span className="font-mono">이 12값만</span>{' '}
-          바꾼다.
+          Radix 12-step convention. These values generate no utilities, preventing components from
+          using raw colors directly. Retheme the entire palette by changing{' '}
+          <span className="font-mono">these 12 values</span> .
         </p>
         <Ramp />
       </div>
 
       <div>
-        <GroupLabel>2 · 시맨틱 (L1 · 램프의 alias)</GroupLabel>
+        <GroupLabel>2 · Semantics (L1 · ramp aliases)</GroupLabel>
         <SemanticSwatches />
       </div>
 
       <div>
-        <GroupLabel>3 · Radius 사다리</GroupLabel>
+        <GroupLabel>3 · Radius scale</GroupLabel>
         <RadiusLadder />
       </div>
 
       <div>
-        <GroupLabel>4 · Elevation — 다크는 그림자가 아니라 톤 + inset 하이라이트</GroupLabel>
+        <GroupLabel>4 · Elevation — dark mode uses tone and inset highlights</GroupLabel>
         <div className="grid gap-4 lg:grid-cols-2">
           <ElevationGrid label="light" />
           <ElevationGrid label="dark" dark />

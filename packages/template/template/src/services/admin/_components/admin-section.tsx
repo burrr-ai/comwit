@@ -1,25 +1,25 @@
 'use client'
 
-import type { LucideIcon } from 'lucide-react'
+import type { IconComponent } from '@comwit/ui/icons'
 import { adminCardRaised } from '@/services/admin/_components/styles'
 import { cn } from '@/lib/utils'
 
 type AdminSectionProps = {
   title: string
-  icon?: LucideIcon
+  icon?: IconComponent
   description?: React.ReactNode
   action?: React.ReactNode
-  /** 헤더 우측 인라인 보조 텍스트 (예: "누적 1시간 30분") */
+  /** Inline supporting text beside the header, such as accumulated duration. */
   meta?: React.ReactNode
   className?: string
-  /** 본문 패딩 제거(리스트/테이블을 카드 가장자리까지 붙일 때) */
+  /** Remove content padding so lists/tables reach the card edges. */
   flush?: boolean
   children?: React.ReactNode
 }
 
 /**
- * 어드민 카드 섹션 — Toss 톤(화이트 표면 + 헤어라인 보더 + 큰 라운드).
- * 헤더는 (아이콘? + 제목 + description?) | meta? | action? 구조.
+ * Toss-inspired admin card section: white surface, hairline border, large radius.
+ * Header structure: optional icon + title + optional description | meta | action.
  */
 export function AdminSection({
   title,

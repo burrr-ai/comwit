@@ -1,5 +1,7 @@
 'use client'
 
+import { useCopy } from '@/i18n/copy'
+
 import { Button } from '@comwit/ui-templates/button'
 import { useEffect, useRef, useState } from 'react'
 
@@ -14,6 +16,8 @@ export function CopyButton({
   className?: string
   label?: string
 }) {
+  const localize = useCopy()
+
   const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle')
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(
@@ -41,16 +45,20 @@ export function CopyButton({
       type="button"
       onClick={copy}
       className={className}
-      aria-label={label}
+      aria-label={label ? localize(label) : undefined}
     >
       <span aria-hidden={status !== 'idle'}>
-        {status === 'copied' ? 'Copied!' : status === 'error' ? 'Try again' : children}
+        {status === 'copied'
+          ? localize('Copied!')
+          : status === 'error'
+            ? localize('Try again')
+            : children}
       </span>
       <span className="sr-only" role="status">
         {status === 'copied'
-          ? 'Copied to clipboard'
+          ? localize('Copied to clipboard')
           : status === 'error'
-            ? 'Could not copy. Try again.'
+            ? localize('Could not copy. Try again.')
             : ''}
       </span>
     </Button>

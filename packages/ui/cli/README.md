@@ -1,43 +1,31 @@
 # comwit-ui
 
-**Comwit UI 컴포넌트 설치 CLI.** shadcn 의 "복붙해서 소유" 철학에서 **영감**만 받은, comwit 자체 도구다 —
-shadcn CLI·registry 스키마·`components.json` 에 의존하지 않는다. 레지스트리를 **패키지에 번들**로 싣고 다니므로
-`npx comwit-ui` 만으로 오프라인에서도 동작한다.
+**The Comwit UI component installer.** Inspired by shadcn's source-ownership approach, this is Comwit's own tool with no dependency on the shadcn CLI, registry schema, or `components.json`. The registry is bundled in the package, so component source is available without a registry network request. Installing missing npm dependencies still requires access to the package registry.
 
 ```bash
-npx comwit-ui@latest init          # 프로젝트 세팅 (comwit.json + 토큰 계약)
-npx comwit-ui@latest add button    # 컴포넌트 + 의존 설치
+npx comwit-ui@latest init          # Set up comwit.json and the token contract.
+npx comwit-ui@latest add button    # Install components and dependencies.
 ```
 
-## 명령어
+## Commands
 
-|                           | 하는 일                                                                         |
-| ------------------------- | ------------------------------------------------------------------------------- |
-| `comwit-ui init`          | `comwit.json` 생성 + `comwit-tokens.css`(토큰 계약) 배선 + 베이스 npm deps 설치 |
-| `comwit-ui add <name...>` | 컴포넌트 + `registryDependencies`(형제/lib/hook) + npm `dependencies` 설치      |
-| `comwit-ui list`          | 설치 가능한 컴포넌트 목록                                                       |
+| Command                   | Purpose                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| `comwit-ui init`          | Create `comwit.json`, wire `comwit-tokens.css`, and install base npm dependencies. |
+| `comwit-ui add <name...>` | Install components, recursive `registryDependencies`, and npm `dependencies`.      |
+| `comwit-ui list`          | List available components.                                                         |
 
-**플래그**: `--cwd <dir>` 대상 프로젝트 · `--overwrite` 기존 파일 덮기 · `--dry` 미리보기(안 씀) ·
-`--no-install` npm 설치 스킵 · `--css <path>` 전역 CSS 경로 지정 ·
-`--router <nextjs|react-router|tanstack-router|generic>` 라우터 종속 구현체(`route-boundary`)를 직접 지정 ·
-`--locale <en|ko>` 컴포넌트 기본 문구(`lib/ui-text`)의 언어 — `init` 은 `comwit.json` 에 기록하고 `add` 는 거기서 읽는다
+**Flags:** `--cwd <dir>` chooses the target project; `--overwrite` replaces existing files; `--dry` previews without writing; `--no-install` skips npm installation; `--css <path>` selects global CSS; `--router <nextjs|react-router|tanstack-router|generic>` chooses a router-specific implementation; `--locale <en|ko>` selects default component text in `lib/ui-text`. `init` records the locale in `comwit.json`, and `add` reads it.
 
-## 동작 방식
+## How it works
 
-1. **컴포넌트 파일 복사** — `components/ui/<name>.tsx` 를 내 프로젝트로. 이제 내 코드, 자유 수정.
-2. **`registryDependencies` 재귀 해석** — 예: `add date-picker` → `popover`·`popup`·`use-mobile`·`interaction`·`utils` 까지 자동.
-3. **import 경로 재작성** — 템플릿의 상대 import(`../../lib/utils` · `./popover` · `../../hooks` …)를 내
-   `comwit.json` 의 `importAlias`+`aliases` 로 치환(`@/lib/utils` · `@/components/ui/popover`).
-   동작 훅(`useMobile` · `ScrollChromeProvider`)은 `@comwit/ui` 가 내보내므로 복사하지 않는다.
-   `@comwit/ui`(엔진)는 그대로 npm 참조.
-4. **npm `dependencies` 설치** — `@comwit/ui`(아이콘은 `@comwit/ui/icons` 하위 경로로 포함) 및 `class-variance-authority`·(해당 시)
-   `react-hook-form`·`@tiptap/*`·`sonner`·`@ssgoi/react`·`react-virtuoso` 등. 패키지 매니저(pnpm/yarn/bun/npm) 자동 감지.
-5. **이미 있는 npm 패키지는 건너뛴다** — `package.json` 에 선언된 패키지는 다시 add 하지 않는다(프로젝트가 고정한 버전을 바꾸지 않게).
-6. **문구 로케일** — 컴포넌트가 화면·스크린리더에 쓰는 기본 문구와 날짜 로케일은 `lib/ui-text.ts` 하나에 모인다.
-   `--locale` 또는 `comwit.json` 의 `locale`(기본 `en`)로 언어판을 고르고, 설치 뒤엔 내 파일이니 그대로 고친다.
-7. **라우터 감지 변형** — `variants` 가 있는 아이템(`route-boundary`)은 `package.json` 의 `next` ·
-   `react-router(-dom)` · `@tanstack/react-router` 를 보고 맞는 구현체를 쓴다(없으면 generic). 프레임워크 패키지는
-   이미 있으므로 설치 목록에 넣지 않는다. `--router` 로 강제할 수 있고, `comwit-ui list` 가 변형 목록을 보여준다.
+1. **Copy component files** into your project's `components/ui/`. You own and can edit them.
+2. **Resolve registry dependencies recursively.** For example, `add date-picker` includes its popover, popup, interaction, utility, and related component dependencies.
+3. **Rewrite imports** from template-relative paths to the `importAlias` and `aliases` in your `comwit.json`, such as `@/lib/utils` and `@/components/ui/popover`. Behavior hooks such as `useMobile` and `ScrollChromeProvider` remain npm imports from `@comwit/ui` rather than copied files.
+4. **Install npm dependencies:** `@comwit/ui` (including its `@comwit/ui/icons` subpaths), `class-variance-authority`, and applicable packages such as `react-hook-form`, `@tiptap/*`, `sonner`, `@ssgoi/react`, and `react-virtuoso`. Detects pnpm, yarn, bun, or npm automatically.
+5. **Preserve installed package versions.** Dependencies already declared in `package.json` are not added again.
+6. **Choose component text.** Default visible/screen-reader strings and date locale live in `lib/ui-text.ts`. Select `en` (default) or `ko` with `--locale` or `comwit.json`, then edit the installed file directly.
+7. **Detect router variants.** Items with variants use the appropriate implementation for `next`, `react-router(-dom)`, or `@tanstack/react-router`, falling back to generic. Existing framework packages are not added as dependencies. Override detection with `--router`; `comwit-ui list` shows available variants.
 
 ## `comwit.json`
 
@@ -49,48 +37,39 @@ npx comwit-ui@latest add button    # 컴포넌트 + 의존 설치
 }
 ```
 
-- `aliases` — `importAlias` 뒤에 붙는 경로. `add` 가 `srcDir/<alias>` 로 복사하고 import 를 `@/<alias>/…` 로 쓴다.
-  `aliases.utils`(선택)는 `cn()` 파일 위치다(확장자 없이, 기본 `<lib>/utils`). `lib/utils/` 폴더에 다른 헬퍼가
-  이미 있으면 `"lib/utils/cn"` 처럼 그 안에 둔다.
-- `css` — 전역 CSS. `init` 이 여기에 `@import "./comwit-tokens.css"` 를 (tailwind import 뒤에) 배선한다.
-- `importAlias` — 재작성된 import 접두사(`@/`). 프로젝트 tsconfig `paths` 와 맞춘다.
-- `srcDir` — `importAlias` 가 가리키는 폴더. `init` 이 tsconfig/jsconfig 의 `"@/*": ["./src/*"]` 를 읽어 `src` 로
-  채운다(없으면 루트 `""`). 필드가 없는 옛 설정도 실행할 때 같은 방식으로 감지한다.
-- `locale`(선택) — `lib/ui-text.ts` 문구 언어(`en` · `ko`). `init --locale ko` 가 기록한다. 이미 설치된 문구를 바꾸려면
-  `comwit-ui add ui-text --overwrite`.
+- `aliases`: paths after `importAlias`. `add` copies to `srcDir/<alias>` and writes imports as `@/<alias>/…`. Optional `aliases.utils` locates `cn()` without an extension, defaulting to `<lib>/utils`. If `lib/utils/` already contains helpers, use a path such as `lib/utils/cn`.
+- `css`: global stylesheet. `init` adds `@import "./comwit-tokens.css"` after the Tailwind import.
+- `importAlias`: rewritten import prefix (`@/`), matching the project's tsconfig paths.
+- `srcDir`: directory addressed by `importAlias`. `init` reads tsconfig/jsconfig paths such as `"@/*": ["./src/*"]` and records `src`, or `""` for the root. Older configs missing this field use the same detection at runtime.
+- `locale` (optional): `lib/ui-text.ts` language, `en` or `ko`. `init --locale ko` records it. To replace installed text after changing it, run `comwit-ui add ui-text --overwrite`.
 
-## 토큰 계약
+## Token contract
 
-`init` 이 `comwit-tokens.css` 를 CSS 옆에 쓰고 `@import` 한다 (SSOT `@comwit/ui-templates/styles.css` 에서 생성).
-안에는 뉴트럴 램프 `--n-1..12` · 시맨틱 색 · 타입스케일 · radius/border/elevation/motion/state/z 노브 ·
-`.dark` 다크 세트 · `@theme inline` 매핑 · `@utility`(z-_, state-_-layer, ring-focus …) 가 전부 들어있다.
-`tw-animate-css` 는 함께 설치된다.
+`init` writes `comwit-tokens.css` next to your stylesheet and imports it. Generated from `@comwit/ui-templates/styles.css`, it includes named palettes, semantic colors, type scales, radius/border/elevation/motion/state/z controls, `.dark` values, `@theme inline` mappings, and named utilities such as `ring-focus`. It also installs `tw-animate-css`.
 
-**프리셋 테마는 배포하지 않는다.** 커스터마이즈는 소비처가 값을 덮어서 한다 — 토큰 뒤에 쓰면 이긴다.
+**No preset themes are shipped.** Customize by overriding values after the token import:
 
 ```css
 @import 'tailwindcss';
 @import './comwit-tokens.css';
 
 :root {
-  --brand: #0b68ba; /* 컴윗 블루 기본값을 교체 */
+  --brand: #0b68ba; /* Replace the default Comwit blue. */
   --brand-strong: #095a9d;
   --brand-ink: #073b67;
   --brand-surface: #e6f4fe;
-  --radius-scale: 0; /* 성격은 L0 노브로: 직각 */
-  --border-width: 2px; /* 굵은 보더 */
-  --duration-base: 0ms; /* 모션 제거 */
+  --radius-scale: 0; /* Square corners through an L0 control. */
+  --border-width: 2px; /* Stronger borders. */
+  --duration-base: 0ms; /* Remove base-duration motion. */
 }
 ```
 
-다크는 `<html class="dark">` 하나. 컴포넌트 코드는 0줄 변한다.
+Enable dark mode with `<html class="dark">`; component code stays unchanged. See the [UI token contract](../README.md#token-contract-theming-and-customization) for the full token tables and scope of each control.
 
-전체 토큰 표와 "노브 하나가 어디까지 번지나"는 [루트 README 의 토큰 계약](../../README.md#토큰-계약-테마--커스터마이징) 참고.
+## Regenerating the registry
 
-## 레지스트리 재생성 (개발자용)
-
-컴포넌트/variant 를 고치면 번들 레지스트리를 다시 뽑는다(모노레포에서):
+After editing components or variants, regenerate the bundled registry from the monorepo root:
 
 ```bash
-pnpm registry        # = comwit-ui build:registry — templates 소스 → packages/ui/cli/registry/*.json
+pnpm registry # Template source → packages/ui/cli/registry/*.json
 ```

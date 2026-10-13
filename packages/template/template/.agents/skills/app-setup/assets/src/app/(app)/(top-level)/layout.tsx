@@ -3,12 +3,13 @@ import type { ReactNode } from 'react'
 import { TabShell } from '@/lib/components/ui/app-shell'
 
 /**
- * (top-level) — BottomNav로 갈 수 있는 화면만 둔다.
- * 탭 하나 = 이 그룹의 폴더 하나 + `services/app/page/layout/app-tabs.ts` 항목 하나.
- * 탭이 아닌 화면은 전부 `(detail)`로 간다.
+ * (top-level) contains only screens reachable from BottomNav.
+ * Each tab has a folder in this group and an entry in services/app/page/layout/app-tabs.ts.
+ * All other screens belong in (detail).
  *
- * 탭끼리는 본문만 바뀌고 탭바는 그대로 선다 — 셸·전환·탭바는 `@/lib/components/ui/app-shell`
- * 설치본이 맡는다. 바깥 셸은 `layout/client.tsx`의 `<AppShell tabs={APP_TABS}>`다.
+ * Tab changes replace the body while keeping the tab bar. The installed
+ * @/lib/components/ui/app-shell provides the shell, transitions, and tab bar.
+ * The outer shell is <AppShell tabs={APP_TABS}> in layout/client.tsx.
  */
 export default function TopLevelLayout({ children }: { children: ReactNode }) {
   return <TabShell>{children}</TabShell>

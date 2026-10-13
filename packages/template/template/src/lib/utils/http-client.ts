@@ -1,6 +1,4 @@
-/**
- * 범용 HTTP 클라이언트 유틸리티
- */
+/** General-purpose HTTP client utilities. */
 
 export interface RequestOptions {
   headers?: Record<string, string>;
@@ -8,9 +6,7 @@ export interface RequestOptions {
   debug?: boolean;
 }
 
-/**
- * HTTP 클라이언트 클래스
- */
+/** HTTP client class. */
 export class HttpClient {
   private debug: boolean = false;
 
@@ -22,9 +18,7 @@ export class HttpClient {
     this.debug = options?.debug ?? false;
   }
 
-  /**
-   * GET 요청
-   */
+  /** GET request. */
   async get<TResponse>(
     endpoint: string,
     options?: RequestOptions
@@ -57,9 +51,7 @@ export class HttpClient {
     return this.handleResponse<TResponse>(response, shouldDebug);
   }
 
-  /**
-   * POST 요청
-   */
+  /** POST request. */
   async post<TResponse>(
     endpoint: string,
     body?: unknown,
@@ -98,9 +90,7 @@ export class HttpClient {
     return this.handleResponse<TResponse>(response, shouldDebug);
   }
 
-  /**
-   * PUT 요청
-   */
+  /** PUT request. */
   async put<TResponse>(
     endpoint: string,
     body?: unknown,
@@ -139,9 +129,7 @@ export class HttpClient {
     return this.handleResponse<TResponse>(response, shouldDebug);
   }
 
-  /**
-   * PATCH 요청
-   */
+  /** PATCH request. */
   async patch<TResponse>(
     endpoint: string,
     body?: unknown,
@@ -180,9 +168,7 @@ export class HttpClient {
     return this.handleResponse<TResponse>(response, shouldDebug);
   }
 
-  /**
-   * DELETE 요청
-   */
+  /** DELETE request. */
   async delete<TResponse>(
     endpoint: string,
     options?: RequestOptions
@@ -215,9 +201,7 @@ export class HttpClient {
     return this.handleResponse<TResponse>(response, shouldDebug);
   }
 
-  /**
-   * URL 빌드 (query parameters 포함)
-   */
+  /** Build a URL, including query parameters. */
   private buildUrl(
     endpoint: string,
     queryParams?: Record<string, string | number | boolean | undefined | null>
@@ -240,9 +224,7 @@ export class HttpClient {
     return url;
   }
 
-  /**
-   * Response 처리
-   */
+  /** Handle the response. */
   private async handleResponse<TResponse>(
     response: Response,
     shouldDebug: boolean = false
@@ -266,7 +248,7 @@ export class HttpClient {
     if (!response.ok) {
       let errorMessage = `HTTP error! status: ${response.status}`;
 
-      // Type guard를 사용한 안전한 에러 메시지 추출
+      // Safely extract an error message with a type guard.
       if (data && typeof data === "object" && "error" in data) {
         const error = data.error;
         if (error && typeof error === "object" && "message" in error) {
@@ -289,9 +271,7 @@ export class HttpClient {
   }
 }
 
-/**
- * API Response 공통 타입
- */
+/** Shared API response type. */
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

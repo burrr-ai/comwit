@@ -1,5 +1,8 @@
 'use client'
 
+import { Copy } from '@/i18n/copy'
+import { useTranslations } from 'next-intl'
+
 import { Button } from '@comwit/ui-templates/button'
 import { Input } from '@comwit/ui-templates/input'
 import { useState, useCallback } from 'react'
@@ -20,6 +23,8 @@ const INITIAL_TODOS: Todo[] = [
 let nextId = 4
 
 export function DemoTodo() {
+  const copy = useTranslations('Copy')
+
   const [todos, setTodos] = useState<Todo[]>(INITIAL_TODOS)
   const [input, setInput] = useState('')
 
@@ -40,25 +45,27 @@ export function DemoTodo() {
 
   return (
     <div className="w-full max-w-sm">
-      <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-muted">Interactive Demo</p>
+      <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-muted">
+        <Copy id="text000" />
+      </p>
       <div className="rounded-lg border border-border bg-white overflow-hidden">
         {/* Input */}
         <div className="flex border-b border-border">
           <Input
             bare
             type="text"
-            aria-label="New todo"
+            aria-label={copy('text001')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && add()}
-            placeholder="Add a todo..."
+            placeholder={copy('text002')}
             className="flex-1 bg-transparent px-4 py-2.5 text-[13px] text-foreground/80 placeholder:text-foreground/25 outline-none"
           />
           <Button
             variant="plain"
             size="none"
             onClick={add}
-            aria-label="Add todo"
+            aria-label={copy('text003')}
             className="px-3 text-muted transition-colors hover:text-foreground"
           >
             <svg
@@ -93,7 +100,10 @@ export function DemoTodo() {
                   variant="plain"
                   size="none"
                   onClick={() => toggle(todo.id)}
-                  aria-label={`Mark ${todo.text} ${todo.done ? 'incomplete' : 'complete'}`}
+                  aria-label={copy('markTodo', {
+                    name: todo.text,
+                    state: copy(todo.done ? 'incomplete' : 'complete'),
+                  })}
                   aria-pressed={todo.done}
                   className={`w-4 h-4 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors ${
                     todo.done
@@ -122,13 +132,13 @@ export function DemoTodo() {
                     todo.done ? 'text-foreground/30 line-through' : 'text-foreground/70'
                   }`}
                 >
-                  {todo.text}
+                  <Copy text={todo.text} />
                 </span>
                 <Button
                   variant="plain"
                   size="none"
                   onClick={() => remove(todo.id)}
-                  aria-label={`Remove ${todo.text}`}
+                  aria-label={copy('removeTodo', { name: todo.text })}
                   className="text-foreground/0 group-hover:text-foreground/30 hover:!text-foreground/60 transition-colors"
                 >
                   <svg
@@ -154,7 +164,7 @@ export function DemoTodo() {
         {todos.length > 0 && (
           <div className="border-t border-border/50 px-4 py-1.5">
             <span className="text-[11px] text-foreground/25">
-              {todos.filter((t) => !t.done).length} remaining
+              {todos.filter((t) => !t.done).length} <Copy id="text004" />{' '}
             </span>
           </div>
         )}

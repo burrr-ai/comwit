@@ -1,0 +1,85 @@
+---
+title: 'comwit v2.4.0 — URL 상태와 느린 최초 로딩'
+date: '2026-09-23'
+description: 'v2.4.0은 타입이 지정된 searchParam() 모델 필드와 선언적인 느린 로딩 상태를 베타에서 안정 버전 @comwit/state로 올립니다.'
+author: 'Codex'
+---
+
+v2.4.0은 2.4 베타 기능을 안정 버전 `@comwit/state` 채널로 가져옵니다. 모델에 URL 기반 필드를 선언하고, 지정한 시간을 넘겨도 최초 로딩 중인 쿼리를 구분할 수 있습니다. 기존 쿼리 요청과 데이터 시점은 바뀌지 않습니다.
+
+<a id="url-state-in-ordinary-models"></a>
+
+## 일반 모델 안의 URL 상태
+
+`searchParam()`은 `model()`에 쿼리 문자열 필드를 선언합니다. 일반적인 타입 지정 모델 필드처럼 `useModel()`이나 `create()` 도메인 훅으로 읽고 액션에서 값을 대입합니다. Provider가 관찰 중인 URL 모델과 브라우저의 연결을 관리하므로 별도 URL 훅이 필요하지 않습니다.
+
+```tsx
+import { action, model, searchParam, useModel } from '@comwit/state'
+
+const location = model({
+  threadId: searchParam({ key: 'thread' }), // string | null
+  page: searchParam({ key: 'page', type: 'number', defaultValue: 1 }), // number
+  archived: searchParam({ key: 'archived', type: 'boolean' }), // boolean | null
+})
+
+const selectionActions = action(({ state }) => ({
+  select(id: string | null) {
+    state(location).threadId = id
+  },
+}))
+
+function PageNumber() {
+  const page = useModel(location, (state) => state.page)
+  return <span>{page}</span>
+}
+```
+
+유효한 URL 값은 기본값보다 우선합니다. 없거나 유효하지 않으면 `defaultValue`를 사용하고, 기본값도 없으면 `null`입니다. 빈 문자열은 유효한 문자열이며 숫자는 유한해야 합니다. 불리언은 `true`/`false`, `1`/`0`을 받습니다. 다른 형식은 사용자 정의 `parse`, `serialize`로 지원합니다. 모델 쓰기는 기본적으로 브라우저 히스토리 `replace`를 사용합니다. 뒤로가기 항목을 만들려면 `history: 'push'`를 지정하세요. 관련 없는 쿼리 매개변수와 해시는 보존됩니다.
+
+서버 렌더링에서는 선택적 `ComwitProvider` prop인 `getServerSearchParams?: () => string | null`로 첫 모델 읽기 전에 요청 URL을 제공하고 hydration에도 같은 값을 전달합니다. 없으면 서버와 첫 hydration 스냅샷은 기본값을 사용하고 클라이언트가 커밋 후 현재 URL과 맞춥니다. 고급 흐름에서는 `searchParam.getSnapshot(state, field)`의 `ready`, `value`, `revision`을 읽고 액션에서 조건부 `searchParam.set()`을 사용해 오래된 비동기 결과의 적용을 막을 수 있습니다. 이 도구는 라우트 데이터를 불러오거나 라우트 식별자를 검증하지 않습니다. 해당 작업은 앱이 담당합니다.
+
+파싱, 서버 초기화, 히스토리, 조건부 쓰기는 [URL 상태 레퍼런스](/docs/api/router)를 참고하세요. [PR #88](https://github.com/burrr-ai/comwit/pull/88)에서 도입됐습니다.
+
+<a id="a-query-flag-for-slow-initial-loading"></a>
+
+## 느린 최초 로딩을 나타내는 쿼리 플래그
+
+쿼리에 `slowLoadingMs`를 선언하고 일반 쿼리 상태에서 `isSlowLoading`을 읽으세요. 처음에는 false이며 최초 로딩이 기준 시간을 넘겼을 때만 true가 됩니다. 성공, 오류, 사용 가능한 캐시 데이터가 생기면 해제됩니다.
+
+```tsx
+import { model, query, useModel } from '@comwit/state'
+
+const projects = model({
+  list: query<Project[]>({
+    initialData: [],
+    queryFn: fetchProjects,
+    slowLoadingMs: 500,
+  }),
+})
+
+function Projects() {
+  const result = useModel(projects, (state) => state.list.load())
+  if (result.isLoading && !result.isSuccess) {
+    return result.isSlowLoading ? <ProjectsSkeleton /> : null
+  }
+  if (result.isSuccess) return <ProjectsList items={result.data} />
+  if (result.isError) return <LoadError error={result.error} />
+  return null
+}
+```
+
+`query()`, `query.infinite()`, `query.realtime()`, `local.query()`, `local.infinite()`에서 사용할 수 있습니다. `0`부터 `2147483647`까지 유한한 밀리초를 받습니다. 생략하면 타이머 없이 false를 유지합니다. 요청, Promise, 데이터, `isLoading`, `isFetching`을 지연하지 않습니다. 최신 로컬 복원이나 백그라운드 재검증은 느린 최초 로딩으로 표시하지 않습니다. 인자나 로컬 스코프가 바뀌면 새 구간을 시작하고 같은 요청의 재시도는 기존 구간을 유지합니다. 서버 렌더링에서는 로딩 타이머를 시작하지 않습니다.
+
+`isSlowLoading: false`가 데이터 준비 완료를 뜻하지는 않습니다. `isSuccess` 등 상태 플래그를 확인하세요. 공간을 확보할지 스켈레톤을 보여 줄지는 UI가 결정합니다. [쿼리 레퍼런스](/docs/api/query#slow-initial-loading)와 [PR #90](https://github.com/burrr-ai/comwit/pull/90)을 참고하세요.
+
+<a id="upgrade"></a>
+
+## 업그레이드
+
+```bash
+yarn add @comwit/state@2.4.0
+```
+
+2.3.0에서 필수 API 마이그레이션은 없습니다. 2.4 베타의 선언과 타입은 2.4.0에서도 같습니다. 사용 중단 안내가 붙은 `comwit` 호환 패키지는 별도 패키지로 남으며, 현재 API는 `@comwit/state`를 설치하세요.
+
+안정 패키지는 npm `latest` 태그로 게시됩니다. [패키지 README](https://github.com/burrr-ai/comwit/tree/latest/packages/state/core)와 [LLM 레퍼런스](https://library.comwit.io/llms.txt)도 안정 API를 설명합니다.

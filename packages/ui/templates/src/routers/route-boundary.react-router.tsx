@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * RouteBoundary — React Router 용. `comwit-ui add page-transition` 이 react-router 를 감지하면 이 파일을 설치한다.
+ * RouteBoundary — React Router integration, installed when comwit-ui add page-transition detects react-router.
  *
- * useLocation 의 pathname 을 <PageBoundary> 에 넘긴다. 라우팅되는 영역(<Outlet /> 등)을 한 번 감싼다:
+ * Passes useLocation pathname to PageBoundary. Wrap the routed area (such as Outlet) once:
  *
  *   <PageTransition config={transitions}>
  *     <RouteBoundary><Outlet /></RouteBoundary>
@@ -19,7 +19,7 @@ export type RouteBoundaryProps<T extends React.ElementType = 'div'> = Omit<
   PageBoundaryProps<T>,
   'path' | 'resolve'
 > & {
-  /** 논리 경로와 DOM 수명을 함께 정한다. 생략하면 { id: location.pathname }. */
+  /** Determine both logical path and DOM lifetime. Defaults to { id: location.pathname }. */
   resolve?: (location: Location) => { id: string; key?: string | number }
 }
 

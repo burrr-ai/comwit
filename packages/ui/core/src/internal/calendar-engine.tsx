@@ -3,16 +3,16 @@
 import * as React from 'react'
 
 // ════════════════════════════════════════════════════════════════════════
-// Calendar engine — 날짜 선택 달력의 헤드리스 로직 (date-picker 용)
+// Calendar engine — headless date-selection logic for date-picker.
 //
-// 여기에는 UX-JS 만 산다: 입력값 파싱, 42-셀 월 그리드 빌드, 선택/비활성 판정,
-// 뷰-월 상태 + 이월 네비게이션, 오늘 계산, onChange 로 넘길 출력값 포매팅.
-// Tailwind 클래스·라벨·표시 문자열 등 프레젠테이션은 소비 템플릿이 소유한다.
+// Owns UX logic only: input parsing, the 42-cell month grid, selected/disabled states,
+// view-month state and navigation, today's date, and formatting onChange output.
+// The consuming template owns presentation such as Tailwind classes, labels, and display strings.
 // ════════════════════════════════════════════════════════════════════════
 
 // ── Pure helpers ─────────────────────────────────────────────────────────
 
-/** "YYYY-MM-DD" → Date(로컬 자정). 파싱 실패 시 null. */
+/** "YYYY-MM-DD" → Date at local midnight. Returns null on parse failure. */
 export function parseYMD(value: string | undefined): Date | null {
   if (!value) return null
   const [y, m, d] = value.split('-').map(Number)
@@ -20,7 +20,7 @@ export function parseYMD(value: string | undefined): Date | null {
   return new Date(y, m - 1, d)
 }
 
-/** Date → "YYYY-MM-DD" (onChange 로 넘길 출력값). */
+/** Date → "YYYY-MM-DD", the output passed to onChange. */
 export function formatYMD(date: Date): string {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
@@ -67,21 +67,21 @@ export type CalendarDay = {
 export type CalendarPanel = {
   viewMonth: Date
   year: number
-  /** viewMonth 의 월(표시용 1-based). */
+  /** The viewMonth month number, 1-based for display. */
   month: number
   selected: Date | null
   days: CalendarDay[]
   goPrevMonth: () => void
   goNextMonth: () => void
-  /** 선택 허용(비활성 아님) 시 "YYYY-MM-DD" 반환, 아니면 null. 소비자가 onChange 로 넘긴다. */
+  /** Return "YYYY-MM-DD" if selection is allowed (not disabled), otherwise null. The consumer passes it to onChange. */
   selectDate: (d: Date) => string | null
   today: Date
 }
 
 /**
- * 달력 본문(월 네비 + 42-셀 그리드 + 선택/비활성 판정)의 헤드리스 훅.
- * value/min/max 는 "YYYY-MM-DD" 문자열. 뷰-월은 마운트 시 선택값(없으면 오늘)의
- * 달로 초기화되고, 이후 goPrev/goNextMonth 네비게이션으로만 바뀐다(원래 동작 보존).
+ * Headless hook for the calendar body: month navigation, 42-cell grid, and selected/disabled states.
+ * value/min/max are "YYYY-MM-DD" strings. On mount, the view month starts at the selected month or today,
+ * then changes only through goPrev/goNextMonth navigation, preserving the original behavior.
  */
 export function useCalendarPanel(opts: {
   value?: string

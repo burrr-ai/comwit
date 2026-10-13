@@ -1,8 +1,12 @@
+import { localizeMetadata } from '@/i18n/metadata'
+
+import { Copy } from '@/i18n/copy'
+import { useLocale, useTranslations } from 'next-intl'
 import type { Metadata } from 'next'
 import { tokens, tokenMap, byName } from '../_generated/catalog'
 import { CodeBlock } from '../_components/code-block'
 
-export const metadata: Metadata = { title: 'Tokens and theming' }
+const metadata: Metadata = { title: 'Tokens and theming' }
 
 const ORDER = [
   'Palette',
@@ -27,14 +31,18 @@ const EXAMPLE = `@import './comwit-tokens.css';
 }`
 
 export default function ThemingPage() {
+  const copy = useTranslations('Copy')
+  const locale = useLocale()
+
   const groups = ORDER.filter((g) => tokens.some((t) => t.group === g))
   return (
     <div className="max-w-5xl">
       <header className="max-w-2xl">
-        <h1 className="text-display-lg text-foreground">Tokens and theming</h1>
+        <h1 className="text-display-lg text-foreground">
+          <Copy id="text239" />
+        </h1>
         <p className="mt-3 text-body text-soft-foreground">
-          Components only read tokens. Override the palette and a few dials after the import, and
-          every component follows without a single file edit. Dark mode is one class.
+          <Copy id="text240" />{' '}
         </p>
       </header>
 
@@ -43,19 +51,26 @@ export default function ThemingPage() {
       </div>
 
       <section className="mt-12">
-        <h2 className="text-display-sm text-foreground">Try it</h2>
+        <h2 className="text-display-sm text-foreground">
+          <Copy id="text241" />
+        </h2>
         <iframe
+          key={locale}
           src="/preview/ui/theme"
-          title="Theme playground"
+          title={copy('text242')}
           className="theme-editor-frame mt-5"
         />
       </section>
 
       <section className="mt-16 space-y-12">
-        <h2 className="text-display-sm text-foreground">All tokens</h2>
+        <h2 className="text-display-sm text-foreground">
+          <Copy id="text243" />
+        </h2>
         {groups.map((g) => (
           <div key={g}>
-            <h3 className="text-title-md text-foreground">{g}</h3>
+            <h3 className="text-title-md text-foreground">
+              <Copy text={g} />
+            </h3>
             <div className="mt-3 divide-y divide-border border-y border-border">
               {tokens
                 .filter((t) => t.group === g)
@@ -79,9 +94,13 @@ export default function ThemingPage() {
                             <span
                               className="size-5"
                               style={{ background: t.value }}
-                              title="Light"
+                              title={copy('text244')}
                             />
-                            <span className="size-5" style={{ background: t.dark }} title="Dark" />
+                            <span
+                              className="size-5"
+                              style={{ background: t.dark }}
+                              title={copy('text245')}
+                            />
                           </span>
                         ) : (
                           <span className="size-5 shrink-0" />
@@ -100,12 +119,12 @@ export default function ThemingPage() {
                             href={`/ui/components#${n}`}
                             className="text-caption text-soft-foreground underline-offset-2 hover:text-primary hover:underline"
                           >
-                            {byName[n]?.title ?? n}
+                            <Copy text={byName[n]?.title ?? n} />
                           </a>
                         ))}
                         {users.length > 8 && (
                           <span className="text-caption text-muted-foreground">
-                            +{users.length - 8} more
+                            +{users.length - 8} <Copy id="text246" />{' '}
                           </span>
                         )}
                       </div>
@@ -118,4 +137,8 @@ export default function ThemingPage() {
       </section>
     </div>
   )
+}
+
+export async function generateMetadata() {
+  return localizeMetadata(metadata)
 }

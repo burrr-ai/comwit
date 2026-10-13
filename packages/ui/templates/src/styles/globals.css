@@ -6,72 +6,76 @@
 @import 'tailwindcss/preflight.css' layer(base);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
-/* 다크는 클래스 단일 스위치. `light-dark()` 를 쓰지 않는 이유:
-   그건 색만 커버하고 `dark:` 변형(미디어 기반)과 신호가 갈려 반쪽 다크가 난다.
-   `.dark` 하나가 (1) 토큰 값 (2) dark: 변형 (3) color-scheme 를 동시에 문다. */
+/*
+ * Dark mode uses one class switch. light-dark() covers only colors and would diverge from media-based
+ * dark: variants, creating partial dark mode. The .dark class controls token values, dark: variants,
+ * and color-scheme together.
+ */
 @custom-variant dark (&:is(.dark *));
 
-/* ════════════════════════════════════════════════════════════════
-   comwit-ui 디자인 토큰 (SSOT) — 기본값은 컴윗 디자인 시스템이다.
+/*
+ * comwit-ui design tokens: single source of truth, defaulting to the Comwit design system.
+ *
+ * Tone: warm white, deep ink, and Toss-inspired blue. Avoid pure black and neon.
+ * Always pair a surface X with its text color X-foreground.
+ *
+ * Three layers:
+ * L0 primitives: the only literal values, with named palettes (ink, brand, line, etc.) and controls (radius, motion, etc.).
+ * L1 semantics: role tokens (--background, --primary, --border, etc.), all aliases of L0.
+ * L2 utilities: @theme inline exposes L1 as Tailwind names such as bg-primary and rounded-card.
+ *
+ * Customize by overriding only L0. Components consume utilities, not literals, so no JSX edits are required.
+ * No preset themes are shipped. Comwit provides defaults; consumers own the design choices.
+ */
 
-   톤: 따뜻한 화이트 + 딥 잉크 + 토스톤 블루. 순블랙·네온 금지.
-   색은 항상 "면(X) / 그 위 텍스트(X-foreground)" 쌍으로 생각한다.
-
-   3계층:
-     L0 프리미티브 — 실제 값이 사는 유일한 곳. 이름 있는 팔레트(ink·brand·line…) + 노브(radius·motion…)
-     L1 시맨틱     — 역할 토큰(--background·--primary·--border…). 전부 L0 의 alias.
-     L2 유틸       — @theme inline 이 L1 을 Tailwind 유틸명으로 승격(bg-primary·rounded-card…).
-
-   커스터마이즈 = L0 만 덮는다. 컴포넌트는 리터럴을 쓰지 않고 유틸만 소비하므로 JSX 0 수정.
-   **프리셋 테마는 싣지 않는다.** 컴윗 톤이 기본값일 뿐, 의견은 소비처가 갖는다.
-   ──────────────────────────────────────────────────────────────── */
-
-/* ── L0: 프리미티브(라이트) + 노브 ─────────────────────────────── */
+/* ── L0: light primitives and controls ── */
 :root {
   color-scheme: light;
 
-  /* 면(Surface) — 캔버스 → 옅은 면 → hover 면 → 선택 면 */
-  --canvas: #ffffff; /* 페이지 바탕 */
-  --canvas-raised: #ffffff; /* 카드 — 라이트에선 캔버스와 같고 그림자로 뜬다 */
-  --canvas-overlay: #ffffff; /* 팝오버·다이얼로그 */
-  --surface-subtle: #f4f5f7; /* 카드·그룹 배경 (옅은 면) */
-  --fill: #e9ebef; /* hover·눌림 면. 브랜드색 아님 → bg-accent */
-  --fill-strong: #dfe2e7; /* 선택됨 — hover 보다 한 스텝 눌러 둘이 구분되게 */
+  /* Surfaces: canvas → subtle surface → hover → selected. */
+  --canvas: #ffffff; /* Page background. */
+  --canvas-raised: #ffffff; /* Cards: same as canvas in light mode, elevated by shadows. */
+  --canvas-overlay: #ffffff; /* Popovers and dialogs. */
+  --surface-subtle: #f4f5f7; /* Card/group background (subtle surface). */
+  --fill: #e9ebef; /* Hover/pressed surface, not a brand color → bg-accent. */
+  --fill-strong: #dfe2e7; /* Selected state: one step stronger than hover to distinguish them. */
 
-  /* 잉크(Ink) — 제목 → 본문 → 메타 → 힌트 → 비활성 */
+  /* Ink: heading → body → metadata → hint → disabled. */
   --ink: #0a0a0a;
-  --ink-soft: #484848; /* 제목이 아닌 기본 읽기 텍스트 */
-  --ink-muted: #6b6b6b; /* 메타·도움말 */
-  --ink-subtle: #9ca3af; /* 3차 텍스트·플레이스홀더 */
-  --ink-disabled: #999999; /* 비활성 표시 전용. 대비 미달이므로 본문에 쓰지 말 것 */
+  --ink-soft: #484848; /* Default reading text, excluding headings. */
+  --ink-muted: #6b6b6b; /* Metadata and help text. */
+  --ink-subtle: #9ca3af; /* Tertiary text and placeholders. */
+  --ink-disabled: #999999; /* Disabled indicators only. Insufficient contrast for body text. */
 
-  /* 브랜드(Brand) — 리브랜딩은 이 5개만 바꾸면 된다 */
-  --brand: #3182f6; /* 지배적 액션 (토스 블루) */
+  /* Brand: change these five values to rebrand. */
+  --brand: #3182f6; /* Primary action (Toss blue). */
   --brand-foreground: #ffffff;
-  --brand-strong: #1b64da; /* hover·강조 */
-  --brand-ink: #0b2e6b; /* 브랜드 틴트 면 위 텍스트 */
-  --brand-surface: #eff5ff; /* 브랜드 틴트 면 */
+  --brand-strong: #1b64da; /* Hover and emphasis. */
+  --brand-ink: #0b2e6b; /* Text on the brand-tinted surface. */
+  --brand-surface: #eff5ff; /* Brand-tinted surface. */
 
-  /* 선(Line) */
-  --line: #e8e8e5; /* 헤어라인 — 카드·디바이더 */
-  --line-strong: #d8dade; /* 입력 외곽 — 한 톤 강하게(폼 어포던스) */
+  /* Lines. */
+  --line: #e8e8e5; /* Hairline: cards and dividers. */
+  --line-strong: #d8dade; /* Input outline: one tone stronger for form affordance. */
 
-  /* 상태(Status) — 계열마다 5토큰. 브랜드와 분리되어 리브랜딩에도 고정된다.
-       {s} 솔리드 면 · {s}-foreground 솔리드 위 텍스트 · {s}-surface 틴트 면
-       {s}-surface-foreground 틴트 면 위 텍스트(AA 4.5:1+) · {s}-border 틴트 면의 보더 */
+  /*
+   * Status: five tokens per color family, independent of brand and unchanged by rebranding.
+   * {s}: solid surface; {s}-foreground: text on solid; {s}-surface: tinted surface;
+   * {s}-surface-foreground: text on tint (AA 4.5:1+); {s}-border: tinted-surface border.
+   */
   --success: #30a46c;
   --success-foreground: #ffffff;
   --success-surface: #e6f6eb;
   --success-surface-foreground: #1c7549;
   --success-border: #8eceaa;
   --warning: #f76b15;
-  --warning-foreground: #431407; /* 흰색은 2.97:1 미달 → 다크 잉크 */
+  --warning-foreground: #431407; /* White falls short at 2.97:1; use dark ink. */
   --warning-surface: #ffefd6;
   --warning-surface-foreground: #b54500;
   --warning-border: #f5ae73;
-  --destructive: #e5484d; /* 위험·되돌릴 수 없는 액션 */
+  --destructive: #e5484d; /* Dangerous or irreversible action. */
   --destructive-foreground: #ffffff;
-  --destructive-strong: #c62a2f; /* 위험 액션 hover */
+  --destructive-strong: #c62a2f; /* Dangerous-action hover. */
   --destructive-surface: #feebec;
   --destructive-surface-foreground: #c62a2f;
   --destructive-border: #f4a9aa;
@@ -81,91 +85,97 @@
   --info-surface-foreground: #0b68ba;
   --info-border: #8ec8f6;
 
-  /* 글래스(Glass) — 앱바·탭바·메뉴·토스트의 굴절 유리 면 (.glass 가 소비) */
-  --glass-tint: rgb(233 235 239); /* 유리에 섞는 색. 컴포넌트 tint prop 이 인라인으로 덮는다 */
-  --glass-opacity: 0.38; /* tint 불투명도 — 낮을수록 뒤가 비친다 */
-  --glass-veil: #ffffff; /* blur·frosted·fade 변형의 옅은 막 */
-  --glass-edge: rgba(255, 255, 255, 0.55); /* 유리 테두리 */
-  --glass-sheen: rgba(255, 255, 255, 0.9); /* 윗모서리 광택 */
-  --glass-glow: rgba(255, 255, 255, 0.42); /* 면 위 방사 반사 */
-  --glass-shade: rgba(10, 10, 10, 0.08); /* 아랫모서리 음영 */
+  /* Glass: refractive surfaces for app bars, tab bars, menus, and toasts, consumed by .glass. */
+  --glass-tint: rgb(
+    233 235 239
+  ); /* Color mixed into glass; the component tint prop overrides it inline. */
+  --glass-opacity: 0.38; /* Tint opacity: lower values reveal more of the backdrop. */
+  --glass-veil: #ffffff; /* Subtle film for blur, frosted, and fade variants. */
+  --glass-edge: rgba(255, 255, 255, 0.55); /* Glass border. */
+  --glass-sheen: rgba(255, 255, 255, 0.9); /* Top-edge gloss. */
+  --glass-glow: rgba(255, 255, 255, 0.42); /* Radial reflection on the surface. */
+  --glass-shade: rgba(10, 10, 10, 0.08); /* Bottom-edge shading. */
   --glass-shadow: 0 2px 4px rgba(16, 24, 40, 0.09), 0 12px 28px rgba(16, 24, 40, 0.12);
 
-  /* 형태 노브 */
-  --radius: 10px; /* 컨트롤(버튼 외 입력·셀렉트) 반경 → rounded-control */
+  /* Shape controls. */
+  --radius: 10px; /* Control radius for inputs and selects, excluding buttons → rounded-control. */
   --card-radius: 16px; /* → rounded-card */
-  --sheet-radius: 20px; /* 바텀시트·토스트 → rounded-sheet */
-  --pill-radius: 9999px; /* 알약(버튼·칩·탭바). 각지게 하려면 8px 같은 값으로 */
-  --radius-scale: 1; /* 모든 반경의 승수. 0 = 완전 직각 */
-  --text-scale: 1; /* 타입 스케일 승수. 행간은 무단위 비율이라 같이 따라온다 */
-  --tracking-scale: 1; /* 자간 승수. 0 = 타이트 자간을 끈다 */
-  --border-width: 1px; /* bare/방향 보더 두께 (아래 @layer utilities 가 배선) */
-  --border-width-strong: 2px; /* 강조 보더 두께 */
-  --focus-ring-width: 2px; /* 면 있는 컨트롤의 키보드 포커스 링 */
+  --sheet-radius: 20px; /* Bottom sheets and toasts → rounded-sheet. */
+  --pill-radius: 9999px; /* Pills for buttons, chips, and tab bars. Use a value such as 8px for squarer corners. */
+  --radius-scale: 1; /* Multiplier for all radii. 0 creates square corners. */
+  --text-scale: 1; /* Type-scale multiplier. Unitless line-height ratios scale with it. */
+  --tracking-scale: 1; /* Letter-spacing multiplier. 0 disables tight tracking. */
+  --border-width: 1px; /* Bare/directional border thickness, wired by @layer utilities below. */
+  --border-width-strong: 2px; /* Emphasized border thickness. */
+  --focus-ring-width: 2px; /* Keyboard focus ring for surfaced controls. */
   --focus-ring-offset: 2px;
-  --field-ring-width: 3px; /* 입력 필드 포커스 링(옅은 브랜드 링) */
-  --spacing: 0.25rem; /* p-/m-/gap- 시드. 낮추면 전역 밀도↑ */
+  --field-ring-width: 3px; /* Input-field focus ring (subtle brand ring). */
+  --spacing: 0.25rem; /* Base unit for p-, m-, and gap-. Lower values increase global density. */
 
-  /* 타이포 노브 — Tailwind 네임스페이스(--font-weight-* / --font-display)는 L2 가 매핑 */
+  /* Typography controls; L2 maps Tailwind namespaces such as --font-weight-* and --font-display. */
   --display-font: var(--font-sans);
   --weight-normal: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
 
-  /* 모션 노브 */
+  /* Motion controls. */
   --duration-instant: 75ms;
-  --duration-fast: 150ms; /* 눌림·색 전환 */
+  --duration-fast: 150ms; /* Pressed-state and color transitions. */
   --duration-base: 200ms;
   --duration-slow: 300ms;
   --duration-slower: 500ms;
-  --press-scale: 0.98; /* 눌림 스케일. 1 = 눌림 없음 */
-  --press-scale-thumb: 1.1; /* 스위치 썸은 눌리면 오히려 커진다. 1 = 없음 */
+  --press-scale: 0.98; /* Pressed scale. 1 disables scaling. */
+  --press-scale-thumb: 1.1; /* Switch thumbs grow when pressed. 1 disables scaling. */
   --ripple-opacity: 0.35;
 
-  /* 상태 노브 — 즉흥 알파 대신 이름 있는 값 */
-  --state-hover: 0.05; /* hover 헤일로 불투명도 */
-  --state-selected: 0.1; /* 선택 상태 헤일로 불투명도 */
-  --state-disabled: 0.5; /* 비활성 컨테이너 */
-  --state-disabled-content: 0.4; /* 비활성 셀·아이콘 */
+  /* State controls: named values instead of ad hoc alpha levels. */
+  --state-hover: 0.05; /* Hover-halo opacity. */
+  --state-selected: 0.1; /* Selected-state halo opacity. */
+  --state-disabled: 0.5; /* Disabled container. */
+  --state-disabled-content: 0.4; /* Disabled cells and icons. */
 
-  /* 레이어링 SSOT — 오버레이가 서로 물리지 않게.
-     dropdown 은 modal **위**다: 다이얼로그·시트 안에서 연 셀렉트·메뉴·피커가 body 로 포털되므로
-     modal 보다 낮으면 자기를 연 다이얼로그 뒤로 숨는다. */
+  /*
+   * Single source for layering so overlays do not overlap incorrectly.
+   * Dropdowns sit above modals: selects, menus, and pickers opened inside dialogs/sheets portal to body,
+   * so a lower layer would hide them behind the dialog that opened them.
+   */
   --z-raised: 10;
   --z-sticky: 20;
-  --z-appbar: 40; /* 앱바·바텀내비 — 콘텐츠 위, 오버레이 아래 */
+  --z-appbar: 40; /* App bars and bottom navigation: above content, below overlays. */
   --z-overlay: 1000;
   --z-modal: 1100;
   --z-dropdown: 1200;
   --z-toast: 1300;
 
-  /* 치수 정합 */
-  --page-gutter: 1rem; /* 페이지 좌우 여백 → px-gutter. 페이지 콘텐츠와 모바일 토스트가 같은 선에 선다 */
+  /* Dimension alignment. */
+  --page-gutter: 1rem; /* Horizontal page spacing → px-gutter. Aligns page content and mobile toasts. */
   --menu-min-width: 8rem;
   --picker-width: 320px;
   --appbar-height: 56px;
   --bottom-nav-height: 64px;
 
-  /* Elevation(라이트) — 보더는 옅게, 분리는 그림자로. 다크는 .dark 에서 재저작 */
+  /* Light elevation: subtle borders, separation through shadows. Reauthored for dark mode in .dark. */
   --elevation-0: none;
   --elevation-1: 0 1px 2px rgba(16, 24, 40, 0.04);
   --elevation-2: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 8px rgba(16, 24, 40, 0.06);
   --elevation-3: 0 2px 4px rgba(16, 24, 40, 0.06), 0 10px 28px rgba(16, 24, 40, 0.08);
   --elevation-4: 0 4px 12px rgba(16, 24, 40, 0.1), 0 16px 40px rgba(16, 24, 40, 0.12);
   --elevation-5: 0 8px 24px rgba(16, 24, 40, 0.12), 0 24px 64px rgba(16, 24, 40, 0.16);
-  /* 소형 요소(스위치 썸·활성 탭) 전용. 컨테이너 사다리와 분리해야 썸이 깨지지 않는다 */
+  /* Small elements only, such as switch thumbs and active tabs. Separate from container elevation to preserve thumb appearance. */
   --elevation-raised: 0 1px 2px rgba(16, 24, 40, 0.1), 0 1px 3px rgba(16, 24, 40, 0.08);
-  --elevation-message: 0 4px 20px rgba(11, 46, 107, 0.06); /* 말풍선·카드형 메시지 */
-  --elevation-panel: 0 10px 30px rgba(11, 46, 107, 0.08); /* 캔버스 위에 뜬 큰 패널 */
+  --elevation-message: 0 4px 20px rgba(11, 46, 107, 0.06); /* Bubbles and card-style messages. */
+  --elevation-panel: 0 10px 30px rgba(11, 46, 107, 0.08); /* Large panel floating above the canvas. */
 }
 
-/* ── L0: 프리미티브(다크) ─────────────────────────────────────── */
+/* ── L0: dark primitives ── */
 .dark {
   color-scheme: dark;
 
-  /* 다크의 depth 는 그림자가 아니라 톤이다 — 인접 면이 항상 한 스텝씩 분리되게 올린다.
-     canvas → card → muted·popover → hover → selected */
+  /*
+   * Dark-mode depth comes from tone rather than shadow; each adjacent surface steps up:
+   * canvas → card → muted/popover → hover → selected.
+   */
   --canvas: #161618;
   --canvas-raised: #1e1f22;
   --canvas-overlay: #26272b;
@@ -179,15 +189,15 @@
   --ink-subtle: #8b8c94;
   --ink-disabled: #6a6b74;
 
-  /* 브랜드 솔리드는 그대로 — 틴트 면과 그 위 텍스트만 어두운 바탕용으로 재저작 */
+  /* Keep the solid brand color; reauthor only tinted surfaces and their text for dark backgrounds. */
   --brand-ink: #b9d4ff;
   --brand-surface: #0c273f;
 
-  /* 선 — hairline 은 은은하게, 입력 외곽은 배경 대비 3:1(WCAG 1.4.11) 이상 */
+  /* Lines: subtle hairlines; input outlines need at least 3:1 contrast against the background (WCAG 1.4.11). */
   --line: #45464d;
   --line-strong: #8b8c94;
 
-  /* status — 솔리드(step9)와 전경은 라이트와 동일. 어두운 면에 얹히는 surface·텍스트·보더만 재저작 */
+  /* Status: solid step9 and foreground match light mode. Reauthor only surfaces, text, and borders placed on dark backgrounds. */
   --success-surface: #10261b;
   --success-surface-foreground: #63d69b;
   --success-border: #3f9169;
@@ -210,7 +220,7 @@
   --glass-shade: rgba(0, 0, 0, 0.3);
   --glass-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 12px 28px rgba(0, 0, 0, 0.55);
 
-  /* 검정 드롭섀도만으론 근검정 배경에서 depth 가 0이 된다 → 강한 그림자 + 흰 inset 하이라이트 */
+  /* Black drop shadows alone provide no depth on near-black backgrounds; combine strong shadows with white inset highlights. */
   --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   --elevation-2:
     0 2px 8px rgba(0, 0, 0, 0.7), 0 1px 2px rgba(0, 0, 0, 0.5),
@@ -229,15 +239,17 @@
   --elevation-panel: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* ── L1: 시맨틱 alias ────────────────────────────────────────────
-   셀렉터에 .dark 를 함께 나열하는 게 핵심이다.
-   CSS 커스텀 프로퍼티는 "선언한 요소"에서 var() 가 치환되므로, 자식 스코프가 L0 만 덮으면
-   :root 에서 이미 계산돼버린 alias 는 따라오지 않는다. L0 를 덮는 스코프마다 alias 도 다시 선언한다.
-
-   커스터마이즈는 소비처가 한다:
-     전역:   styles.css import **뒤에** :root { --brand: …; --radius-scale: 0 }  (같은 특이성, 나중 선언이 이김)
-     스코프: 임의의 셀렉터에서 L1(--primary 등)을 덮으면 그대로 먹는다.
-             L0(--ink 등)를 스코프에서 덮으려면 그 셀렉터에서 아래 alias 도 다시 선언해야 한다. */
+/*
+ * ── L1: semantic aliases ──
+ * Listing .dark alongside the root selector is essential. CSS custom-property var() references resolve on
+ * the element where they are declared. If a child scope overrides only L0, aliases already resolved at
+ * :root do not follow. Redeclare aliases in every scope that overrides L0.
+ *
+ * Consumers customize:
+ * Global: after importing styles.css, use :root { --brand: …; --radius-scale: 0 }. Equal specificity means later declarations win.
+ * Scoped: overriding L1 tokens such as --primary on any selector works directly.
+ * For scoped L0 overrides such as --ink, redeclare the aliases below on that same selector.
+ */
 :root,
 .dark {
   --background: var(--canvas);
@@ -253,7 +265,7 @@
   --primary-ink: var(--brand-ink);
   --primary-surface: var(--brand-surface);
 
-  /* 중립 면 + 텍스트 위계 — foreground → soft(기본 읽기) → muted(메타) → subtle(힌트) */
+  /* Neutral surfaces and text hierarchy: foreground → soft (body) → muted (metadata) → subtle (hints). */
   --secondary: var(--surface-subtle);
   --secondary-foreground: var(--ink);
   --muted: var(--surface-subtle);
@@ -261,55 +273,61 @@
   --soft-foreground: var(--ink-soft);
   --subtle-foreground: var(--ink-subtle);
   --disabled-foreground: var(--ink-disabled);
-  --accent: var(--fill); /* hover 채움 면. 브랜드색 아님(shadcn 관례) */
+  --accent: var(--fill); /* Hover fill surface, not a brand color (shadcn convention). */
   --accent-foreground: var(--ink);
   --selected: var(--fill-strong);
-  --skeleton: var(--surface-subtle); /* 로딩 플레이스홀더 전용면 */
+  --skeleton: var(--surface-subtle); /* Dedicated loading-placeholder surface. */
 
   --border: var(--line);
   --border-strong: var(--line-strong);
-  --input: var(--line-strong); /* 입력 외곽 — hairline 보다 한 톤 강하게 */
-  --ring: var(--brand); /* 포커스 링 — 지배적 액션과 같은 브랜드 신호 */
+  --input: var(--line-strong); /* Input outline: one tone stronger than hairlines. */
+  --ring: var(--brand); /* Focus ring: the same brand signal as primary actions. */
 
-  --switch-thumb: #ffffff; /* 스위치 노브 — 다크에서도 밝아야 트랙 대비 유지 */
-  --overlay: rgba(0, 0, 0, 0.5); /* 모달 스크림 */
-  --surface-glass: rgba(255, 255, 255, 0.72); /* 불투명 backdrop-blur 칩 */
+  --switch-thumb: #ffffff; /* Switch thumb: stays light in dark mode to maintain contrast against the track. */
+  --overlay: rgba(0, 0, 0, 0.5); /* Modal scrim. */
+  --surface-glass: rgba(255, 255, 255, 0.72); /* Opaque backdrop-blur chip. */
 
-  /* 외부 소비자가 shadow-[var(--shadow-card)] 로 참조할 수 있게 변수도 노출 */
+  /* Also expose variables so external consumers can reference shadow-[var(--shadow-card)]. */
   --shadow-card: var(--elevation-2);
   --shadow-card-hover: var(--elevation-3);
 }
 
-/* 다크 전용 시맨틱 보정 — 반드시 alias 규칙 **뒤**에 둔다.
-   html.dark 는 `.dark` 와 `:root` 에 동시에 매치되고 특이성이 같아, 뒤에 오는 alias 가 앞을 되돌린다. */
+/*
+ * Dark-only semantic adjustments must follow the alias rule.
+ * html.dark matches both .dark and :root with equal specificity; later aliases would undo earlier adjustments.
+ */
 .dark {
-  --skeleton: var(--fill); /* 카드(raised) 안에서도 보이도록 한 스텝 위 */
+  --skeleton: var(--fill); /* One step higher so it remains visible inside raised cards. */
   --switch-thumb: #f4f4f7;
   --overlay: rgba(0, 0, 0, 0.72);
   --surface-glass: rgba(30, 31, 34, 0.72);
 }
 
-/* ════════════════════════════════════════════════════════════════
-   L2 — @theme inline: 토큰을 유틸리티로 승격. 유틸명 = 토큰명.
-   inline 이라 var() 인디렉션이 유지되고, .dark 나 소비처의 오버라이드 값이 라이브로 흐른다.
-   ⚠️ 이름 규약: `bg-accent` = 중립 hover 면(브랜드 아님). 브랜드 면은 `bg-primary`.
-   ──────────────────────────────────────────────────────────────── */
+/*
+ * L2 — @theme inline exposes tokens as utilities with matching names.
+ * inline preserves var() indirection, allowing .dark and consumer overrides to flow through live.
+ * Naming convention: bg-accent is the neutral hover surface, not brand. Use bg-primary for brand surfaces.
+ */
 @theme inline {
   --font-sans:
     var(--font-pretendard, 'Pretendard Variable'), var(--font-noto-sans-kr, 'Noto Sans KR'),
     system-ui, sans-serif;
   --font-mono:
     var(--font-noto-sans-mono, 'Noto Sans Mono'), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-display: var(--display-font); /* font-display 유틸 + 제목 슬롯 자동 배선(아래 base) */
+  --font-display: var(
+    --display-font
+  ); /* font-display utility and automatic heading-slot wiring (base rules below). */
 
-  /* 웨이트 노브 → font-normal/medium/semibold/bold 가 노브를 탄다.
-     ※ 이름은 반드시 Tailwind 네임스페이스(--font-weight-normal). */
+  /*
+   * Weight controls feed font-normal/medium/semibold/bold.
+   * Names must use the Tailwind namespace, such as --font-weight-normal.
+   */
   --font-weight-normal: var(--weight-normal);
   --font-weight-medium: var(--weight-medium);
   --font-weight-semibold: var(--weight-semibold);
   --font-weight-bold: var(--weight-bold);
 
-  /* 색 → bg-* / text-* / border-* / ring-*. 반전은 bg-foreground text-background. */
+  /* Colors → bg-*, text-*, border-*, ring-*. Invert with bg-foreground text-background. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -361,22 +379,24 @@
   --color-info-surface-foreground: var(--info-surface-foreground);
   --color-info-border: var(--info-border);
 
-  /* 그림자 → shadow-*. 빌트인을 덮어써서 컴포넌트 편집 0으로 elevation 이 리테마된다. */
+  /* Shadows → shadow-*. Override built-ins to retheme elevation without editing components. */
   --shadow-xs: var(--elevation-1);
   --shadow-sm: var(--elevation-2);
   --shadow-md: var(--elevation-3);
   --shadow-lg: var(--elevation-4);
   --shadow-xl: var(--elevation-5);
   --shadow-raised: var(--elevation-raised);
-  /* 의미로 부르는 별칭 — 카드가 캔버스 위에 살짝 떠 보이게 */
+  /* Semantic aliases that lift cards slightly above the canvas. */
   --shadow-card: var(--elevation-2);
   --shadow-card-hover: var(--elevation-3);
   --shadow-message: var(--elevation-message);
   --shadow-panel: var(--elevation-panel);
 
-  /* ── 목적형 타입 스케일 — 컴윗 밀도(본문 15 · 라벨 14 · 캡션 12).
-     크기+행간+자간을 한 유틸로 묶는다. 제목(display/title)만 굵기를 내장하고,
-     본문·라벨·캡션·마이크로는 비워 두어 font-semibold 등으로 얹는다. 색은 text-* 로 따로. */
+  /*
+   * Purpose-based type scale at Comwit density: body 15, label 14, caption 12.
+   * One utility combines size, line height, and tracking. Only display/title include weight; body, label,
+   * caption, and micro leave it unset for font-semibold or similar. Apply color separately with text-*.
+   */
   --text-display-xl: calc(40px * var(--text-scale));
   --text-display-xl--line-height: 1.1;
   --text-display-xl--font-weight: var(--weight-bold);
@@ -432,9 +452,11 @@
   --text-micro--line-height: 1.27;
   --text-micro--letter-spacing: calc(0.01em * var(--tracking-scale));
 
-  /* 반경 — 목적형이 주 어휘: rounded-control / rounded-card / rounded-sheet / rounded-pill.
-     t-shirt 사다리(rounded-sm/md/lg…)는 Tailwind 기본값 그대로 두고 --radius-scale 만 곱한다.
-     rounded-pill = 소비처가 각지게 만들 수 있는 알약, rounded-full = 항상 원(아바타·라디오·리플). */
+  /*
+   * Purpose-based radii are the primary vocabulary: rounded-control, rounded-card, rounded-sheet, rounded-pill.
+   * Keep Tailwind's rounded-sm/md/lg scale and multiply only by --radius-scale.
+   * rounded-pill can be squared by consumers; rounded-full always stays circular for avatars, radios, and ripples.
+   */
   --radius-control: calc(var(--radius) * var(--radius-scale));
   --radius-card: calc(var(--card-radius) * var(--radius-scale));
   --radius-sheet: calc(var(--sheet-radius) * var(--radius-scale));
@@ -447,15 +469,20 @@
   --radius-xl: calc(12px * var(--radius-scale));
   --radius-2xl: calc(16px * var(--radius-scale));
   --radius-3xl: calc(24px * var(--radius-scale));
-  --radius-full: 9999px; /* 리터럴 = 어떤 테마도 못 바꾼다. 의도된 고정 */
+  --radius-full: 9999px; /* Literal value: intentionally fixed so themes cannot change it. */
 }
 
 @theme {
-  /* 이징 — 빌트인 ease-out/ease-in-out 은 하이재킹하지 않는다 */
+  /* Easing: do not replace built-in ease-out/ease-in-out. */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-emphasized: cubic-bezier(0.34, 1.56, 0.64, 1); /* 오버슈트 — 라디오 도트·탭 인디케이터 */
+  --ease-emphasized: cubic-bezier(
+    0.34,
+    1.56,
+    0.64,
+    1
+  ); /* Overshoot for radio dots and tab indicators. */
 
-  /* 리플 — Chip·Checkbox·Radio. forwards 로 종료 후 opacity 0 유지(잔상 방지) */
+  /* Ripple for Chip, Checkbox, and Radio. forwards preserves opacity 0 after completion to prevent ghosting. */
   --animate-ripple: ripple 600ms ease-out forwards;
   @keyframes ripple {
     from {
@@ -469,9 +496,11 @@
   }
 }
 
-/* ── bare/방향 보더 두께를 노브에 묶는다.
-   @utility 로는 안 된다 — 빌트인과 이름이 겹치면 커스텀 유틸이 조용히 버려진다(실측 확인).
-   같은 utilities 레이어에 "뒤에" 같은 특이성으로 authored 규칙을 두면 이긴다. ── */
+/*
+ * Connect bare/directional border thickness to the control.
+ * @utility cannot override this: custom utilities sharing built-in names are silently discarded (verified).
+ * Later authored rules in the same utilities layer win with equal specificity.
+ */
 @layer utilities {
   .border {
     border-width: var(--border-width);
@@ -496,8 +525,10 @@
   }
 }
 
-/* ── 모션 — 빌트인 duration-* 은 숫자/임의값만 매칭하므로 이름 충돌이 없다.
-   빌트인처럼 --tw-duration 도 쓴다 — tw-animate 의 animate-in/out 이 이 값을 읽는다(없으면 150ms 로 뭉개진다). ── */
+/*
+ * Motion: built-in duration-* matches only numbers/arbitrary values, so names do not collide.
+ * Also set --tw-duration as built-ins do; tw-animate animate-in/out reads it and otherwise falls back to 150ms.
+ */
 @utility duration-instant {
   --tw-duration: var(--duration-instant);
   transition-duration: var(--duration-instant);
@@ -519,7 +550,7 @@
   transition-duration: var(--duration-slower);
 }
 
-/* ── 레이어링 — z-50 난립 대신 이름 있는 사다리 ── */
+/* Layering: a named scale instead of scattered z-50 values. */
 @utility z-raised {
   z-index: var(--z-raised);
 }
@@ -542,7 +573,7 @@
   z-index: var(--z-toast);
 }
 
-/* ── 노브를 부르는 이름 있는 유틸 — 컴포넌트에 arbitrary 를 흩뿌리지 않기 위한 것 ── */
+/* Named utilities for controls, avoiding scattered arbitrary values in components. */
 @utility opacity-disabled {
   opacity: var(--state-disabled);
 }
@@ -570,7 +601,7 @@
 @utility h-bottom-nav {
   height: var(--bottom-nav-height);
 }
-/* 페이지 좌우 여백 — 노치 쪽(safe-area)은 그보다 넓으면 그만큼 비운다. 페이지 콘텐츠도 이걸 쓰면 크롬과 줄이 맞는다. */
+/* Horizontal page spacing: reserve a larger safe area on the notch side when needed. Use this for page content to align it with app chrome. */
 @utility px-gutter {
   padding-left: max(var(--page-gutter), env(safe-area-inset-left));
   padding-right: max(var(--page-gutter), env(safe-area-inset-right));
@@ -586,8 +617,10 @@
   margin-right: max(var(--page-gutter), env(safe-area-inset-right));
 }
 
-/* 포커스 링 폭/오프셋 — Tailwind 가 ring-* 에 쓰는 합성 변수를 그대로 조립한다.
-   var() 폴백은 @property 등록이 없는 경우에도 box-shadow 가 무효화되지 않게 하는 안전장치. */
+/*
+ * Focus-ring width/offset: compose the same variables Tailwind uses for ring-*.
+ * var() fallbacks keep box-shadow valid even without @property registrations.
+ */
 @utility ring-focus {
   --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0
     calc(var(--focus-ring-width) + var(--tw-ring-offset-width, 0px))
@@ -611,8 +644,10 @@
     var(--tw-ring-offset-color);
 }
 
-/* ── 상태 헤일로 — currentColor 를 노브 불투명도로 합성.
-   체크박스/라디오 헤일로가 checked 시 primary 를 자동으로 따라간다. ── */
+/*
+ * State halos: blend currentColor using the configured opacity.
+ * Checkbox/radio halos automatically follow primary when checked.
+ */
 @utility state-hover-layer {
   background-color: color-mix(in oklab, currentColor calc(var(--state-hover) * 100%), transparent);
 }
@@ -625,16 +660,20 @@
 }
 
 @layer base {
-  /* 색 없는 `border` 유틸의 기본색을 hairline 토큰으로.
-     (Tailwind v4 기본 보더색은 currentColor 라 이 규칙이 없으면 날것 검정 테두리가 나온다.) */
+  /*
+   * Use the hairline token as the default for border utilities without an explicit color.
+   * Tailwind v4 defaults to currentColor, which would otherwise produce raw black borders.
+   */
   *,
   ::before,
   ::after {
     border-color: var(--border);
   }
 
-  /* 제목 슬롯이 디스플레이 폰트를 상속 — 소비처가 --display-font 만 바꾸면
-     dialog/sheet/card/alert 제목이 컴포넌트 편집 0으로 세리프/그로테스크가 된다. */
+  /*
+   * Heading slots inherit the display font. Changing only --display-font lets consumers switch dialog,
+   * sheet, card, and alert headings to serif/grotesque without editing components.
+   */
   [data-slot='dialog-title'],
   [data-slot='sheet-title'],
   [data-slot='card-title'],
@@ -650,24 +689,26 @@
     color: var(--foreground);
   }
 
-  /* 전역 스크롤바 — 얇고 살짝 투명, hover 시 또렷해짐 */
+  /* Global scrollbars: thin and slightly translucent, becoming clearer on hover. */
   * {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--ink-subtle) 45%, transparent) transparent;
   }
 }
 
-/* ════════════════════════════════════════════════════════════════
-   컴포넌트 CSS — Tailwind 유틸로 표현이 안 되는 것만 여기 둔다.
-   ──────────────────────────────────────────────────────────────── */
+/*
+ * Component CSS: only rules that cannot be expressed with Tailwind utilities belong here.
+ */
 @layer components {
-  /* ── 굴절 유리(.glass) — RefractiveGlass / GlassSurface 가 소비한다.
-     기본(.glass) = 반투명 틴트 + 광택 + 그림자. 변형:
-       .glass-morphing  렌즈 가장자리 굴절(Chromium 은 SVG 렌즈 · 그 외 blur 폴백) — 메뉴·앱바 버튼
-       .glass-blur      강한 블러 · 보더 없음 — 앱바 전체 면
-       .glass-frosted   서리 유리 — 카드형 패널
-       .glass-fade      아래로 사라지는 블러 — 스크롤 헤더 뒤 페이드
-     tint/opacity 는 인라인 --glass-tint / --glass-opacity 로 덮는다. ── */
+  /*
+   * Refractive glass (.glass), consumed by RefractiveGlass / GlassSurface.
+   * Base .glass combines translucent tint, gloss, and shadow. Variants:
+   * .glass-morphing: edge refraction (SVG lens in Chromium, blur fallback elsewhere), for menus and app-bar buttons.
+   * .glass-blur: strong blur without a border, for full app-bar surfaces.
+   * .glass-frosted: frosted glass for card-style panels.
+   * .glass-fade: downward-fading blur behind scrolling headers.
+   * Override tint/opacity inline with --glass-tint and --glass-opacity.
+   */
   .glass {
     border: var(--border-width) solid var(--line);
     background-color: color-mix(
@@ -687,8 +728,10 @@
       var(--glass-shadow);
   }
 
-  /* 윗모서리 하이라이트 — 면의 반경을 그대로 따라 휘고 가운데가 가장 밝다. 직선으로 그으면 원형·짧은 알약
-     버튼에서 곡선 밖으로 삐져나와 윗부분이 잘린 것처럼 보인다. */
+  /*
+   * Top-edge highlight follows the surface radius and is brightest at the center. A straight line would
+   * extend outside circular or short pill buttons, making their tops appear clipped.
+   */
   .glass::after {
     content: '';
     pointer-events: none;
@@ -786,7 +829,7 @@
       backdrop-filter: blur(12px) saturate(165%) contrast(103%);
     }
 
-    /* SVG 렌즈 — JS 가 Chromium 에서만 .glass-lens 를 붙인다 */
+    /* SVG lens: JS adds .glass-lens only in Chromium. */
     .glass-lens {
       -webkit-backdrop-filter: var(--glass-filter);
       backdrop-filter: var(--glass-filter);
@@ -838,9 +881,11 @@
       backdrop-filter: blur(18px) saturate(155%) var(--glass-filter);
     }
 
-    /* 페이지 전환 중엔 렌즈 대신 CSS 블러 — 엔진이 움직이는 경계에 `contain: layout paint` 를 거는 동안
-       Chromium 은 SVG(url) backdrop-filter 를 통째로 버려 바텀내비·앱바 유리의 블러가 풀린다.
-       전환이 끝나 contain 이 지워지면 렌즈가 돌아온다. */
+    /*
+     * Use CSS blur instead of the lens during page transitions. While the engine applies contain: layout paint
+     * to a moving boundary, Chromium drops SVG url() backdrop-filter entirely, removing app-bar/bottom-nav blur.
+     * The lens returns once the transition ends and contain is removed.
+     */
     [style*='contain: layout paint'] .glass-morphing.glass-lens {
       -webkit-backdrop-filter: blur(12px) saturate(165%) contrast(103%);
       backdrop-filter: blur(12px) saturate(165%) contrast(103%);
@@ -859,23 +904,26 @@
     }
   }
 
-  /* 레이어가 가진 그림자는 여기서 끈다(바깥 버튼이 아니라) — 앱바 뒤로가기처럼 면에 붙는 유리 */
+  /* Disable the layer's own shadow here, not the outer button's, for glass attached to a surface such as an app-bar back button. */
   .glass.glass-shadowless {
     box-shadow: none;
   }
 
-  /* 스크림 위에 뜨는 유리(다이얼로그·시트·팝업) — 뒤가 어두워지므로 틴트를 오버레이 면 색으로, 불투명도를 올려
-     본문·폼이 읽히게 한다. 가장자리 굴절·블러·광택은 그대로. @supports 의 .glass-morphing 값 뒤에 와야 이긴다. */
+  /*
+   * Glass above a scrim (dialogs, sheets, popups): use the overlay surface tint at higher opacity against the
+   * darkened backdrop for readable text/forms. Preserve refraction, blur, and gloss. Must follow the
+   * @supports .glass-morphing values to take precedence.
+   */
   .glass-dense {
     --glass-tint: var(--popover);
     --glass-opacity: 0.8;
-    /* 변수로 두는 이유: 토스트의 :focus-visible 처럼 unlayered 에서 링을 덧대야 하는 곳이 같은 값을 읽는다 */
+    /* Keep this in a variable so unlayered rules adding rings, such as toast :focus-visible, can reuse the same value. */
     --glass-dense-shadow:
       inset 0 1px 0 var(--glass-sheen), inset 0 -1px 1px var(--glass-shade), var(--elevation-3);
     box-shadow: var(--glass-dense-shadow);
   }
 
-  /* 유리 메뉴 행 — hover·포커스에도 굴절 면이 비쳐 보이게 채움 대신 글자색으로 표시한다 */
+  /* Glass menu rows: show hover/focus through text color instead of fill so the refractive surface remains visible. */
   .glass-morphing [data-glass-item] {
     transition:
       color 150ms ease,
@@ -917,14 +965,14 @@
   .glass-morphing [data-glass-item][data-variant='destructive'] svg {
     color: inherit;
   }
-  /* 스크롤되는 메뉴 안에서도 보이도록 안쪽 아웃라인 */
+  /* Inset outline remains visible inside scrolling menus. */
   .glass-morphing [data-glass-item]:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: -2px;
     box-shadow: none;
   }
 
-  /* 투명도·대비 선호 — 유리를 불투명 면으로 */
+  /* Transparency/contrast preferences: replace glass with an opaque surface. */
   @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
     .glass {
       border-color: var(--line-strong);
@@ -951,7 +999,7 @@
     }
   }
 
-  /* ── 리치 텍스트(Editor) 본문 — typography 플러그인 없이도 읽히는 최소 규칙 ── */
+  /* Rich-text editor content: minimal readable styles without the typography plugin. */
   [data-slot='editor'] .tiptap {
     color: var(--foreground);
     font-size: var(--text-body);
@@ -1019,7 +1067,7 @@
   [data-slot='editor'] .tiptap hr {
     border-top: 1px solid var(--border);
   }
-  /* 빈 문서의 플레이스홀더 — tiptap Placeholder 가 첫 빈 노드에 data-placeholder 를 단다 */
+  /* Empty-document placeholder: tiptap Placeholder adds data-placeholder to the first empty node. */
   [data-slot='editor'] .tiptap .is-editor-empty:first-child::before {
     content: attr(data-placeholder);
     float: left;
@@ -1028,9 +1076,12 @@
     pointer-events: none;
   }
 
-  /* ── 앱 셸(app-shell) — 폰 틀. 높이는 브라우저 툴바를 따라가는 dvh, 설치형(standalone) iOS 는 dvh 가 safe-area 를 빼고
-     계산돼 vh 로 되돌린다. 안의 스크롤러들은 스크롤바를 숨긴다. 위에 붙는 것(설치 배너)이 있으면 상단 safe-area 는 그쪽이 갖고,
-     앱바 없는 탭 화면(AppScreen)이 --app-safe-area-top 만큼만 띄운다. ── */
+  /*
+   * App shell: phone frame using dvh to follow browser toolbars. Installed standalone iOS apps revert to vh
+   * because dvh excludes the safe area. Inner scrollers hide scrollbars. Content above the shell, such as an
+   * install banner, owns the top safe area when present. AppScreen tab pages without an app bar reserve
+   * only --app-safe-area-top.
+   */
   [data-slot='app-shell'] {
     --app-safe-area-top: env(safe-area-inset-top);
     height: 100vh;
@@ -1041,7 +1092,7 @@
       height: 100vh;
     }
   }
-  /* 래퍼는 늘 있고 배너는 조건부로 그려진다 — 실제로 보일 때만 상단 safe-area 를 넘긴다. */
+  /* The wrapper always exists but the banner is conditional; hand off the top safe area only when the banner is visible. */
   [data-slot='app-shell']:has(> [data-slot='app-shell-top']:not(:empty)) {
     --app-safe-area-top: 0px;
   }
@@ -1052,7 +1103,7 @@
     display: none;
   }
 
-  /* ── 플로팅 탭 인디케이터 — 바텀내비·세그먼트 탭의 활성 알약 ── */
+  /* Floating tab indicator: active pill for bottom navigation and segmented tabs. */
   .floating-tab-indicator {
     border: 0;
     background-color: color-mix(in srgb, var(--ink) 6%, transparent);
@@ -1060,8 +1111,10 @@
   }
 }
 
-/* ── 토스트 — 면은 toast.tsx 의 <Toast>(GlassSurface · 굴절 유리)가 그린다. sonner 는 위치·스택·스와이프·타이머만 맡고,
-   그 <li> 래퍼(sonner 의 unlayered 기본 CSS)에 필요한 최소 규칙만 같은 unlayered 로 둔다. ── */
+/*
+ * Toasts: Toast in toast.tsx draws the refractive GlassSurface. Sonner owns only position, stacking, swiping,
+ * and timers. Add only the minimal required li-wrapper rules in the same unlayered scope as Sonner's default CSS.
+ */
 .comwit-toaster[data-sonner-toaster] {
   font-family: var(--font-sans);
 }
@@ -1071,7 +1124,7 @@
 .comwit-toaster[data-sonner-toaster] [data-sonner-toast]:focus-visible {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 40%, transparent);
 }
-/* 접힌 스택 — 뒤 토스트는 유리 가장자리만 남기고 내용을 숨긴다(sonner 가 styled 모드에서 해주던 것) */
+/* Collapsed stack: hide rear-toast contents, leaving only their glass edges, as Sonner does in styled mode. */
 .comwit-toaster[data-sonner-toaster] [data-slot='toast'] > * {
   transition: opacity 400ms;
 }

@@ -1,22 +1,24 @@
 'use client'
 
 /**
- * Toast — 유리 토스트. 모바일은 상단 가운데에 레이아웃 폭만큼(위로 스와이프), 데스크톱은 우상단 고정 폭(오른쪽 스와이프).
+ * Toast — glass notification. Mobile uses the layout width at top center with upward swipe; desktop uses
+ * a fixed width at top right with rightward swipe.
  *
- * 엔진은 sonner 다: 위치·스택·스와이프·타이머·접근성을 맡는다. 면은 우리 것이다 — `toast()` 가 sonner 의
- * `toast.custom` 에 <Toast>(GlassSurface · 드롭다운·팝오버와 같은 굴절 유리)를 꽂는다. 그래서 sonner 의
- * 기본 스킨을 CSS 로 덮지 않고, 토스트 한 장이 그냥 리액트 컴포넌트다.
+ * Sonner owns positioning, stacking, swiping, timers, and accessibility. We own the surface: toast() supplies
+ * a Toast component through sonner toast.custom, using GlassSurface with the same refractive glass as menus
+ * and popovers. Each toast is a React component rather than a CSS override of Sonner's default skin.
  *
- *   // 앱 루트에 한 번 (overlay-kit 의 OverlayProvider 옆)
+ *   // Mount once at the app root, beside overlay-kit's OverlayProvider.
  *   <Toaster />
  *
  *   import { toast } from '@/components/ui/toast'
  *   toast.success('Changes saved', { description: 'Just now', action: { label: 'Undo', onClick } })
  *   toast.promise(save(), { loading: 'Saving…', success: 'Saved', error: 'Could not save' })
  *
- * 성공·실패·경고 모두 같은 면이다 — 상태는 왼쪽의 작은 솔리드 아이콘 원만 말한다. 알아서 닫히므로 닫기 버튼은
- * 기본으로 없다(closeButton 으로 켤 수 있다). 모바일 여백은 페이지 거터 토큰(--page-gutter · safe-area)이다.
- * `import { toast } from 'sonner'` 로 직접 부르면 sonner 의 기본 스킨으로 뜬다 — 항상 이 파일의 toast 를 쓴다.
+ * Success, error, and warning share the same surface; only the small solid icon circle on the left indicates
+ * status. Auto-dismiss means no close button by default; enable closeButton when needed. Mobile spacing
+ * uses --page-gutter and safe-area tokens. Always import toast from this file: importing directly from
+ * sonner displays its default skin.
  */
 
 import * as React from 'react'
@@ -41,22 +43,22 @@ export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info' | '
 
 export type ToastAction = {
   label: React.ReactNode
-  /** preventDefault 하면 토스트가 닫히지 않는다. */
+  /** Calling preventDefault keeps the toast open. */
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void
 }
 
 export type ToastOptions = {
-  /** 같은 id 로 다시 부르면 그 토스트를 갱신한다(loading → success 등). */
+  /** Calling again with the same ID updates that toast, such as loading → success. */
   id?: string | number
   description?: React.ReactNode
-  /** ms. Infinity 면 닫을 때까지 남는다. loading 은 기본이 Infinity. */
+  /** Duration in milliseconds. Infinity keeps it until dismissed; loading defaults to Infinity. */
   duration?: number
-  /** 상태 아이콘을 대신한다. */
+  /** Replaces the status icon. */
   icon?: React.ReactNode
   action?: ToastAction
   cancel?: ToastAction
   closeButton?: boolean
-  /** false 면 스와이프·클릭으로 못 닫는다. */
+  /** False prevents dismissal by swipe or click. */
   dismissible?: boolean
   position?: ToasterProps['position']
   onDismiss?: () => void
@@ -95,7 +97,7 @@ type ToastProps = Pick<
   ToastOptions,
   'description' | 'icon' | 'action' | 'cancel' | 'closeButton'
 > & {
-  /** sonner 가 준 토스트 id — 버튼이 닫을 때 쓴다. */
+  /** Toast ID supplied by Sonner, used by buttons when dismissing it. */
   id: string | number
   type?: ToastType
   title: React.ReactNode
@@ -103,8 +105,9 @@ type ToastProps = Pick<
 }
 
 /**
- * 토스트 한 장 — `toast()` 가 sonner 에 꽂는 유리 면. 직접 렌더할 수도 있다:
- * `toast.custom((id) => <Toast id={id} title="…" />)`. 폭은 Toaster 가 정한 --width 다 — sonner 는 커스텀 토스트 칸에 폭을 주지 않는다.
+ * One toast: the glass surface passed to Sonner by toast(). It can also be rendered directly:
+ * toast.custom((id) => <Toast id={id} title="…" />). Width comes from Toaster's --width because Sonner
+ * does not set a width on custom-toast slots.
  */
 function Toast({
   id,
@@ -175,7 +178,7 @@ function Toast({
 
 function show(type: ToastType, title: React.ReactNode, options: ToastOptions = {}) {
   const { id, description, duration, icon, action, cancel, closeButton, ...rest } = options
-  // undefined 키를 넘기지 않는다 — 같은 id 로 갱신할 때 sonner 가 이전 값(예: loading 의 Infinity)을 지워버린다.
+  // Do not pass undefined keys: when updating the same ID, Sonner would erase prior values such as loading's Infinity duration.
   const data: ExternalToast = {}
   if (id !== undefined) data.id = id
   const life = duration ?? (type === 'loading' ? Infinity : undefined)
@@ -218,7 +221,7 @@ const toast = Object.assign(
     warning: (title: React.ReactNode, options?: ToastOptions) => show('warning', title, options),
     info: (title: React.ReactNode, options?: ToastOptions) => show('info', title, options),
     loading: (title: React.ReactNode, options?: ToastOptions) => show('loading', title, options),
-    /** 한 토스트를 loading → success / error 로 옮긴다. id 를 돌려주므로 직접 갱신할 수도 있다. */
+    /** Move one toast from loading to success/error. Returns its ID so it can also be updated manually. */
     promise<T>(
       promise: Promise<T> | (() => Promise<T>),
       messages: PromiseMessages<T>,
@@ -253,13 +256,13 @@ const toast = Object.assign(
       )
       return id
     },
-    /** 임의 컴포넌트를 토스트로. 유리 면이 필요하면 <Toast> 로 감싼다. */
+    /** Render any component as a toast. Wrap it in Toast when a glass surface is needed. */
     custom: sonner.custom,
     dismiss: sonner.dismiss,
   }
 )
 
-/** 모바일 여백 — 페이지 거터 토큰(--page-gutter, px-gutter 와 같은 식)이라 페이지 콘텐츠와 줄이 맞는다. */
+/** Mobile spacing uses the page-gutter token (--page-gutter, the same expression as px-gutter) to align with page content. */
 const GUTTER = 'var(--page-gutter, 1rem)'
 const GUTTER_LEFT = `max(${GUTTER}, env(safe-area-inset-left))`
 const GUTTER_RIGHT = `max(${GUTTER}, env(safe-area-inset-right))`
@@ -269,14 +272,14 @@ const MOBILE_OFFSET = {
   left: GUTTER_LEFT,
 }
 
-/** 앱 루트에 한 번 마운트한다. 면은 <Toast> 가 그리므로 여기엔 위치·스택 설정만 있다. */
+/** Mount once at the app root. Toast draws the surface; this component configures only positioning and stacking. */
 function Toaster({ ...props }: ToasterProps) {
   const { isMobile } = useMobile(767)
 
   return (
     <Sonner
       position={isMobile ? 'top-center' : 'top-right'}
-      // sonner 는 600px 이하에서만 mobileOffset 을 쓴다 — 그 위의 모바일 폭(~767px)도 같은 여백을 쓰게 둘 다 준다.
+      // Sonner uses mobileOffset only at 600px or below. Set both offsets so larger mobile widths up to 767px use the same spacing.
       offset={isMobile ? MOBILE_OFFSET : { top: 24, right: 24 }}
       mobileOffset={MOBILE_OFFSET}
       swipeDirections={isMobile ? ['top'] : ['right']}
@@ -286,7 +289,7 @@ function Toaster({ ...props }: ToasterProps) {
       className="comwit-toaster toaster group"
       style={
         {
-          // 모바일은 레이아웃 폭에서 거터만 뺀다(600px 이하에선 sonner 가 mobileOffset 으로 같은 폭을 잡는다).
+          // On mobile, subtract only the gutters from layout width; at 600px or below Sonner calculates the same width from mobileOffset.
           '--width': isMobile ? `calc(100vw - ${GUTTER_LEFT} - ${GUTTER_RIGHT})` : '356px',
         } as React.CSSProperties
       }

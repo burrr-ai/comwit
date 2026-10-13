@@ -284,7 +284,7 @@ function ResourceSection() {
           </div>
           <div>
             <p style={{ margin: 0, fontWeight: 600, lineHeight: 1.2 }}>
-              {me.isLoading ? '프로필 불러오는 중...' : profileName}
+              {me.isLoading ? 'Loading profile...' : profileName}
             </p>
             <p style={{ margin: 0, color: '#6b7280', fontSize: 12 }}>
               {me.isLoading ? '...' : profileEmail}
@@ -307,7 +307,7 @@ function ResourceSection() {
             cursor: me.isLoading ? 'not-allowed' : 'pointer',
           }}
         >
-          {me.isLoading ? '로딩 중' : '새로고침'}
+          {me.isLoading ? 'Loading' : 'Refresh'}
         </button>
       </div>
 
@@ -339,14 +339,14 @@ function ResourceSection() {
               cursor: collaborators.isLoading ? 'not-allowed' : 'pointer',
             }}
           >
-            팀원 갱신
+            Refresh teammates
           </button>
         </div>
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
           {collaborators.isLoading ? (
-            <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>팀원을 불러오는 중...</p>
+            <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>Loading teammates...</p>
           ) : collaborators.data.data.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 12, color: '#9ca3af' }}>불러온 팀원이 없습니다.</p>
+            <p style={{ margin: 0, fontSize: 12, color: '#9ca3af' }}>No teammates loaded.</p>
           ) : (
             collaborators.data.data.map((user) => (
               <span
@@ -384,7 +384,7 @@ function ResourceSection() {
               padding: '2px 8px',
             }}
           >
-            팀원 다시 불러오기
+            Reload teammates
           </button>
         )}
       </div>
@@ -419,7 +419,7 @@ export function TodoPage({ initialTodos }: { initialTodos: Todo[] }) {
           checked={forceFail}
           onChange={(e) => setForceFail(e.target.checked)}
         />
-        실패 강제 재현 토글
+        Toggle forced failure
       </label>
       <ResourceSection />
       <Stats />

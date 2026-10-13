@@ -1,4 +1,4 @@
-/** 브라우저가 Server Function을 호출하는 단일 내부 HTTP 경로. */
+/** Single internal HTTP endpoint for browser Server Function calls. */
 export const SERVER_FN_BASE_PATH = '/api/internal/server-fn'
 
 export type ServerFnSuccess = {
@@ -25,8 +25,8 @@ type WireMarker = {
 }
 
 /**
- * JSON이 잃어버리는 undefined/Date/bigint/비유한 숫자만 태그해서 보존한다.
- * 나머지는 평범한 JSON이라 Route Handler와 브라우저 양쪽에서 같은 코덱을 쓸 수 있다.
+ * Tag only values JSON loses: undefined, Date, bigint, and non-finite numbers.
+ * Everything else stays ordinary JSON, sharing one codec between Route Handler and browser.
  */
 export function stringifyServerFnWire(value: unknown): string {
   return (
@@ -61,7 +61,7 @@ export function stringifyServerFnWire(value: unknown): string {
   )
 }
 
-/** stringifyServerFnWire의 태그를 원래 JavaScript 값으로 복원한다. */
+/** Restore stringifyServerFnWire tags to their original JavaScript values. */
 export function parseServerFnWire<T>(text: string): T {
   const parsed = JSON.parse(text, (_key, value: unknown) => {
     if (!isWireMarker(value)) return value
@@ -84,7 +84,7 @@ export function parseServerFnWire<T>(text: string): T {
   return restoreUndefined(parsed) as T
 }
 
-/** registry id의 #export 부분을 마지막 URL segment로 옮긴다. */
+/** Move the registry ID's #export suffix to the final URL segment. */
 export function serverFnIdToPath(id: string): string {
   const separator = id.lastIndexOf('#')
   if (separator < 1 || separator === id.length - 1) {
@@ -97,7 +97,7 @@ export function serverFnIdToPath(id: string): string {
     .join('/')
 }
 
-/** catch-all Route Handler의 segments를 registry id로 복원한다. */
+/** Restore catch-all Route Handler segments to a registry ID. */
 export function serverFnPathToId(segments: string[]): string | null {
   if (segments.length < 2 || segments.some((segment) => !segment)) return null
   return `${segments.slice(0, -1).join('/')}#${segments.at(-1)}`
@@ -132,10 +132,10 @@ function restoreUndefined(value: unknown): unknown {
 }
 
 /**
- * Client Component SSR에서 쓰는 같은 프로세스 dispatcher의 전역 키.
- * RSC graph(`ssr-bridge.ts`)가 등록하고, SSR의 client facade가 읽는다.
+ * Global key for the in-process Client Component SSR dispatcher.
+ * The RSC graph (ssr-bridge.ts) registers it; the SSR client facade reads it.
  */
 export const SERVER_FN_SSR_DISPATCH = Symbol.for('comwit.server-fn.ssr-dispatch')
 
-/** HTTP 왕복 없이 응답 wire 문자열을 돌려주는 dispatcher. */
+/** Dispatcher returning the response wire string without an HTTP round trip. */
 export type ServerFnSsrDispatch = (id: string, args: unknown[]) => Promise<string>

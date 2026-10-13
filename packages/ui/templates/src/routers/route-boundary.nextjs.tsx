@@ -1,25 +1,25 @@
 'use client'
 
 /**
- * RouteBoundary — Next.js App Router 용. `comwit-ui add page-transition` 이 next 를 감지하면 이 파일을 설치한다.
+ * RouteBoundary — Next.js App Router integration, installed when comwit-ui add page-transition detects next.
  *
- * 구현은 ssgoi 공식 어댑터(`@ssgoi/react/nextjs` 의 SsgoiRouteBoundary)다 — usePathname 으로 논리 경로를,
- * useSelectedLayoutSegments 로 이 레이아웃이 소유한 슬롯을 읽고, URL 훅이 서스펜드할 수 있어(Cache Components)
- * Suspense 로 감싼다. 여기서는 <PageBoundary> 와 같은 기본 클래스(min-h-full grow)만 입힌다.
+ * Uses the official ssgoi adapter, SsgoiRouteBoundary from @ssgoi/react/nextjs. It reads the logical path with
+ * usePathname and the layout-owned slot with useSelectedLayoutSegments, wrapped in Suspense because URL
+ * hooks may suspend with Cache Components. This layer adds only the PageBoundary defaults, min-h-full grow.
  *
- *   // app/layout.tsx — 라우팅되는 영역을 한 번 감싼다
+ *   // app/layout.tsx: wrap the routed area once.
  *   <PageTransition config={transitions}>
  *     <RouteBoundary>{children}</RouteBoundary>
  *   </PageTransition>
  *
- *   // 탭바가 살아남는 쉘: 바깥은 routeKey 고정, 안쪽이 페이지(앱바 포함)를 바꾼다. 앱바는 페이지 안에 둔다.
+ *   // Persistent tab shell: fixed outer routeKey; inner boundary replaces the page, including its app bar.
  *   <RouteBoundary routeKey="tabs" className="flex min-h-full flex-col">
  *     <RouteBoundary className="flex-1">{children}</RouteBoundary>
  *     <BottomNav … />
  *   </RouteBoundary>
  *
- * `resolve` 로 인터셉트 모달(@modal)처럼 URL 과 소유 슬롯이 다른 경우의 id/key 를 직접 정한다.
- * 어댑터·경계 계약의 상세는 https://ssgoi.dev/llms.txt 를 읽는다.
+ * Use resolve to choose id/key when the URL differs from the owned slot, such as intercepted @modal routes.
+ * See https://ssgoi.dev/llms.txt for the adapter and boundary contract.
  */
 
 import * as React from 'react'
@@ -32,10 +32,10 @@ import {
 
 import { cn } from '../lib/utils'
 
-/** pathname + 이 경계를 그리는 레이아웃 아래의 세그먼트(라우트 그룹 포함). */
+/** pathname plus segments below the layout rendering this boundary, including route groups. */
 export type RouteLocation = NextjsRouteLocation
 
-/** resolve · routeKey · parallelRoutesKey · fallback · as + 요소 속성. */
+/** resolve, routeKey, parallelRoutesKey, fallback, as, and element attributes. */
 export type RouteBoundaryProps<T extends React.ElementType = 'div'> = SsgoiRouteBoundaryProps<T>
 
 function RouteBoundary<T extends React.ElementType = 'div'>(props: RouteBoundaryProps<T>) {
@@ -44,15 +44,15 @@ function RouteBoundary<T extends React.ElementType = 'div'>(props: RouteBoundary
     <SsgoiRouteBoundary<T>
       {...(rest as RouteBoundaryProps<T>)}
       data-slot="page-boundary"
-      // grow: 흐름 안에서 쉘(flex 열)을 채운다. min-h-full: 나가는 동안(absolute, 쉘이 기준)에도 쉘 높이를 유지한다.
+      // grow fills the flex-column shell in normal flow; min-h-full preserves shell height while exiting absolutely.
       className={cn('min-h-full grow', className)}
     />
   )
 }
 
 /**
- * 레이아웃의 선택된 세그먼트를 논리 경로로 만든다. 라우트 그룹 `(group)` 과 인터셉트 표식 `(.)` 은 걷는다.
- * 중첩 레이아웃이면 그 레이아웃의 절대 경로를 basePath 로 준다. (ssgoi 의 selectedSegmentsToPath)
+ * Convert selected layout segments into a logical path, removing route groups (group) and interception
+ * markers (.). For nested layouts, pass their absolute path as basePath. Uses ssgoi selectedSegmentsToPath.
  */
 const segmentsToPath = selectedSegmentsToPath
 

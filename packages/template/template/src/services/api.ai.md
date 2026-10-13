@@ -30,7 +30,7 @@ api/{domain}/
 - **findAll**: Second argument is `PageRequest`, response is `Pageable<T>` — import from `@/server/repository/types`
 - **Timestamp**:
   - Input: KST string with an explicit `+09:00` offset → convert to UTC and pass to repository
-  - Response: Format activity/created/updated timestamps in the API with `kstRelativeTime` from `@/lib/kst` (`30분 전`, `어제`); the UI renders the returned label. Reuse these shared formatters instead of duplicating formatting per domain or page.
+  - Response: Format activity/created/updated timestamps in the API with `kstRelativeTime` from `@/lib/kst` (localized equivalents of `30 minutes ago` and `yesterday`); the UI renders the returned label. Reuse these shared formatters instead of duplicating formatting per domain or page.
   - Use `kstDate`/`kstDateTime` from the same module when exact dates matter (reservations, expiry, payments); keep raw timestamps separately only when needed for editing, sorting, or other logic.
   ```typescript
   import { kstDate, kstRelativeTime } from '@/lib/kst'
@@ -50,12 +50,9 @@ api/{domain}/
 
 ## Storybook API boundary
 
-- 페이지 스토리는 실제 state를 거쳐 이 레이어의 공개 API 객체를 호출한다.
-  `.storybook/mocks/api/{service}-{domain}.ts`에 동일 export·인자·응답 계약의 mock을 둔다.
-- Storybook resolver는 API mock이 없거나 실제 서버 구현이 import되면 실패한다.
-  mock에서 실제 API·action·repository를 runtime import하지 않는다. 계약 참조는 `import type`만 쓴다.
-- 로딩·빈 목록·오류는 API 응답으로 재현하고 mock은 매 스토리 시작 시 초기화한다.
-  자세한 작성·검증 규칙은 [`.storybook/stories/.ai.md`](../../.storybook/stories/.ai.md)를 따른다.
+- Page stories call this layer's public API object through real state. Put matching export, argument, and response contracts in `.storybook/mocks/api/{service}-{domain}.ts`.
+- The Storybook resolver fails when an API mock is missing or a real server implementation is imported. Mocks must never runtime-import actual APIs, actions, or repositories; use `import type` for contracts.
+- Reproduce loading, empty, and error states with API responses. Reset mocks at the start of every story. Follow [`.storybook/stories/.ai.md`](../../.storybook/stories/.ai.md) for authoring and validation.
 
 ## types.ts
 

@@ -3,17 +3,21 @@ import * as React from 'react'
 import { cn } from '@/lib/utils/cn'
 
 type EmptyStateProps = Omit<React.ComponentProps<'div'>, 'title'> & {
-  /** 큰 이모지 또는 아이콘 */
+  /**
+   * Large emoji or icon.
+   */
   icon?: React.ReactNode
   title: React.ReactNode
   description?: React.ReactNode
-  /** CTA 슬롯 — 보통 Button 하나 */
+  /**
+   * Call-to-action slot, usually a single Button.
+   */
   action?: React.ReactNode
 }
 
 /**
- * 빈 상태 — 옅은 면 · 경계선 없음 · 큰 이모지 한 줄 카피 · 보조 설명 · CTA.
- * 목록이 비었을 때 "다음에 할 일"을 하나만 제안한다.
+ * Empty state: subtle borderless surface, large emoji, one-line copy, supporting description, and a CTA.
+ * Suggest just one next action when a list is empty.
  */
 function EmptyState({ icon, title, description, action, className, ...props }: EmptyStateProps) {
   return (

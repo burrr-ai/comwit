@@ -1,0 +1,200 @@
+---
+title: '빠른 시작'
+group: 'Guide'
+slug: 'guide/quickstart'
+order: 1
+---
+
+<a id="quickstart"></a>
+
+# 빠른 시작
+
+설치하고 도메인을 정의한 다음 훅을 사용하세요. 예제는 React 18과 19에서 동작하며, 아래 프로바이더 배치는 Next.js App Router를 사용합니다.
+
+<a id="1-install"></a>
+
+## 1. 설치
+
+```bash
+npm i @comwit/state
+```
+
+에이전트와 함께 개발한다면 핵심 설정과 사용 계약을 담은 [`llms.txt`](/state/llms.txt)를 전달하세요. 아래 단계를 직접 따라 해도 됩니다.
+
+<a id="2-add-the-provider"></a>
+
+## 2. 프로바이더 추가
+
+```tsx
+// app/providers.tsx
+'use client'
+
+import { ComwitProvider } from '@comwit/state'
+import type { ReactNode } from 'react'
+
+export function Providers({ children }: { children: ReactNode }) {
+  return (
+    <ComwitProvider defaultOptions={{ query: { staleTime: 30_000 } }}>{children}</ComwitProvider>
+  )
+}
+```
+
+```tsx
+// app/layout.tsx
+import type { ReactNode } from 'react'
+import { Providers } from './providers'
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
+}
+```
+
+React 앱에서는 루트 컴포넌트를 `ComwitProvider`로 감싸세요. 공유 컨텍스트, 영속화, 전역 인터셉터는 선택 사항입니다. [프로바이더](/state/docs/api/provider)를 참고하세요.
+
+<a id="3-define-a-domain"></a>
+
+## 3. 도메인 정의
+
+작은 카운터부터 시작합니다. 상태 계약과 액션 계약은 기능이 무엇을 제공하는지 TypeScript와 에이전트 모두에게 알려줍니다.
+
+```ts
+// state/counter/types.ts
+export type CounterState = { count: number }
+export type CounterActions = { increment(): void; reset(): void }
+```
+
+```ts
+// state/counter/model.ts
+import { model } from '@comwit/state'
+import type { CounterState } from './types'
+
+export const counter = model<CounterState>({ count: 0 })
+```
+
+```ts
+// state/counter/actions/interact.ts
+import { action } from '@comwit/state'
+import { counter } from '../model'
+import type { CounterActions } from '../types'
+
+export const counterActions = action<CounterActions>(({ state }) => {
+  class Actions {
+    private counter = state(counter)
+
+    increment() {
+      this.counter.count += 1
+    }
+
+    reset() {
+      this.counter.count = 0
+    }
+  }
+  return new Actions()
+})
+```
+
+```ts
+// state/counter/index.ts
+import { create } from '@comwit/state'
+import { counter } from './model'
+import { counterActions } from './actions/interact'
+import type { CounterState, CounterActions } from './types'
+
+export const useCounter = create<CounterState, CounterActions>(counter, {
+  actions: [counterActions],
+})
+```
+
+<a id="4-read-state-call-actions"></a>
+
+## 4. 상태 읽기와 액션 호출
+
+```tsx
+// app/page.tsx
+'use client'
+
+import { useCounter } from '@/state/counter'
+
+export default function CounterPage() {
+  const { count, actions } = useCounter((s) => ({
+    count: s.count,
+    actions: s.actions,
+  }))
+
+  return (
+    <main>
+      <p>Count: {count}</p>
+      <button onClick={actions.increment}>Add one</button>
+      <button onClick={actions.reset}>Reset</button>
+    </main>
+  )
+}
+```
+
+액션은 객체를 변경합니다. 선택자는 `count`를 구독합니다. 각 프로바이더는 독립적인 카운터를 소유하므로 서로 다른 앱 루트와 서버 요청이 싱글턴 상태 인스턴스를 공유하지 않습니다.
+
+<a id="5-add-server-data-when-you-need-it"></a>
+
+## 5. 필요할 때 서버 데이터 추가
+
+쿼리 필드를 사용하고 요청을 소유한 화면에서 `.load()`를 호출하세요. 여기서 `/api/products`는 `Product[]`를 반환하는 앱의 엔드포인트입니다.
+
+```ts
+// state/product/index.ts — a compact domain; split files as it grows
+import { create, model, query } from '@comwit/state'
+
+type Product = { id: string; title: string }
+
+const product = model({
+  list: query<Product[]>({
+    initialData: [],
+    queryFn: async () => {
+      const response = await fetch('/api/products')
+      if (!response.ok) throw new Error('Could not load products')
+      return (await response.json()) as Product[]
+    },
+  }),
+})
+
+export const useProduct = create(product, { actions: [] })
+```
+
+```tsx
+'use client'
+
+import { useProduct } from '@/state/product'
+
+export function ProductList() {
+  const list = useProduct((s) => s.list.load())
+
+  if (list.isLoading) return <p>Loading products…</p>
+  if (list.isError && !list.isSuccess) return <p>{list.error}</p>
+  if (list.data.length === 0) return <p>No products yet.</p>
+
+  return (
+    <ul aria-busy={list.isFetching}>
+      {list.data.map((product) => (
+        <li key={product.id}>{product.title}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+`.load()`는 렌더링 중 로딩 상태를 반환하고 커밋 후 요청을 시작합니다. `s.list`만 선택하면 수동적으로 읽습니다. 서버 렌더링 데이터는 [Next.js 가이드](/state/docs/guide/nextjs)를 따르세요. Server Component가 가져온 값을 `useProduct.hydrate(...)`로 초기화하거나, `<Suspense>` 안의 컴포넌트 하나가 실험적 `s.list.suspend()`로 쿼리를 실행하고 스트리밍하도록 할 수 있습니다.
+
+<a id="next-steps"></a>
+
+## 다음 단계
+
+- [프로젝트 구조](/state/docs/guide/structure) — 도메인과 공개 계약을 구성합니다.
+- [query()](/state/docs/api/query) — 인수, 페이지네이션, 스트리밍, 구독을 살펴봅니다.
+- [local()](/state/docs/api/local) — 재검증 전에 정규화된 IndexedDB 데이터를 복원합니다.
+
+`comwit`에서 마이그레이션하나요? 버전 2는 `@comwit/state` 패키지 이름을 사용합니다. [v2.0.0 릴리스 노트](/blog/v2.0.0-release)를 참고하세요.

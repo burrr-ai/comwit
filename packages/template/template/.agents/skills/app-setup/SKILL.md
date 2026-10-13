@@ -1,6 +1,6 @@
 ---
 name: app-setup
-description: One-time mobile app setup with bottom tabs, fullscreen details, app bars with history-aware back/fallback, Ssgoi, viewport and PWA installation/banner. Leaves .ai.md guidance and removes itself. Use for "앱 만들어줘", "모바일 앱", "앱처럼", "바텀 네비", "탭 화면" before the first app screen; not ordinary websites or template maintenance.
+description: One-time mobile app setup with bottom tabs, fullscreen details, app bars with history-aware back/fallback, Ssgoi, viewport and PWA installation/banner. Leaves .ai.md guidance and removes itself. Use for requests to build a mobile app, add bottom navigation, or create tab screens before the first app screen; not ordinary websites or template maintenance.
 ---
 
 # app-setup
@@ -13,7 +13,7 @@ conventions for ordinary web pages or run setup in the source template checkout.
 
 ## Choose tabs
 
-Use the user's product brief to choose 2–5 tabs (href, label, Lucide icon).
+Use the user's product brief to choose 2–5 tabs (href, label, icon name from `@comwit/ui/icons` without the `Icon` suffix, e.g. House, Search, UserRound).
 Ask only if missing product information prevents a reasonable choice.
 
 Read `src/app/.ai.md`, `src/services/page.ai.md`, `src/services/state.ai.md`,
@@ -33,15 +33,15 @@ Write the chosen tabs to `.agents/state/app-setup-tabs.json`, for example:
 
 ```json
 [
-  { "href": "/", "label": "홈", "icon": "Home" },
-  { "href": "/search", "label": "검색", "icon": "Search" }
+  { "href": "/", "label": "Home", "icon": "House" },
+  { "href": "/search", "label": "Search", "icon": "Search" }
 ]
 ```
 
 Write `.agents/state/app-setup-pwa.json` from the product brief, for example:
 
 ```json
-{ "name": "모아", "shortName": "모아", "description": "함께 모으는 기록", "backgroundColor": "#ffffff", "themeColor": "#ffffff" }
+{ "name": "Gather", "shortName": "Gather", "description": "Collect memories together", "backgroundColor": "#ffffff", "themeColor": "#ffffff" }
 ```
 
 Optional `icon` is an existing local logo path (PNG/SVG/etc.); the CLI uses Next's
