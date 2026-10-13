@@ -9,6 +9,19 @@ npm i @comwit/ui
 # peer: react, react-dom
 ```
 
+## 아이콘 (`@comwit/ui/icons`)
+
+컴윗 원본 아이콘 109개가 같은 패키지의 하위 경로로 들어 있다. 따로 설치하지 않고, 쓰지 않는 아이콘은 번들러가 트리셰이킹으로 걷어낸다.
+
+```tsx
+import { SearchIcon, CheckIcon } from '@comwit/ui/icons' // 정적 — 순수 SVG, 서버 컴포넌트에서도 동작
+import { AnimatedBellIcon } from '@comwit/ui/icons/animated' // 스프링 모션 — 'use client' 경계 보존
+import { iconCatalog } from '@comwit/ui/icons/catalog' // 갤러리용 메타데이터와 전체 드로잉
+```
+
+`size`(기본 24) · `color`(`currentColor`) · `strokeWidth`(기본 1.65) · `title` 과 SVG 속성을 받는다. 모션 prop(`animateOn` · `replayKey`),
+디자인 규칙과 기여 방법은 [`src/icons/README.md`](src/icons/README.md), 갤러리는 https://library.comwit.io/ui/icons.
+
 ## 설계
 
 - **공개 진입점은 배럴 하나** (`@comwit/ui`). 프리미티브는 이름 충돌을 피해 **네임스페이스**로 나간다.

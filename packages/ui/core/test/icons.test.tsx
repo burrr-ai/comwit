@@ -2,12 +2,12 @@ import { createElement, createRef } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { cleanup, fireEvent, render, act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { BellIcon, CheckIcon } from '../src/index'
-import { AnimatedBellIcon, AnimatedCheckIcon } from '../src/animated'
-import { Icon } from '../src/icon'
-import { iconCatalog } from '../src/catalog'
-import { bake, simulate } from '../src/motion'
-import type { IconMotion } from '../src/types'
+import { BellIcon, CheckIcon } from '../src/icons/index'
+import { AnimatedBellIcon, AnimatedCheckIcon } from '../src/icons/animated'
+import { Icon } from '../src/icons/icon'
+import { iconCatalog } from '../src/icons/catalog'
+import { bake, simulate } from '../src/icons/motion'
+import type { IconMotion } from '../src/icons/types'
 
 let reduced: boolean
 let listeners: Set<() => void>

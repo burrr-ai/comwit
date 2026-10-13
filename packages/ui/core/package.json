@@ -1,13 +1,14 @@
 {
   "name": "@comwit/ui",
-  "version": "0.4.0",
-  "description": "Comwit UI — headless UI primitives with a self-built behavior/a11y engine (ported from Radix Primitives). The behavior/a11y engine under @comwit/ui-templates.",
+  "version": "0.5.0",
+  "description": "Comwit UI — headless UI primitives with a self-built behavior/a11y engine (ported from Radix Primitives), plus the original Comwit icon set under @comwit/ui/icons. Styled, editable component source lives in @comwit/ui-templates.",
   "keywords": [
     "react",
     "headless",
     "ui",
     "primitives",
-    "comwit"
+    "comwit",
+    "icons"
   ],
   "homepage": "https://library.comwit.io/ui",
   "license": "MIT",
@@ -25,17 +26,35 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./icons": {
+      "types": "./dist/icons/index.d.ts",
+      "import": "./dist/icons/index.js",
+      "require": "./dist/icons/index.cjs"
+    },
+    "./icons/animated": {
+      "types": "./dist/icons/animated.d.ts",
+      "import": "./dist/icons/animated.js",
+      "require": "./dist/icons/animated.cjs"
+    },
+    "./icons/catalog": {
+      "types": "./dist/icons/catalog.d.ts",
+      "import": "./dist/icons/catalog.js",
+      "require": "./dist/icons/catalog.cjs"
     }
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
-    "dev": "vite build --watch",
-    "build": "vite build",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prepublishOnly": "vite build"
+    "generate": "node scripts/generate-icons.mjs",
+    "dev": "pnpm generate && vite build --watch",
+    "build": "pnpm generate && vite build",
+    "typecheck": "pnpm generate && tsc -p tsconfig.json --noEmit",
+    "test": "pnpm build && vitest run && node scripts/verify-icons.mjs",
+    "prepublishOnly": "pnpm typecheck && pnpm test"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -57,15 +76,20 @@
     "react-virtuoso": "^4.18.15"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20.19.17",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "esbuild": "^0.25.12",
+    "happy-dom": "^20.6.2",
+    "prettier": "^3.5.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
-    "vite-plugin-dts": "^4.5.4"
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.18"
   },
   "repository": {
     "type": "git",

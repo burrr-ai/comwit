@@ -102,6 +102,24 @@ The everyday parts, styled with the same tokens.
 - skeleton: Loading placeholder.
 - pagination: Composable page links.
 
+## Icons
+
+The original Comwit icon set (109 glyphs on a 24px grid) ships inside @comwit/ui, which init already installs. Static icons are pure SVG and work in Server Components; animated ones carry their own 'use client' boundary and play a spring gesture on hover, click, mount or when replayKey changes. Unused icons tree-shake away.
+
+```tsx
+import { SearchIcon, CheckIcon } from '@comwit/ui/icons'
+import { AnimatedBellIcon } from '@comwit/ui/icons/animated'
+
+<SearchIcon size={20} />
+<CheckIcon title="Saved" />
+<button data-icon-trigger aria-label="Notifications">
+  <AnimatedBellIcon size={20} />
+</button>
+```
+
+- Props: size (default 24), color (currentColor), strokeWidth (1.65), title, className and any SVG attribute. Icons are decorative unless given a title or aria-label; label the button when the icon is its only content.
+- Put data-icon-trigger on the enclosing button or link so its whole area plays the icon. Browse names and copy snippets: https://library.comwit.io/ui/icons
+
 ## More
 
 - Installation guide, with page transitions, bottom sheet and chat in depth: https://library.comwit.io/ui/docs/installation

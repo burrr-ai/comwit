@@ -2,7 +2,7 @@
 
 Headless behavior and editable UI components used in Comwit templates — a curated kit that wraps the best library for each job (page transitions, toasts, overlays, rich text, tables, dates, forms, chat lists) under neutral names and one design system, installed as source you own.
 
-Original icons are available separately in [`@comwit/icons`](../icons/README.md), with static and animated React exports and a [searchable gallery](https://library.comwit.io/ui/icons).
+Original icons ship inside `@comwit/ui` as subpaths: `@comwit/ui/icons` (static SVG, works in Server Components), `@comwit/ui/icons/animated` (spring motion, own `use client` boundary) and `@comwit/ui/icons/catalog` (gallery metadata). Unused icons tree-shake away. Browse them in the [searchable gallery](https://library.comwit.io/ui/icons); design and contribution notes are in [core/src/icons/README.md](core/src/icons/README.md).
 
 [Documentation](https://library.comwit.io/ui) · [Components](https://library.comwit.io/ui/components) · [Agent guide](https://library.comwit.io/ui/llms.txt)
 
