@@ -19,7 +19,7 @@
  */
 
 import * as React from 'react'
-import { ChevronLeft, X } from 'lucide-react'
+import { ChevronLeftIcon, XIcon } from '@comwit/ui/icons'
 import { AppBar as AppBarPrimitive } from '@comwit/ui'
 
 import { Button } from './button'
@@ -123,7 +123,7 @@ function AppBarBackButton({
         )}
         {...(props as React.ComponentProps<typeof Button>)}
       >
-        {children ?? <X className="size-5" aria-hidden="true" />}
+        {children ?? <XIcon className="size-5" aria-hidden="true" />}
       </Button>
     )
   }
@@ -135,7 +135,7 @@ function AppBarBackButton({
       className={cn('size-11 shrink-0', className)}
       {...props}
     >
-      {children ?? <ChevronLeft className="size-7" strokeWidth={2.5} aria-hidden="true" />}
+      {children ?? <ChevronLeftIcon className="size-7" strokeWidth={2.5} aria-hidden="true" />}
     </GlassButton>
   )
 }

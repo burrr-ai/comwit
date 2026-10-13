@@ -5,7 +5,7 @@ export const specs = [
     component: 'Button',
     imports: [{ from: '@comwit/ui-templates/button', names: ['Button'] }],
     extraImports: [
-      `import { ArrowRight, Download, Loader2, Plus, Search, Trash2 } from 'lucide-react'`,
+      `import { ArrowRightIcon, DownloadIcon, Loader2Icon, PlusIcon, SearchIcon, Trash2Icon } from '@comwit/ui/icons'`,
     ],
     stories: [
       {
@@ -16,20 +16,20 @@ export const specs = [
         render: `<div className="flex flex-col items-center gap-3">
   <div className="flex flex-wrap items-center justify-center gap-2">
     <Button size="lg">
-      Get started <ArrowRight />
+      Get started <ArrowRightIcon />
     </Button>
     <Button size="lg" variant="secondary">Book a demo</Button>
   </div>
   <div className="flex flex-wrap items-center justify-center gap-2">
     <Button variant="outline">
-      <Download /> Export
+      <DownloadIcon /> Export
     </Button>
     <Button variant="ghost">Cancel</Button>
     <Button variant="destructive">
-      <Trash2 /> Delete
+      <Trash2Icon /> Delete
     </Button>
     <Button size="icon" variant="outline" aria-label="Search">
-      <Search />
+      <SearchIcon />
     </Button>
   </div>
 </div>`,
@@ -54,7 +54,7 @@ export const specs = [
   <Button size="default">Invite teammates</Button>
   <Button size="lg">Invite your whole team</Button>
   <Button size="icon" variant="outline" aria-label="Add teammate">
-    <Plus />
+    <PlusIcon />
   </Button>
 </div>`,
       },
@@ -68,7 +68,7 @@ export const specs = [
     Export
   </Button>
   <Button disabled aria-busy="true">
-    <Loader2 className="animate-spin" /> Saving
+    <Loader2Icon className="animate-spin" /> Saving
   </Button>
 </div>`,
       },

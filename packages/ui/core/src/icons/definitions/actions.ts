@@ -6,6 +6,7 @@ import {
   g,
   gear,
   ink,
+  nudge,
   p,
   pivot,
   pop,
@@ -359,5 +360,49 @@ export const actionIcons: readonly IconDefinition[] = [
       ),
     ],
     motion: [push('wrench', { rotate: -20 }, { hold: 140, spring: spring.bouncy })],
+  },
+  {
+    name: 'MoreVertical',
+    category: 'Actions',
+    tags: ['more', 'menu', 'overflow', 'kebab', '더보기', '메뉴'],
+    nodes: [g('first', c(12, 5, 1)), g('second', c(12, 12, 1)), g('third', c(12, 19, 1))],
+    motion: ['first', 'second', 'third'].map((part, index) =>
+      push(part, { x: 2.6 }, { at: index * 70, hold: 80, spring: spring.bouncy })
+    ),
+  },
+  {
+    name: 'Undo',
+    category: 'Actions',
+    tags: ['revert', 'back', 'history', '실행 취소', '되돌리기'],
+    nodes: [
+      g('arrow', p('M4.5 9h10a5.5 5.5 0 0 1 0 11H10'), p('m8.5 5-3.3 3.3a1 1 0 0 0 0 1.4L8.5 13')),
+    ],
+    motion: [nudge('arrow', { x: -2.2 })],
+  },
+  {
+    name: 'Redo',
+    category: 'Actions',
+    tags: ['repeat', 'forward', 'again', '다시 실행', '앞으로'],
+    nodes: [
+      g(
+        'arrow',
+        p('M19.5 9h-10a5.5 5.5 0 0 0 0 11H14'),
+        p('m15.5 5 3.3 3.3a1 1 0 0 1 0 1.4L15.5 13')
+      ),
+    ],
+    motion: [nudge('arrow', { x: 2.2 })],
+  },
+  {
+    name: 'SearchX',
+    category: 'Actions',
+    tags: ['no results', 'not found', 'clear search', '검색 결과 없음', '찾을 수 없음'],
+    nodes: [
+      g('lens', c(10.5, 10.5, 6.5), p('m15.2 15.2 4.8 4.8')),
+      g('cross', p('m8.3 8.3 4.4 4.4'), p('m12.7 8.3-4.4 4.4')),
+    ],
+    motion: [
+      turn('cross', { rotate: 90 }),
+      swing('lens', { x: 1.4 }, { at: 40, beats: 3, interval: 90 }),
+    ],
   },
 ]

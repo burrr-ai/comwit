@@ -30,7 +30,7 @@ export const specs = [
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `import { Paperclip, Phone, Sparkles } from 'lucide-react'`,
+      `import { PaperclipIcon, PhoneIcon, SparklesIcon } from '@comwit/ui/icons'`,
       `type Turn = { id: number; role: 'user' | 'assistant'; text: string }`,
       `type Note = { id: number; from: 'me' | 'ava' | 'system'; text: string; time?: string }`,
       `const ANSWER =
@@ -96,7 +96,7 @@ return (
     <Chat mode="assistant">
       <ChatHeader>
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-surface text-primary-ink">
-          <Sparkles className="size-4" aria-hidden="true" />
+          <SparklesIcon className="size-4" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
           <ChatTitle>Trip planner</ChatTitle>
@@ -164,7 +164,7 @@ return (
           </div>
           <ChatHeaderActions>
             <Button variant="ghost" size="icon" aria-label="Call">
-              <Phone />
+              <PhoneIcon />
             </Button>
           </ChatHeaderActions>
         </ChatHeader>
@@ -219,7 +219,7 @@ return (
           aria-label="Attach a file"
           className="text-muted-foreground"
         >
-          <Paperclip />
+          <PaperclipIcon />
         </Button>
         <ChatComposerSubmit />
       </ChatComposerActions>

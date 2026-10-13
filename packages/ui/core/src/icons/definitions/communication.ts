@@ -162,4 +162,53 @@ export const communicationIcons: readonly IconDefinition[] = [
       enter('far-wave', { x: -2.5, opacity: 0 }, { at: 140, spring: spring.snappy }),
     ],
   },
+  {
+    name: 'Phone',
+    category: 'Communication',
+    tags: ['call', 'contact', 'telephone', '전화', '통화'],
+    nodes: [
+      pivot(
+        g(
+          'handset',
+          p(
+            'M6.2 3.5h2.6a1 1 0 0 1 1 .8l.9 3.6a1 1 0 0 1-.4 1l-1.9 1.4a11.5 11.5 0 0 0 5.3 5.3l1.4-1.9a1 1 0 0 1 1-.4l3.6.9a1 1 0 0 1 .8 1v2.6a2 2 0 0 1-2.2 2A15.8 15.8 0 0 1 4.2 5.7a2 2 0 0 1 2-2.2Z'
+          )
+        ),
+        12,
+        12
+      ),
+    ],
+    motion: [swing('handset', { rotate: 9 }, { beats: 5, interval: 70, spring: spring.snappy })],
+  },
+  {
+    name: 'Inbox',
+    category: 'Communication',
+    tags: ['tray', 'received', 'messages', '받은 편지함', '수신'],
+    nodes: [
+      p(
+        'M3.5 13.5l2.6-7.2A1.7 1.7 0 0 1 7.7 5.2h8.6a1.7 1.7 0 0 1 1.6 1.1l2.6 7.2V18a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2Z'
+      ),
+      g('shelf', p('M3.5 13.5h4.6l1.3 2.5h5.2l1.3-2.5h4.6')),
+    ],
+    // Something lands in the tray: the shelf dips and springs back.
+    motion: [push('shelf', { y: 1.3 }, { hold: 90, spring: spring.bouncy })],
+  },
+  {
+    name: 'Share',
+    category: 'Communication',
+    tags: ['send to', 'export', 'share sheet', '공유', '내보내기'],
+    nodes: [
+      g(
+        'box',
+        p(
+          'M8.5 10.5H6.5A1.5 1.5 0 0 0 5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12a1.5 1.5 0 0 0-1.5-1.5h-2'
+        )
+      ),
+      g('arrow', p('M12 15V4'), p('m8.3 7.5 3-3a1 1 0 0 1 1.4 0l3 3')),
+    ],
+    motion: [
+      push('arrow', { y: -2 }, { hold: 100, spring: spring.bouncy }),
+      push('box', { scaleY: 0.88 }, { at: 60, hold: 60, origin: '50% 100%' }),
+    ],
+  },
 ]

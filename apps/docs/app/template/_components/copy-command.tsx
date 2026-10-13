@@ -2,7 +2,7 @@
 
 import { Button } from '@comwit/ui-templates/button'
 import * as React from 'react'
-import { Check, Copy } from 'lucide-react'
+import { CheckIcon, CopyIcon } from '@comwit/ui/icons'
 
 /** The template install line with a shared UI copy button. */
 export function CopyCommand({ command }: { command: string }) {
@@ -35,7 +35,7 @@ export function CopyCommand({ command }: { command: string }) {
           }
         }}
       >
-        {copied ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}
+        {copied ? <CheckIcon size={16} aria-hidden /> : <CopyIcon size={16} aria-hidden />}
         <span className="sr-only" role="status">
           {copied ? 'Copied to clipboard' : ''}
         </span>

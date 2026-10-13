@@ -8,7 +8,10 @@ export const specs = [
       { from: '@comwit/ui-templates/lib/popup', names: ['popup'] },
       { from: '@comwit/ui-templates/button', names: ['Button'] },
     ],
-    extraImports: [`import * as React from 'react'`, `import { Check } from 'lucide-react'`],
+    extraImports: [
+      `import * as React from 'react'`,
+      `import { CheckIcon } from '@comwit/ui/icons'`,
+    ],
     stories: [
       {
         name: 'Confirm',
@@ -121,7 +124,7 @@ return (
                   <span>{p.name}</span>
                   <span className="flex items-center gap-2 text-muted-foreground">
                     {p.price}
-                    {p.id === plan ? <Check /> : null}
+                    {p.id === plan ? <CheckIcon /> : null}
                   </span>
                 </Button>
               ))}

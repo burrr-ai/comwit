@@ -2,7 +2,7 @@
 
 import { Button } from '@comwit/ui-templates/button'
 import * as React from 'react'
-import { Check, Copy } from 'lucide-react'
+import { CheckIcon, CopyIcon } from '@comwit/ui/icons'
 import { cn } from '@comwit/ui-templates/lib/utils'
 
 export function CopyButton({
@@ -39,7 +39,7 @@ export function CopyButton({
         className
       )}
     >
-      {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+      {copied ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
       <span className="sr-only" role="status">
         {copied ? 'Copied to clipboard' : ''}
       </span>

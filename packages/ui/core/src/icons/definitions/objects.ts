@@ -414,4 +414,89 @@ export const objectIcons: readonly IconDefinition[] = [
       )
     ),
   },
+  {
+    name: 'Circle',
+    category: 'Objects',
+    tags: ['dot', 'shape', 'radio', '원', '점'],
+    nodes: [g('ring', c(12, 12, 8.3))],
+    motion: [pop('ring', { scale: 1.08 })],
+  },
+  {
+    name: 'BatteryFull',
+    category: 'Objects',
+    tags: ['charge', 'power', 'energy', '배터리', '충전'],
+    nodes: [
+      r(3, 7.5, 16, 9, 2),
+      p('M21 10.5v3'),
+      g('first', p('M6.5 10.5v3')),
+      g('second', p('M9.5 10.5v3')),
+      g('third', p('M12.5 10.5v3')),
+      g('fourth', p('M15.5 10.5v3')),
+    ],
+    // Charging: a pulse runs through the cells left to right; nothing disappears.
+    motion: ['first', 'second', 'third', 'fourth'].map((part, index) =>
+      push(part, { scaleY: 0.35 }, { at: index * 55, hold: 70, spring: spring.bouncy })
+    ),
+  },
+  {
+    name: 'SignalHigh',
+    category: 'Objects',
+    tags: ['network', 'reception', 'cellular', '신호', '수신 감도'],
+    nodes: [
+      g('first', p('M4.5 19.5v-3')),
+      g('second', p('M9.5 19.5v-7')),
+      g('third', p('M14.5 19.5v-11')),
+      g('fourth', p('M19.5 19.5v-15')),
+    ],
+    // The bars dip from their base and spring back, one after another.
+    motion: ['first', 'second', 'third', 'fourth'].map((part, index) =>
+      push(
+        part,
+        { scaleY: 0.45 },
+        { at: index * 55, hold: 70, origin: '50% 100%', spring: spring.bouncy }
+      )
+    ),
+  },
+  {
+    name: 'Columns3',
+    category: 'Objects',
+    tags: ['layout', 'table', 'columns', '열', '레이아웃'],
+    nodes: [r(3.5, 4.5, 17, 15, 2), g('left', p('M9.2 4.5v15')), g('right', p('M14.8 4.5v15'))],
+    motion: [
+      push('left', { x: -1.2 }, { hold: 100, spring: spring.bouncy }),
+      push('right', { x: 1.2 }, { hold: 100, spring: spring.bouncy }),
+    ],
+  },
+  {
+    name: 'BarChart3',
+    category: 'Objects',
+    tags: ['analytics', 'statistics', 'report', '통계', '차트'],
+    nodes: [
+      p('M3.5 20.5h17'),
+      g('first', p('M7.5 20.5v-6')),
+      g('second', p('M12 20.5v-11')),
+      g('third', p('M16.5 20.5v-16')),
+    ],
+    motion: ['first', 'second', 'third'].map((part, index) =>
+      push(
+        part,
+        { scaleY: 0.45 },
+        { at: index * 60, hold: 80, origin: '50% 100%', spring: spring.bouncy }
+      )
+    ),
+  },
+  {
+    name: 'LayoutDashboard',
+    category: 'Objects',
+    tags: ['overview', 'admin', 'panels', '대시보드', '개요'],
+    nodes: [
+      g('first', r(3.5, 3.5, 7, 10, 1.5)),
+      g('second', r(13.5, 3.5, 7, 6, 1.5)),
+      g('third', r(13.5, 12.5, 7, 8, 1.5)),
+      g('fourth', r(3.5, 16.5, 7, 4, 1.5)),
+    ],
+    motion: ['first', 'second', 'third', 'fourth'].map((part, index) =>
+      push(part, { scale: 0.7 }, { at: [0, 50, 100, 50][index], hold: 60, spring: spring.bouncy })
+    ),
+  },
 ]

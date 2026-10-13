@@ -21,7 +21,9 @@ export const specs = [
       { from: '@comwit/ui-templates/input', names: ['Input'] },
       { from: '@comwit/ui-templates/label', names: ['Label'] },
     ],
-    extraImports: [`import { Copy, Link2, Share2, Trash2 } from 'lucide-react'`],
+    extraImports: [
+      `import { CopyIcon, Link2Icon, Share2Icon, Trash2Icon } from '@comwit/ui/icons'`,
+    ],
     stories: [
       {
         name: 'Default',
@@ -87,7 +89,7 @@ export const specs = [
         render: `<Sheet>
   <SheetTrigger asChild>
     <Button variant="outline">
-      <Share2 />
+      <Share2Icon />
       Share file
     </Button>
   </SheetTrigger>
@@ -99,19 +101,19 @@ export const specs = [
     <div className="grid gap-2 px-4 pb-4">
       <SheetClose asChild>
         <Button variant="ghost" className="justify-start">
-          <Link2 />
-          Copy link
+          <Link2Icon />
+          CopyIcon link
         </Button>
       </SheetClose>
       <SheetClose asChild>
         <Button variant="ghost" className="justify-start">
-          <Copy />
+          <CopyIcon />
           Duplicate
         </Button>
       </SheetClose>
       <SheetClose asChild>
         <Button variant="ghost" className="justify-start text-destructive">
-          <Trash2 />
+          <Trash2Icon />
           Move to trash
         </Button>
       </SheetClose>

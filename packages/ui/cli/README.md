@@ -30,7 +30,7 @@ npx comwit-ui@latest add button    # 컴포넌트 + 의존 설치
    `comwit.json` 의 `importAlias`+`aliases` 로 치환(`@/lib/utils` · `@/components/ui/popover`).
    동작 훅(`useMobile` · `ScrollChromeProvider`)은 `@comwit/ui` 가 내보내므로 복사하지 않는다.
    `@comwit/ui`(엔진)는 그대로 npm 참조.
-4. **npm `dependencies` 설치** — `@comwit/ui` 및 `class-variance-authority`·`lucide-react`·(해당 시)
+4. **npm `dependencies` 설치** — `@comwit/ui`(아이콘은 `@comwit/ui/icons` 하위 경로로 포함) 및 `class-variance-authority`·(해당 시)
    `react-hook-form`·`@tiptap/*`·`sonner`·`@ssgoi/react`·`react-virtuoso` 등. 패키지 매니저(pnpm/yarn/bun/npm) 자동 감지.
 5. **이미 있는 npm 패키지는 건너뛴다** — `package.json` 에 선언된 패키지는 다시 add 하지 않는다(프로젝트가 고정한 버전을 바꾸지 않게).
 6. **문구 로케일** — 컴포넌트가 화면·스크린리더에 쓰는 기본 문구와 날짜 로케일은 `lib/ui-text.ts` 하나에 모인다.

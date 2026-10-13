@@ -9,7 +9,9 @@ export const specs = [
         names: ['Tabs', 'TabsList', 'TabsTrigger', 'TabsContent'],
       },
     ],
-    extraImports: [`import { BarChart3, Bell, LayoutGrid, Settings } from 'lucide-react'`],
+    extraImports: [
+      `import { BarChart3Icon, BellIcon, LayoutGridIcon, SettingsIcon } from '@comwit/ui/icons'`,
+    ],
     stories: [
       {
         name: 'Project',
@@ -41,13 +43,13 @@ export const specs = [
         render: `<Tabs defaultValue="dashboard" className="w-full max-w-md">
   <TabsList>
     <TabsTrigger value="dashboard">
-      <LayoutGrid /> Dashboard
+      <LayoutGridIcon /> Dashboard
     </TabsTrigger>
     <TabsTrigger value="reports">
-      <BarChart3 /> Reports
+      <BarChart3Icon /> Reports
     </TabsTrigger>
     <TabsTrigger value="alerts">
-      <Bell /> Alerts
+      <BellIcon /> Alerts
     </TabsTrigger>
   </TabsList>
   <TabsContent value="dashboard" className="p-1 text-body-sm text-soft-foreground">
@@ -69,7 +71,7 @@ export const specs = [
     <TabsTrigger value="general">General</TabsTrigger>
     <TabsTrigger value="members">Members</TabsTrigger>
     <TabsTrigger value="billing" disabled>
-      <Settings /> Billing
+      <SettingsIcon /> Billing
     </TabsTrigger>
   </TabsList>
   <TabsContent value="general" className="p-1 text-body-sm text-soft-foreground">

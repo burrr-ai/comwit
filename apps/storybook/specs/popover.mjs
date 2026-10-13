@@ -14,7 +14,7 @@ export const specs = [
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `import { Check, Copy, Share2 } from 'lucide-react'`,
+      `import { CheckIcon, CopyIcon, Share2Icon } from '@comwit/ui/icons'`,
     ],
     stories: [
       {
@@ -26,7 +26,7 @@ return (
   <Popover onOpenChange={() => setCopied(false)}>
     <PopoverTrigger asChild>
       <Button variant="outline">
-        <Share2 />
+        <Share2Icon />
         Share
       </Button>
     </PopoverTrigger>
@@ -39,7 +39,7 @@ return (
         <div className="flex items-center gap-2">
           <Input readOnly aria-label="Share link" defaultValue="https://comwit.io/b/q3-launch" />
           <Button size="icon" variant="secondary" aria-label="Copy link" onClick={() => setCopied(true)}>
-            {copied ? <Check /> : <Copy />}
+            {copied ? <CheckIcon /> : <CopyIcon />}
           </Button>
         </div>
       </div>

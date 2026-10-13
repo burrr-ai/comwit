@@ -22,7 +22,7 @@ export const specs = [
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `import { Bookmark, Check, MapPin, Share2, SlidersHorizontal } from 'lucide-react'`,
+      `import { BookmarkIcon, CheckIcon, MapPinIcon, Share2Icon, SlidersHorizontalIcon } from '@comwit/ui/icons'`,
     ],
     stories: [
       {
@@ -37,7 +37,7 @@ return (
   <BottomSheet>
     <BottomSheetTrigger asChild>
       <Button variant="outline">
-        <SlidersHorizontal />
+        <SlidersHorizontalIcon />
         Filters
       </Button>
     </BottomSheetTrigger>
@@ -92,7 +92,7 @@ return (
                 className="flex w-full items-center justify-between rounded-control px-2 py-3 text-left text-label text-foreground hover:bg-accent"
               >
                 {o}
-                {o === sort ? <Check className="size-4 text-primary" /> : null}
+                {o === sort ? <CheckIcon className="size-4 text-primary" /> : null}
               </button>
             </BottomSheetClose>
           </li>
@@ -109,7 +109,7 @@ return (
         render: `<BottomSheet>
   <BottomSheetTrigger asChild>
     <Button variant="outline">
-      <Share2 />
+      <Share2Icon />
       Hyeopjae beach
     </Button>
   </BottomSheetTrigger>
@@ -121,19 +121,19 @@ return (
     <div className="grid gap-1 px-3 pb-4">
       <BottomSheetClose asChild>
         <Button variant="ghost" className="justify-start">
-          <Share2 />
+          <Share2Icon />
           Share
         </Button>
       </BottomSheetClose>
       <BottomSheetClose asChild>
         <Button variant="ghost" className="justify-start">
-          <Bookmark />
+          <BookmarkIcon />
           Save
         </Button>
       </BottomSheetClose>
       <BottomSheetClose asChild>
         <Button variant="ghost" className="justify-start">
-          <MapPin />
+          <MapPinIcon />
           Directions
         </Button>
       </BottomSheetClose>

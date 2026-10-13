@@ -27,7 +27,7 @@ export const specs = [
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `import { ArrowUpDown, Copy, CreditCard, LogOut, Mail, MessageSquare, MoreHorizontal, Pencil, Settings, Share2, SlidersHorizontal, Trash2, User } from 'lucide-react'`,
+      `import { ArrowUpDownIcon, CopyIcon, CreditCardIcon, LogOutIcon, MailIcon, MessageSquareIcon, MoreHorizontalIcon, PencilIcon, SettingsIcon, Share2Icon, SlidersHorizontalIcon, Trash2Icon, UserRoundIcon } from '@comwit/ui/icons'`,
     ],
     stories: [
       {
@@ -38,7 +38,7 @@ export const specs = [
         render: `<DropdownMenu>
   <DropdownMenuTrigger asChild>
     <Button variant="outline">
-      <User />
+      <UserRoundIcon />
       My account
     </Button>
   </DropdownMenuTrigger>
@@ -47,24 +47,24 @@ export const specs = [
     <DropdownMenuSeparator />
     <DropdownMenuGroup>
       <DropdownMenuItem>
-        <User />
+        <UserRoundIcon />
         Profile
         <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
       </DropdownMenuItem>
       <DropdownMenuItem>
-        <CreditCard />
+        <CreditCardIcon />
         Billing
         <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
       </DropdownMenuItem>
       <DropdownMenuItem>
-        <Settings />
-        Settings
+        <SettingsIcon />
+        SettingsIcon
         <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
       </DropdownMenuItem>
     </DropdownMenuGroup>
     <DropdownMenuSeparator />
     <DropdownMenuItem variant="destructive">
-      <LogOut />
+      <LogOutIcon />
       Log out
     </DropdownMenuItem>
   </DropdownMenuContent>
@@ -80,7 +80,7 @@ return (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button variant="outline">
-        <SlidersHorizontal />
+        <SlidersHorizontalIcon />
         Columns
       </Button>
     </DropdownMenuTrigger>
@@ -112,7 +112,7 @@ return (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button variant="outline">
-        <ArrowUpDown />
+        <ArrowUpDownIcon />
         {labels[sort]}
       </Button>
     </DropdownMenuTrigger>
@@ -135,37 +135,37 @@ return (
         render: `<DropdownMenu>
   <DropdownMenuTrigger asChild>
     <Button variant="ghost" size="icon" aria-label="More actions">
-      <MoreHorizontal />
+      <MoreHorizontalIcon />
     </Button>
   </DropdownMenuTrigger>
   <DropdownMenuContent className="w-52" align="end">
     <DropdownMenuItem>
-      <Pencil />
+      <PencilIcon />
       Rename
     </DropdownMenuItem>
     <DropdownMenuItem>
-      <Copy />
+      <CopyIcon />
       Duplicate
     </DropdownMenuItem>
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
-        <Share2 className="mr-2 size-4 text-muted-foreground" />
+        <Share2Icon className="mr-2 size-4 text-muted-foreground" />
         Share
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="w-44">
         <DropdownMenuItem>
-          <Mail />
+          <MailIcon />
           Email link
         </DropdownMenuItem>
         <DropdownMenuItem>
-          <MessageSquare />
+          <MessageSquareIcon />
           Send to Slack
         </DropdownMenuItem>
       </DropdownMenuSubContent>
     </DropdownMenuSub>
     <DropdownMenuSeparator />
     <DropdownMenuItem variant="destructive">
-      <Trash2 />
+      <Trash2Icon />
       Delete
     </DropdownMenuItem>
   </DropdownMenuContent>

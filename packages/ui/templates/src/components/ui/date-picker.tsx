@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon } from '@comwit/ui/icons'
 import { useCalendarPanel, parseYMD } from '@comwit/ui'
 import { Popover, PopoverContent, PopoverTrigger } from './popover'
 import { useMobile } from '@comwit/ui'
@@ -80,7 +80,7 @@ export function DatePicker({
       >
         {selected ? display.format(selected) : placeholder}
       </span>
-      <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
+      <CalendarDaysIcon className="size-4 shrink-0 text-muted-foreground" />
     </>
   )
 
@@ -193,7 +193,7 @@ function CalendarPanel({
           className={NAV_CLASS}
           aria-label={labels.previousMonth}
         >
-          <ChevronLeft className="size-4" />
+          <ChevronLeftIcon className="size-4" />
         </button>
         <div className="text-body-sm font-semibold text-foreground" aria-live="polite">
           {caption.format(new Date(year, month - 1, 1))}
@@ -205,7 +205,7 @@ function CalendarPanel({
           className={NAV_CLASS}
           aria-label={labels.nextMonth}
         >
-          <ChevronRight className="size-4" />
+          <ChevronRightIcon className="size-4" />
         </button>
       </div>
 

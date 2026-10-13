@@ -1,5 +1,5 @@
 import type { IconDefinition } from '../types'
-import { c, g, p, push, spring, turn } from './kit'
+import { c, cog, g, ink, p, pop, push, spring, turn, write } from './kit'
 
 export const peopleIcons: readonly IconDefinition[] = [
   {
@@ -46,6 +46,48 @@ export const peopleIcons: readonly IconDefinition[] = [
     ],
     motion: [
       turn('plus', { rotate: 90 }),
+      push('head', { y: -1.6 }, { at: 60, hold: 80, spring: spring.bouncy }),
+    ],
+  },
+  {
+    name: 'UserCheck',
+    category: 'People',
+    tags: ['approved', 'verified member', 'active', '승인', '활성 사용자'],
+    nodes: [
+      g('head', c(9.5, 7.8, 3.3)),
+      p('M3.5 20.5v-1.2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1.2'),
+      ink('check', 'm15.5 11.8 2 2 3.5-3.8'),
+    ],
+    motion: [
+      write('check', { spring: { duration: 340, bounce: 0 } }),
+      push('head', { y: -1.6 }, { at: 60, hold: 80, spring: spring.bouncy }),
+    ],
+  },
+  {
+    name: 'UserMinus',
+    category: 'People',
+    tags: ['remove member', 'deactivate', 'leave', '멤버 제거', '비활성'],
+    nodes: [
+      g('head', c(9.5, 7.8, 3.3)),
+      p('M3.5 20.5v-1.2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1.2'),
+      g('minus', p('M15.7 10.8h5.6')),
+    ],
+    motion: [
+      pop('minus', { scaleX: 1.2 }, { dip: 0.9 }),
+      push('head', { y: -1.6 }, { at: 60, hold: 80, spring: spring.bouncy }),
+    ],
+  },
+  {
+    name: 'UserRoundCog',
+    category: 'People',
+    tags: ['account settings', 'manage user', 'role', '계정 설정', '사용자 관리'],
+    nodes: [
+      g('head', c(9.5, 7.5, 3.5)),
+      p('M3 20.5v-1.2a5.3 5.3 0 0 1 5.3-5.3h3.2'),
+      cog(17.2, 16.3),
+    ],
+    motion: [
+      turn('cog', { rotate: 120 }, { spring: { duration: 620, bounce: 0.38 } }),
       push('head', { y: -1.6 }, { at: 60, hold: 80, spring: spring.bouncy }),
     ],
   },

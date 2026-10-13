@@ -57,7 +57,7 @@ describe('static SVG contract', () => {
     expect(svg.classList.contains('status')).toBe(true)
   })
   it('renders all catalog geometry and resolves every motion target to exactly one part', () => {
-    expect(iconCatalog.length).toBe(109)
+    expect(iconCatalog.length).toBe(143)
     expect(new Set(iconCatalog.map((icon) => icon.name)).size).toBe(iconCatalog.length)
     for (const definition of iconCatalog) {
       const { container, unmount } = render(createElement(Icon, { definition }))

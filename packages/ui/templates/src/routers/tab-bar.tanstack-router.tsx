@@ -15,7 +15,7 @@ import { BottomNav, BottomNavItem } from '../components/ui/bottom-nav'
 export type AppTab = {
   href: string
   label: string
-  /** 아이콘 컴포넌트(lucide 등) 또는 엘리먼트. */
+  /** 아이콘 컴포넌트(`@comwit/ui/icons` 등) 또는 엘리먼트. */
   icon: React.ComponentType<{ className?: string }> | React.ReactElement
 }
 

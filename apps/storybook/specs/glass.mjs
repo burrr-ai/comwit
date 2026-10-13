@@ -4,7 +4,7 @@ export const specs = [
     slug: 'glass',
     covers: ['glass'],
     imports: [{ from: '@comwit/ui-templates/glass', names: ['Glass', 'GlassButton'] }],
-    extraImports: [`import { ChevronLeft, Heart, Plus } from 'lucide-react'`],
+    extraImports: [`import { ChevronLeftIcon, HeartIcon, PlusIcon } from '@comwit/ui/icons'`],
     stories: [
       {
         name: 'Variants',
@@ -24,13 +24,13 @@ export const specs = [
         description: 'GlassButton — circle and pill, pressed with aria-pressed',
         render: `<div className="flex items-center gap-3 rounded-card bg-[linear-gradient(135deg,#9be7c4_0%,#5aa9ff_100%)] p-6">
   <GlassButton shape="circle" shadow={false} aria-label="Back" className="size-11">
-    <ChevronLeft className="size-7" strokeWidth={2.5} />
+    <ChevronLeftIcon className="size-7" strokeWidth={2.5} />
   </GlassButton>
   <GlassButton shape="circle" aria-label="Like" aria-pressed className="size-11">
-    <Heart className="size-5" />
+    <HeartIcon className="size-5" />
   </GlassButton>
   <GlassButton className="h-11 px-5 text-label font-semibold">
-    <Plus className="size-4" /> New
+    <PlusIcon className="size-4" /> New
   </GlassButton>
 </div>`,
       },

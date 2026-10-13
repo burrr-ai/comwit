@@ -28,7 +28,7 @@
  */
 
 import * as React from 'react'
-import { ArrowDown, ArrowUp, Square } from 'lucide-react'
+import { ArrowDownIcon, ArrowUpIcon, SquareIcon } from '@comwit/ui/icons'
 import { Chat as ChatPrimitive } from '@comwit/ui'
 
 import { Button } from './button'
@@ -181,7 +181,7 @@ function ChatScrollToBottom({ className, labels, ...props }: ChatScrollToBottomP
             contentClassName={cn('text-label font-semibold', pill && 'gap-1.5')}
             {...props}
           >
-            <ArrowDown className="size-4" strokeWidth={2.5} aria-hidden="true" />
+            <ArrowDownIcon className="size-4" strokeWidth={2.5} aria-hidden="true" />
             {pill ? <span>{text.newMessages(unread)}</span> : null}
           </GlassButton>
         )
@@ -409,7 +409,7 @@ function ChatComposerSubmit({
           )}
           {...props}
         >
-          <Square className="size-3.5" fill="currentColor" aria-hidden="true" />
+          <SquareIcon className="size-3.5" fill="currentColor" aria-hidden="true" />
         </Button>
       </ChatPrimitive.ComposerStop>
       <ChatPrimitive.ComposerSubmit asChild>
@@ -420,7 +420,7 @@ function ChatComposerSubmit({
           className={cn('ml-auto', className)}
           {...props}
         >
-          {children ?? <ArrowUp className="size-4" strokeWidth={2.5} aria-hidden="true" />}
+          {children ?? <ArrowUpIcon className="size-4" strokeWidth={2.5} aria-hidden="true" />}
         </Button>
       </ChatPrimitive.ComposerSubmit>
     </>

@@ -6,7 +6,7 @@ export const specs = [
     imports: [{ from: '@comwit/ui-templates/segmented-control', names: ['SegmentedControl'] }],
     extraImports: [
       `import * as React from 'react'`,
-      `import { Columns3, List } from 'lucide-react'`,
+      `import { Columns3Icon, ListIcon } from '@comwit/ui/icons'`,
     ],
     stories: [
       {
@@ -74,8 +74,8 @@ return (
       onValueChange={setView}
       className="w-fit"
       options={[
-        { label: <><List className="size-4" /> List</>, value: 'list' },
-        { label: <><Columns3 className="size-4" /> Board</>, value: 'board' },
+        { label: <><ListIcon className="size-4" /> List</>, value: 'list' },
+        { label: <><Columns3Icon className="size-4" /> Board</>, value: 'board' },
       ]}
     />
     <p className="rounded-control border border-border px-4 py-3 text-body-sm text-soft-foreground">

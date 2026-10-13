@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Clock } from 'lucide-react'
+import { ClockIcon } from '@comwit/ui/icons'
 import { useTimePanel } from '@comwit/ui'
 import { Popover, PopoverContent, PopoverTrigger } from './popover'
 import { useMobile } from '@comwit/ui'
@@ -71,7 +71,7 @@ export function TimePicker({
       >
         {display || placeholder}
       </span>
-      <Clock className="size-4 shrink-0 text-muted-foreground" />
+      <ClockIcon className="size-4 shrink-0 text-muted-foreground" />
     </>
   )
 

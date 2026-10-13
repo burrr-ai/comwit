@@ -10,11 +10,11 @@ export const specs = [
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `import { ChevronRight, Compass, House, User } from 'lucide-react'`,
+      `import { ChevronRightIcon, CompassIcon, HouseIcon, UserRoundIcon } from '@comwit/ui/icons'`,
       `const TABS = [
-  { href: '/', label: 'Home', icon: House },
-  { href: '/explore', label: 'Explore', icon: Compass },
-  { href: '/me', label: 'Profile', icon: User },
+  { href: '/', label: 'Home', icon: HouseIcon },
+  { href: '/explore', label: 'Explore', icon: CompassIcon },
+  { href: '/me', label: 'Profile', icon: UserRoundIcon },
 ]
 const NOTES = [
   { id: 1, title: 'Packing list', body: 'Passport, chargers, the good camera and one book too many.' },
@@ -52,7 +52,7 @@ return (
                       className="flex w-full items-center justify-between rounded-control px-3 py-3 text-left text-label font-medium text-foreground hover:bg-accent"
                     >
                       {n.title}
-                      <ChevronRight className="size-4 text-muted-foreground" />
+                      <ChevronRightIcon className="size-4 text-muted-foreground" />
                     </button>
                   </li>
                 ))}
