@@ -12,7 +12,7 @@ export const specs = [
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `import { ChevronDown, ChevronsUpDown, Lock } from 'lucide-react'`,
+      `import { ChevronDownIcon, ChevronsUpDownIcon, LockIcon } from '@comwit/ui/icons'`,
     ],
     stories: [
       {
@@ -24,7 +24,7 @@ export const specs = [
     <p className="text-body-sm font-semibold text-foreground">Morgan starred 3 repositories</p>
     <CollapsibleTrigger asChild>
       <Button variant="ghost" size="icon" className="size-8" aria-label="Toggle repositories">
-        <ChevronsUpDown />
+        <ChevronsUpDownIcon />
       </Button>
     </CollapsibleTrigger>
   </div>
@@ -59,7 +59,7 @@ return (
     <CollapsibleTrigger asChild>
       <Button variant="link" size="sm" className="w-fit px-0">
         {open ? 'Hide advanced options' : 'Show advanced options'}
-        <ChevronDown className={open ? 'rotate-180' : undefined} />
+        <ChevronDownIcon className={open ? 'rotate-180' : undefined} />
       </Button>
     </CollapsibleTrigger>
   </Collapsible>
@@ -72,7 +72,7 @@ return (
   <CollapsibleTrigger asChild>
     <Button variant="outline" className="justify-between">
       Billing history
-      <Lock />
+      <LockIcon />
     </Button>
   </CollapsibleTrigger>
   <CollapsibleContent className="rounded-control border border-border px-4 py-2.5 text-body-sm text-soft-foreground">

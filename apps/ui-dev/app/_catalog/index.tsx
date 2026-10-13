@@ -2,7 +2,14 @@
 
 import * as React from 'react'
 import { toast } from '@comwit/ui-templates/toast'
-import { CheckCircle2, AlertTriangle, XCircle, Info, Search, Plus } from 'lucide-react'
+import {
+  CheckCircle2Icon,
+  AlertTriangleIcon,
+  XCircleIcon,
+  InfoIcon,
+  SearchIcon,
+  PlusIcon,
+} from '@comwit/ui/icons'
 
 import { popup } from '@comwit/ui-templates/lib/popup'
 import { Button } from '@comwit/ui-templates/button'
@@ -94,7 +101,7 @@ const CALLOUTS = [
     wrap: 'border-success-border bg-success-surface',
     icon: 'text-success',
     fg: 'text-success-surface-foreground',
-    Icon: CheckCircle2,
+    Icon: CheckCircle2Icon,
     title: '완료되었습니다',
     body: '작업이 정상적으로 처리되었습니다.',
   },
@@ -103,7 +110,7 @@ const CALLOUTS = [
     wrap: 'border-info-border bg-info-surface',
     icon: 'text-info',
     fg: 'text-info-surface-foreground',
-    Icon: Info,
+    Icon: InfoIcon,
     title: '안내',
     body: '참고할 정보를 여기에 표시합니다.',
   },
@@ -112,7 +119,7 @@ const CALLOUTS = [
     wrap: 'border-warning-border bg-warning-surface',
     icon: 'text-warning',
     fg: 'text-warning-surface-foreground',
-    Icon: AlertTriangle,
+    Icon: AlertTriangleIcon,
     title: '주의가 필요합니다',
     body: '확인이 필요한 항목이 있습니다.',
   },
@@ -121,7 +128,7 @@ const CALLOUTS = [
     wrap: 'border-destructive-border bg-destructive-surface',
     icon: 'text-destructive',
     fg: 'text-destructive-surface-foreground',
-    Icon: XCircle,
+    Icon: XCircleIcon,
     title: '문제가 발생했습니다',
     body: '다시 시도해 주세요.',
   },
@@ -131,22 +138,27 @@ const FILLED_CALLOUTS = [
   {
     tone: 'success',
     wrap: 'bg-success text-success-foreground',
-    Icon: CheckCircle2,
+    Icon: CheckCircle2Icon,
     title: '저장되었습니다',
   },
   {
     tone: 'warning',
     wrap: 'bg-warning text-warning-foreground',
-    Icon: AlertTriangle,
+    Icon: AlertTriangleIcon,
     title: '용량이 얼마 남지 않았습니다',
   },
   {
     tone: 'destructive',
     wrap: 'bg-destructive text-destructive-foreground',
-    Icon: XCircle,
+    Icon: XCircleIcon,
     title: '삭제에 실패했습니다',
   },
-  { tone: 'info', wrap: 'bg-info text-info-foreground', Icon: Info, title: '새 버전이 있습니다' },
+  {
+    tone: 'info',
+    wrap: 'bg-info text-info-foreground',
+    Icon: InfoIcon,
+    title: '새 버전이 있습니다',
+  },
 ] as const
 
 const CHIP_TONES = ['neutral', 'brand', 'success', 'warning', 'destructive', 'info'] as const
@@ -333,7 +345,7 @@ export function DesignSystemCatalog() {
                   <Button>default</Button>
                   <Button size="lg">lg</Button>
                   <Button size="icon" variant="outline" aria-label="검색">
-                    <Search />
+                    <SearchIcon />
                   </Button>
                   <Button className="rounded-pill px-5">pill</Button>
                   <Button disabled>disabled</Button>
@@ -379,7 +391,7 @@ export function DesignSystemCatalog() {
                       size="sm"
                       onClick={() => setTags(['디자인', '토큰', '컴포넌트'])}
                     >
-                      <Plus /> 되돌리기
+                      <PlusIcon /> 되돌리기
                     </Button>
                   ) : null}
                 </div>
@@ -410,7 +422,7 @@ export function DesignSystemCatalog() {
                   <Label>InputGroup · 검색</Label>
                   <InputGroup>
                     <InputAddon>
-                      <Search />
+                      <SearchIcon />
                     </InputAddon>
                     <Input placeholder="검색어" />
                   </InputGroup>

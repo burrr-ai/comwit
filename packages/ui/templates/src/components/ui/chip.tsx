@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { X } from 'lucide-react'
+import { XIcon } from '@comwit/ui/icons'
 
 import { useRipple } from '@comwit/ui'
 import { disabledStyle, focusRing, pressable, rippleItemClassName } from '../../lib/interaction'
@@ -116,7 +116,7 @@ const clickableStyle = cn(
 interface ChipProps extends React.HTMLAttributes<HTMLElement>, VariantProps<typeof chipVariants> {
   // 선택 상태 — aria-pressed + data-selected 로 강조된다.
   selected?: boolean
-  // 삭제 콜백 — 있으면 우측에 X 삭제 버튼이 붙는다.
+  // 삭제 콜백 — 있으면 우측에 XIcon 삭제 버튼이 붙는다.
   onDelete?: () => void
   // 삭제 버튼의 접근성 이름.
   deleteLabel?: string
@@ -206,7 +206,7 @@ function Chip({
           }}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <X className="size-3.5" />
+          <XIcon className="size-3.5" />
         </button>
       </div>
     )

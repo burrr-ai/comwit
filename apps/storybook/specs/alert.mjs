@@ -10,7 +10,7 @@ export const specs = [
       { from: '@comwit/ui-templates/button', names: ['Button'] },
     ],
     extraImports: [
-      `import { CircleCheck, CircleAlert, Info, Megaphone, TriangleAlert } from 'lucide-react'`,
+      `import { CheckCircle2Icon, AlertCircleIcon, InfoIcon, MegaphoneIcon, AlertTriangleIcon } from '@comwit/ui/icons'`,
     ],
     stories: [
       {
@@ -18,7 +18,7 @@ export const specs = [
         gallery: true,
         description: 'A tinted callout: leading icon, title and description.',
         render: `<Alert tone="info" className="max-w-md">
-  <Info />
+  <InfoIcon />
   <div className="grid gap-1">
     <AlertTitle>Scheduled maintenance</AlertTitle>
     <AlertDescription>
@@ -32,35 +32,35 @@ export const specs = [
         description: 'tone — default · success · warning · destructive · info.',
         render: `<div className="grid w-full max-w-md gap-3">
   <Alert>
-    <Megaphone />
+    <MegaphoneIcon />
     <div className="grid gap-1">
       <AlertTitle>New: shared templates</AlertTitle>
       <AlertDescription>Save any project as a template for your team.</AlertDescription>
     </div>
   </Alert>
   <Alert tone="success">
-    <CircleCheck />
+    <CheckCircle2Icon />
     <div className="grid gap-1">
       <AlertTitle>Domain verified</AlertTitle>
       <AlertDescription>acme.com is now connected to your workspace.</AlertDescription>
     </div>
   </Alert>
   <Alert tone="warning">
-    <TriangleAlert />
+    <AlertTriangleIcon />
     <div className="grid gap-1">
       <AlertTitle>Your trial ends in 3 days</AlertTitle>
       <AlertDescription>Add a payment method to keep your projects running.</AlertDescription>
     </div>
   </Alert>
   <Alert tone="destructive">
-    <CircleAlert />
+    <AlertCircleIcon />
     <div className="grid gap-1">
       <AlertTitle>Payment failed</AlertTitle>
       <AlertDescription>We couldn't charge the card ending in 4242.</AlertDescription>
     </div>
   </Alert>
   <Alert tone="info">
-    <Info />
+    <InfoIcon />
     <div className="grid gap-1">
       <AlertTitle>Read-only access</AlertTitle>
       <AlertDescription>Ask a workspace admin to request edit permissions.</AlertDescription>
@@ -72,7 +72,7 @@ export const specs = [
         name: 'WithAction',
         description: 'Add an action next to the message when the reader can resolve it right away.',
         render: `<Alert tone="warning" className="max-w-lg items-center">
-  <TriangleAlert />
+  <AlertTriangleIcon />
   <div className="grid flex-1 gap-1">
     <AlertTitle>Billing details needed</AlertTitle>
     <AlertDescription>Update your card to avoid service interruption.</AlertDescription>

@@ -8,7 +8,10 @@ export const specs = [
       { from: '@comwit/ui-templates/badge', names: ['Badge'] },
       { from: '@comwit/ui-templates/button', names: ['Button'] },
     ],
-    extraImports: ["import * as React from 'react'", "import { Download } from 'lucide-react'"],
+    extraImports: [
+      "import * as React from 'react'",
+      "import { DownloadIcon } from '@comwit/ui/icons'",
+    ],
     stories: [
       {
         name: 'Members',
@@ -73,7 +76,7 @@ return (
         <div className="flex items-center justify-between gap-4">
           <p className="text-body-sm font-semibold text-foreground">Recent orders</p>
           <Button size="sm" variant="outline">
-            <Download /> Export
+            <DownloadIcon /> Export
           </Button>
         </div>
       }

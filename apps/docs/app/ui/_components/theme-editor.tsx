@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Moon, Sun } from 'lucide-react'
+import { MoonIcon, SunIcon } from '@comwit/ui/icons'
 import { cn } from '@comwit/ui-templates/lib/utils'
 import { Button } from '@comwit/ui-templates/button'
 import { Chip } from '@comwit/ui-templates/chip'
@@ -83,7 +83,7 @@ export function ThemeEditor() {
               aria-pressed={dark}
               onClick={() => setDark((d) => !d)}
             >
-              {dark ? <Sun /> : <Moon />}
+              {dark ? <SunIcon /> : <MoonIcon />}
             </Button>
             <Button
               variant="ghost"

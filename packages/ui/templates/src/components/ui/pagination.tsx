@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from '@comwit/ui/icons'
 
 import { cn } from '../../lib/utils'
 import { uiText } from '../../lib/ui-text'

@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react'
+import type { ReactElement, SVGProps } from 'react'
 
 export type IconCategory =
   | 'Navigation'
@@ -10,6 +10,7 @@ export type IconCategory =
   | 'Media'
   | 'Development'
   | 'Objects'
+  | 'Text'
 export interface IconNode {
   tag: 'path' | 'circle' | 'rect' | 'line' | 'polyline' | 'ellipse' | 'g'
   attrs?: Record<string, string | number>
@@ -81,3 +82,5 @@ export interface AnimatedIconProps extends IconProps {
   /** Change this value to replay a feedback animation after an action succeeds. */
   replayKey?: string | number
 }
+/** A named static icon: a plain function component over IconProps, usable where a component type is stored. */
+export type IconComponent = (props: IconProps) => ReactElement

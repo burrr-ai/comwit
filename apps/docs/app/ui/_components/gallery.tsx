@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { ChevronDown, Code2 } from 'lucide-react'
+import { ChevronDownIcon, Code2Icon } from '@comwit/ui/icons'
 import { Button } from '@comwit/ui-templates/button'
 import {
   Sheet,
@@ -74,7 +74,7 @@ function CodeButton({ name, className }: { name: string; className?: string }) {
       onClick={() => openCode(name)}
       aria-label={`${byName[name].title} code and install`}
     >
-      <Code2 /> Code
+      <Code2Icon /> Code
     </Button>
   )
 }
@@ -192,7 +192,7 @@ function ComponentSheet({ name, onClose }: { name: string | null; onClose: () =>
                   </div>
                   <Collapsible>
                     <CollapsibleTrigger className="group/code flex items-center gap-1 rounded-lg px-1 text-caption font-semibold text-muted-foreground transition-colors duration-fast hover:text-foreground">
-                      <ChevronDown className="size-3.5 transition-transform duration-base group-data-[state=open]/code:rotate-180" />
+                      <ChevronDownIcon className="size-3.5 transition-transform duration-base group-data-[state=open]/code:rotate-180" />
                       Code
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pt-2">
@@ -229,7 +229,7 @@ function ComponentSheet({ name, onClose }: { name: string | null; onClose: () =>
                 )}
                 <Collapsible>
                   <CollapsibleTrigger className="group/src flex items-center gap-1 rounded-lg px-1 text-caption font-semibold text-muted-foreground transition-colors duration-fast hover:text-foreground">
-                    <ChevronDown className="size-3.5 transition-transform duration-base group-data-[state=open]/src:rotate-180" />
+                    <ChevronDownIcon className="size-3.5 transition-transform duration-base group-data-[state=open]/src:rotate-180" />
                     Full source
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pt-2">

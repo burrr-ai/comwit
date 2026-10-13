@@ -37,7 +37,7 @@ const animatedImports = icons.map((icon) => `${icon.name}AnimatedDefinition`).jo
 writeFileSync(
   `${root}/index.ts`,
   header +
-    `import { createIcon } from './icon'\nimport { ${imports} } from './generated/definitions'\nexport { Icon } from './icon'\nexport type { IconProps, IconDefinition, IconCategory } from './types'\n\n` +
+    `import { createIcon } from './icon'\nimport { ${imports} } from './generated/definitions'\nexport { Icon } from './icon'\nexport type { IconProps, IconDefinition, IconCategory, IconComponent } from './types'\n\n` +
     icons
       .map(
         (icon) =>

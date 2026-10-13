@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRightIcon } from '@comwit/ui/icons'
 import { Button } from '@comwit/ui-templates/button'
 import { CliCommand } from './_components/cli-command'
 import { AppShellExhibit } from './_components/exhibits'
@@ -93,7 +93,7 @@ export default function UiOverview() {
                   className="inline-flex items-center gap-1 rounded-control text-title-md text-foreground outline-none transition-colors duration-fast hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {label}
-                  <ArrowUpRight className="size-4 text-muted-foreground" aria-hidden="true" />
+                  <ArrowUpRightIcon className="size-4 text-muted-foreground" aria-hidden="true" />
                 </a>
                 <span className="mt-1 block text-body-sm text-soft-foreground">
                   {items.map((c, i) => (

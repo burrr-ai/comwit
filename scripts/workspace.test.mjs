@@ -1,6 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  rmSync,
+} from 'node:fs'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
@@ -461,4 +469,44 @@ test('icons ship inside @comwit/ui as subpath exports, not as a separate package
     readFileSync(join(root, 'apps/docs/app/ui/icons/icon-gallery.tsx'), 'utf8'),
     /@comwit\/icons/
   )
+})
+
+test('the kit draws every icon from @comwit/ui/icons: lucide-react is gone', () => {
+  const uiDir = join(root, 'packages/ui/templates/src/components/ui')
+  for (const file of readdirSync(uiDir).filter((f) => f.endsWith('.tsx')))
+    assert.doesNotMatch(
+      readFileSync(join(uiDir, file), 'utf8'),
+      /from 'lucide-react'/,
+      `${file} imports lucide-react`
+    )
+  for (const manifest of [
+    'packages/ui/templates',
+    'packages/ui/cli',
+    'packages/ui/core',
+    'apps/docs',
+    'apps/storybook',
+    'apps/ui-dev',
+  ]) {
+    const pkg = JSON.parse(readFileSync(join(root, manifest, 'package.json'), 'utf8'))
+    assert.ok(
+      !pkg.dependencies?.['lucide-react'] && !pkg.devDependencies?.['lucide-react'],
+      `${manifest} depends on lucide-react`
+    )
+  }
+  execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
+  const { items } = JSON.parse(
+    readFileSync(join(root, 'packages/ui/cli/registry/index.json'), 'utf8')
+  )
+  for (const item of items)
+    assert.ok(
+      !item.dependencies?.includes('lucide-react'),
+      `${item.name} registry item depends on lucide-react`
+    )
+  const specDir = join(root, 'apps/storybook/specs')
+  for (const spec of readdirSync(specDir))
+    assert.doesNotMatch(
+      readFileSync(join(specDir, spec), 'utf8'),
+      /lucide-react/,
+      `${spec} uses lucide-react`
+    )
 })

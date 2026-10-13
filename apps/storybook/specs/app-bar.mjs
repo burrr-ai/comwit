@@ -11,7 +11,7 @@ export const specs = [
       },
       { from: '@comwit/ui-templates/button', names: ['Button'] },
     ],
-    extraImports: [`import { Share, MoreHorizontal } from 'lucide-react'`],
+    extraImports: [`import { ShareIcon, MoreHorizontalIcon } from '@comwit/ui/icons'`],
     stories: [
       {
         name: 'Detail',
@@ -22,7 +22,7 @@ export const specs = [
     <AppBarBackButton onClick={() => {}} />
     <AppBarTitle>Trip to Jeju</AppBarTitle>
     <AppBarActions>
-      <Button variant="ghost" size="icon" aria-label="Share"><Share /></Button>
+      <Button variant="ghost" size="icon" aria-label="Share"><ShareIcon /></Button>
     </AppBarActions>
   </AppBar>
   <div className="space-y-3 p-4">
@@ -51,7 +51,7 @@ export const specs = [
   <AppBar behavior="flow">
     <AppBarTitle size="lg">Projects</AppBarTitle>
     <AppBarActions>
-      <Button variant="ghost" size="icon" aria-label="More"><MoreHorizontal /></Button>
+      <Button variant="ghost" size="icon" aria-label="More"><MoreHorizontalIcon /></Button>
     </AppBarActions>
   </AppBar>
 </div>`,

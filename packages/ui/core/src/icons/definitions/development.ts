@@ -1,6 +1,7 @@
 import type { IconDefinition } from '../types'
 import {
   c,
+  cog,
   e,
   enter,
   g,
@@ -10,15 +11,11 @@ import {
   pivot,
   push,
   r,
-  spokes,
   spring,
   swing,
   turn,
   write,
 } from './kit'
-
-const cog = (cx: number, cy: number) =>
-  pivot(g('cog', c(cx, cy, 1.9), p(spokes(cx, cy, 2.9, 3.8, 6))), cx, cy)
 
 export const developmentIcons: readonly IconDefinition[] = [
   {
@@ -114,6 +111,24 @@ export const developmentIcons: readonly IconDefinition[] = [
     motion: [
       push('eyes', { scaleY: 0.1 }, { hold: 60, spring: spring.snappy }),
       swing('antenna', { rotate: 18 }, { at: 40, beats: 4, interval: 90, spring: spring.wobbly }),
+    ],
+  },
+  {
+    name: 'ServerCrash',
+    category: 'Development',
+    tags: ['outage', 'error', 'down', '서버 오류', '장애'],
+    nodes: [
+      p('M14 10.5H5.5a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2'),
+      p('M12 13.5H5.5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2h-2'),
+      g('upper-light', p('M7 7h.4')),
+      g('lower-light', p('M7 17h.4')),
+      g('bolt', p('m14.8 6-2.3 3.6h4.2l-2.8 4.6h4l-3.4 5.3')),
+    ],
+    // The fault flickers through both trays; the status lights come back one by one.
+    motion: [
+      swing('bolt', { x: 1.3 }, { beats: 4, interval: 70, spring: spring.snappy }),
+      enter('upper-light', { opacity: 0 }, { at: 60, spring: spring.smooth }),
+      enter('lower-light', { opacity: 0 }, { at: 120, spring: spring.smooth }),
     ],
   },
 ]

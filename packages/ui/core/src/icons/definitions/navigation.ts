@@ -1,5 +1,5 @@
 import type { IconDefinition } from '../types'
-import { fly, g, nudge, p, push, spring } from './kit'
+import { c, fly, g, nudge, p, pivot, push, spring, swing } from './kit'
 
 const arrow = (
   name: string,
@@ -174,5 +174,34 @@ export const navigationIcons: readonly IconDefinition[] = [
       push('outward', { x: 1.3, y: -1.3 }, { hold: 100, spring: spring.bouncy }),
       push('inward', { x: -1.3, y: 1.3 }, { hold: 100, spring: spring.bouncy }),
     ],
+  },
+  arrow(
+    'ArrowDownRight',
+    ['decrease', 'trend down', 'diagonal', '하락', '대각선'],
+    'M6 6l12 12',
+    'M7.5 18H17a1 1 0 0 0 1-1V7.5',
+    2.4,
+    2.4
+  ),
+  {
+    name: 'ArrowUpDown',
+    category: 'Navigation',
+    tags: ['sort', 'reorder', 'swap', '정렬', '순서 바꾸기'],
+    nodes: [
+      g('up', p('M8 19V6'), p('m4.8 8.8 2.5-2.6a1 1 0 0 1 1.4 0l2.5 2.6')),
+      g('down', p('M16 5v13'), p('m12.8 15.2 2.5 2.6a1 1 0 0 0 1.4 0l2.5-2.6')),
+    ],
+    motion: [
+      push('up', { y: -2 }, { hold: 90, spring: spring.bouncy }),
+      push('down', { y: 2 }, { hold: 90, spring: spring.bouncy }),
+    ],
+  },
+  {
+    name: 'Compass',
+    category: 'Navigation',
+    tags: ['explore', 'discover', 'direction', '탐색', '둘러보기'],
+    nodes: [c(12, 12, 8.3), pivot(g('needle', p('m15.6 8.4-2.2 5-5 2.2 2.2-5Z')), 12, 12)],
+    // The needle hunts for north and settles.
+    motion: [swing('needle', { rotate: 28 }, { beats: 5, interval: 95, spring: spring.wobbly })],
   },
 ]

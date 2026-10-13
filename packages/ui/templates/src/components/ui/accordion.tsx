@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Accordion as AccordionPrimitive } from '@comwit/ui'
-import { ChevronDownIcon } from 'lucide-react'
+import { ChevronDownIcon } from '@comwit/ui/icons'
 
 import { focusRing } from '../../lib/interaction'
 import { cn } from '../../lib/utils'

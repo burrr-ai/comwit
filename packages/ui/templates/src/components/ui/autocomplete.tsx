@@ -13,7 +13,7 @@
  */
 
 import * as React from 'react'
-import { CheckIcon, ChevronDownIcon } from 'lucide-react'
+import { CheckIcon, ChevronDownIcon } from '@comwit/ui/icons'
 
 import { Autocomplete as AutocompletePrimitive } from '@comwit/ui'
 import { focusWithinField } from '../../lib/interaction'

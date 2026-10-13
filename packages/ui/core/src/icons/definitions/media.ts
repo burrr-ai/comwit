@@ -77,4 +77,23 @@ export const mediaIcons: readonly IconDefinition[] = [
       push('body', { scale: 0.94 }, { hold: 50, spring: spring.bouncy }),
     ],
   },
+  {
+    name: 'Film',
+    category: 'Media',
+    tags: ['video', 'movie', 'clip', '영상', '동영상'],
+    nodes: [
+      r(3.5, 4.5, 17, 15, 2),
+      p('M7.5 4.5v15M16.5 4.5v15'),
+      g('holes', p('M3.5 9h4M3.5 15h4M16.5 9h4M16.5 15h4')),
+    ],
+    // The strip advances one perforation.
+    motion: [push('holes', { y: -2.2 }, { hold: 90, spring: spring.snappy })],
+  },
+  {
+    name: 'Square',
+    category: 'Media',
+    tags: ['stop', 'shape', 'box', '정지', '사각형'],
+    nodes: [g('square', r(5, 5, 14, 14, 2.5))],
+    motion: [pop('square', { scale: 0.86 }, { dip: 0.4 })],
+  },
 ]

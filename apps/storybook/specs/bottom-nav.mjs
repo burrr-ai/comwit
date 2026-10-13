@@ -6,7 +6,7 @@ export const specs = [
     imports: [{ from: '@comwit/ui-templates/bottom-nav', names: ['BottomNav', 'BottomNavItem'] }],
     extraImports: [
       `import * as React from 'react'`,
-      `import { House, Compass, Bell, User } from 'lucide-react'`,
+      `import { HouseIcon, CompassIcon, BellIcon, UserRoundIcon } from '@comwit/ui/icons'`,
     ],
     stories: [
       {
@@ -17,10 +17,10 @@ export const specs = [
 return (
   <div className="w-full max-w-sm rounded-card bg-muted pt-10">
     <BottomNav value={tab} onValueChange={setTab}>
-      <BottomNavItem value="home" label="Home" icon={<House />} />
-      <BottomNavItem value="explore" label="Explore" icon={<Compass />} />
-      <BottomNavItem value="alerts" label="Notifications" icon={<Bell />} />
-      <BottomNavItem value="me" label="Profile" icon={<User />} />
+      <BottomNavItem value="home" label="Home" icon={<HouseIcon />} />
+      <BottomNavItem value="explore" label="Explore" icon={<CompassIcon />} />
+      <BottomNavItem value="alerts" label="Notifications" icon={<BellIcon />} />
+      <BottomNavItem value="me" label="Profile" icon={<UserRoundIcon />} />
     </BottomNav>
   </div>
 )`,
@@ -32,9 +32,9 @@ return (
 return (
   <div className="w-full max-w-sm rounded-card bg-muted pt-10">
     <BottomNav value={tab} onValueChange={setTab} showLabels>
-      <BottomNavItem value="home" label="Home" icon={<House />} />
-      <BottomNavItem value="explore" label="Explore" icon={<Compass />} />
-      <BottomNavItem value="me" label="Profile" icon={<User />} />
+      <BottomNavItem value="home" label="Home" icon={<HouseIcon />} />
+      <BottomNavItem value="explore" label="Explore" icon={<CompassIcon />} />
+      <BottomNavItem value="me" label="Profile" icon={<UserRoundIcon />} />
     </BottomNav>
   </div>
 )`,
@@ -44,10 +44,10 @@ return (
         description: 'compact — the scrolled-down state',
         render: `<div className="w-full max-w-sm rounded-card bg-muted pt-10">
   <BottomNav value="home" compact>
-    <BottomNavItem value="home" label="Home" icon={<House />} />
-    <BottomNavItem value="explore" label="Explore" icon={<Compass />} />
-    <BottomNavItem value="alerts" label="Notifications" icon={<Bell />} />
-    <BottomNavItem value="me" label="Profile" icon={<User />} />
+    <BottomNavItem value="home" label="Home" icon={<HouseIcon />} />
+    <BottomNavItem value="explore" label="Explore" icon={<CompassIcon />} />
+    <BottomNavItem value="alerts" label="Notifications" icon={<BellIcon />} />
+    <BottomNavItem value="me" label="Profile" icon={<UserRoundIcon />} />
   </BottomNav>
 </div>`,
       },
