@@ -21,7 +21,7 @@ export const specs = [
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `import { ChevronRight, Compass, House, PenLine, User } from 'lucide-react'`,
+      `import { ChevronRightIcon, CompassIcon, HouseIcon, PenLineIcon, UserRoundIcon } from '@comwit/ui/icons'`,
       `const NOTES = [
   { id: 1, title: 'Packing list', body: 'Passport, chargers, the good camera and one book too many.' },
   { id: 2, title: 'Places to eat', body: 'Black pork near the harbor. The noodle stand opens at eleven.' },
@@ -83,7 +83,7 @@ return (
                     className="flex w-full items-center justify-between rounded-control px-3 py-3 text-left text-label font-medium text-foreground hover:bg-accent"
                   >
                     {n.title}
-                    <ChevronRight className="size-4 text-muted-foreground" />
+                    <ChevronRightIcon className="size-4 text-muted-foreground" />
                   </button>
                 </li>
               ))}
@@ -123,7 +123,7 @@ return (
               <AppBarTitle size="lg">Notes</AppBarTitle>
               <AppBarActions>
                 <Button variant="ghost" size="icon" aria-label="New note" onClick={() => setPath('/compose')}>
-                  <PenLine />
+                  <PenLineIcon />
                 </Button>
               </AppBarActions>
             </AppBar>
@@ -190,9 +190,9 @@ return (
         description:
           'A persistent shell: the outer boundary keeps a fixed routeKey so the bottom nav survives, and the inner boundary swaps the page. The app bar belongs to the page, so it slides with it, and nothing sits above the inner boundary, so the leaving page stays exactly where it was. ordered + slide(): the tab order decides the direction.',
         renderFn: `const TABS = [
-  { value: '/home', label: 'Home', icon: <House /> },
-  { value: '/explore', label: 'Explore', icon: <Compass /> },
-  { value: '/me', label: 'Profile', icon: <User /> },
+  { value: '/home', label: 'Home', icon: <HouseIcon /> },
+  { value: '/explore', label: 'Explore', icon: <CompassIcon /> },
+  { value: '/me', label: 'Profile', icon: <UserRoundIcon /> },
 ]
 const [tab, setTab] = React.useState('/home')
 const current = TABS.find((t) => t.value === tab) ?? TABS[0]

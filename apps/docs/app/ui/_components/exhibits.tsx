@@ -2,31 +2,31 @@
 
 import * as React from 'react'
 import {
-  Archive,
-  ArrowLeft,
-  Bell,
-  BatteryFull,
-  Check,
-  Circle,
-  Clock,
-  CloudUpload,
-  Film,
-  FolderPlus,
-  Heart,
-  Image as ImageIcon,
-  LayoutGrid,
-  Maximize2,
-  MoreVertical,
-  Phone,
-  Play,
-  Plus,
-  Search,
-  SignalHigh,
-  Sparkles,
-  Trash2,
-  Upload,
-  Wifi,
-} from 'lucide-react'
+  ArchiveIcon,
+  ArrowLeftIcon,
+  BellIcon,
+  BatteryFullIcon,
+  CheckIcon,
+  CircleIcon,
+  ClockIcon,
+  CloudUploadIcon,
+  FilmIcon,
+  FolderPlusIcon,
+  HeartIcon,
+  ImageIcon,
+  LayoutGridIcon,
+  Maximize2Icon,
+  MoreVerticalIcon,
+  PhoneIcon,
+  PlayIcon,
+  PlusIcon,
+  SearchIcon,
+  SignalHighIcon,
+  SparklesIcon,
+  Trash2Icon,
+  UploadIcon,
+  WifiIcon,
+} from '@comwit/ui/icons'
 import { toast } from '@comwit/ui-templates/toast'
 import {
   AppBar,
@@ -113,9 +113,9 @@ export function PhoneFrame({
           <span>9:41</span>
           <span className="phone-island" />
           <span className="flex items-center gap-1">
-            <SignalHigh className="size-3.5" strokeWidth={2.5} />
-            <Wifi className="size-3.5" strokeWidth={2.5} />
-            <BatteryFull className="size-4" strokeWidth={2} />
+            <SignalHighIcon className="size-3.5" strokeWidth={2.5} />
+            <WifiIcon className="size-3.5" strokeWidth={2.5} />
+            <BatteryFullIcon className="size-4" strokeWidth={2} />
           </span>
         </div>
         <PhoneScreenContext.Provider value={screen}>{children}</PhoneScreenContext.Provider>
@@ -256,12 +256,12 @@ function Pinwheel({ className }: { className?: string }) {
 
 const TABS = [
   { value: '/', label: 'Photos', icon: <ImageIcon /> },
-  { value: '/collections', label: 'Collections', icon: <LayoutGrid /> },
-  { value: '/create', label: 'Create', icon: <Sparkles /> },
+  { value: '/collections', label: 'Collections', icon: <LayoutGridIcon /> },
+  { value: '/create', label: 'Create', icon: <SparklesIcon /> },
 ]
 const isTab = (path: string) => TABS.some((t) => t.value === path)
 /** 탭바의 네 번째 칸. 앱 쉘에서는 페이지가 아니라 검색 시트를 연다. */
-const SEARCH_TAB = { value: '/search', label: 'Search', icon: <Search /> }
+const SEARCH_TAB = { value: '/search', label: 'Search', icon: <SearchIcon /> }
 const NAV_TABS = [...TABS, SEARCH_TAB]
 
 /** 탭 쉘의 상단 바 — 로고 · 추가 · 알림 · 프로필. */
@@ -283,7 +283,7 @@ function TopAppBar({
           aria-label="Add"
           onClick={onAdd ?? (() => toast('Add'))}
         >
-          <Plus />
+          <PlusIcon />
         </Button>
         <Button
           variant="ghost"
@@ -292,7 +292,7 @@ function TopAppBar({
           className="relative"
           onClick={() => toast('Backup complete')}
         >
-          <Bell />
+          <BellIcon />
           <span className="absolute top-2 right-2.5 size-2 rounded-full bg-destructive" />
         </Button>
         <Button
@@ -402,10 +402,10 @@ function CollectionCard({ collection, onOpen }: { collection: Collection; onOpen
 }
 
 const UTILITIES = [
-  ['Favorites', Heart],
-  ['Trash', Trash2],
-  ['Videos', Film],
-  ['Archive', Archive],
+  ['Favorites', HeartIcon],
+  ['Trash', Trash2Icon],
+  ['Videos', FilmIcon],
+  ['Archive', ArchiveIcon],
 ] as const
 
 function CollectionsTab({ onOpen }: { onOpen: (collection: Collection) => void }) {
@@ -438,21 +438,25 @@ function CollectionsTab({ onOpen }: { onOpen: (collection: Collection) => void }
 const TOOLS = [
   {
     label: 'Collage',
-    Icon: LayoutGrid,
+    Icon: LayoutGridIcon,
     tint: 'bg-info-surface text-info-surface-foreground',
     enabled: true,
   },
   {
     label: 'Highlight video',
-    Icon: Sparkles,
+    Icon: SparklesIcon,
     tint: 'bg-destructive-surface text-destructive-surface-foreground',
   },
   {
     label: 'Cinematic motion',
-    Icon: Film,
+    Icon: FilmIcon,
     tint: 'bg-success-surface text-success-surface-foreground',
   },
-  { label: 'Animation', Icon: Play, tint: 'bg-warning-surface text-warning-surface-foreground' },
+  {
+    label: 'Animation',
+    Icon: PlayIcon,
+    tint: 'bg-warning-surface text-warning-surface-foreground',
+  },
 ]
 
 function CreateTab({ onCollage }: { onCollage: () => void }) {
@@ -509,7 +513,7 @@ function PhotoDetailPage({ photo, onBack }: { photo: Photo; onBack: () => void }
         onClick={onBack}
         className="absolute top-3 left-3 z-raised size-10"
       >
-        <ArrowLeft className="size-5" />
+        <ArrowLeftIcon className="size-5" />
       </GlassButton>
       <section className="w-full bg-background py-4" style={{ height: SCREEN_H }}>
         <Img
@@ -573,7 +577,7 @@ function CollectionDetailPage({
         <AppBarBackButton onClick={onBack} />
         <AppBarActions>
           <Button variant="ghost" size="icon" aria-label="More" onClick={() => toast('More')}>
-            <MoreVertical />
+            <MoreVerticalIcon />
           </Button>
         </AppBarActions>
       </AppBar>
@@ -623,15 +627,15 @@ function CollagePage({ onClose }: { onClose: () => void }) {
       <div className="px-gutter">
         <p className="text-center text-caption text-muted-foreground">Select 1–6 photos</p>
         <div className="mt-3 flex h-11 items-center gap-2 rounded-pill bg-muted px-4 text-label text-muted-foreground">
-          <Search className="size-4" aria-hidden="true" />
-          Search your photos
+          <SearchIcon className="size-4" aria-hidden="true" />
+          SearchIcon your photos
         </div>
       </div>
       <div className="flex-1 pb-24">
         {sections.map(({ label, photos }) => (
           <section key={label} className="mt-5">
             <div className="flex items-center gap-3 px-4 pb-3">
-              <Circle
+              <CircleIcon
                 className="size-5 text-subtle-foreground"
                 strokeWidth={1.75}
                 aria-hidden="true"
@@ -666,7 +670,7 @@ function CollagePage({ onClose }: { onClose: () => void }) {
                         on ? 'bg-primary text-primary-foreground' : 'bg-black/10'
                       )}
                     >
-                      {on && <Check className="size-3" strokeWidth={3} aria-hidden="true" />}
+                      {on && <CheckIcon className="size-3" strokeWidth={3} aria-hidden="true" />}
                     </span>
                   </Button>
                 )
@@ -683,7 +687,7 @@ function CollagePage({ onClose }: { onClose: () => void }) {
           onClick={() => toast('Resize')}
           className="absolute right-4 bottom-6 size-12 rounded-card shadow-raised"
         >
-          <Maximize2 />
+          <Maximize2Icon />
         </Button>
       </div>
     </div>
@@ -693,10 +697,10 @@ function CollagePage({ onClose }: { onClose: () => void }) {
 /* ── Bottom sheets the app opens ────────────────────────────────────── */
 
 const CREATE_ITEMS = [
-  ['Album', FolderPlus],
-  ['Collage', LayoutGrid],
-  ['Highlight video', Sparkles],
-  ['Import photos', Upload],
+  ['Album', FolderPlusIcon],
+  ['Collage', LayoutGridIcon],
+  ['Highlight video', SparklesIcon],
+  ['Import photos', UploadIcon],
 ] as const
 const SEARCH_CHIPS = ['People', 'Places', 'Things', 'Screenshots', 'Favorites']
 const RECENT = [
@@ -785,7 +789,7 @@ function SearchSheet({
                   onClick={() => toast(term)}
                   className="flex w-full items-center justify-start gap-3 rounded-control px-2 py-2.5 text-left text-label text-foreground transition-colors duration-fast hover:bg-accent"
                 >
-                  <Clock className="size-4 text-muted-foreground" aria-hidden="true" />
+                  <ClockIcon className="size-4 text-muted-foreground" aria-hidden="true" />
                   {term}
                 </Button>
               </BottomSheetClose>
@@ -1011,8 +1015,8 @@ export function BottomNavExhibit() {
           ) : (
             <div className="space-y-4 px-gutter py-4">
               <div className="flex h-11 items-center gap-2 rounded-pill bg-muted px-4 text-label text-muted-foreground">
-                <Search className="size-4" aria-hidden="true" />
-                Search your photos
+                <SearchIcon className="size-4" aria-hidden="true" />
+                SearchIcon your photos
               </div>
               <div className="flex flex-wrap gap-2">
                 {SEARCH_CHIPS.map((c) => (
@@ -1073,7 +1077,7 @@ export function PullToRefreshExhibit() {
               aria-label="Back up"
               onClick={() => toast('Backing up…')}
             >
-              <CloudUpload />
+              <CloudUploadIcon />
             </Button>
           </AppBarActions>
         </AppBar>
@@ -1167,7 +1171,7 @@ export function GlassExhibit() {
               if (e.key === 'ArrowRight') setX((v) => clamp(v + 0.05))
             }}
           >
-            <Heart className="size-4" /> Drag me
+            <HeartIcon className="size-4" /> Drag me
           </GlassButton>
         </div>
       </div>
@@ -1252,7 +1256,7 @@ function MessengerScreen() {
         </div>
         <ChatHeaderActions>
           <Button variant="ghost" size="icon" aria-label="Call">
-            <Phone />
+            <PhoneIcon />
           </Button>
         </ChatHeaderActions>
       </ChatHeader>
@@ -1325,7 +1329,7 @@ function AssistantScreen() {
     <Chat mode="assistant" className="h-auto flex-1">
       <ChatHeader>
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-surface text-primary-ink">
-          <Sparkles className="size-4" aria-hidden="true" />
+          <SparklesIcon className="size-4" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
           <ChatTitle>Trip planner</ChatTitle>

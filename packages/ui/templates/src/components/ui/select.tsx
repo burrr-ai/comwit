@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Select as SelectPrimitive } from '@comwit/ui'
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@comwit/ui/icons'
 
 import { focusField, invalidField } from '../../lib/interaction'
 import { OverlayMotion } from '../../lib/overlay-motion'

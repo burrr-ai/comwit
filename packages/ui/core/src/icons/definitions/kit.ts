@@ -50,6 +50,10 @@ export function spokes(cx: number, cy: number, inner: number, outer: number, cou
     return `M${x1} ${y1}L${x2} ${y2}`
   }).join('')
 }
+/** A small six-spoke cog on a hub, pivoting on its own centre: the shared 'configure' mark. */
+export const cog = (cx: number, cy: number) =>
+  pivot(g('cog', c(cx, cy, 1.9), p(spokes(cx, cy, 2.9, 3.8, 6))), cx, cy)
+
 /** A closed scalloped outline: `count` soft lobes between two radii. */
 export function scallop(cx: number, cy: number, inner: number, outer: number, count: number) {
   const step = 360 / count

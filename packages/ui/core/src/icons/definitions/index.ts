@@ -7,6 +7,7 @@ import { navigationIcons } from './navigation'
 import { objectIcons } from './objects'
 import { peopleIcons } from './people'
 import { statusIcons } from './status'
+import { textIcons } from './text'
 
 export const definitions = [
   ...navigationIcons,
@@ -18,4 +19,5 @@ export const definitions = [
   ...mediaIcons,
   ...developmentIcons,
   ...objectIcons,
+  ...textIcons,
 ]

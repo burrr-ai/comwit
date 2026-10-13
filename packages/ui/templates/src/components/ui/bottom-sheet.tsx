@@ -27,7 +27,7 @@
 
 import * as React from 'react'
 import { BottomSheet as BottomSheetPrimitive } from '@comwit/ui'
-import { XIcon } from 'lucide-react'
+import { XIcon } from '@comwit/ui/icons'
 
 import { GlassSurface } from './glass'
 import { OverlayMotion } from '../../lib/overlay-motion'

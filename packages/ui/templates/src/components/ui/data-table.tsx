@@ -19,7 +19,7 @@
 
 import * as React from 'react'
 import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon, Loader2Icon } from '@comwit/ui/icons'
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table'
 import { Button } from './button'
@@ -76,6 +76,10 @@ function DataTable<TData, TValue>({
   toolbar,
   labels,
 }: DataTableProps<TData, TValue>) {
+  // TanStack Table v8의 내부 가변 상태는 자동 메모이제이션과 호환되지 않는다.
+  // 컴파일러 호환 API로 전환하면 이 지시문을 제거한다.
+  'use no memo'
+
   const { data: pageable, isLoading, isFetching, isSuccess, isError } = queryData
   const { items, total, totalPages, limit } = pageable
   const [page, setPage] = React.useState(pageable.page)
@@ -131,7 +135,7 @@ function DataTable<TData, TValue>({
         {/* 백그라운드 재조회 — 전체 딤 대신 우상단 스피너만. 첫 로딩 스켈레톤 중엔 숨김. */}
         {isFetching && !showSkeleton && (
           <div className="pointer-events-none absolute right-3 top-2.5 z-sticky inline-flex items-center gap-1.5 rounded-pill border border-border bg-surface-glass px-2.5 py-1 text-caption font-medium text-primary shadow-card backdrop-blur">
-            <Loader2 className="size-3.5 animate-spin" />
+            <Loader2Icon className="size-3.5 animate-spin" />
             {text.refreshing}
           </div>
         )}
@@ -219,7 +223,7 @@ function DataTable<TData, TValue>({
             onClick={() => goToPage(page - 1)}
             disabled={!canPrev}
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeftIcon className="size-4" />
           </Button>
           <span className="min-w-[3.5rem] text-center text-caption tabular-nums text-muted-foreground">
             {page} / {totalPages || 1}
@@ -232,7 +236,7 @@ function DataTable<TData, TValue>({
             onClick={() => goToPage(page + 1)}
             disabled={!canNext}
           >
-            <ChevronRight className="size-4" />
+            <ChevronRightIcon className="size-4" />
           </Button>
         </div>
       </div>

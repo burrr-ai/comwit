@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon } from '@comwit/ui/icons'
 
 import { disabledStyle, focusRing, pressable } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
@@ -53,7 +53,7 @@ function Pager({ page, totalPages, onChange, className, alwaysShow = false, labe
         onClick={() => onChange(current - 1)}
         aria-label={text.previous}
       >
-        <ChevronLeft className="size-4" aria-hidden="true" />
+        <ChevronLeftIcon className="size-4" aria-hidden="true" />
       </PageButton>
       {pages.map((p, i) =>
         p === '…' ? (
@@ -80,7 +80,7 @@ function Pager({ page, totalPages, onChange, className, alwaysShow = false, labe
         onClick={() => onChange(current + 1)}
         aria-label={text.next}
       >
-        <ChevronRight className="size-4" aria-hidden="true" />
+        <ChevronRightIcon className="size-4" aria-hidden="true" />
       </PageButton>
     </nav>
   )

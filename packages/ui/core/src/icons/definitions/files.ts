@@ -1,5 +1,5 @@
 import type { IconDefinition } from '../types'
-import { c, g, ink, p, pivot, pop, push, spring, swing, turn, write } from './kit'
+import { c, g, ink, p, pivot, pop, push, r, spring, swing, turn, write } from './kit'
 
 const folderBack = 'M3.5 10V6a1.5 1.5 0 0 1 1.5-1.5h4l2.4 2.7H19a1.5 1.5 0 0 1 1.5 1.5V10'
 const folderFront = 'M3.5 10h17v8a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18Z'
@@ -173,5 +173,38 @@ export const fileIcons: readonly IconDefinition[] = [
       ),
     ],
     motion: [swing('clip', { rotate: 12 }, { beats: 4, interval: 100, spring: spring.wobbly })],
+  },
+  {
+    name: 'FolderPlus',
+    category: 'Files',
+    tags: ['new folder', 'create', 'directory', '새 폴더', '폴더 추가'],
+    nodes: [p(folder), g('plus', p('M12 10.5v6'), p('M9 13.5h6'))],
+    motion: [turn('plus', { rotate: 90 })],
+  },
+  {
+    name: 'Archive',
+    category: 'Files',
+    tags: ['store', 'box', 'old', '보관', '아카이브'],
+    nodes: [
+      p('M5 8.5v9.5A1.5 1.5 0 0 0 6.5 19.5h11a1.5 1.5 0 0 0 1.5-1.5V8.5'),
+      g('handle', p('M10 13h4')),
+      g('lid', r(3.5, 4.5, 17, 4, 1.2)),
+    ],
+    // The lid lifts; the handle inside is tugged.
+    motion: [
+      push('lid', { y: -1.6 }, { hold: 150, spring: spring.bouncy }),
+      push('handle', { scaleX: 1.35 }, { at: 90, hold: 80, spring: spring.bouncy }),
+    ],
+  },
+  {
+    name: 'Image',
+    category: 'Files',
+    tags: ['photo', 'picture', 'media', '이미지', '사진'],
+    nodes: [
+      p('M3.5 6.5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z'),
+      g('sun', c(8.8, 9.3, 1.5)),
+      p('m3.5 17.3 4.4-4.4a1.2 1.2 0 0 1 1.7 0l3 3 2.2-2.2a1.2 1.2 0 0 1 1.7 0l4 4'),
+    ],
+    motion: [push('sun', { y: -1.8 }, { hold: 100, spring: spring.bouncy })],
   },
 ]

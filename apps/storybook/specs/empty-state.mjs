@@ -7,7 +7,9 @@ export const specs = [
       { from: '@comwit/ui-templates/empty-state', names: ['EmptyState'] },
       { from: '@comwit/ui-templates/button', names: ['Button'] },
     ],
-    extraImports: [`import { FolderOpen, Inbox, Plus, SearchX, Users } from 'lucide-react'`],
+    extraImports: [
+      `import { FolderOpenIcon, InboxIcon, PlusIcon, SearchXIcon, UsersIcon } from '@comwit/ui/icons'`,
+    ],
     stories: [
       {
         name: 'NoProjects',
@@ -15,12 +17,12 @@ export const specs = [
         description: 'Icon, one-line title, a short hint and a single next step.',
         render: `<EmptyState
   className="w-full max-w-md py-8"
-  icon={<FolderOpen />}
+  icon={<FolderOpenIcon />}
   title="No projects yet"
   description="Create a project to start tracking work with your team."
   action={
     <Button>
-      <Plus /> New project
+      <PlusIcon /> New project
     </Button>
   }
 />`,
@@ -30,7 +32,7 @@ export const specs = [
         description: 'For an empty search or filter, offer a way back instead of a create action.',
         render: `<EmptyState
   className="w-full max-w-md"
-  icon={<SearchX />}
+  icon={<SearchXIcon />}
   title="No results for “quarterly report”"
   description="Check the spelling or try a broader search. Filters may also be hiding results."
   action={<Button variant="outline">Clear filters</Button>}
@@ -41,7 +43,7 @@ export const specs = [
         description: 'action accepts more than one button; lead with the primary one.',
         render: `<EmptyState
   className="w-full max-w-md"
-  icon={<Users />}
+  icon={<UsersIcon />}
   title="Invite your team"
   description="Projects work better together. Teammates you invite can comment, assign and edit."
   action={
@@ -58,7 +60,7 @@ export const specs = [
           'No action — for small panels like a notification list where there is nothing to do yet.',
         render: `<EmptyState
   className="w-full max-w-xs py-10"
-  icon={<Inbox />}
+  icon={<InboxIcon />}
   title="You're all caught up"
   description="New notifications will show up here."
 />`,

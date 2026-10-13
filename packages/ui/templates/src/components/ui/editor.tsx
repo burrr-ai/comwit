@@ -4,21 +4,21 @@ import * as React from 'react'
 import { EditorContent } from '@tiptap/react'
 import { useRichTextEditor, type TiptapEditor } from '@comwit/ui'
 import {
-  Bold,
-  Italic,
-  Strikethrough,
-  Heading1,
-  Heading2,
-  Heading3,
-  List,
-  ListOrdered,
-  Quote,
-  Code,
-  Link as LinkIcon,
-  Image as ImageIcon,
-  Undo,
-  Redo,
-} from 'lucide-react'
+  BoldIcon,
+  ItalicIcon,
+  StrikethroughIcon,
+  Heading1Icon,
+  Heading2Icon,
+  Heading3Icon,
+  ListIcon,
+  ListOrderedIcon,
+  QuoteIcon,
+  Code2Icon,
+  Link2Icon,
+  ImageIcon,
+  UndoIcon,
+  RedoIcon,
+} from '@comwit/ui/icons'
 
 import { focusWithinField } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
@@ -93,21 +93,21 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
         active={editor.isActive('bold')}
         onClick={() => editor.chain().focus().toggleBold().run()}
       >
-        <Bold />
+        <BoldIcon />
       </ToolbarButton>
       <ToolbarButton
         label="Italic"
         active={editor.isActive('italic')}
         onClick={() => editor.chain().focus().toggleItalic().run()}
       >
-        <Italic />
+        <ItalicIcon />
       </ToolbarButton>
       <ToolbarButton
         label="Strikethrough"
         active={editor.isActive('strike')}
         onClick={() => editor.chain().focus().toggleStrike().run()}
       >
-        <Strikethrough />
+        <StrikethroughIcon />
       </ToolbarButton>
       <Separator orientation="vertical" className="mx-1 h-6" />
       <ToolbarButton
@@ -115,21 +115,21 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
         active={editor.isActive('heading', { level: 1 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
       >
-        <Heading1 />
+        <Heading1Icon />
       </ToolbarButton>
       <ToolbarButton
         label="Heading 2"
         active={editor.isActive('heading', { level: 2 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
       >
-        <Heading2 />
+        <Heading2Icon />
       </ToolbarButton>
       <ToolbarButton
         label="Heading 3"
         active={editor.isActive('heading', { level: 3 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
       >
-        <Heading3 />
+        <Heading3Icon />
       </ToolbarButton>
       <Separator orientation="vertical" className="mx-1 h-6" />
       <ToolbarButton
@@ -137,32 +137,32 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
         active={editor.isActive('bulletList')}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
       >
-        <List />
+        <ListIcon />
       </ToolbarButton>
       <ToolbarButton
         label="Ordered list"
         active={editor.isActive('orderedList')}
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
       >
-        <ListOrdered />
+        <ListOrderedIcon />
       </ToolbarButton>
       <ToolbarButton
         label="Quote"
         active={editor.isActive('blockquote')}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
       >
-        <Quote />
+        <QuoteIcon />
       </ToolbarButton>
       <ToolbarButton
         label="Code block"
         active={editor.isActive('codeBlock')}
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
       >
-        <Code />
+        <Code2Icon />
       </ToolbarButton>
       <Separator orientation="vertical" className="mx-1 h-6" />
       <ToolbarButton label="Link" active={editor.isActive('link')} onClick={setLink}>
-        <LinkIcon />
+        <Link2Icon />
       </ToolbarButton>
       <ToolbarButton label="Image" onClick={addImage}>
         <ImageIcon />
@@ -173,14 +173,14 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
         disabled={!editor.can().undo()}
         onClick={() => editor.chain().focus().undo().run()}
       >
-        <Undo />
+        <UndoIcon />
       </ToolbarButton>
       <ToolbarButton
         label="Redo"
         disabled={!editor.can().redo()}
         onClick={() => editor.chain().focus().redo().run()}
       >
-        <Redo />
+        <RedoIcon />
       </ToolbarButton>
     </div>
   )

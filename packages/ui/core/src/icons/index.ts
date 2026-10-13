@@ -3,14 +3,20 @@ import { createIcon } from './icon'
 import {
   AlertCircleDefinition,
   AlertTriangleDefinition,
+  ArchiveDefinition,
   ArrowDownDefinition,
+  ArrowDownRightDefinition,
   ArrowLeftDefinition,
   ArrowRightDefinition,
   ArrowUpDefinition,
+  ArrowUpDownDefinition,
   ArrowUpRightDefinition,
   BadgeCheckDefinition,
+  BarChart3Definition,
+  BatteryFullDefinition,
   BellDefinition,
   BellRingDefinition,
+  BoldDefinition,
   BookmarkDefinition,
   BotDefinition,
   BriefcaseDefinition,
@@ -24,11 +30,14 @@ import {
   ChevronRightDefinition,
   ChevronsUpDownDefinition,
   ChevronUpDefinition,
+  CircleDefinition,
   ClockDefinition,
   Clock3Definition,
   CloudUploadDefinition,
   Code2Definition,
   CoffeeDefinition,
+  Columns3Definition,
+  CompassDefinition,
   CopyDefinition,
   CreditCardDefinition,
   CrownDefinition,
@@ -38,24 +47,35 @@ import {
   EyeDefinition,
   EyeOffDefinition,
   FileTextDefinition,
+  FilmDefinition,
   FilterDefinition,
   FlagDefinition,
   FolderDefinition,
   FolderGit2Definition,
   FolderKanbanDefinition,
   FolderOpenDefinition,
+  FolderPlusDefinition,
   GitBranchDefinition,
   GlobeDefinition,
   Globe2Definition,
   GraduationCapDefinition,
+  Heading1Definition,
+  Heading2Definition,
+  Heading3Definition,
   HeartDefinition,
   HistoryDefinition,
   HouseDefinition,
+  ImageDefinition,
   ImagePlusDefinition,
+  InboxDefinition,
   InfoDefinition,
+  ItalicDefinition,
   KeyRoundDefinition,
+  LayoutDashboardDefinition,
   LayoutGridDefinition,
   Link2Definition,
+  ListDefinition,
+  ListOrderedDefinition,
   Loader2Definition,
   LockDefinition,
   LockKeyholeDefinition,
@@ -74,35 +94,49 @@ import {
   MonitorCogDefinition,
   MoonDefinition,
   MoreHorizontalDefinition,
+  MoreVerticalDefinition,
   PaperclipDefinition,
   PauseDefinition,
   PencilDefinition,
   PenLineDefinition,
+  PhoneDefinition,
   PlayDefinition,
   PlusDefinition,
+  QuoteDefinition,
+  RedoDefinition,
   RefreshCcwDefinition,
   RefreshCwDefinition,
   RocketDefinition,
   RotateCcwDefinition,
   SaveDefinition,
   SearchDefinition,
+  SearchXDefinition,
   SendDefinition,
   ServerCogDefinition,
+  ServerCrashDefinition,
   SettingsDefinition,
+  ShareDefinition,
   Share2Definition,
   ShieldCheckDefinition,
+  SignalHighDefinition,
   SlidersHorizontalDefinition,
   SmartphoneDefinition,
   SparklesDefinition,
+  SquareDefinition,
   SquareKanbanDefinition,
   SquareTerminalDefinition,
   StarDefinition,
+  StrikethroughDefinition,
   SunDefinition,
   ThumbsUpDefinition,
   Trash2Definition,
+  UndoDefinition,
   UploadDefinition,
+  UserCheckDefinition,
+  UserMinusDefinition,
   UserPlusDefinition,
   UserRoundDefinition,
+  UserRoundCogDefinition,
   UsersDefinition,
   Volume2Definition,
   WifiDefinition,
@@ -112,18 +146,24 @@ import {
   ZapDefinition,
 } from './generated/definitions'
 export { Icon } from './icon'
-export type { IconProps, IconDefinition, IconCategory } from './types'
+export type { IconProps, IconDefinition, IconCategory, IconComponent } from './types'
 
 export const AlertCircleIcon = /* @__PURE__ */ createIcon(AlertCircleDefinition)
 export const AlertTriangleIcon = /* @__PURE__ */ createIcon(AlertTriangleDefinition)
+export const ArchiveIcon = /* @__PURE__ */ createIcon(ArchiveDefinition)
 export const ArrowDownIcon = /* @__PURE__ */ createIcon(ArrowDownDefinition)
+export const ArrowDownRightIcon = /* @__PURE__ */ createIcon(ArrowDownRightDefinition)
 export const ArrowLeftIcon = /* @__PURE__ */ createIcon(ArrowLeftDefinition)
 export const ArrowRightIcon = /* @__PURE__ */ createIcon(ArrowRightDefinition)
 export const ArrowUpIcon = /* @__PURE__ */ createIcon(ArrowUpDefinition)
+export const ArrowUpDownIcon = /* @__PURE__ */ createIcon(ArrowUpDownDefinition)
 export const ArrowUpRightIcon = /* @__PURE__ */ createIcon(ArrowUpRightDefinition)
 export const BadgeCheckIcon = /* @__PURE__ */ createIcon(BadgeCheckDefinition)
+export const BarChart3Icon = /* @__PURE__ */ createIcon(BarChart3Definition)
+export const BatteryFullIcon = /* @__PURE__ */ createIcon(BatteryFullDefinition)
 export const BellIcon = /* @__PURE__ */ createIcon(BellDefinition)
 export const BellRingIcon = /* @__PURE__ */ createIcon(BellRingDefinition)
+export const BoldIcon = /* @__PURE__ */ createIcon(BoldDefinition)
 export const BookmarkIcon = /* @__PURE__ */ createIcon(BookmarkDefinition)
 export const BotIcon = /* @__PURE__ */ createIcon(BotDefinition)
 export const BriefcaseIcon = /* @__PURE__ */ createIcon(BriefcaseDefinition)
@@ -137,11 +177,14 @@ export const ChevronLeftIcon = /* @__PURE__ */ createIcon(ChevronLeftDefinition)
 export const ChevronRightIcon = /* @__PURE__ */ createIcon(ChevronRightDefinition)
 export const ChevronsUpDownIcon = /* @__PURE__ */ createIcon(ChevronsUpDownDefinition)
 export const ChevronUpIcon = /* @__PURE__ */ createIcon(ChevronUpDefinition)
+export const CircleIcon = /* @__PURE__ */ createIcon(CircleDefinition)
 export const ClockIcon = /* @__PURE__ */ createIcon(ClockDefinition)
 export const Clock3Icon = /* @__PURE__ */ createIcon(Clock3Definition)
 export const CloudUploadIcon = /* @__PURE__ */ createIcon(CloudUploadDefinition)
 export const Code2Icon = /* @__PURE__ */ createIcon(Code2Definition)
 export const CoffeeIcon = /* @__PURE__ */ createIcon(CoffeeDefinition)
+export const Columns3Icon = /* @__PURE__ */ createIcon(Columns3Definition)
+export const CompassIcon = /* @__PURE__ */ createIcon(CompassDefinition)
 export const CopyIcon = /* @__PURE__ */ createIcon(CopyDefinition)
 export const CreditCardIcon = /* @__PURE__ */ createIcon(CreditCardDefinition)
 export const CrownIcon = /* @__PURE__ */ createIcon(CrownDefinition)
@@ -151,24 +194,35 @@ export const ExternalLinkIcon = /* @__PURE__ */ createIcon(ExternalLinkDefinitio
 export const EyeIcon = /* @__PURE__ */ createIcon(EyeDefinition)
 export const EyeOffIcon = /* @__PURE__ */ createIcon(EyeOffDefinition)
 export const FileTextIcon = /* @__PURE__ */ createIcon(FileTextDefinition)
+export const FilmIcon = /* @__PURE__ */ createIcon(FilmDefinition)
 export const FilterIcon = /* @__PURE__ */ createIcon(FilterDefinition)
 export const FlagIcon = /* @__PURE__ */ createIcon(FlagDefinition)
 export const FolderIcon = /* @__PURE__ */ createIcon(FolderDefinition)
 export const FolderGit2Icon = /* @__PURE__ */ createIcon(FolderGit2Definition)
 export const FolderKanbanIcon = /* @__PURE__ */ createIcon(FolderKanbanDefinition)
 export const FolderOpenIcon = /* @__PURE__ */ createIcon(FolderOpenDefinition)
+export const FolderPlusIcon = /* @__PURE__ */ createIcon(FolderPlusDefinition)
 export const GitBranchIcon = /* @__PURE__ */ createIcon(GitBranchDefinition)
 export const GlobeIcon = /* @__PURE__ */ createIcon(GlobeDefinition)
 export const Globe2Icon = /* @__PURE__ */ createIcon(Globe2Definition)
 export const GraduationCapIcon = /* @__PURE__ */ createIcon(GraduationCapDefinition)
+export const Heading1Icon = /* @__PURE__ */ createIcon(Heading1Definition)
+export const Heading2Icon = /* @__PURE__ */ createIcon(Heading2Definition)
+export const Heading3Icon = /* @__PURE__ */ createIcon(Heading3Definition)
 export const HeartIcon = /* @__PURE__ */ createIcon(HeartDefinition)
 export const HistoryIcon = /* @__PURE__ */ createIcon(HistoryDefinition)
 export const HouseIcon = /* @__PURE__ */ createIcon(HouseDefinition)
+export const ImageIcon = /* @__PURE__ */ createIcon(ImageDefinition)
 export const ImagePlusIcon = /* @__PURE__ */ createIcon(ImagePlusDefinition)
+export const InboxIcon = /* @__PURE__ */ createIcon(InboxDefinition)
 export const InfoIcon = /* @__PURE__ */ createIcon(InfoDefinition)
+export const ItalicIcon = /* @__PURE__ */ createIcon(ItalicDefinition)
 export const KeyRoundIcon = /* @__PURE__ */ createIcon(KeyRoundDefinition)
+export const LayoutDashboardIcon = /* @__PURE__ */ createIcon(LayoutDashboardDefinition)
 export const LayoutGridIcon = /* @__PURE__ */ createIcon(LayoutGridDefinition)
 export const Link2Icon = /* @__PURE__ */ createIcon(Link2Definition)
+export const ListIcon = /* @__PURE__ */ createIcon(ListDefinition)
+export const ListOrderedIcon = /* @__PURE__ */ createIcon(ListOrderedDefinition)
 export const Loader2Icon = /* @__PURE__ */ createIcon(Loader2Definition)
 export const LockIcon = /* @__PURE__ */ createIcon(LockDefinition)
 export const LockKeyholeIcon = /* @__PURE__ */ createIcon(LockKeyholeDefinition)
@@ -187,35 +241,49 @@ export const MinusIcon = /* @__PURE__ */ createIcon(MinusDefinition)
 export const MonitorCogIcon = /* @__PURE__ */ createIcon(MonitorCogDefinition)
 export const MoonIcon = /* @__PURE__ */ createIcon(MoonDefinition)
 export const MoreHorizontalIcon = /* @__PURE__ */ createIcon(MoreHorizontalDefinition)
+export const MoreVerticalIcon = /* @__PURE__ */ createIcon(MoreVerticalDefinition)
 export const PaperclipIcon = /* @__PURE__ */ createIcon(PaperclipDefinition)
 export const PauseIcon = /* @__PURE__ */ createIcon(PauseDefinition)
 export const PencilIcon = /* @__PURE__ */ createIcon(PencilDefinition)
 export const PenLineIcon = /* @__PURE__ */ createIcon(PenLineDefinition)
+export const PhoneIcon = /* @__PURE__ */ createIcon(PhoneDefinition)
 export const PlayIcon = /* @__PURE__ */ createIcon(PlayDefinition)
 export const PlusIcon = /* @__PURE__ */ createIcon(PlusDefinition)
+export const QuoteIcon = /* @__PURE__ */ createIcon(QuoteDefinition)
+export const RedoIcon = /* @__PURE__ */ createIcon(RedoDefinition)
 export const RefreshCcwIcon = /* @__PURE__ */ createIcon(RefreshCcwDefinition)
 export const RefreshCwIcon = /* @__PURE__ */ createIcon(RefreshCwDefinition)
 export const RocketIcon = /* @__PURE__ */ createIcon(RocketDefinition)
 export const RotateCcwIcon = /* @__PURE__ */ createIcon(RotateCcwDefinition)
 export const SaveIcon = /* @__PURE__ */ createIcon(SaveDefinition)
 export const SearchIcon = /* @__PURE__ */ createIcon(SearchDefinition)
+export const SearchXIcon = /* @__PURE__ */ createIcon(SearchXDefinition)
 export const SendIcon = /* @__PURE__ */ createIcon(SendDefinition)
 export const ServerCogIcon = /* @__PURE__ */ createIcon(ServerCogDefinition)
+export const ServerCrashIcon = /* @__PURE__ */ createIcon(ServerCrashDefinition)
 export const SettingsIcon = /* @__PURE__ */ createIcon(SettingsDefinition)
+export const ShareIcon = /* @__PURE__ */ createIcon(ShareDefinition)
 export const Share2Icon = /* @__PURE__ */ createIcon(Share2Definition)
 export const ShieldCheckIcon = /* @__PURE__ */ createIcon(ShieldCheckDefinition)
+export const SignalHighIcon = /* @__PURE__ */ createIcon(SignalHighDefinition)
 export const SlidersHorizontalIcon = /* @__PURE__ */ createIcon(SlidersHorizontalDefinition)
 export const SmartphoneIcon = /* @__PURE__ */ createIcon(SmartphoneDefinition)
 export const SparklesIcon = /* @__PURE__ */ createIcon(SparklesDefinition)
+export const SquareIcon = /* @__PURE__ */ createIcon(SquareDefinition)
 export const SquareKanbanIcon = /* @__PURE__ */ createIcon(SquareKanbanDefinition)
 export const SquareTerminalIcon = /* @__PURE__ */ createIcon(SquareTerminalDefinition)
 export const StarIcon = /* @__PURE__ */ createIcon(StarDefinition)
+export const StrikethroughIcon = /* @__PURE__ */ createIcon(StrikethroughDefinition)
 export const SunIcon = /* @__PURE__ */ createIcon(SunDefinition)
 export const ThumbsUpIcon = /* @__PURE__ */ createIcon(ThumbsUpDefinition)
 export const Trash2Icon = /* @__PURE__ */ createIcon(Trash2Definition)
+export const UndoIcon = /* @__PURE__ */ createIcon(UndoDefinition)
 export const UploadIcon = /* @__PURE__ */ createIcon(UploadDefinition)
+export const UserCheckIcon = /* @__PURE__ */ createIcon(UserCheckDefinition)
+export const UserMinusIcon = /* @__PURE__ */ createIcon(UserMinusDefinition)
 export const UserPlusIcon = /* @__PURE__ */ createIcon(UserPlusDefinition)
 export const UserRoundIcon = /* @__PURE__ */ createIcon(UserRoundDefinition)
+export const UserRoundCogIcon = /* @__PURE__ */ createIcon(UserRoundCogDefinition)
 export const UsersIcon = /* @__PURE__ */ createIcon(UsersDefinition)
 export const Volume2Icon = /* @__PURE__ */ createIcon(Volume2Definition)
 export const WifiIcon = /* @__PURE__ */ createIcon(WifiDefinition)

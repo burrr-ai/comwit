@@ -12,7 +12,7 @@ export const specs = [
     ],
     extraImports: [
       `import * as React from 'react'`,
-      `import { ChevronLeft, ChevronRight } from 'lucide-react'`,
+      `import { ChevronLeftIcon, ChevronRightIcon } from '@comwit/ui/icons'`,
     ],
     stories: [
       {
@@ -40,7 +40,7 @@ export const specs = [
 return (
   <div className="flex w-full max-w-md items-center gap-2">
     <Button variant="outline" size="icon" aria-label="Scroll left" onClick={() => ref.current?.scrollByAmount(-240)}>
-      <ChevronLeft />
+      <ChevronLeftIcon />
     </Button>
     <DragScroller ref={ref} className="flex-1" trackClassName="gap-2 py-1">
       {Array.from({ length: 12 }, (_, i) => (
@@ -50,7 +50,7 @@ return (
       ))}
     </DragScroller>
     <Button variant="outline" size="icon" aria-label="Scroll right" onClick={() => ref.current?.scrollByAmount(240)}>
-      <ChevronRight />
+      <ChevronRightIcon />
     </Button>
   </div>
 )`,

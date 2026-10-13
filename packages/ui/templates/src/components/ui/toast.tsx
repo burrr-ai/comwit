@@ -20,7 +20,14 @@
  */
 
 import * as React from 'react'
-import { CircleCheck, Info, LoaderCircle, TriangleAlert, X, XCircle } from 'lucide-react'
+import {
+  CheckCircle2Icon,
+  InfoIcon,
+  Loader2Icon,
+  AlertTriangleIcon,
+  XIcon,
+  XCircleIcon,
+} from '@comwit/ui/icons'
 import { Toaster as Sonner, toast as sonner, type ExternalToast, type ToasterProps } from 'sonner'
 
 import { Button } from './button'
@@ -59,27 +66,27 @@ export type ToastOptions = {
 const STATUS_ICON: Record<Exclude<ToastType, 'default'>, React.ReactNode> = {
   success: (
     <span className="flex size-8 items-center justify-center rounded-full bg-success text-success-foreground">
-      <CircleCheck className="size-4" aria-hidden="true" />
+      <CheckCircle2Icon className="size-4" aria-hidden="true" />
     </span>
   ),
   error: (
     <span className="flex size-8 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
-      <XCircle className="size-4" aria-hidden="true" />
+      <XCircleIcon className="size-4" aria-hidden="true" />
     </span>
   ),
   warning: (
     <span className="flex size-8 items-center justify-center rounded-full bg-warning text-warning-foreground">
-      <TriangleAlert className="size-4" aria-hidden="true" />
+      <AlertTriangleIcon className="size-4" aria-hidden="true" />
     </span>
   ),
   info: (
     <span className="flex size-8 items-center justify-center rounded-full bg-info text-info-foreground">
-      <Info className="size-4" aria-hidden="true" />
+      <InfoIcon className="size-4" aria-hidden="true" />
     </span>
   ),
   loading: (
     <span className="flex size-8 items-center justify-center rounded-full bg-primary-surface text-primary">
-      <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+      <Loader2Icon className="size-4 animate-spin" aria-hidden="true" />
     </span>
   ),
 }
@@ -158,7 +165,7 @@ function Toast({
               '-mr-1 flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-accent hover:text-foreground'
             )}
           >
-            <X className="size-4" aria-hidden="true" />
+            <XIcon className="size-4" aria-hidden="true" />
           </button>
         ) : null}
       </div>

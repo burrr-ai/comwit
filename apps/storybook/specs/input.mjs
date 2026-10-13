@@ -8,7 +8,7 @@ export const specs = [
       { from: '@comwit/ui-templates/input', names: ['Input'] },
       { from: '@comwit/ui-templates/label', names: ['Label'] },
     ],
-    extraImports: [`import { Search } from 'lucide-react'`],
+    extraImports: [`import { SearchIcon } from '@comwit/ui/icons'`],
     stories: [
       {
         name: 'Default',
@@ -63,7 +63,7 @@ export const specs = [
         description:
           'bare drops the field skin so the input can sit inside an already styled container',
         render: `<div className="flex w-full max-w-sm items-center gap-2 rounded-pill border border-border bg-muted px-4 py-2">
-  <Search className="size-4 shrink-0 text-muted-foreground" />
+  <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
   <Input bare placeholder="Search docs" aria-label="Search docs" />
 </div>`,
       },

@@ -8,7 +8,7 @@ export const specs = [
       { from: '@comwit/ui-templates/input', names: ['Input'] },
       { from: '@comwit/ui-templates/button', names: ['Button'] },
     ],
-    extraImports: [`import { Search } from 'lucide-react'`],
+    extraImports: [`import { SearchIcon } from '@comwit/ui/icons'`],
     stories: [
       {
         name: 'Addons',
@@ -16,7 +16,7 @@ export const specs = [
         description: 'Icon and text addons share one focus ring with the input',
         render: `<div className="grid w-full max-w-xs gap-3">
   <InputGroup>
-    <InputAddon><Search /></InputAddon>
+    <InputAddon><SearchIcon /></InputAddon>
     <Input placeholder="Search projects" aria-label="Search projects" />
   </InputGroup>
   <InputGroup>
@@ -59,7 +59,7 @@ export const specs = [
     <Input inputMode="decimal" defaultValue="-40" aria-invalid aria-label="Refund amount" />
   </InputGroup>
   <InputGroup>
-    <InputAddon><Search /></InputAddon>
+    <InputAddon><SearchIcon /></InputAddon>
     <Input placeholder="Search is unavailable" disabled aria-label="Search" />
   </InputGroup>
 </div>`,

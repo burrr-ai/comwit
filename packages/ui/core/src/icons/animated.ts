@@ -5,14 +5,20 @@ import { createAnimatedIcon } from './create-animated-icon'
 import {
   AlertCircleAnimatedDefinition,
   AlertTriangleAnimatedDefinition,
+  ArchiveAnimatedDefinition,
   ArrowDownAnimatedDefinition,
+  ArrowDownRightAnimatedDefinition,
   ArrowLeftAnimatedDefinition,
   ArrowRightAnimatedDefinition,
   ArrowUpAnimatedDefinition,
+  ArrowUpDownAnimatedDefinition,
   ArrowUpRightAnimatedDefinition,
   BadgeCheckAnimatedDefinition,
+  BarChart3AnimatedDefinition,
+  BatteryFullAnimatedDefinition,
   BellAnimatedDefinition,
   BellRingAnimatedDefinition,
+  BoldAnimatedDefinition,
   BookmarkAnimatedDefinition,
   BotAnimatedDefinition,
   BriefcaseAnimatedDefinition,
@@ -26,11 +32,14 @@ import {
   ChevronRightAnimatedDefinition,
   ChevronsUpDownAnimatedDefinition,
   ChevronUpAnimatedDefinition,
+  CircleAnimatedDefinition,
   ClockAnimatedDefinition,
   Clock3AnimatedDefinition,
   CloudUploadAnimatedDefinition,
   Code2AnimatedDefinition,
   CoffeeAnimatedDefinition,
+  Columns3AnimatedDefinition,
+  CompassAnimatedDefinition,
   CopyAnimatedDefinition,
   CreditCardAnimatedDefinition,
   CrownAnimatedDefinition,
@@ -40,24 +49,35 @@ import {
   EyeAnimatedDefinition,
   EyeOffAnimatedDefinition,
   FileTextAnimatedDefinition,
+  FilmAnimatedDefinition,
   FilterAnimatedDefinition,
   FlagAnimatedDefinition,
   FolderAnimatedDefinition,
   FolderGit2AnimatedDefinition,
   FolderKanbanAnimatedDefinition,
   FolderOpenAnimatedDefinition,
+  FolderPlusAnimatedDefinition,
   GitBranchAnimatedDefinition,
   GlobeAnimatedDefinition,
   Globe2AnimatedDefinition,
   GraduationCapAnimatedDefinition,
+  Heading1AnimatedDefinition,
+  Heading2AnimatedDefinition,
+  Heading3AnimatedDefinition,
   HeartAnimatedDefinition,
   HistoryAnimatedDefinition,
   HouseAnimatedDefinition,
+  ImageAnimatedDefinition,
   ImagePlusAnimatedDefinition,
+  InboxAnimatedDefinition,
   InfoAnimatedDefinition,
+  ItalicAnimatedDefinition,
   KeyRoundAnimatedDefinition,
+  LayoutDashboardAnimatedDefinition,
   LayoutGridAnimatedDefinition,
   Link2AnimatedDefinition,
+  ListAnimatedDefinition,
+  ListOrderedAnimatedDefinition,
   Loader2AnimatedDefinition,
   LockAnimatedDefinition,
   LockKeyholeAnimatedDefinition,
@@ -76,35 +96,49 @@ import {
   MonitorCogAnimatedDefinition,
   MoonAnimatedDefinition,
   MoreHorizontalAnimatedDefinition,
+  MoreVerticalAnimatedDefinition,
   PaperclipAnimatedDefinition,
   PauseAnimatedDefinition,
   PencilAnimatedDefinition,
   PenLineAnimatedDefinition,
+  PhoneAnimatedDefinition,
   PlayAnimatedDefinition,
   PlusAnimatedDefinition,
+  QuoteAnimatedDefinition,
+  RedoAnimatedDefinition,
   RefreshCcwAnimatedDefinition,
   RefreshCwAnimatedDefinition,
   RocketAnimatedDefinition,
   RotateCcwAnimatedDefinition,
   SaveAnimatedDefinition,
   SearchAnimatedDefinition,
+  SearchXAnimatedDefinition,
   SendAnimatedDefinition,
   ServerCogAnimatedDefinition,
+  ServerCrashAnimatedDefinition,
   SettingsAnimatedDefinition,
+  ShareAnimatedDefinition,
   Share2AnimatedDefinition,
   ShieldCheckAnimatedDefinition,
+  SignalHighAnimatedDefinition,
   SlidersHorizontalAnimatedDefinition,
   SmartphoneAnimatedDefinition,
   SparklesAnimatedDefinition,
+  SquareAnimatedDefinition,
   SquareKanbanAnimatedDefinition,
   SquareTerminalAnimatedDefinition,
   StarAnimatedDefinition,
+  StrikethroughAnimatedDefinition,
   SunAnimatedDefinition,
   ThumbsUpAnimatedDefinition,
   Trash2AnimatedDefinition,
+  UndoAnimatedDefinition,
   UploadAnimatedDefinition,
+  UserCheckAnimatedDefinition,
+  UserMinusAnimatedDefinition,
   UserPlusAnimatedDefinition,
   UserRoundAnimatedDefinition,
+  UserRoundCogAnimatedDefinition,
   UsersAnimatedDefinition,
   Volume2AnimatedDefinition,
   WifiAnimatedDefinition,
@@ -122,20 +156,32 @@ export const AnimatedAlertCircleIcon = /* @__PURE__ */ createAnimatedIcon(
 export const AnimatedAlertTriangleIcon = /* @__PURE__ */ createAnimatedIcon(
   AlertTriangleAnimatedDefinition
 )
+export const AnimatedArchiveIcon = /* @__PURE__ */ createAnimatedIcon(ArchiveAnimatedDefinition)
 export const AnimatedArrowDownIcon = /* @__PURE__ */ createAnimatedIcon(ArrowDownAnimatedDefinition)
+export const AnimatedArrowDownRightIcon = /* @__PURE__ */ createAnimatedIcon(
+  ArrowDownRightAnimatedDefinition
+)
 export const AnimatedArrowLeftIcon = /* @__PURE__ */ createAnimatedIcon(ArrowLeftAnimatedDefinition)
 export const AnimatedArrowRightIcon = /* @__PURE__ */ createAnimatedIcon(
   ArrowRightAnimatedDefinition
 )
 export const AnimatedArrowUpIcon = /* @__PURE__ */ createAnimatedIcon(ArrowUpAnimatedDefinition)
+export const AnimatedArrowUpDownIcon = /* @__PURE__ */ createAnimatedIcon(
+  ArrowUpDownAnimatedDefinition
+)
 export const AnimatedArrowUpRightIcon = /* @__PURE__ */ createAnimatedIcon(
   ArrowUpRightAnimatedDefinition
 )
 export const AnimatedBadgeCheckIcon = /* @__PURE__ */ createAnimatedIcon(
   BadgeCheckAnimatedDefinition
 )
+export const AnimatedBarChart3Icon = /* @__PURE__ */ createAnimatedIcon(BarChart3AnimatedDefinition)
+export const AnimatedBatteryFullIcon = /* @__PURE__ */ createAnimatedIcon(
+  BatteryFullAnimatedDefinition
+)
 export const AnimatedBellIcon = /* @__PURE__ */ createAnimatedIcon(BellAnimatedDefinition)
 export const AnimatedBellRingIcon = /* @__PURE__ */ createAnimatedIcon(BellRingAnimatedDefinition)
+export const AnimatedBoldIcon = /* @__PURE__ */ createAnimatedIcon(BoldAnimatedDefinition)
 export const AnimatedBookmarkIcon = /* @__PURE__ */ createAnimatedIcon(BookmarkAnimatedDefinition)
 export const AnimatedBotIcon = /* @__PURE__ */ createAnimatedIcon(BotAnimatedDefinition)
 export const AnimatedBriefcaseIcon = /* @__PURE__ */ createAnimatedIcon(BriefcaseAnimatedDefinition)
@@ -161,6 +207,7 @@ export const AnimatedChevronsUpDownIcon = /* @__PURE__ */ createAnimatedIcon(
   ChevronsUpDownAnimatedDefinition
 )
 export const AnimatedChevronUpIcon = /* @__PURE__ */ createAnimatedIcon(ChevronUpAnimatedDefinition)
+export const AnimatedCircleIcon = /* @__PURE__ */ createAnimatedIcon(CircleAnimatedDefinition)
 export const AnimatedClockIcon = /* @__PURE__ */ createAnimatedIcon(ClockAnimatedDefinition)
 export const AnimatedClock3Icon = /* @__PURE__ */ createAnimatedIcon(Clock3AnimatedDefinition)
 export const AnimatedCloudUploadIcon = /* @__PURE__ */ createAnimatedIcon(
@@ -168,6 +215,8 @@ export const AnimatedCloudUploadIcon = /* @__PURE__ */ createAnimatedIcon(
 )
 export const AnimatedCode2Icon = /* @__PURE__ */ createAnimatedIcon(Code2AnimatedDefinition)
 export const AnimatedCoffeeIcon = /* @__PURE__ */ createAnimatedIcon(CoffeeAnimatedDefinition)
+export const AnimatedColumns3Icon = /* @__PURE__ */ createAnimatedIcon(Columns3AnimatedDefinition)
+export const AnimatedCompassIcon = /* @__PURE__ */ createAnimatedIcon(CompassAnimatedDefinition)
 export const AnimatedCopyIcon = /* @__PURE__ */ createAnimatedIcon(CopyAnimatedDefinition)
 export const AnimatedCreditCardIcon = /* @__PURE__ */ createAnimatedIcon(
   CreditCardAnimatedDefinition
@@ -181,6 +230,7 @@ export const AnimatedExternalLinkIcon = /* @__PURE__ */ createAnimatedIcon(
 export const AnimatedEyeIcon = /* @__PURE__ */ createAnimatedIcon(EyeAnimatedDefinition)
 export const AnimatedEyeOffIcon = /* @__PURE__ */ createAnimatedIcon(EyeOffAnimatedDefinition)
 export const AnimatedFileTextIcon = /* @__PURE__ */ createAnimatedIcon(FileTextAnimatedDefinition)
+export const AnimatedFilmIcon = /* @__PURE__ */ createAnimatedIcon(FilmAnimatedDefinition)
 export const AnimatedFilterIcon = /* @__PURE__ */ createAnimatedIcon(FilterAnimatedDefinition)
 export const AnimatedFlagIcon = /* @__PURE__ */ createAnimatedIcon(FlagAnimatedDefinition)
 export const AnimatedFolderIcon = /* @__PURE__ */ createAnimatedIcon(FolderAnimatedDefinition)
@@ -193,22 +243,38 @@ export const AnimatedFolderKanbanIcon = /* @__PURE__ */ createAnimatedIcon(
 export const AnimatedFolderOpenIcon = /* @__PURE__ */ createAnimatedIcon(
   FolderOpenAnimatedDefinition
 )
+export const AnimatedFolderPlusIcon = /* @__PURE__ */ createAnimatedIcon(
+  FolderPlusAnimatedDefinition
+)
 export const AnimatedGitBranchIcon = /* @__PURE__ */ createAnimatedIcon(GitBranchAnimatedDefinition)
 export const AnimatedGlobeIcon = /* @__PURE__ */ createAnimatedIcon(GlobeAnimatedDefinition)
 export const AnimatedGlobe2Icon = /* @__PURE__ */ createAnimatedIcon(Globe2AnimatedDefinition)
 export const AnimatedGraduationCapIcon = /* @__PURE__ */ createAnimatedIcon(
   GraduationCapAnimatedDefinition
 )
+export const AnimatedHeading1Icon = /* @__PURE__ */ createAnimatedIcon(Heading1AnimatedDefinition)
+export const AnimatedHeading2Icon = /* @__PURE__ */ createAnimatedIcon(Heading2AnimatedDefinition)
+export const AnimatedHeading3Icon = /* @__PURE__ */ createAnimatedIcon(Heading3AnimatedDefinition)
 export const AnimatedHeartIcon = /* @__PURE__ */ createAnimatedIcon(HeartAnimatedDefinition)
 export const AnimatedHistoryIcon = /* @__PURE__ */ createAnimatedIcon(HistoryAnimatedDefinition)
 export const AnimatedHouseIcon = /* @__PURE__ */ createAnimatedIcon(HouseAnimatedDefinition)
+export const AnimatedImageIcon = /* @__PURE__ */ createAnimatedIcon(ImageAnimatedDefinition)
 export const AnimatedImagePlusIcon = /* @__PURE__ */ createAnimatedIcon(ImagePlusAnimatedDefinition)
+export const AnimatedInboxIcon = /* @__PURE__ */ createAnimatedIcon(InboxAnimatedDefinition)
 export const AnimatedInfoIcon = /* @__PURE__ */ createAnimatedIcon(InfoAnimatedDefinition)
+export const AnimatedItalicIcon = /* @__PURE__ */ createAnimatedIcon(ItalicAnimatedDefinition)
 export const AnimatedKeyRoundIcon = /* @__PURE__ */ createAnimatedIcon(KeyRoundAnimatedDefinition)
+export const AnimatedLayoutDashboardIcon = /* @__PURE__ */ createAnimatedIcon(
+  LayoutDashboardAnimatedDefinition
+)
 export const AnimatedLayoutGridIcon = /* @__PURE__ */ createAnimatedIcon(
   LayoutGridAnimatedDefinition
 )
 export const AnimatedLink2Icon = /* @__PURE__ */ createAnimatedIcon(Link2AnimatedDefinition)
+export const AnimatedListIcon = /* @__PURE__ */ createAnimatedIcon(ListAnimatedDefinition)
+export const AnimatedListOrderedIcon = /* @__PURE__ */ createAnimatedIcon(
+  ListOrderedAnimatedDefinition
+)
 export const AnimatedLoader2Icon = /* @__PURE__ */ createAnimatedIcon(Loader2AnimatedDefinition)
 export const AnimatedLockIcon = /* @__PURE__ */ createAnimatedIcon(LockAnimatedDefinition)
 export const AnimatedLockKeyholeIcon = /* @__PURE__ */ createAnimatedIcon(
@@ -239,12 +305,18 @@ export const AnimatedMoonIcon = /* @__PURE__ */ createAnimatedIcon(MoonAnimatedD
 export const AnimatedMoreHorizontalIcon = /* @__PURE__ */ createAnimatedIcon(
   MoreHorizontalAnimatedDefinition
 )
+export const AnimatedMoreVerticalIcon = /* @__PURE__ */ createAnimatedIcon(
+  MoreVerticalAnimatedDefinition
+)
 export const AnimatedPaperclipIcon = /* @__PURE__ */ createAnimatedIcon(PaperclipAnimatedDefinition)
 export const AnimatedPauseIcon = /* @__PURE__ */ createAnimatedIcon(PauseAnimatedDefinition)
 export const AnimatedPencilIcon = /* @__PURE__ */ createAnimatedIcon(PencilAnimatedDefinition)
 export const AnimatedPenLineIcon = /* @__PURE__ */ createAnimatedIcon(PenLineAnimatedDefinition)
+export const AnimatedPhoneIcon = /* @__PURE__ */ createAnimatedIcon(PhoneAnimatedDefinition)
 export const AnimatedPlayIcon = /* @__PURE__ */ createAnimatedIcon(PlayAnimatedDefinition)
 export const AnimatedPlusIcon = /* @__PURE__ */ createAnimatedIcon(PlusAnimatedDefinition)
+export const AnimatedQuoteIcon = /* @__PURE__ */ createAnimatedIcon(QuoteAnimatedDefinition)
+export const AnimatedRedoIcon = /* @__PURE__ */ createAnimatedIcon(RedoAnimatedDefinition)
 export const AnimatedRefreshCcwIcon = /* @__PURE__ */ createAnimatedIcon(
   RefreshCcwAnimatedDefinition
 )
@@ -253,12 +325,20 @@ export const AnimatedRocketIcon = /* @__PURE__ */ createAnimatedIcon(RocketAnima
 export const AnimatedRotateCcwIcon = /* @__PURE__ */ createAnimatedIcon(RotateCcwAnimatedDefinition)
 export const AnimatedSaveIcon = /* @__PURE__ */ createAnimatedIcon(SaveAnimatedDefinition)
 export const AnimatedSearchIcon = /* @__PURE__ */ createAnimatedIcon(SearchAnimatedDefinition)
+export const AnimatedSearchXIcon = /* @__PURE__ */ createAnimatedIcon(SearchXAnimatedDefinition)
 export const AnimatedSendIcon = /* @__PURE__ */ createAnimatedIcon(SendAnimatedDefinition)
 export const AnimatedServerCogIcon = /* @__PURE__ */ createAnimatedIcon(ServerCogAnimatedDefinition)
+export const AnimatedServerCrashIcon = /* @__PURE__ */ createAnimatedIcon(
+  ServerCrashAnimatedDefinition
+)
 export const AnimatedSettingsIcon = /* @__PURE__ */ createAnimatedIcon(SettingsAnimatedDefinition)
+export const AnimatedShareIcon = /* @__PURE__ */ createAnimatedIcon(ShareAnimatedDefinition)
 export const AnimatedShare2Icon = /* @__PURE__ */ createAnimatedIcon(Share2AnimatedDefinition)
 export const AnimatedShieldCheckIcon = /* @__PURE__ */ createAnimatedIcon(
   ShieldCheckAnimatedDefinition
+)
+export const AnimatedSignalHighIcon = /* @__PURE__ */ createAnimatedIcon(
+  SignalHighAnimatedDefinition
 )
 export const AnimatedSlidersHorizontalIcon = /* @__PURE__ */ createAnimatedIcon(
   SlidersHorizontalAnimatedDefinition
@@ -267,6 +347,7 @@ export const AnimatedSmartphoneIcon = /* @__PURE__ */ createAnimatedIcon(
   SmartphoneAnimatedDefinition
 )
 export const AnimatedSparklesIcon = /* @__PURE__ */ createAnimatedIcon(SparklesAnimatedDefinition)
+export const AnimatedSquareIcon = /* @__PURE__ */ createAnimatedIcon(SquareAnimatedDefinition)
 export const AnimatedSquareKanbanIcon = /* @__PURE__ */ createAnimatedIcon(
   SquareKanbanAnimatedDefinition
 )
@@ -274,12 +355,21 @@ export const AnimatedSquareTerminalIcon = /* @__PURE__ */ createAnimatedIcon(
   SquareTerminalAnimatedDefinition
 )
 export const AnimatedStarIcon = /* @__PURE__ */ createAnimatedIcon(StarAnimatedDefinition)
+export const AnimatedStrikethroughIcon = /* @__PURE__ */ createAnimatedIcon(
+  StrikethroughAnimatedDefinition
+)
 export const AnimatedSunIcon = /* @__PURE__ */ createAnimatedIcon(SunAnimatedDefinition)
 export const AnimatedThumbsUpIcon = /* @__PURE__ */ createAnimatedIcon(ThumbsUpAnimatedDefinition)
 export const AnimatedTrash2Icon = /* @__PURE__ */ createAnimatedIcon(Trash2AnimatedDefinition)
+export const AnimatedUndoIcon = /* @__PURE__ */ createAnimatedIcon(UndoAnimatedDefinition)
 export const AnimatedUploadIcon = /* @__PURE__ */ createAnimatedIcon(UploadAnimatedDefinition)
+export const AnimatedUserCheckIcon = /* @__PURE__ */ createAnimatedIcon(UserCheckAnimatedDefinition)
+export const AnimatedUserMinusIcon = /* @__PURE__ */ createAnimatedIcon(UserMinusAnimatedDefinition)
 export const AnimatedUserPlusIcon = /* @__PURE__ */ createAnimatedIcon(UserPlusAnimatedDefinition)
 export const AnimatedUserRoundIcon = /* @__PURE__ */ createAnimatedIcon(UserRoundAnimatedDefinition)
+export const AnimatedUserRoundCogIcon = /* @__PURE__ */ createAnimatedIcon(
+  UserRoundCogAnimatedDefinition
+)
 export const AnimatedUsersIcon = /* @__PURE__ */ createAnimatedIcon(UsersAnimatedDefinition)
 export const AnimatedVolume2Icon = /* @__PURE__ */ createAnimatedIcon(Volume2AnimatedDefinition)
 export const AnimatedWifiIcon = /* @__PURE__ */ createAnimatedIcon(WifiAnimatedDefinition)

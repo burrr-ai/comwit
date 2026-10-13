@@ -5,7 +5,9 @@ export const specs = [
     covers: ['badge'],
     docsOnly: true,
     imports: [{ from: '@comwit/ui-templates/badge', names: ['Badge'] }],
-    extraImports: [`import { AlertTriangle, Check, Clock, Sparkles } from 'lucide-react'`],
+    extraImports: [
+      `import { AlertTriangleIcon, CheckIcon, ClockIcon, SparklesIcon } from '@comwit/ui/icons'`,
+    ],
     stories: [
       {
         name: 'Showcase',
@@ -13,16 +15,16 @@ export const specs = [
         description: 'Small, non-interactive labels for status and metadata.',
         render: `<div className="flex max-w-sm flex-wrap items-center justify-center gap-2">
   <Badge>
-    <Sparkles /> New
+    <SparklesIcon /> New
   </Badge>
   <Badge variant="success">
-    <Check /> Paid
+    <CheckIcon /> Paid
   </Badge>
   <Badge variant="warning">
-    <Clock /> Pending
+    <ClockIcon /> Pending
   </Badge>
   <Badge variant="destructive">
-    <AlertTriangle /> Overdue
+    <AlertTriangleIcon /> Overdue
   </Badge>
   <Badge variant="info">Beta</Badge>
   <Badge variant="secondary">Draft</Badge>

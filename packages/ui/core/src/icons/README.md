@@ -1,6 +1,6 @@
 # Icons (`@comwit/ui/icons`)
 
-Original Comwit icons: 109 familiar shapes on a 24 × 24 grid, with optional spring motion for each one. They ship inside `@comwit/ui` as subpath exports, so there is nothing extra to install and bundlers tree-shake the icons a project does not use. MIT licensed. The collection follows the most-used Lucide names in the Comwit app, plus everyday interface glyphs (theme toggle, visibility, media, sharing); its SVG geometry and motion are authored here, not re-exported from Lucide.
+Original Comwit icons: 143 familiar shapes on a 24 × 24 grid, with optional spring motion for each one. They ship inside `@comwit/ui` as subpath exports, so there is nothing extra to install and bundlers tree-shake the icons a project does not use. MIT licensed. The collection follows the most-used Lucide names in the Comwit app, plus everyday interface glyphs (theme toggle, visibility, media, sharing), text formatting for the editor, and the status and layout marks the UI templates and the project template use; its SVG geometry and motion are authored here, not re-exported from Lucide.
 
 ```sh
 npm i @comwit/ui
@@ -95,4 +95,4 @@ The 109 icons cover 836 of 931 named runtime imports (90%) and 100 of 175 distin
 node packages/ui/core/scripts/audit-icon-usage.mjs /path/to/application/src > packages/ui/core/scripts/icon-usage-audit.json
 ```
 
-The icon set does not migrate the Comwit application or replace the UI templates' existing Lucide imports. It is the first original collection, for evaluation and gradual adoption.
+The UI templates, the docs site and the project template draw every icon from this set; `lucide-react` is no longer a dependency anywhere in the kit. `scripts/audit-icon-usage.mjs` still reads an application's Lucide imports, to find which names a migration needs.

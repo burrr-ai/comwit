@@ -104,7 +104,7 @@ The everyday parts, styled with the same tokens.
 
 ## Icons
 
-The original Comwit icon set (109 glyphs on a 24px grid) ships inside @comwit/ui, which init already installs. Static icons are pure SVG and work in Server Components; animated ones carry their own 'use client' boundary and play a spring gesture on hover, click, mount or when replayKey changes. Unused icons tree-shake away.
+The original Comwit icon set (143 glyphs on a 24px grid) ships inside @comwit/ui, which init already installs. Static icons are pure SVG and work in Server Components; animated ones carry their own 'use client' boundary and play a spring gesture on hover, click, mount or when replayKey changes. Unused icons tree-shake away.
 
 ```tsx
 import { SearchIcon, CheckIcon } from '@comwit/ui/icons'

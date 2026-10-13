@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, Search } from 'lucide-react'
+import { MenuIcon, SearchIcon } from '@comwit/ui/icons'
 import { InputGroup, InputAddon } from '@comwit/ui-templates/input-group'
 import { Input } from '@comwit/ui-templates/input'
 import { Button } from '@comwit/ui-templates/button'
@@ -152,7 +152,7 @@ function NavContent({
         >
           <InputGroup className="bg-background">
             <InputAddon className="pr-0">
-              <Search />
+              <SearchIcon />
             </InputAddon>
             <Input
               ref={searchRef}
@@ -277,7 +277,7 @@ export function MobileNav() {
         aria-label="Open navigation"
         onClick={() => setOpen(true)}
       >
-        <Menu className="size-5" />
+        <MenuIcon className="size-5" />
       </Button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

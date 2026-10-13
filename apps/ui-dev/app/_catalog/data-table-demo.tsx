@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { toast } from '@comwit/ui-templates/toast'
-import { Search } from 'lucide-react'
+import { SearchIcon } from '@comwit/ui/icons'
 import { DataTable, type ColumnDef, type QueryData } from '@comwit/ui-templates/data-table'
 import { Chip } from '@comwit/ui-templates/chip'
 import { Input } from '@comwit/ui-templates/input'
@@ -111,7 +111,7 @@ export function DataTableDemo() {
         <div className="flex items-center justify-between gap-3">
           <InputGroup className="max-w-xs">
             <InputAddon>
-              <Search />
+              <SearchIcon />
             </InputAddon>
             <Input placeholder="주문번호 검색" />
           </InputGroup>

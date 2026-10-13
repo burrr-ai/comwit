@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { DropdownMenu as DropdownMenuPrimitive } from '@comwit/ui'
-import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
+import { CheckIcon, ChevronRightIcon, CircleIcon } from '@comwit/ui/icons'
 
 import { GlassSurface } from './glass'
 import { OverlayMotion } from '../../lib/overlay-motion'
