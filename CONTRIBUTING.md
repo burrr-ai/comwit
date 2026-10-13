@@ -25,6 +25,8 @@ those details in source comments and maintainer-facing PR descriptions.
 
 UI examples are generated from `apps/storybook/specs/*.mjs`; the story marked `gallery: true` is the one shown on the gallery card, and `docsOnly: true` specs produce docs examples without a Storybook story. The registry comes from the actual template files. Every template component must appear once in `gallery.mjs`; the generator warns about gaps. Run `pnpm --filter docs gen` after changing specs or template source. Do not hand-edit `app/ui/_generated`, `public/ui/llms.txt` or `packages/ui/cli/registry`.
 
+Icons live in `packages/ui/core/src/icons/` and ship as the `@comwit/ui/icons` subpaths. The category files in `src/icons/definitions/` are the source; `pnpm --filter @comwit/ui generate` (run by its `build` and `typecheck`) writes `src/icons/{index,animated,catalog}.ts` and the ignored `src/icons/generated/`. `pnpm --filter @comwit/ui test` builds, runs the icon tests and `scripts/verify-icons.mjs` (every catalog name exported, ESM/CJS/RSC, the client boundary on `/icons/animated`, one icon tree-shakes to a few kilobytes, the primitives entry stays icon-free).
+
 The theme editor runs inside an iframe so CSS changes and portaled components cannot change the outer documentation shell. Site tokens use the `--site-` prefix to avoid colliding with library tokens.
 
 ## Template snapshot

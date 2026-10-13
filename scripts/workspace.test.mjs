@@ -439,3 +439,26 @@ test('create-comwit --opennext overlays the Cloudflare Workers adapter', () => {
     rmSync(fixture, { recursive: true, force: true })
   }
 })
+
+test('icons ship inside @comwit/ui as subpath exports, not as a separate package', () => {
+  const pkg = JSON.parse(readFileSync(join(root, 'packages/ui/core/package.json'), 'utf8'))
+  for (const [sub, file] of [
+    ['./icons', 'index'],
+    ['./icons/animated', 'animated'],
+    ['./icons/catalog', 'catalog'],
+  ]) {
+    assert.deepEqual(pkg.exports[sub], {
+      types: `./dist/icons/${file}.d.ts`,
+      import: `./dist/icons/${file}.js`,
+      require: `./dist/icons/${file}.cjs`,
+    })
+  }
+  assert.equal(pkg.sideEffects, false, 'tree-shaking relies on sideEffects: false')
+  assert.ok(existsSync(join(root, 'packages/ui/core/src/icons/definitions/kit.ts')))
+  assert.ok(!existsSync(join(root, 'packages/icons')), 'the separate icons package is gone')
+  assert.doesNotMatch(readFileSync(join(root, 'pnpm-workspace.yaml'), 'utf8'), /packages\/icons/)
+  assert.doesNotMatch(
+    readFileSync(join(root, 'apps/docs/app/ui/icons/icon-gallery.tsx'), 'utf8'),
+    /@comwit\/icons/
+  )
+})
