@@ -81,9 +81,8 @@ export async function GET() {
             letterSpacing: -3,
           }}
         >
-          <span>A little state.</span>
-          <span>A lot of</span>
-          <span style={{ color: '#dfc1ed' }}>possibility.</span>
+          <span>State and logic.</span>
+          <span style={{ color: '#dfc1ed' }}>One domain.</span>
         </div>
         <div
           style={{

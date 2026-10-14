@@ -33,3 +33,15 @@ The ink-on-lime tile stays readable on light and dark browser tab bars. An ink t
 After you edit `icon.svg`, run `node scripts/gen-icons.mjs` from `apps/docs` to regenerate every raster.
 
 State keeps its panda favicon (`app/state/layout.tsx`). UI and every other route use the Comwit mark.
+
+## Product marks
+
+Navigation and landing links share `app/product-mark.tsx` and three transparent WebP assets:
+
+- `public/brand/state-mark.webp`: the original winking panda with its square background removed.
+- `public/brand/ui-mark.webp`: cobalt and sky-blue interlocking modules. UI does not use purple.
+- `public/brand/template-mark.webp`: terracotta and cream folded sheets.
+
+The marks were made with built-in ImageGen. Exact final prompts are in `product-mark-prompts.json`. Each image retains its alpha channel and is optimized to 512 × 512 WebP with consistent transparent padding. Do not put the marks inside a colored tile or clip their silhouette with a border radius.
+
+Mobile landing navigation keeps all three product names visible on a second header row. Product documentation uses the same mark beside the product name. Hover, pressed, and keyboard focus states belong to the link around the image.

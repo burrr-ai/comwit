@@ -2,32 +2,12 @@
 
 import { useTranslations } from 'next-intl'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { SquaresFourIcon } from '@phosphor-icons/react/dist/csr/SquaresFour'
-import { TreeStructureIcon } from '@phosphor-icons/react/dist/csr/TreeStructure'
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight'
 import { Brand } from './brand'
 import { LocaleSwitch } from './locale-switch'
-
-const PRODUCTS = {
-  state: {
-    href: '/state/docs',
-    label: 'State',
-    mark: <Image src="/panda-mark.webp" alt="" width={28} height={28} />,
-  },
-  ui: {
-    href: '/ui',
-    label: 'UI',
-    mark: <SquaresFourIcon size={23} weight="fill" aria-hidden="true" />,
-  },
-  template: {
-    href: '/template',
-    label: 'Template',
-    mark: <TreeStructureIcon size={23} weight="fill" aria-hidden="true" />,
-  },
-}
+import { ProductMark, products, type Product } from './product-mark'
 
 function GitHubLink() {
   return (
@@ -52,7 +32,7 @@ export function SiteHeader({
   menu,
 }: {
   home?: boolean
-  product?: keyof typeof PRODUCTS
+  product?: Product
   menu?: React.ReactNode
 }) {
   const copy = useTranslations('Copy')
@@ -60,7 +40,7 @@ export function SiteHeader({
   const pathname = usePathname()
 
   if (product) {
-    const { href, label, mark } = PRODUCTS[product]
+    const { href, label } = products[product]
     return (
       <header className="site-header app-header product-header">
         <div className="product-brand">
@@ -68,8 +48,12 @@ export function SiteHeader({
           <span className="product-slash" aria-hidden="true">
             /
           </span>
-          <Link href={href} className="product-home">
-            {mark}
+          <Link
+            href={href}
+            className="product-home"
+            aria-current={pathname === href ? 'page' : undefined}
+          >
+            <ProductMark product={product} />
             <span>{label}</span>
           </Link>
         </div>
@@ -85,22 +69,26 @@ export function SiteHeader({
   return (
     <header className={`site-header app-header ${home ? 'site-header-home' : ''}`}>
       <Brand />
-      <nav aria-label={copy('text106')}>
-        {(Object.keys(PRODUCTS) as (keyof typeof PRODUCTS)[]).map((key) => (
+      <nav className="product-navigation" aria-label={copy('text106')}>
+        {(Object.keys(products) as Product[]).map((key) => (
           <Link
             key={key}
-            href={PRODUCTS[key].href}
-            aria-label={PRODUCTS[key].label}
+            href={products[key].href}
             className="product-nav"
-            aria-current={pathname.startsWith(`/${key}`) ? 'page' : undefined}
+            data-product={key}
+            aria-current={
+              pathname === `/${key}` || pathname.startsWith(`/${key}/`) ? 'page' : undefined
+            }
           >
-            {PRODUCTS[key].mark}
-            <span>{PRODUCTS[key].label}</span>
+            <ProductMark product={key} />
+            <span>{products[key].label}</span>
           </Link>
         ))}
+      </nav>
+      <div className="header-actions">
         <LocaleSwitch />
         <GitHubLink />
-      </nav>
+      </div>
     </header>
   )
 }

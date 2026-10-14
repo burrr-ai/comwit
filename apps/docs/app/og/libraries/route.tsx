@@ -24,9 +24,7 @@ export async function GET() {
         position: 'relative',
       }}
     >
-      <div style={{ display: 'flex', fontSize: 15, letterSpacing: 2 }}>
-        OPEN SOURCE. OPEN ENDED.
-      </div>
+      <div style={{ display: 'flex', fontSize: 15, letterSpacing: 2 }}>STATE / UI / TEMPLATE</div>
       <div style={{ display: 'flex', fontSize: 194, letterSpacing: -14, marginTop: 25 }}>
         COMWIT
       </div>
@@ -48,11 +46,11 @@ export async function GET() {
           letterSpacing: -1,
         }}
       >
-        <span>Small pieces.</span>
-        <span>Wild possibilities.</span>
+        <span>From interface</span>
+        <span>to architecture.</span>
       </div>
       <div style={{ display: 'flex', position: 'absolute', bottom: 40, left: 50, fontSize: 19 }}>
-        State + UI / comwit.io
+        library.comwit.io
       </div>
     </div>,
     {

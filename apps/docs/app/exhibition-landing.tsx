@@ -9,11 +9,10 @@ import Link from 'next/link'
 import { useState, useSyncExternalStore } from 'react'
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'motion/react'
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight'
-import { SquaresFourIcon } from '@phosphor-icons/react/dist/csr/SquaresFour'
-import { TreeStructureIcon } from '@phosphor-icons/react/dist/csr/TreeStructure'
 import { PauseIcon } from '@phosphor-icons/react/dist/csr/Pause'
 import { PlayIcon } from '@phosphor-icons/react/dist/csr/Play'
 import { SiteHeader } from './site-header'
+import { ProductMark } from './product-mark'
 
 function subscribePresentation(listener: () => void) {
   const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -101,14 +100,6 @@ export function ExhibitionLanding() {
       </a>
       <SiteHeader />
       <main id="main" className="exhibition-main">
-        <div className="exhibition-meta">
-          <span>
-            <Copy id="text107" />
-          </span>
-          <a href="https://comwit.io" target="_blank" rel="noreferrer">
-            <Copy id="text108" /> <ArrowUpRightIcon size={13} aria-hidden="true" />
-          </a>
-        </div>
         <h1 className="exhibition-title" aria-label="Comwit">
           <span aria-hidden="true">
             {'COMWIT'.split('').map((letter, index) => (
@@ -122,9 +113,6 @@ export function ExhibitionLanding() {
               <Copy id="text110" /> <br />
               <Copy id="text111" />{' '}
             </p>
-            <span>
-              <Copy id="text112" />
-            </span>
           </div>
           <motion.div
             className="exhibition-art"
@@ -141,14 +129,6 @@ export function ExhibitionLanding() {
               />
             </div>
           </motion.div>
-          <div className="exhibition-edition">
-            <span>
-              <Copy id="text113" />
-            </span>
-            <strong>
-              <Copy id="text114" />
-            </strong>
-          </div>
         </div>
         <nav className="exhibition-routes" aria-label={copy('text115')}>
           <Link
@@ -159,12 +139,12 @@ export function ExhibitionLanding() {
             onBlur={() => setLibrary(null)}
             className="exhibition-route"
           >
-            <span className="exhibition-route-index">01</span>
-            <Image src="/panda-mark.webp" alt="" width={46} height={46} />
-            <span className="exhibition-route-title">State</span>
-            <span className="exhibition-route-detail">
-              <Copy id="text117" /> <br />
-              <Copy id="text118" />{' '}
+            <ProductMark product="state" size={52} />
+            <span className="exhibition-route-copy">
+              <span className="exhibition-route-title">State</span>
+              <span className="exhibition-route-detail">
+                <Copy id="stateSummary" />
+              </span>
             </span>
             <span className="exhibition-route-arrow">
               <ArrowUpRightIcon size={32} aria-hidden="true" />
@@ -182,12 +162,12 @@ export function ExhibitionLanding() {
             onBlur={() => setLibrary(null)}
             className="exhibition-route"
           >
-            <span className="exhibition-route-index">02</span>
-            <SquaresFourIcon size={43} weight="fill" aria-hidden="true" />
-            <span className="exhibition-route-title">UI</span>
-            <span className="exhibition-route-detail">
-              <Copy id="text121" /> <br />
-              <Copy id="text122" />{' '}
+            <ProductMark product="ui" size={52} />
+            <span className="exhibition-route-copy">
+              <span className="exhibition-route-title">UI</span>
+              <span className="exhibition-route-detail">
+                <Copy id="uiSummary" />
+              </span>
             </span>
             <span className="exhibition-route-arrow">
               <ArrowUpRightIcon size={32} aria-hidden="true" />
@@ -205,12 +185,12 @@ export function ExhibitionLanding() {
             onBlur={() => setLibrary(null)}
             className="exhibition-route"
           >
-            <span className="exhibition-route-index">03</span>
-            <TreeStructureIcon size={43} weight="fill" aria-hidden="true" />
-            <span className="exhibition-route-title">Template</span>
-            <span className="exhibition-route-detail">
-              <Copy id="text073" /> <br />
-              <Copy id="text124" />{' '}
+            <ProductMark product="template" size={52} />
+            <span className="exhibition-route-copy">
+              <span className="exhibition-route-title">Template</span>
+              <span className="exhibition-route-detail">
+                <Copy id="templateSummary" />
+              </span>
             </span>
             <span className="exhibition-route-arrow">
               <ArrowUpRightIcon size={32} aria-hidden="true" />
@@ -223,9 +203,14 @@ export function ExhibitionLanding() {
         </nav>
       </main>
       <footer className="exhibition-footer">
-        <span>
-          <Copy id="text125" />
-        </span>
+        <a
+          className="exhibition-site-link"
+          href="https://comwit.io"
+          target="_blank"
+          rel="noreferrer"
+        >
+          comwit.io <ArrowUpRightIcon size={15} aria-hidden="true" />
+        </a>
         <div>
           <Link href="/blog">
             <Copy id="text126" />

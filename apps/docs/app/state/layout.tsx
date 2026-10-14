@@ -7,7 +7,7 @@ const metadata: Metadata = {
   icons: { icon: '/panda-icon-32.png', apple: '/panda-apple-icon.png' },
   openGraph: {
     title: 'Comwit State',
-    description: 'A little state. A lot of possibility.',
+    description: 'State and logic. One domain.',
     images: ['/og/panda-garden'],
   },
   twitter: { card: 'summary_large_image', images: ['/og/panda-garden'] },
