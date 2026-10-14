@@ -216,19 +216,21 @@ function DropdownMenuSubContent({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
   return (
-    <GlassSurface variant="morphing" shape="panel">
-      <DropdownMenuPrimitive.SubContent
-        data-slot="dropdown-menu-sub-content"
-        className={cn(
-          'text-popover-foreground relative z-dropdown min-w-menu origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-card p-1',
-          className
-        )}
-        {...props}
-        asChild
-      >
-        <OverlayMotion preset="menu">{children}</OverlayMotion>
-      </DropdownMenuPrimitive.SubContent>
-    </GlassSurface>
+    <DropdownMenuPrimitive.Portal>
+      <GlassSurface variant="morphing" shape="panel">
+        <DropdownMenuPrimitive.SubContent
+          data-slot="dropdown-menu-sub-content"
+          className={cn(
+            'text-popover-foreground relative z-dropdown min-w-menu origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-card p-1',
+            className
+          )}
+          {...props}
+          asChild
+        >
+          <OverlayMotion preset="menu">{children}</OverlayMotion>
+        </DropdownMenuPrimitive.SubContent>
+      </GlassSurface>
+    </DropdownMenuPrimitive.Portal>
   )
 }
 
