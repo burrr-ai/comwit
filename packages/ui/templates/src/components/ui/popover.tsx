@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { Popover as PopoverPrimitive } from '@comwit/ui'
 
-import { GlassSurface } from './glass'
+import { GlassSurface, type GlassPanelVariant } from './glass'
 import { OverlayMotion } from '../../lib/overlay-motion'
 import { cn } from '../../lib/utils'
 
@@ -19,12 +19,16 @@ function PopoverContent({
   className,
   align = 'center',
   sideOffset = 4,
+  glassVariant = 'morphing',
   children,
   ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+}: React.ComponentProps<typeof PopoverPrimitive.Content> & {
+  /** Transparent edge refraction (default) or a denser, softly blurred panel. */
+  glassVariant?: GlassPanelVariant
+}) {
   return (
     <PopoverPrimitive.Portal>
-      <GlassSurface variant="morphing" shape="panel">
+      <GlassSurface variant={glassVariant} shape="panel">
         <PopoverPrimitive.Content
           data-slot="popover-content"
           align={align}

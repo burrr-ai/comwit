@@ -4,7 +4,7 @@ import * as React from 'react'
 import { DropdownMenu as DropdownMenuPrimitive } from '@comwit/ui'
 import { CheckIcon, ChevronRightIcon, CircleIcon } from '@comwit/ui/icons'
 
-import { GlassSurface } from './glass'
+import { GlassSurface, type GlassPanelVariant } from './glass'
 import { OverlayMotion } from '../../lib/overlay-motion'
 import { cn } from '../../lib/utils'
 
@@ -28,11 +28,15 @@ function DropdownMenuContent({
   className,
   children,
   sideOffset = 4,
+  glassVariant = 'morphing',
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Content> & {
+  /** Transparent edge refraction (default) or a denser, softly blurred panel. */
+  glassVariant?: GlassPanelVariant
+}) {
   return (
     <DropdownMenuPrimitive.Portal>
-      <GlassSurface variant="morphing" shape="panel">
+      <GlassSurface variant={glassVariant} shape="panel">
         <DropdownMenuPrimitive.Content
           data-slot="dropdown-menu-content"
           sideOffset={sideOffset}
@@ -213,11 +217,14 @@ function DropdownMenuSubTrigger({
 function DropdownMenuSubContent({
   className,
   children,
+  glassVariant = 'morphing',
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent> & {
+  glassVariant?: GlassPanelVariant
+}) {
   return (
     <DropdownMenuPrimitive.Portal>
-      <GlassSurface variant="morphing" shape="panel">
+      <GlassSurface variant={glassVariant} shape="panel">
         <DropdownMenuPrimitive.SubContent
           data-slot="dropdown-menu-sub-content"
           className={cn(
