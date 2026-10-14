@@ -369,7 +369,7 @@ describe('query', () => {
         queryFn,
       })
 
-      // 타입 컨트랙트는 Promise<unknown> — 호출자가 .then/.catch 를 붙여도 안전해야 한다.
+      // The type contract is Promise<unknown>; callers must be able to attach .then/.catch safely.
       const result = bound.refetch()
       expect(result).toBeInstanceOf(Promise)
       await expect(result).resolves.toBeUndefined()

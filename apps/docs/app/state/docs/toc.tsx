@@ -1,11 +1,16 @@
 'use client'
 
+import { Copy } from '@/i18n/copy'
+import { useLocale, useTranslations } from 'next-intl'
+
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
 type TocItem = { id: string; text: string; level: number }
 
 function PageContents() {
+  const copy = useTranslations('Copy')
+
   const [headings, setHeadings] = useState<TocItem[]>([])
   const [activeId, setActiveId] = useState('')
 
@@ -45,8 +50,10 @@ function PageContents() {
 
   if (!headings.length) return null
   return (
-    <nav aria-label="On this page">
-      <h2 className="toc-title">On this page</h2>
+    <nav aria-label={copy('text052')}>
+      <h2 className="toc-title">
+        <Copy id="text052" />
+      </h2>
       {headings.map((heading) => (
         <a
           key={heading.id}
@@ -64,5 +71,6 @@ function PageContents() {
 
 export function TableOfContents() {
   const pathname = usePathname()
-  return <PageContents key={pathname} />
+  const locale = useLocale()
+  return <PageContents key={`${locale}:${pathname}`} />
 }

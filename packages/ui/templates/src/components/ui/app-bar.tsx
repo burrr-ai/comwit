@@ -1,15 +1,15 @@
 'use client'
 
 /**
- * AppBar — 모바일 상단 앱바. 화면의 의미(무엇을 보여줄지)와 스크롤 동작(어떻게 붙어 있을지)을 분리한다.
+ * AppBar — mobile top app bar. Separates screen content from scroll behavior.
  *
- * behavior (동작은 @comwit/ui 의 AppBar.Root 가 갖고, 여기서는 data-state 로 시각만 입힌다)
- *  - flow   : 문서 흐름대로 스크롤되어 올라간다. 탭 루트처럼 앱바가 거의 필요 없을 때.
- *  - pinned : 항상 상단에 붙는다(sticky). 시트·즉시 작업이 있는 목록.
- *  - reveal : 아래로 스크롤하면 숨고, 조금만 올려도 다시 나온다. 상세 화면의 기본.
+ * behavior (owned by @comwit/ui AppBar.Root; this layer styles its data-state):
+ * - flow: scrolls away with the document; useful for tab roots that rarely need an app bar.
+ * - pinned: remains sticky at the top; useful for sheets and lists with immediate actions.
+ * - reveal: hides when scrolling down and returns on a small upward scroll; default for details.
  *
- * 배경은 노치까지 이어지고 실제 컨트롤만 safe-area 안쪽에 놓인다. 면은 아래로 사라지는 fade 유리라
- * 경계선이 없다. reveal 은 가장 가까운 <ScrollChromeProvider>(@comwit/ui) 의 스크롤 의도를 따른다.
+ * The background extends beneath the notch while controls stay within the safe area. The glass surface fades
+ * at its lower edge without a border. reveal follows scroll intent from the nearest ScrollChromeProvider.
  *
  *   <AppBar behavior="reveal">
  *     <AppBarBackButton onClick={() => router.back()} />
@@ -32,7 +32,7 @@ export type AppBarBehavior = NonNullable<
 >
 
 type AppBarProps = React.ComponentProps<typeof AppBarPrimitive.Root> & {
-  /** 면 재질. false 면 투명(콘텐츠 위에 컨트롤만). 기본 fade 유리. */
+  /** Surface material. False leaves only controls over the content. Defaults to fading glass. */
   glass?: GlassVariant | false
 }
 
@@ -48,8 +48,8 @@ function AppBar({
       behavior={behavior}
       data-slot="app-bar"
       className={cn(
-        // shrink-0: 페이지가 높이가 정해진 flex 열이면 앱바가 콘텐츠 높이(36px)까지 눌린다 — 그러면 나가는 페이지가
-        // absolute 가 되는 순간 56px 로 돌아와 그 차이만큼 내용이 튄다. 크롬은 절대 눌리지 않는다.
+        // shrink-0: in a fixed-height flex column, the app bar can shrink to its 36px content height. When the exiting page
+        // becomes absolute, it returns to 56px and shifts content by the difference. App chrome must never shrink.
         'box-content isolate z-appbar flex h-appbar shrink-0 items-center bg-transparent',
         'pt-[env(safe-area-inset-top)] pr-[max(0.75rem,env(safe-area-inset-right))] pl-[max(0.75rem,env(safe-area-inset-left))]',
         behavior === 'flow' ? 'relative' : 'sticky top-0',
@@ -61,7 +61,7 @@ function AppBar({
       {...props}
     >
       {glass ? <Glass variant={glass} shape="panel" /> : null}
-      {/* 마스크된 백드롭과 전경은 전환 첫 프레임부터 합성 레이어를 분리해야 한다(Safari 포함). */}
+      {/* Separate the masked backdrop and foreground into compositing layers from the first transition frame, including Safari. */}
       <div className="relative z-raised flex w-full min-w-0 transform-gpu items-center gap-1">
         {children}
       </div>
@@ -98,12 +98,12 @@ function AppBarActions({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 type AppBarBackButtonProps = Omit<React.ComponentProps<typeof GlassButton>, 'children'> & {
-  /** back = 유리 원 + 굵은 셰브론(이탈 동선) · close = 담백한 X(시트 닫기) */
+  /** Back: a glass circle with a bold chevron for navigation. Close: a simple X for dismissing a sheet. */
   icon?: 'back' | 'close'
   children?: React.ReactNode
 }
 
-/** 앱바 뒤로가기 — 44px 유리 원, 그림자 없음, 28px 셰브론(stroke 2.5). */
+/** App-bar back button: 44px glass circle, no shadow, 28px chevron with stroke 2.5. */
 function AppBarBackButton({
   icon = 'back',
   className,
@@ -141,8 +141,8 @@ function AppBarBackButton({
 }
 
 /**
- * 풀블리드 히어로 위에 홀로 뜨는 뒤로가기. 앱바 면 없이 버튼만 고정되고,
- * 아래로 스크롤하면(ScrollChrome compact) 위로 빠져나간다.
+ * Standalone back button floating above a full-bleed hero. Only the button is fixed, without an app-bar surface.
+ * It slides upward out of view when scrolling down (ScrollChrome compact).
  */
 function FloatingBackButton({
   className,

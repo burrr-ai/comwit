@@ -1,4 +1,4 @@
-/** KST 날짜 표시 — '2026. 07. 20.' */
+/** Format a KST date, e.g. '2026. 07. 20.'. */
 export function kstDate(date: Date): string {
   return date.toLocaleDateString('ko-KR', {
     timeZone: 'Asia/Seoul',
@@ -8,7 +8,7 @@ export function kstDate(date: Date): string {
   })
 }
 
-/** KST 날짜·시각 표시 (24시간제) — '2026. 07. 20. 15:04:05' */
+/** Format KST date/time in 24-hour notation, e.g. '2026. 07. 20. 15:04:05'. */
 export function kstDateTime(date: Date): string {
   const time = date.toLocaleTimeString('en-GB', {
     timeZone: 'Asia/Seoul',
@@ -25,8 +25,8 @@ const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
 /**
- * 활동·작성·수정 시각의 API 표시용 문자열. 월·년은 각각 30일·365일 기준이다.
- * 미래 활동 시각은 시계 오차로 보고 '방금 전'으로 표시한다.
+ * API display labels for activity/created/updated timestamps; months/years use 30/365 days.
+ * Treat future activity as clock skew and display the localized equivalent of "just now".
  */
 export function kstRelativeTime(date: Date, now = new Date()): string {
   const elapsed = Math.max(0, now.getTime() - date.getTime())

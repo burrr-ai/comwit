@@ -1,0 +1,146 @@
+---
+title: 폴더 구조
+group: How it works
+order: 3
+description: 템플릿의 모든 폴더, 허용되는 import 방향, 작성 순서를 설명합니다.
+---
+
+<a id="folder-structure"></a>
+
+# 폴더 구조
+
+```text
+src/
+  app/                          Next.js App Router — routing only
+    (app)/                      end-user routes, wrapped by the app service layout
+    (admin)/admin/              operator routes on a stable internal path
+    layout.tsx                  root layout: providers, toaster, service worker
+  services/
+    .ai.md                      service rules and import rules
+    api.ai.md · state.ai.md · page.ai.md
+    design.md                   design tone — read before any screen work
+    app/
+      api/{domain}/             server actions      index.ts · types.ts · actions/*.ts
+      state/{domain}/           domain state        index.ts · types.ts · model.ts · actions/*.ts
+      page/{route}/             page components     index.tsx · *-section.tsx
+      page/layout/              service layout      index.tsx (server) · client.tsx (hydration adapter)
+    admin/
+      .ai.md                    admin routes, account rules, entry guidance
+      _components/              admin-only compositions (shell, page, stat cards)
+      api/ · state/ · page/     same layers, separate domains
+  lib/                          shared code
+    components/ui/              comwit-ui components installed as source
+    layout/                     root layout client (StateProvider, OverlayProvider, Toaster)
+    state/                      ComwitProvider wiring and the AppContext type
+    server-action/              typed server-function transport (one POST route handler)
+    utils/                      cn · createAction · resolveActions · ActionError · http client
+    popup.tsx · ui-text.ts · kst.ts · admin-routes.ts
+  server/                       server-only
+    config.ts                   ordinary server settings from process.env
+    db/schema.ts                Drizzle schema (empty until a database is connected)
+    repository/
+      .ai.md                    repository rules
+      types.ts                  PageRequest · Pageable
+      schema.dbml               entity design — written before mock data
+      _data/{entity}.ts         normalized mock rows
+      {entity}.ts               CRUD per aggregate root
+  proxy.ts                      request proxy: public admin prefix → internal /admin
+.storybook/                     page-level stories, api mocks, stories/.ai.md
+```
+
+<a id="srcapp-is-routing-only"></a>
+
+## `src/app`은 라우팅 전용
+
+라우트 파일은 페이지 컴포넌트를 가져와 반환합니다. Next 자체 오류 경계 외에는 `'use client'`를 사용하지 않으며, 데이터를 가공하거나 서비스 경계를 넘어서는 레이아웃 로직을 두지 않습니다. 홈 라우트는 `src/app/(app)/page.tsx`입니다. 모든 라우트는 서비스에 속하므로 루트 `src/app/page.tsx`는 규칙에 따라 빌드 오류가 됩니다.
+
+각 서비스에는 레이아웃 쌍이 있습니다. 라우트 그룹의 `layout.tsx`는 서비스의 비동기 레이아웃을 `<Suspense fallback={null}>`로 감쌉니다. 이 레이아웃은 기본 사용자(`getMe()`)를 기다리고 완료된 값을 작은 클라이언트 어댑터에 전달합니다. 어댑터는 사용자 훅을 읽기 전에 `useUser.hydrate(...)`를 호출합니다. 상호작용 UI와 사용자 구독은 어댑터 내부가 아니라 자식에 두므로 로그아웃 시 오래된 서버 초기 값을 다시 적용하지 않습니다.
+
+상세 페이지에는 두 가지 선택이 있습니다. ID를 전달하고 클라이언트가 로드하게 할 수 있습니다.
+
+```tsx
+export default async function Page({ params }) {
+  const { id } = await params
+  return <PostDetail id={id} />
+}
+```
+
+또는 SEO가 중요하면 서버에서 값을 준비하고 쿼리를 하이드레이션합니다.
+
+```tsx
+export default async function Page({ params }) {
+  const { id } = await params
+  const post = await api.post.find(id)
+  return <PostDetailRoute id={id} initialPost={post} />
+}
+```
+
+## `src/services/{service}`
+
+사용자 유형마다 폴더 하나를 둡니다. 템플릿에는 `app`과 `admin`이 포함됩니다. 각 서비스는 같은 도메인 이름을 사용하는 세 개의 클라이언트 대면 계층을 가집니다.
+
+| 계층  | 경로              | 책임                                     |
+| ----- | ----------------- | ---------------------------------------- |
+| api   | `api/{domain}/`   | 화면에 맞는 서버 액션. 리포지토리와 통신 |
+| state | `state/{domain}/` | 도메인 모델, 쿼리, 모든 부수 효과        |
+| page  | `page/{route}/`   | 도메인 훅 하나를 읽고 렌더링하는 섹션    |
+
+규칙은 다음과 같습니다.
+
+- 서비스 간 교차 import를 하지 않습니다. `admin`은 `app`에서 가져오지 않습니다.
+- 공유 코드는 `src/lib`(클라이언트 및 공통) 또는 `src/server`(서버 전용)에 둡니다.
+- 외부 import는 도메인의 `index.ts`만 거칩니다. `api/post/index.ts` 외의 위치에서 `api/post/actions/create`를 가져오면 린트 오류입니다.
+- 하나의 도메인 폴더 안에서는 상대 import를 자유롭게 사용합니다.
+- api는 state 또는 하이드레이션을 위한 Server Component에서 호출합니다. 클라이언트 컴포넌트의 `useEffect`에서 api를 호출하면 안 됩니다.
+
+api 계층의 도메인은 테이블보다 **페이지에 맞춥니다**. 주요 화면에 필요한 것을 묶으므로 화면이 바뀌면 응답도 함께 바뀔 수 있습니다. 도메인 하나가 여러 페이지에 데이터를 제공하고 페이지 하나가 여러 도메인을 읽을 수 있습니다.
+
+## `src/server/repository`
+
+데이터로 가는 유일한 관문입니다. 리포지토리는 `_data/`의 정규화된 모킹 행을 대상으로 하는 함수로 시작하며 실제 데이터베이스처럼 조회 시 조인합니다. 데이터베이스 연결 시 각 함수 내부만 바뀌고 시그니처와 api 계층은 유지됩니다.
+
+- 모든 파일에 `import 'server-only'`를 둡니다.
+- 애그리거트 루트마다 파일 하나를 둡니다. 댓글은 `post.ts` 안에 있습니다.
+- `findAll(filter, pageable)`, `findById(id)`, `create(data)`, `update(id, data)`, `delete(id)`를 사용하며 목록은 항상 `Pageable<T>`를 반환합니다.
+- ID는 `uuid()`에서 만듭니다(시간순 UUID v7). 삭제는 소프트 삭제이고 쿼리는 기본적으로 `deletedAt`이 있는 행을 제외합니다.
+- 원시 값만 반환합니다. 프런트엔드용 변환은 api 계층의 책임입니다.
+- 모킹 데이터보다 먼저 `schema.dbml`을 작성하여 관계를 나중에 발견하지 않고 먼저 설계합니다.
+
+<a id="srclib-and-srcserver"></a>
+
+## `src/lib`와 `src/server`
+
+`src/lib`는 클라이언트에서 서비스 간 공유하는 모든 것을 담습니다. UI 컴포넌트는 CLI로 설치한 `comwit-ui` 소스이므로 직접 수정할 수 있으며 각 파일의 헤더가 API 문서입니다. `popup.tsx`는 액션에서 명령형 confirm/alert/sheet 대화상자를 제공하고 `ui-text.ts`는 모든 기본 문자열을 담아 파일 하나에서 앱 언어를 정할 수 있게 합니다.
+
+`src/server`는 서버 전용입니다. `config.ts`는 일반 설정, `db/`는 연결 후 Drizzle 스키마와 클라이언트, `repository/`는 앞에서 설명한 리포지토리를 담습니다.
+
+<a id="write-order"></a>
+
+## 작성 순서
+
+기능은 아래에서 위로 작성하고 위에서 아래로 읽습니다.
+
+```text
+write:  repository → api → state → page
+depend: page → state → api → repository
+```
+
+계층 안에서도 순서가 정해져 있습니다. api 도메인은 `types.ts`(인터페이스와 `Simple`, `Detail`, `Request` 구조), `actions/*.ts`, `index.ts` 순서로 만듭니다. state 도메인은 `types.ts`(`State`, `Actions`), `model.ts`, `actions/*.ts`, `index.ts` 순서입니다. 페이지는 아직 없는 섹션을 조합하는 `index.tsx`부터 만든 다음 섹션을 작성합니다.
+
+<a id="what-enforces-it"></a>
+
+## 규칙을 강제하는 방법
+
+위 규칙은 위키의 관례에 그치지 않습니다. `eslint-rules/`에는 경계를 넘으면 `pnpm run validate`를 실패시키는 Oxlint 플러그인이 포함됩니다.
+
+| 규칙                                                                               | 거부하는 코드                                                                           |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `app-structure`, `no-root-app-folder`, `no-use-client-in-app`                      | `src/app` 밖의 라우트, 루트 페이지, 라우트 파일의 client 지시문                         |
+| `index-only-import`, `no-direct-api-action-import`                                 | 도메인의 `index.ts`를 우회하는 내부 접근                                                |
+| `client-component-no-api-import`                                                   | api 계층을 가져오는 클라이언트 컴포넌트                                                 |
+| `api-structure`, `api-create-action`, `api-action-error`, `api-only-server-action` | `resolveActions`, `createAction`, `ActionError`를 사용하지 않는 api 모듈                |
+| `state-structure`, `no-direct-comwit-import`, `no-multiple-state-hook-calls`       | 필수 파일이 빠진 state 폴더, state 밖의 `@comwit/state` 사용, 같은 도메인 훅 두 번 호출 |
+| `page-use-client`, `no-native-interactive`, `no-next-image`, `no-anchor-tag`       | `'use client'` 없는 페이지, 원시 `<button>`/`<input>`, `next/image`, 내부 링크용 `<a>`  |
+| `no-db-in-api`, `server-only-import`, `drizzle-node-config`                        | api의 DB 접근, `server-only` 없는 리포지토리, 서버 모듈을 가져오는 Drizzle 설정         |
+| `auth-hydration-boundary`, `better-auth-required-options`                          | 구독도 수행하는 하이드레이션 어댑터, 필수 옵션이 없는 Better Auth 인스턴스              |
+| `kebab-case-filename`                                                              | kebab-case가 아닌 파일 이름                                                             |

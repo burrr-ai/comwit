@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-/** 넘버링 섹션 셸 — `01 — COLOR` 스타일 헤더 + 제목 + 설명. */
+/** Numbered section shell: 01 — COLOR heading, title, and description. */
 export function CatalogSection({
   index,
   eyebrow,
@@ -28,7 +28,7 @@ export function CatalogSection({
   )
 }
 
-/** 섹션 안 소그룹 라벨 */
+/** Subgroup label within a section. */
 export function GroupLabel({ children }: { children: React.ReactNode }) {
   return <h3 className="mb-4 text-title-md text-foreground">{children}</h3>
 }

@@ -18,7 +18,7 @@ type AdminReasonDialogProps = {
   onOpenChange: (open: boolean) => void
   title: string
   description?: string
-  /** "대상: ..." 으로 노출할 라벨 */
+  /** Label identifying the action target. */
   targetLabel?: string
   reasonPlaceholder?: string
   confirmLabel?: string
@@ -28,8 +28,8 @@ type AdminReasonDialogProps = {
 }
 
 /**
- * 사유 입력 후 확인하는 다이얼로그 — 숨김/삭제 등 되돌릴 수 있는 조치 공용.
- * (moderation의 HideDialog를 일반화.)
+ * Reason-entry confirmation dialog for reversible actions such as hiding or removing.
+ * Generalized from the moderation HideDialog.
  */
 export function AdminReasonDialog({
   open,

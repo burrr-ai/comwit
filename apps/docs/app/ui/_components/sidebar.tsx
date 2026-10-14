@@ -1,5 +1,8 @@
 'use client'
 
+import { Copy, useCopy } from '@/i18n/copy'
+import { useTranslations } from 'next-intl'
+
 import * as React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -23,9 +26,7 @@ const guides = [
 ]
 
 /**
- * 갤러리 페이지에서 지금 읽고 있는 항목 — 헤더 바로 아래 판정선을 지난 마지막 항목.
- * 사이드바에서 고른 항목은 그리로 가는 스크롤이 멈출 때까지 붙잡아 둔다. 그래야 끝까지 못 올라가는
- * 마지막 항목들도 고른 대로 켜진다. 다음 스크롤부터 다시 위치로 판정한다.
+ * Track the last gallery item above the header's bottom edge. Keep a sidebar selection active until its scroll ends, including final items that cannot reach the top; resume position tracking on the next scroll.
  */
 function useActiveItem(enabled: boolean) {
   const [active, setActive] = React.useState<string | null>(null)
@@ -42,7 +43,7 @@ function useActiveItem(enabled: boolean) {
     let frame = 0
     const measure = () => {
       frame = 0
-      // html 의 scroll-padding-top 이 곧 "헤더 바로 아래" — 앵커로 올라온 항목이 그 선에 선다.
+      // html scroll-padding-top marks the line just below the header where anchor targets land.
       const line = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) + 48
       let current: string | null = null
       for (const node of document.querySelectorAll<HTMLElement>('[data-gallery-item]')) {
@@ -70,7 +71,7 @@ function useActiveItem(enabled: boolean) {
     (id: string) => {
       held.current = true
       setActive(id)
-      release() // 이미 제자리라 스크롤이 일어나지 않아도 풀린다
+      release() // Release even when no scroll occurs because the item is already in place.
     },
     [release]
   )
@@ -87,9 +88,11 @@ function NavContent({
   onNavigate?: () => void
   searchRef?: React.Ref<HTMLInputElement>
   autoScroll?: boolean
-  /** 시트 안 — 우상단 닫기 버튼 자리를 비운다 */
+  /** Reserve space for the sheet's top-right close button. */
   inSheet?: boolean
 }) {
+  const copy = useTranslations('Copy')
+
   const pathname = usePathname()
   const router = useRouter()
   const onGallery = pathname === GALLERY
@@ -98,15 +101,21 @@ function NavContent({
   const listRef = React.useRef<HTMLDivElement>(null)
 
   const q = query.trim().toLowerCase()
+  const localize = useCopy()
   const matches = (name: string) => {
     const c = byName[name]
-    return !q || `${c.title} ${c.name} ${c.summary}`.toLowerCase().includes(q)
+    return (
+      !q ||
+      `${c.title} ${c.name} ${c.summary} ${localize(c.title)} ${localize(c.summary)}`
+        .toLowerCase()
+        .includes(q)
+    )
   }
   const visibleGroups = groups
     .map((g) => ({ ...g, items: g.items.filter(matches) }))
     .filter((g) => g.items.length)
 
-  // 강조된 항목을 사이드바 스크롤 안에서만 보이게 한다(페이지 스크롤은 건드리지 않는다).
+  // Reveal the active item within the sidebar scroller without moving the page.
   React.useEffect(() => {
     if (!autoScroll || !active || !listRef.current) return
     const list = listRef.current
@@ -120,8 +129,7 @@ function NavContent({
   const hrefOf = (name: string) => `${GALLERY}#${name}`
 
   /**
-   * 갤러리 위에서는 라우터를 거치지 않고 바로 스크롤한다. 시트 안에서 눌렀다면 시트가 닫혀
-   * 스크롤 잠금이 풀린 다음 움직인다. 새 탭 열기(⌘·Ctrl·가운데 클릭)는 링크 그대로 둔다.
+   * Scroll directly on the gallery page. Inside a sheet, close it and release scroll lock first. Preserve native links for Cmd/Ctrl/middle-click navigation.
    */
   const goTo = (id: string, item?: string) => {
     if (item) holdActive(item)
@@ -157,8 +165,8 @@ function NavContent({
             <Input
               ref={searchRef}
               type="search"
-              aria-label="Find a component"
-              placeholder="Find a component"
+              aria-label={copy('text156')}
+              placeholder={copy('text156')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -173,7 +181,7 @@ function NavContent({
 
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-3 pb-10">
         {!q && (
-          <nav aria-label="Guides" className="mb-5 border-b border-border pb-5">
+          <nav aria-label={copy('text102')} className="mb-5 border-b border-border pb-5">
             {guides.map((g) => (
               <Link
                 key={g.href}
@@ -182,13 +190,13 @@ function NavContent({
                 aria-current={pathname === g.href ? 'page' : undefined}
                 className="flex h-8 items-center rounded-lg px-2 text-body-sm font-medium text-soft-foreground transition-colors duration-fast hover:bg-accent hover:text-foreground aria-[current=page]:bg-primary-surface aria-[current=page]:text-primary-ink"
               >
-                {g.label}
+                <Copy text={g.label} />
               </Link>
             ))}
           </nav>
         )}
 
-        <nav aria-label="Components">
+        <nav aria-label={copy('text158')}>
           {visibleGroups.map((g) => (
             <div key={g.id} className="mt-3 first:mt-0">
               <Link
@@ -196,7 +204,7 @@ function NavContent({
                 onClick={onAnchorClick(g.id, g.items[0])}
                 className="flex h-8 items-center rounded-lg px-2 text-body-sm font-semibold text-foreground transition-colors duration-fast hover:bg-accent"
               >
-                {g.title}
+                <Copy text={g.title} />
               </Link>
               <ul className="ml-3 border-l border-border">
                 {g.items.map((name) => {
@@ -215,7 +223,7 @@ function NavContent({
                             : 'text-soft-foreground hover:border-border-strong hover:text-foreground'
                         )}
                       >
-                        {byName[name].title}
+                        <Copy text={byName[name].title} />
                       </Link>
                     </li>
                   )
@@ -225,7 +233,8 @@ function NavContent({
           ))}
           {!visibleGroups.length && (
             <p className="px-2 py-6 text-body-sm text-muted-foreground">
-              Nothing matches “{query}”.
+              <Copy id="text159" />
+              {query}”.
             </p>
           )}
         </nav>
@@ -247,6 +256,8 @@ function NavContent({
 }
 
 export function Sidebar() {
+  const copy = useTranslations('Copy')
+
   const searchRef = React.useRef<HTMLInputElement>(null)
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -259,14 +270,16 @@ export function Sidebar() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   return (
-    <aside className="ui-sidebar" aria-label="UI documentation">
+    <aside className="ui-sidebar" aria-label={copy('text161')}>
       <NavContent searchRef={searchRef} autoScroll />
     </aside>
   )
 }
 
-/** 좁은 화면 — 헤더의 메뉴 버튼이 같은 내비를 왼쪽 시트로 연다. */
+/** On narrow screens, the header menu opens the same navigation in a left sheet. */
 export function MobileNav() {
+  const copy = useTranslations('Copy')
+
   const [open, setOpen] = React.useState(false)
   return (
     <>
@@ -274,23 +287,26 @@ export function MobileNav() {
         variant="ghost"
         size="icon"
         className="ui-menu-button"
-        aria-label="Open navigation"
+        aria-label={copy('text162')}
         onClick={() => setOpen(true)}
       >
         <MenuIcon className="size-5" />
       </Button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
+          closeLabel={copy('closeOverlay')}
           side="left"
           className="w-[88%] max-w-xs gap-0 p-0"
-          // 검색창에 바로 포커스하면 폰 키보드가 튀어나온다 — 시트 자체에 둔다.
+          // Focus the sheet instead of the search input to avoid opening the mobile keyboard.
           onOpenAutoFocus={(e) => {
             e.preventDefault()
             ;(e.currentTarget as HTMLElement).focus()
           }}
         >
           <SheetTitle className="sr-only">Comwit UI</SheetTitle>
-          <SheetDescription className="sr-only">Guides and components</SheetDescription>
+          <SheetDescription className="sr-only">
+            <Copy id="text163" />
+          </SheetDescription>
           <NavContent onNavigate={() => setOpen(false)} inSheet />
         </SheetContent>
       </Sheet>

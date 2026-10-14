@@ -1,5 +1,8 @@
 'use client'
 
+import { Copy, useCopy } from '@/i18n/copy'
+import { useTranslations } from 'next-intl'
+
 import { Button } from '@comwit/ui-templates/button'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -57,6 +60,9 @@ function Letter({
 }
 
 export function ExhibitionLanding() {
+  const localize = useCopy()
+  const copy = useTranslations('Copy')
+
   const allowed = useSyncExternalStore(
     subscribePresentation,
     presentationAllowed,
@@ -91,14 +97,16 @@ export function ExhibitionLanding() {
       }}
     >
       <a href="#main" className="skip-link">
-        Skip to content
+        <Copy id="text017" />{' '}
       </a>
       <SiteHeader />
       <main id="main" className="exhibition-main">
         <div className="exhibition-meta">
-          <span>OPEN SOURCE. OPEN ENDED.</span>
+          <span>
+            <Copy id="text107" />
+          </span>
           <a href="https://comwit.io" target="_blank" rel="noreferrer">
-            FROM COMWIT.IO <ArrowUpRightIcon size={13} aria-hidden="true" />
+            <Copy id="text108" /> <ArrowUpRightIcon size={13} aria-hidden="true" />
           </a>
         </div>
         <h1 className="exhibition-title" aria-label="Comwit">
@@ -111,11 +119,12 @@ export function ExhibitionLanding() {
         <div className="exhibition-scene">
           <div className="exhibition-note">
             <p>
-              Small pieces.
-              <br />
-              Wild possibilities.
+              <Copy id="text110" /> <br />
+              <Copy id="text111" />{' '}
             </p>
-            <span>STATE & UI FOR REACT</span>
+            <span>
+              <Copy id="text112" />
+            </span>
           </div>
           <motion.div
             className="exhibition-art"
@@ -133,11 +142,15 @@ export function ExhibitionLanding() {
             </div>
           </motion.div>
           <div className="exhibition-edition">
-            <span>BUILT TO BE</span>
-            <strong>yours.</strong>
+            <span>
+              <Copy id="text113" />
+            </span>
+            <strong>
+              <Copy id="text114" />
+            </strong>
           </div>
         </div>
-        <nav className="exhibition-routes" aria-label="Choose a library">
+        <nav className="exhibition-routes" aria-label={copy('text115')}>
           <Link
             href="/state/docs"
             onPointerEnter={() => setLibrary('state')}
@@ -150,14 +163,16 @@ export function ExhibitionLanding() {
             <Image src="/panda-mark.webp" alt="" width={46} height={46} />
             <span className="exhibition-route-title">State</span>
             <span className="exhibition-route-detail">
-              One domain.
-              <br />
-              One hook.
+              <Copy id="text117" /> <br />
+              <Copy id="text118" />{' '}
             </span>
             <span className="exhibition-route-arrow">
               <ArrowUpRightIcon size={32} aria-hidden="true" />
             </span>
-            <span className="sr-only"> documentation</span>
+            <span className="sr-only">
+              {' '}
+              <Copy id="text119" />
+            </span>
           </Link>
           <Link
             href="/ui"
@@ -171,14 +186,16 @@ export function ExhibitionLanding() {
             <SquaresFourIcon size={43} weight="fill" aria-hidden="true" />
             <span className="exhibition-route-title">UI</span>
             <span className="exhibition-route-detail">
-              Your interface.
-              <br />
-              Your rules.
+              <Copy id="text121" /> <br />
+              <Copy id="text122" />{' '}
             </span>
             <span className="exhibition-route-arrow">
               <ArrowUpRightIcon size={32} aria-hidden="true" />
             </span>
-            <span className="sr-only"> documentation</span>
+            <span className="sr-only">
+              {' '}
+              <Copy id="text119" />
+            </span>
           </Link>
           <Link
             href="/template"
@@ -192,28 +209,36 @@ export function ExhibitionLanding() {
             <TreeStructureIcon size={43} weight="fill" aria-hidden="true" />
             <span className="exhibition-route-title">Template</span>
             <span className="exhibition-route-detail">
-              One command.
-              <br />
-              One architecture.
+              <Copy id="text073" /> <br />
+              <Copy id="text124" />{' '}
             </span>
             <span className="exhibition-route-arrow">
               <ArrowUpRightIcon size={32} aria-hidden="true" />
             </span>
-            <span className="sr-only"> documentation</span>
+            <span className="sr-only">
+              {' '}
+              <Copy id="text119" />
+            </span>
           </Link>
         </nav>
       </main>
       <footer className="exhibition-footer">
-        <span>GOOD TOGETHER. GREAT ON THEIR OWN.</span>
+        <span>
+          <Copy id="text125" />
+        </span>
         <div>
-          <Link href="/blog">RELEASES ↗</Link>
+          <Link href="/blog">
+            <Copy id="text126" />
+          </Link>
           <a href="https://github.com/burrr-ai/comwit/blob/latest/LICENSE">MIT</a>
           <a href="/llms.txt">LLMS.TXT</a>
           <Button
             variant="plain"
             size="none"
             type="button"
-            aria-label={!allowed ? 'Motion disabled' : paused ? 'Play motion' : 'Pause motion'}
+            aria-label={localize(
+              !allowed ? 'Motion disabled' : paused ? 'Play motion' : 'Pause motion'
+            )}
             aria-pressed={paused || !allowed}
             disabled={!allowed}
             onClick={() => setPaused(!paused)}
@@ -223,7 +248,7 @@ export function ExhibitionLanding() {
             ) : (
               <PauseIcon className="size-3" size={12} weight="fill" aria-hidden="true" />
             )}
-            <span>{!allowed ? 'STATIC' : paused ? 'PLAY' : 'PAUSE'}</span>
+            <span>{copy(!allowed ? 'motionStatic' : paused ? 'motionPlay' : 'motionPause')}</span>
           </Button>
         </div>
       </footer>

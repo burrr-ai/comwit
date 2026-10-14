@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 // ─────────────────────────────────────────────────────────────────────────
-// verify.mjs — 체크인된 템플릿 스냅샷이 "가치 중립" 계약을 지키는지 검사한다.
-//   · 특정 인프라(클라우드 프로비저닝·배포 파이프라인·호스팅 샌드박스)의 토큰이 남아 있지 않다
-//   · 꼭 있어야 할 파일(가이드·스킬·설정)이 있고, 빠져야 할 파일이 없다
-//   · .claude/skills 스텁이 .agents/skills 와 1:1 로 맞는다(프론트매터 동일)
-// sync.mjs 가 끝에서 호출하고, `pnpm test` 가 원본 없이도 돌린다.
+// Verify that the checked-in template snapshot remains infrastructure-neutral.
+// Reject tokens tied to cloud provisioning, deployment pipelines, or hosting sandboxes.
+// Require guides, skills, and configuration while rejecting excluded files.
+// Require matching frontmatter between .claude/skills stubs and .agents/skills.
+// Called after sync.mjs and independently by pnpm test without the upstream checkout.
 // ─────────────────────────────────────────────────────────────────────────
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// 라이브러리 참조(@comwit/state · comwit-ui · comwit.json · library.comwit.io)는 허용 — 이 템플릿의 제품이다.
+// Allow references to @comwit/state, comwit-ui, comwit.json, and library.comwit.io: these are the template's products.
 const FORBIDDEN = [
   [/COMWIT_[A-Z]/, 'platform environment variable'],
   [/__COMWIT_/, 'platform build define'],

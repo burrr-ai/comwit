@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import createNextIntlPlugin from 'next-intl/plugin'
 
 const nextConfig: NextConfig = {
   devIndicators: false,
@@ -18,7 +19,7 @@ const nextConfig: NextConfig = {
       { source: '/llm/:path*', destination: '/state/llm/:path*', permanent: true },
       { source: '/components/:name', destination: '/ui/components#:name', permanent: true },
       { source: '/components', destination: '/ui/components', permanent: true },
-      // 컴포넌트별 페이지 → 한 장짜리 갤러리의 앵커
+      // Redirect individual component pages to anchors in the single-page gallery.
       { source: '/ui/components/:name', destination: '/ui/components#:name', permanent: true },
       { source: '/ui/examples', destination: '/ui/components#forms', permanent: true },
       { source: '/tokens', destination: '/ui/theming', permanent: true },
@@ -26,4 +27,4 @@ const nextConfig: NextConfig = {
     ]
   },
 }
-export default nextConfig
+export default createNextIntlPlugin()(nextConfig)

@@ -1,0 +1,126 @@
+---
+title: 'action()'
+group: 'Action'
+slug: 'api/action'
+order: 31
+---
+
+# action()
+
+상태와 컨텍스트에 접근할 수 있는 액션을 만드는 팩토리입니다.
+
+```ts
+import { action } from '@comwit/state'
+```
+
+<a id="usage"></a>
+
+## 사용법
+
+```ts
+import { action, OnError, OnSuccess } from '@comwit/state'
+import { post } from './model'
+import { user } from '@/state/user/model'
+import type { PostActions, AppContext } from './types'
+
+export const postActions = action<Pick<PostActions, 'init' | 'loadPosts' | 'create'>, AppContext>(
+  ({ state, context }) => {
+    class PostActions {
+      private model = state(post)
+      private user = state(user) // cross-domain read
+
+      init(data: Post) {
+        this.model.current = data
+      }
+
+      async loadPosts() {
+        await this.model.posts.query()
+      }
+
+      @OnSuccess(() => context.router.push('/posts'))
+      @OnError((e) => toast.error(e instanceof Error ? e.message : 'Failed'))
+      async create(title: string) {
+        if (!this.user.me) return
+        const created = await api.post.create({ userId: this.user.me.id, title })
+        this.model.posts.data.push(created)
+      }
+    }
+    return new PostActions()
+  }
+)
+```
+
+렌더링 중에 상태를 변경하는 액션을 직접 호출하지 마세요. 서버가 소유하는 데이터는 Server Component에서 기다린 다음 클라이언트 라우트 어댑터에서 `useDomain.hydrate(...)`로 쿼리 항목을 초기화하세요. 사용자 이벤트, 명령형 미리 로드, 여러 작업을 조율하는 흐름에는 액션을 사용합니다.
+
+<a id="factory-parameters"></a>
+
+## 팩토리 매개변수
+
+팩토리는 `{ state, context }`를 받습니다.
+
+- **state(model)** — 모델 상태의 변경 가능한 프록시를 반환합니다. 팩토리나 클래스 필드에서 모델마다 한 번 참조를 얻고 메서드에서 재사용하세요.
+- **context** — `ComwitProvider`가 제공하는 공유 컨텍스트입니다. 라우터, 인증 정보 등을 포함합니다.
+
+모델에 [`history: true`](/state/docs/api/history)가 설정되어 있으면 각 액션 메서드 호출은 하나의 히스토리 트랜잭션으로 기록됩니다. 메서드 안의 여러 상태 변경은 `state.$history.undo()`로 함께 취소됩니다.
+
+<a id="class-pattern"></a>
+
+## 클래스 패턴
+
+팩토리 안에 클래스를 정의하면 다음을 사용할 수 있습니다.
+
+- 모델 참조를 보관하는 비공개 필드(`this.model`, `this.user`)
+- [데코레이터](/state/docs/decorators) 지원(`@OnError`, `@OnSuccess`, `@Debounce` 등)
+- `Actions` 타입과 일치하는 간결한 메서드 시그니처
+
+데코레이터가 필요하지 않으면 일반 객체의 메서드도 사용할 수 있습니다.
+
+```ts
+const counterActions = action<CounterActions>(({ state }) => {
+  const m = state(counter)
+  return {
+    increment() {
+      m.count += 1
+    },
+  }
+})
+```
+
+두 형식 모두 훅을 통해 바인딩된 메서드를 제공합니다. 상태 변경에는 `state(model)`이 반환하는 프록시를 사용하세요. 컴포넌트 선택자는 스냅샷을 읽기 위한 것입니다.
+
+<a id="cross-domain-state"></a>
+
+## 도메인 간 상태 접근
+
+액션은 `state()`를 통해 어떤 모델이든 읽고 쓸 수 있습니다.
+
+```ts
+const postActions = action<Pick<PostActions, 'create'>, AppContext>(({ state }) => {
+  class Actions {
+    private post = state(post)
+    private user = state(user) // different domain
+
+    async create(title: string) {
+      if (!this.user.me) return
+      // ...
+    }
+  }
+  return new Actions()
+})
+```
+
+<a id="splitting-actions"></a>
+
+## 액션 나누기
+
+관심사별로 액션 파일을 나누세요. 각 파일은 `Pick<Actions, ...>`를 사용하는 액션 팩토리 하나를 내보냅니다.
+
+```ts
+// actions/crud.ts
+export const crudActions = action<Pick<PostActions, 'create' | 'update' | 'delete'>, AppContext>(...)
+
+// actions/load.ts
+export const loadActions = action<Pick<PostActions, 'loadPosts'>, AppContext>(...)
+```
+
+[`create()`](/state/docs/api/create)에서 액션을 결합하세요.

@@ -1,10 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────
-// 스토리 코드젠 (= 템플릿 동기화 스크립트).
+// Story generation also synchronizes the template catalog.
 //
-// 단일 소스: apps/storybook/stories.spec.mjs (컴포넌트별 variant 매트릭스 + 렌더 레시피).
-// 여기서 src/generated/*.stories.tsx 를 뽑는다. 스토리는 @comwit/ui-templates 를 "직접 import"
-// 하므로 컴포넌트 코드는 어디에도 복제되지 않는다 — 스펙만 고치고 `pnpm stories` 로 재생성한다.
-// (variant 를 추가하려면 stories.spec.mjs 만 수정 → 재생성. 스토리를 손으로 반복 작성하지 않는다.)
+// Source: apps/storybook/stories.spec.mjs contains component variant matrices and render recipes.
+// Generate src/generated/*.stories.tsx with direct imports from @comwit/ui-templates.
+// Edit specs and run pnpm stories; component implementations remain in one place.
+// Add variants to stories.spec.mjs and regenerate instead of writing repetitive stories.
 // ─────────────────────────────────────────────────────────────────────────
 import { writeFileSync, mkdirSync, rmSync, readdirSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -26,8 +26,8 @@ const tplUiDir = join(
   'ui'
 )
 
-// 스펙 조각 수집: specs/*.mjs 각 파일이 `export const specs = [...]` 를 내보낸다.
-// 컴포넌트별로 파일을 나눠 병렬 편집·충돌 없이 관리한다.
+// Collect specs/*.mjs modules that export const specs = [...].
+// Separate component specs into files to support independent edits without conflicts.
 const specFiles = readdirSync(specsDir)
   .filter((f) => f.endsWith('.mjs'))
   .sort()
@@ -38,7 +38,7 @@ for (const f of specFiles) {
   else if (mod.spec) specs.push(mod.spec)
 }
 
-// 실제 존재하는 템플릿 컴포넌트 목록 — 스펙이 이걸 전부 덮는지 감사한다.
+// Audit spec coverage against the actual template component list.
 const templateFiles = readdirSync(tplUiDir)
   .filter((f) => f.endsWith('.tsx'))
   .map((f) => f.replace(/\.tsx$/, ''))
@@ -61,8 +61,8 @@ function indent(code, pad = '      ') {
 
 function renderStory(story) {
   const name = story.name
-  // renderFn: 훅(useState/useForm 등)이 필요한 스토리 — 전체 함수 본문(return 포함)을 그대로 넣는다.
-  // render:  단순 JSX 표현식 — () => (JSX) 로 감싼다.
+  // renderFn contains the complete function body, including return, for stories requiring hooks.
+  // render is a simple JSX expression wrapped in an arrow function.
   const body = story.renderFn
     ? `() => {\n${indent(story.renderFn, '    ')}\n  }`
     : story.render.includes('\n')
@@ -96,11 +96,11 @@ ${stories}
 `
 }
 
-// 재생성
+// Regenerate.
 rmSync(outDir, { recursive: true, force: true })
 mkdirSync(outDir, { recursive: true })
 
-// docsOnly 스펙 = 토큰만 입힌 컴포넌트(separator·label …). docs 예시는 내지만 스토리는 만들지 않는다.
+// docsOnly specs produce docs examples but no Storybook stories for simple token-styled parts such as separator and label.
 const covered = new Set()
 let written = 0
 for (const spec of specs) {
@@ -111,11 +111,11 @@ for (const spec of specs) {
   written += 1
 }
 
-// 커버리지 감사 — 스펙이 빠뜨린 템플릿 컴포넌트를 알린다(조용한 누락 방지).
+// Report template components missing from specs instead of silently omitting them.
 const missing = templateFiles.filter((f) => !covered.has(f))
 console.log(`stories: ${specs.length} spec(s) → ${written} generated file(s) in src/generated/`)
 if (missing.length) {
-  console.log(`⚠ 스펙이 덮지 않은 템플릿 컴포넌트 ${missing.length}개: ${missing.join(', ')}`)
+  console.log(`⚠ ${missing.length} template components have no specs: ${missing.join(', ')}`)
 } else {
-  console.log(`✓ 모든 템플릿 컴포넌트(${templateFiles.length})가 스펙에 커버됨`)
+  console.log(`✓ All ${templateFiles.length} template components are covered by specs`)
 }

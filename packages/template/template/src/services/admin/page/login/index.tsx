@@ -8,9 +8,9 @@ import { adminCard } from '@/services/admin/_components'
 import { cn } from '@/lib/utils'
 
 /**
- * Admin Login — `@/lib/components/ui` 컨트롤 + 어드민 카드 표면.
- * 공개 관리자 회원가입은 제공하지 않는다.
- * TODO: auth-setup 후 실제 로그인 액션 연결(handleSubmit).
+ * Admin Login: @/lib/components/ui controls on an admin card surface.
+ * No public administrator registration.
+ * TODO: Connect handleSubmit to real sign-in actions after auth-setup.
  */
 export default function AdminLogin() {
   const [email, setEmail] = useState('')

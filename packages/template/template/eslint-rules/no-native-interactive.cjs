@@ -1,27 +1,23 @@
 /**
- * ESLint rule to forbid native interaction elements in service pages.
- *
- * Interaction primitives must come from the design system (`@/lib/components/ui`)
- * so appearance is unified and driven by variants — not hand-rolled native markup.
+ * ESLint rule to forbid native interactive elements in service pages.
+ * Use design-system primitives from @/lib/components/ui for consistent variants.
  *
  * Forbidden: <button> <input> <select> <textarea>
- * Use instead: Button / Input (+ DatePicker/TimePicker/Checkbox/RadioGroup) / Select / Textarea
+ * Use: Button / Input (+ DatePicker/TimePicker/Checkbox/RadioGroup) / Select / Textarea.
+ * .oxlintrc.json scopes this to service pages, excluding UI primitives and admin _components.
  *
- * Scope is applied in .oxlintrc.json (services pages only); the ui primitives
- * in src/lib/components/ui and admin _components are excluded there.
- *
- * 예외: 시각이 없는 input — `type="file"`(숨겨두고 Button 으로 트리거) 과 `type="hidden"`.
- * 이 둘은 디자인 시스템이 대체할 외형 자체가 없다.
+ * Exceptions: nonvisual input types "file" (hidden and triggered by Button) and "hidden".
+ * These have no visual appearance for the design system to replace.
  */
 
 const REPLACEMENT = {
   button: "Button",
-  input: "Input (또는 Checkbox / RadioGroup / DatePicker)",
+  input: "Input (or Checkbox / RadioGroup / DatePicker)",
   select: "Select",
   textarea: "Textarea",
 };
 
-/** 외형이 없어 디자인 시스템으로 대체할 수 없는 input type. */
+/** Input types with no appearance for the design system to replace. */
 const INVISIBLE_INPUT_TYPES = new Set(["file", "hidden"]);
 
 function isInvisibleInput(node) {
@@ -46,7 +42,7 @@ module.exports = {
     },
     messages: {
       noNative:
-        "native <{{tag}}> 사용 금지 → '@/lib/components/ui' 의 {{replacement}} 컴포넌트를 쓰세요. (스타일은 variant 로만 조절)",
+        "Native <{{tag}}> is forbidden. Use {{replacement}} from '@/lib/components/ui' and style it through variants.",
     },
     schema: [],
   },

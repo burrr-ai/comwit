@@ -13,7 +13,7 @@ module.exports = function manifestLoader() {
   const projectRoot = options.projectRoot ?? process.cwd()
   const servicesRoot = path.join(projectRoot, 'src/services')
 
-  // dev 중 action 파일 추가/삭제도 manifest 모듈을 무효화하도록 디렉터리를 감시한다.
+  // Watch directories so adding/removing action files in development invalidates the manifest.
   this.addContextDependency?.(servicesRoot)
 
   const files = findActionFiles(servicesRoot)

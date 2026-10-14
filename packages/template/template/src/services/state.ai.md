@@ -398,7 +398,7 @@ export const crudActions = action<Pick<ProductActions, 'create' | 'delete'>>(({ 
       toast.error(error instanceof Error ? error.message : 'Unexpected error')
     })
     async delete(id: string) {
-      if (!await popup.confirm({ title: '삭제할까요?', description: '삭제하면 되돌릴 수 없어요.', destructive: true })) return
+      if (!await popup.confirm({ title: 'Delete this item?', description: 'This cannot be undone.', destructive: true })) return
       // optimistic — remove from list + decrement stats counts
       const snapshot = { items: [...this.model.products.data.items], stats: { ...this.model.stats.data } }
       this.model.products.data.items = this.model.products.data.items.filter((p) => p.id !== id)
@@ -506,7 +506,7 @@ const LoginRequired = intercept(({ state, context }) => {
 // Shared delete confirmation — if the convention is that the first arg is an id, args can also be used
 const ConfirmDelete = intercept(() => ({
   intercept: async (execute, args) => {
-    if (!(await popup.confirm({ title: '삭제할까요?', description: '삭제하면 되돌릴 수 없어요.', destructive: true }))) return
+    if (!(await popup.confirm({ title: 'Delete this item?', description: 'This cannot be undone.', destructive: true }))) return
     return execute(...args)
   },
 }))

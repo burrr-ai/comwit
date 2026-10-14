@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // ─────────────────────────────────────────────────────────────────────────
-// comwit-ui — comwit UI 컴포넌트를 내 프로젝트로 설치하는 CLI. (설치되는 엔진은 @comwit/ui)
-//   comwit-ui init              프로젝트 세팅(comwit.json + 토큰 계약 배선)
-//   comwit-ui add <name...>     컴포넌트 + registryDependencies + npm deps 설치
-//   comwit-ui list              설치 가능한 컴포넌트 목록
+// CLI for installing editable styled components into a project, using the @comwit/ui engine.
+// comwit-ui init: configure comwit.json and connect the token contract.
+// comwit-ui add <name...>: install components, registryDependencies, and npm dependencies.
+// comwit-ui list: show available components.
 //
-// shadcn 툴 비의존 — comwit 자체 레지스트리(번들된 registry/*.json)를 읽는다. zero-dep(Node 내장만).
+// Read the bundled Comwit registry without shadcn tooling or external CLI dependencies; use Node built-ins only.
 // ─────────────────────────────────────────────────────────────────────────
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -31,7 +31,7 @@ const die = (msg) => {
 }
 
 // ── args ────────────────────────────────────────────────────────────────
-// 값을 받는 플래그만 다음 인자를 먹는다 — `--overwrite add button` 에서 add 가 플래그 값이 되지 않게.
+// Only value-taking flags consume the next argument, so --overwrite add button does not consume add as a flag value.
 const VALUE_FLAGS = new Set(['cwd', 'css', 'router', 'locale'])
 function parseArgs(argv) {
   const positional = []
@@ -54,16 +54,16 @@ function parseArgs(argv) {
 function loadIndex() {
   return JSON.parse(readFileSync(join(REGISTRY_DIR, 'index.json'), 'utf8'))
 }
-// 옛 이름 → 지금 이름. 템플릿 이름은 중성적으로 간다(엔진 브랜드가 아니라 역할).
+// Map old names to current role-based template names rather than engine brands.
 const ALIASES = { sonner: 'toast' }
-// 동작 훅은 이제 엔진(@comwit/ui)이 내보낸다 — 복사할 소스가 없다.
+// Behavior hooks are exported by @comwit/ui and have no source files to copy.
 const MOVED_TO_ENGINE = {
   'use-mobile': 'useMobile · useMobileDevice',
   'use-scroll-chrome': 'ScrollChromeProvider · useScrollChrome',
 }
 function canonical(name) {
   const to = ALIASES[name]
-  if (to) log(c.dim(`  '${name}' 은(는) 이제 '${to}' 입니다.`))
+  if (to) log(c.dim(`  '${name}' is now '${to}'.`))
   return to ?? name
 }
 function loadItem(name) {
@@ -71,13 +71,13 @@ function loadItem(name) {
   if (!existsSync(p)) {
     if (MOVED_TO_ENGINE[name])
       die(
-        `'${name}' 은(는) 이제 @comwit/ui 가 내보냅니다 — import { ${MOVED_TO_ENGINE[name].replace(/ · /g, ', ')} } from '@comwit/ui'. 복사할 파일이 없습니다.`
+        `'${name}' is now exported by @comwit/ui — import { ${MOVED_TO_ENGINE[name].replace(/ · /g, ', ')} } from '@comwit/ui'. There is no file to copy.`
       )
-    die(`레지스트리에 '${name}' 이(가) 없습니다. \`comwit list\` 로 확인하세요.`)
+    die(`'${name}' is not in the registry. Run \`comwit-ui list\` to see available components.`)
   }
   return JSON.parse(readFileSync(p, 'utf8'))
 }
-/** name 목록을 registryDependencies 까지 재귀 해석해 위상정렬(의존 먼저) + 중복 제거. */
+/** Resolve registryDependencies recursively, deduplicate, and topologically order dependencies first. */
 function resolveItems(names) {
   const seen = new Set()
   const ordered = []
@@ -94,9 +94,9 @@ function resolveItems(names) {
 }
 
 // ── config (comwit.json) ────────────────────────────────────────────────
-// aliases 는 importAlias 뒤에 붙는 경로다(`@/` + `components/ui`). 파일은 importAlias 가 가리키는
-// 폴더(srcDir) 아래에 놓인다 — `@/*` → `./src/*` 인 프로젝트는 srcDir 이 `src` 다.
-// aliases.utils 는 cn() 파일 위치(확장자 없이). 없으면 `<lib>/utils`.
+// Aliases append to importAlias (@/ plus components/ui). Files live beneath srcDir,
+// the directory mapped by importAlias; @/* to ./src/* means srcDir is src.
+// aliases.utils points to cn() without an extension; default to <lib>/utils.
 const DEFAULT_CONFIG = {
   aliases: { ui: 'components/ui', lib: 'lib', hooks: 'hooks' },
   css: 'app/globals.css',
@@ -107,7 +107,7 @@ function configPath(cwd) {
 }
 function readConfig(cwd) {
   const p = configPath(cwd)
-  if (!existsSync(p)) die('comwit.json 이 없습니다. 먼저 `comwit init` 을 실행하세요.')
+  if (!existsSync(p)) die('comwit.json is missing. Run `comwit-ui init` first.')
   const raw = JSON.parse(readFileSync(p, 'utf8'))
   const cfg = { ...DEFAULT_CONFIG, ...raw, aliases: { ...DEFAULT_CONFIG.aliases, ...raw.aliases } }
   cfg.srcDir ??= detectSrcDir(cwd, cfg.importAlias)
@@ -117,15 +117,15 @@ function utilsAlias(cfg) {
   return cfg.aliases.utils ?? `${cfg.aliases.lib}/utils`
 }
 
-// tsconfig/jsconfig 의 paths 에서 importAlias 가 가리키는 폴더를 읽는다("@/*": ["./src/*"] → "src").
-// 못 읽으면 프로젝트 루트("")다 — comwit.json 의 srcDir 로 직접 지정할 수 있다.
+// Read the importAlias directory from tsconfig/jsconfig paths, for example @/* to ./src/*.
+// Fall back to the project root; comwit.json can specify srcDir explicitly.
 function detectSrcDir(cwd, importAlias) {
   for (const file of ['tsconfig.json', 'jsconfig.json']) {
     const p = join(cwd, file)
     if (!existsSync(p)) continue
     let json
     try {
-      // tsconfig 는 주석·끝 쉼표를 허용한다. 문자열 안의 `/*`(예: "@/*")를 건드리지 않도록 문자열은 건너뛴다.
+      // Support comments and trailing commas in tsconfig while skipping strings so wildcard aliases remain intact.
       const text = readFileSync(p, 'utf8')
         .replace(/("(?:\\.|[^"\\])*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m, str) => str ?? '')
         .replace(/,(\s*[}\]])/g, '$1')
@@ -142,11 +142,11 @@ function detectSrcDir(cwd, importAlias) {
   return ''
 }
 
-// ── import 경로 재작성 ───────────────────────────────────────────────────
-// 템플릿 소스의 상대 import 를 소비 프로젝트의 alias 로 바꾼다. filePath(레지스트리 경로)로 그 파일이
-// 어느 폴더에 있었는지 알아야 `./X` 를 형제 ui 로 볼지 형제 lib 로 볼지 정할 수 있다.
-//   ../../lib/X → @/lib/X (utils 는 aliases.utils) · ../../hooks/X → @/hooks/X (bare ../../hooks → use-mobile)
-//   components/ui 의 ./X → @/components/ui/X · lib 의 ./X → @/lib/X
+// Rewrite import paths.
+// Convert relative template imports to consumer aliases. Use the registry filePath
+// to distinguish sibling UI components from sibling library files.
+// Map ../../lib/X through the lib alias (utils uses aliases.utils), and ../../hooks/X through the hooks alias.
+// Map ./X within components/ui to the UI alias and within lib to the library alias.
 const VARIANT_SUFFIX = /\.(nextjs|react-router|tanstack-router|generic)$/
 function rewriteImports(content, cfg, filePath) {
   const { importAlias: A, aliases } = cfg
@@ -163,15 +163,15 @@ function rewriteImports(content, cfg, filePath) {
     else if (spec === '../../hooks' || spec === '../hooks') mapped = `${aliases.hooks}/use-mobile`
     else if (spec.startsWith('../components/ui/'))
       mapped = `${aliases.ui}/${spec.slice('../components/ui/'.length)}`
-    // 라우터 변형끼리는 `./tab-bar.nextjs` 처럼 서로를 가리킨다 — 설치되면 접미사 없는 하나의 파일이다.
+    // Router variants import suffixed siblings such as ./tab-bar.nextjs; installed files use unsuffixed names.
     else if (spec.startsWith('./')) mapped = sibling(spec.slice(2).replace(VARIANT_SUFFIX, ''))
-    if (!mapped) return m // @comwit/ui, npm, react 등은 그대로
+    if (!mapped) return m // Leave @comwit/ui, npm, and React imports unchanged.
     return `${kw}${q}${A}${mapped}${q}`
   })
 }
 
-// ── 파일 배치 경로 (레지스트리 path → 프로젝트 상대 경로) ──────────────────
-// 소스 파일은 srcDir 아래(importAlias 가 가리키는 곳), 토큰 css 는 cfg.css 옆에 놓인다.
+// Map registry paths to project-relative destinations.
+// Place source below srcDir, where importAlias points; place token CSS beside cfg.css.
 function targetPath(filePath, cfg) {
   const src = (rel) => join(cfg.srcDir ?? '', rel)
   if (filePath.startsWith('components/ui/'))
@@ -180,7 +180,7 @@ function targetPath(filePath, cfg) {
   if (filePath.startsWith('lib/')) return src(join(cfg.aliases.lib, filePath.slice('lib/'.length)))
   if (filePath.startsWith('hooks/'))
     return src(join(cfg.aliases.hooks, filePath.slice('hooks/'.length)))
-  if (filePath.endsWith('.css')) return join(dirname(cfg.css), filePath) // 토큰 css 는 globals.css 옆
+  if (filePath.endsWith('.css')) return join(dirname(cfg.css), filePath) // Token CSS lives beside globals.css.
   return filePath
 }
 
@@ -194,8 +194,8 @@ function writeFileSafe(abs, content, { overwrite, dry }) {
   return existed ? 'overwrite' : 'write'
 }
 
-// ── 라우터 감지 (route-boundary 변형 선택) ───────────────────────────────
-// 변형 이름은 registry 의 variants 키와 같다: nextjs · react-router · tanstack-router · generic.
+// Detect the router to select a route-boundary variant.
+// Variant names match registry keys: nextjs, react-router, tanstack-router, and generic.
 const ROUTER_PACKAGES = [
   ['nextjs', ['next']],
   ['tanstack-router', ['@tanstack/react-router']],
@@ -217,9 +217,7 @@ function detectRouter(cwd) {
   return 'generic'
 }
 /**
- * variants 가 있는 아이템의 content/deps 를 고른 변형으로 바꾼다.
- *   variantBy 'router' — package.json 에서 감지(또는 --router)
- *   variantBy 'locale' — --locale 또는 comwit.json 의 locale(기본 en). ui-text 의 문구 언어다.
+ * Select item contents and dependencies by variantBy: router uses package.json or --router; locale uses --locale or comwit.json, defaulting to en for ui-text.
  */
 function applyVariant(item, cwd, flags, cfg) {
   if (!item.variants) return { item, variant: null, detected: false }
@@ -228,10 +226,10 @@ function applyVariant(item, cwd, flags, cfg) {
   const chosen = byLocale ? (flags.locale ?? cfg.locale) : flags.router
   const variant = chosen ?? (byLocale ? 'en' : detectRouter(cwd))
   if (!names.includes(variant))
-    die(`'${item.name}' 에 '${variant}' 변형이 없습니다. 가능: ${names.join(' · ')}`)
+    die(`'${item.name}' has no '${variant}' variant. Available: ${names.join(' · ')}`)
   const v = item.variants[variant]
   let content = v.content
-  // React Router 6 는 react-router-dom 만 설치돼 있을 수 있다 — 그쪽에서 import 한다.
+  // React Router 6 may provide only react-router-dom; import from that package.
   if (variant === 'react-router') {
     const deps = projectDeps(cwd)
     if ('react-router-dom' in deps && !('react-router' in deps))
@@ -256,7 +254,7 @@ function detectPM(cwd) {
   if (existsSync(join(cwd, 'bun.lockb')) || existsSync(join(cwd, 'bun.lock'))) return 'bun'
   return 'npm'
 }
-// 이미 package.json 에 있는 패키지는 다시 add 하지 않는다 — 재설치는 프로젝트가 고정한 버전(7.2.0 → ^최신)을 바꾼다.
+// Do not re-add dependencies already declared in package.json, which would replace consumer version pins with newer ranges.
 function installDeps(wanted, cwd, { dry }) {
   const declared = projectDeps(cwd)
   const deps = wanted.filter((name) => !(name in declared))
@@ -268,14 +266,14 @@ function installDeps(wanted, cwd, { dry }) {
   try {
     execSync(cmd, { cwd, stdio: 'inherit' })
   } catch {
-    // pnpm 은 승인 대기 빌드 스크립트(sharp 등)가 있으면 설치가 성공해도 exit 1 을 낸다.
-    // 파일은 이미 다 썼으니 여기서 죽이지 말고 경고만 — 필요 시 사용자가 위 명령을 재실행.
+    // pnpm can exit with code 1 after a successful install when build scripts such as sharp await approval.
+    // Files have already been written; warn instead of aborting so users can rerun the command if needed.
     log(
       c.yellow(
-        '  ⚠ 의존성 설치가 0이 아닌 코드로 끝났습니다 (pnpm 빌드스크립트 승인 대기 등일 수 있음).'
+        '  ⚠ Dependency installation exited with a nonzero code (for example, pnpm build scripts may need approval).'
       )
     )
-    log(c.dim(`    설치가 안 됐다면 수동 실행: ${cmd}`))
+    log(c.dim(`    If installation did not complete, run manually: ${cmd}`))
   }
 }
 
@@ -293,8 +291,8 @@ function cmdList() {
       log(
         c.dim(
           it.variantBy === 'locale'
-            ? `  ${it.name}: 문구 로케일 ${it.variants.join(' · ')} (--locale 또는 comwit.json locale, 기본 en)`
-            : `  ${it.name}: 라우터 감지 변형 ${it.variants.join(' · ')} (--router 로 지정)`
+            ? `  ${it.name}: Text locales ${it.variants.join(' · ')} (--locale or comwit.json locale; default en)`
+            : `  ${it.name}: Router variants ${it.variants.join(' · ')} (choose with --router)`
         )
       )
 }
@@ -305,17 +303,18 @@ function cmdInit(flags) {
   const p = configPath(cwd)
   if (existsSync(p) && !flags.overwrite) {
     if (flags.locale) {
-      // 설정은 그대로 두고 문구 로케일만 바꾼다. 이미 설치된 ui-text 는 `add ui-text --overwrite` 로 교체한다.
+      // Preserve configuration and change only the copy locale. Replace installed ui-text with add ui-text --overwrite.
       const current = JSON.parse(readFileSync(p, 'utf8'))
       if (!dry)
         writeFileSync(p, JSON.stringify({ ...current, locale: flags.locale }, null, 2) + '\n')
       log(c.green('✔ ') + `comwit.json locale: ${flags.locale}`)
-    } else log(c.yellow('• ') + 'comwit.json 이 이미 있습니다 (건너뜀). 덮으려면 --overwrite.')
+    } else
+      log(c.yellow('• ') + 'comwit.json already exists (skipped). Use --overwrite to replace it.')
   } else {
     const cfg = { ...DEFAULT_CONFIG, srcDir: detectSrcDir(cwd, DEFAULT_CONFIG.importAlias) }
     if (flags.css) cfg.css = flags.css
     if (flags.locale) cfg.locale = flags.locale
-    // css 위치 자동 감지 (없으면 기본)
+    // Detect the CSS location or use the default.
     if (!flags.css) {
       for (const guess of [
         'app/globals.css',
@@ -332,11 +331,11 @@ function cmdInit(flags) {
     if (!dry) writeFileSync(p, JSON.stringify(cfg, null, 2) + '\n')
     log(
       c.green('✔ ') +
-        `comwit.json 생성 (css: ${cfg.css}${cfg.srcDir ? ` · 소스: ${cfg.srcDir}/` : ''})`
+        `Created comwit.json (css: ${cfg.css}${cfg.srcDir ? ` · source: ${cfg.srcDir}/` : ''})`
     )
   }
 
-  // 토큰 계약 배선 — comwit-tokens.css 쓰고 css 에서 @import
+  // Write comwit-tokens.css and import it to connect the token contract.
   const cfg = existsSync(p) ? readConfig(cwd) : { ...DEFAULT_CONFIG }
   const theme = loadItem('theme')
   const tokensRel = targetPath(theme.files[0].path, cfg) // <css dir>/comwit-tokens.css
@@ -344,7 +343,7 @@ function cmdInit(flags) {
   const r = writeFileSafe(tokensAbs, theme.files[0].content, { overwrite: !!flags.overwrite, dry })
   log(
     (r === 'skip' ? c.yellow('• ') : c.green('✔ ')) +
-      `토큰: ${tokensRel} ${r === 'skip' ? '(존재, 건너뜀)' : ''}`
+      `Tokens: ${tokensRel} ${r === 'skip' ? '(exists, skipped)' : ''}`
   )
 
   const cssAbs = join(cwd, cfg.css)
@@ -352,8 +351,8 @@ function cmdInit(flags) {
   if (existsSync(cssAbs)) {
     const css = readFileSync(cssAbs, 'utf8')
     if (!css.includes('comwit-tokens.css')) {
-      // CSS 규칙(:root/@theme)은 @import 뒤에 와야 하므로, 선두 @import 블록 다음에 삽입한다.
-      // (최상단에 넣으면 뒤따르는 @import "tailwindcss" 가 "@import must precede rules" 로 무효화됨)
+      // Insert after the leading @import block because :root and @theme rules must follow imports.
+      // Inserting rules first invalidates a later Tailwind import because imports must precede rules.
       const lines = css.split('\n')
       let at = 0
       for (let i = 0; i < lines.length; i++) {
@@ -364,12 +363,12 @@ function cmdInit(flags) {
       }
       lines.splice(at, 0, importLine)
       if (!dry) writeFileSync(cssAbs, lines.join('\n'))
-      log(c.green('✔ ') + `${cfg.css} 에 토큰 @import 추가 (tailwind import 뒤)`)
-    } else log(c.dim(`  ${cfg.css} 에 이미 토큰 import 있음`))
+      log(c.green('✔ ') + `${cfg.css}: added token @import after the Tailwind import`)
+    } else log(c.dim(`  ${cfg.css}: already imports tokens`))
   } else {
     log(
       c.yellow('• ') +
-        `${cfg.css} 없음 — 아래를 전역 CSS 에 추가하세요:\n    @import "tailwindcss";\n    @import "tw-animate-css";\n    ${importLine}`
+        `${cfg.css} is missing — add the following to your global CSS:\n    @import "tailwindcss";\n    @import "tw-animate-css";\n    ${importLine}`
     )
   }
 
@@ -381,17 +380,17 @@ function cmdInit(flags) {
     'tw-animate-css',
   ]
   if (!flags['no-install']) installDeps(baseDeps, cwd, { dry })
-  else log(c.dim(`  npm deps (미설치): ${baseDeps.join(' ')}`))
+  else log(c.dim(`  npm dependencies (not installed): ${baseDeps.join(' ')}`))
   log(
-    c.green('\n완료.') +
-      ' 이제 ' +
-      c.cyan('comwit-ui add <컴포넌트>') +
-      ' 로 추가하세요. 예: comwit-ui add button'
+    c.green('\nDone.') +
+      ' Now run ' +
+      c.cyan('comwit-ui add <component>') +
+      ' to add components. Example: comwit-ui add button'
   )
 }
 
 function cmdAdd(names, flags) {
-  if (!names.length) die('추가할 컴포넌트 이름이 필요합니다. 예: comwit add button dialog')
+  if (!names.length) die('Specify components to add. Example: comwit-ui add button dialog')
   const cwd = resolve(flags.cwd || process.cwd())
   const dry = !!flags.dry
   const overwrite = !!flags.overwrite
@@ -399,7 +398,7 @@ function cmdAdd(names, flags) {
 
   const items = resolveItems(names)
   const deps = new Set()
-  log(c.bold(`add: ${names.join(', ')}`) + c.dim(`  (해석된 ${items.length} 아이템)`))
+  log(c.bold(`add: ${names.join(', ')}`) + c.dim(`  (${items.length} resolved items)`))
   for (const raw of items) {
     const { item, variant, detected } = applyVariant(raw, cwd, flags, cfg)
     for (const d of item.dependencies || []) deps.add(d)
@@ -409,15 +408,16 @@ function cmdAdd(names, flags) {
       const content = f.path.endsWith('.css') ? f.content : rewriteImports(f.content, cfg, f.path)
       const r = writeFileSafe(abs, content, { overwrite, dry })
       const mark = r === 'skip' ? c.yellow('•') : c.green('✔')
-      const tag = variant ? c.cyan(` (${variant}${detected ? ' 감지' : ''})`) : ''
+      const tag = variant ? c.cyan(` (${variant}${detected ? ' detected' : ''})`) : ''
       log(
-        `  ${mark} ${rel}${tag}${r === 'skip' ? c.dim(' (존재, 건너뜀 — --overwrite)') : r === 'overwrite' ? c.dim(' (덮어씀)') : ''}`
+        `  ${mark} ${rel}${tag}${r === 'skip' ? c.dim(' (exists, skipped — --overwrite)') : r === 'overwrite' ? c.dim(' (overwritten)') : ''}`
       )
     }
   }
   if (!flags['no-install']) installDeps([...deps].sort(), cwd, { dry })
-  else if (deps.size) log(c.dim(`  npm deps (미설치): ${[...deps].sort().join(' ')}`))
-  log(c.green('\n완료.'))
+  else if (deps.size)
+    log(c.dim(`  npm dependencies (not installed): ${[...deps].sort().join(' ')}`))
+  log(c.green('\nDone.'))
 }
 
 // ── main ────────────────────────────────────────────────────────────────
@@ -438,16 +438,16 @@ switch (cmd) {
   case 'help':
   case '--help':
   case '-h':
-    log(`${c.bold('comwit-ui')} — comwit UI 컴포넌트 설치 CLI
+    log(`${c.bold('comwit-ui')} — Comwit UI component installer
 
-  ${c.cyan('comwit-ui init')}            프로젝트 세팅 (comwit.json + 토큰 계약)
-  ${c.cyan('comwit-ui add <name...>')}   컴포넌트 + 의존 설치
-  ${c.cyan('comwit-ui list')}            설치 가능한 컴포넌트 목록
+  ${c.cyan('comwit-ui init')}            Set up the project (comwit.json + token contract)
+  ${c.cyan('comwit-ui add <name...>')}   Install components and dependencies
+  ${c.cyan('comwit-ui list')}            List available components
 
-  플래그: --cwd <dir>  --overwrite  --dry  --no-install  --css <path>
-          --router <nextjs|react-router|tanstack-router|generic>  (app-shell · tab-bar · route-boundary 변형 — 기본은 package.json 에서 감지)
-          --locale <en|ko>  (컴포넌트 기본 문구 lib/ui-text — init 은 comwit.json 에 기록, 기본 en)`)
+  Flags: --cwd <dir>  --overwrite  --dry  --no-install  --css <path>
+          --router <nextjs|react-router|tanstack-router|generic>  (app-shell · tab-bar · route-boundary variants; detected from package.json by default)
+          --locale <en|ko>  (default component text in lib/ui-text; init records it in comwit.json; default en)`)
     break
   default:
-    die(`알 수 없는 명령: ${cmd}. \`comwit-ui help\` 참고.`)
+    die(`Unknown command: ${cmd}. See \`comwit-ui help\`.`)
 }

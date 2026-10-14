@@ -1,6 +1,6 @@
 ---
 name: auth-setup
-description: Install Better Auth on Drizzle for one or more services. Triggers - "인증 설정", "로그인", "회원가입", "auth 추가". Requires a connected Drizzle database first.
+description: Install Better Auth on Drizzle for one or more services. Use for authentication setup, sign-in, sign-up, or adding auth. Requires a connected Drizzle database first.
 ---
 
 # auth-setup
@@ -344,7 +344,7 @@ or headers, so the public sign-up endpoint remains disabled:
 ```ts
 const auth = await getAdminAuth()
 await auth.api.createUser({
-  body: { email, password, name: "관리자", role: "admin" },
+  body: { email, password, name: "Admin", role: "admin" },
 })
 ```
 

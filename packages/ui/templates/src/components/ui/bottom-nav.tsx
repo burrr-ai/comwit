@@ -1,15 +1,15 @@
 'use client'
 
 /**
- * BottomNav — 플로팅 유리 캡슐 하단 탭바.
+ * BottomNav — floating glass capsule tab bar.
  *
- *  - 캡슐은 morphing 유리, 활성 탭 뒤로 알약 인디케이터가 스프링으로 미끄러지며 살짝 찌그러진다.
- *  - 아래로 스크롤하면 0.86 으로 작아지고(ScrollChrome compact), 누르거나 포커스가 들어오면 즉시 펼친다.
- *  - 기본은 아이콘만(라벨은 aria-label). 터치 영역은 44px 이상, safe-area-inset-bottom 을 더한다.
+ * - Morphing glass capsule with a spring-driven pill indicator that slides and briefly squashes behind the active tab.
+ * - Scales to 0.86 on downward scroll (ScrollChrome compact), expanding immediately on press or focus.
+ * - Icons only by default, with labels in aria-label. Touch targets are at least 44px; adds safe-area-inset-bottom.
  *
- * 선택·compact·펼치기 동작은 @comwit/ui 의 BottomNav 프리미티브가 갖는다(data-state 로 알린다).
- * 여기서는 유리 캡슐·스프링 인디케이터·라벨 표시만 입힌다. 스프링은 CSS 전환의 linear() 곡선이고(아래 SPRING),
- * 찌그러짐만 탭이 바뀔 때 Web Animations API 로 한 번 돈다 — 애니메이션 라이브러리 없이.
+ * The @comwit/ui BottomNav primitive owns selection, compact mode, and expansion, exposing data-state.
+ * This layer draws the glass capsule, spring indicator, and labels. Springs use CSS transition linear() curves
+ * (SPRING below). Only the squash uses a one-shot Web Animations API animation on tab changes; no animation library.
  *
  *   <BottomNav value={tab} onValueChange={setTab}>
  *     <BottomNavItem value="home" label="Home" icon={<House />} />
@@ -29,16 +29,16 @@ import { uiText } from '../../lib/ui-text'
 
 type BottomNavProps = Omit<React.ComponentProps<typeof BottomNavPrimitive.Root>, 'children'> & {
   value?: string
-  /** 아이콘 아래 작은 라벨을 보인다. 기본은 아이콘만. */
+  /** Show a small label below each icon. Defaults to icons only. */
   showLabels?: boolean
-  /** sticky(스크롤러 안 맨 아래) · fixed(뷰포트 맨 아래) */
+  /** sticky: bottom of the scroller; fixed: bottom of the viewport. */
   position?: 'sticky' | 'fixed'
   children: React.ReactNode
 }
 
 /**
- * 스프링을 CSS 곡선으로 편 값 — 위치는 stiffness 420 · damping 32 · mass 0.72(오버슈트 없음),
- * 캡슐 스케일은 390 · 30 · 0.72(0.1% 넘쳤다 돌아온다). 느낌을 바꾸려면 곡선과 시간을 같이 바꾼다.
+ * Spring samples expanded into CSS curves. Position uses stiffness 420, damping 32, mass 0.72 (no overshoot);
+ * capsule scale uses 390, 30, 0.72 (0.1% overshoot). Adjust both the curve and duration to change the feel.
  */
 const SPRING = {
   '--nav-slide-duration': '293ms',
@@ -49,7 +49,7 @@ const SPRING = {
     'linear(0, 0.0596, 0.1942, 0.3408, 0.4902, 0.613, 0.7201, 0.7991, 0.8628, 0.9067, 0.9401, 0.9619, 0.9768, 0.9872, 0.9934, 0.9974, 0.9995, 1.0007, 1.0011, 1.0013, 1.0012, 1.001, 1.0008, 1.0007, 1)',
 } as React.CSSProperties
 
-/** 탭이 바뀔 때 인디케이터가 한 번 찌그러졌다 돌아온다. */
+/** Squash and restore the indicator once when the active tab changes. */
 const SQUASH: Keyframe[] = [
   { transform: 'scale(1, 1)', easing: 'ease-in-out' },
   { transform: 'scale(1.12, 0.97)', offset: 0.38, easing: 'ease-in-out' },
@@ -74,7 +74,7 @@ function BottomNav({
   const count = Math.max(1, items.length)
   const activeIndex = items.findIndex((item) => item.props.value === value)
 
-  // 탭이 바뀐 뒤에만 찌그러진다 — 첫 렌더에선 돌지 않는다.
+  // Squash only after a tab change, never on the initial render.
   const shapeRef = React.useRef<HTMLSpanElement>(null)
   const previousIndex = React.useRef(activeIndex)
   React.useEffect(() => {
@@ -100,10 +100,12 @@ function BottomNav({
       style={{ ...SPRING, ...style }}
       {...props}
     >
-      {/* 유리 캡슐 — 프리미티브가 compact 를 알리면(data-state) 0.86 으로 줄어든다.
-          AppBar 와 같은 규칙: 부모 페이지가 transform 중(드릴 전환)이면 WebKit 은 z-index 만으로
-          backdrop-filter 레이어와 전경을 분리하지 못해 블러가 빠진다 — 캡슐은 isolate,
-          인디케이터·탭은 각자 합성 레이어(transform-gpu)에 둔다. */}
+      {/*
+       * Glass capsule scales to 0.86 when the primitive exposes compact data-state.
+       * Same rule as AppBar: while a parent page is transformed during a drill transition, WebKit cannot separate
+       * the backdrop-filter layer and foreground using z-index alone, so blur disappears. Isolate the capsule
+       * and put the indicator and tabs on their own compositing layers with transform-gpu.
+       */}
       <div
         className={cn(
           'relative isolate mx-auto grid h-14 w-full max-w-[336px] origin-bottom rounded-pill p-1',
@@ -130,10 +132,10 @@ function BottomNav({
 }
 
 type BottomNavItemProps = React.ComponentProps<typeof BottomNavPrimitive.Item> & {
-  /** 접근성 이름. showLabels 면 아이콘 아래에도 보인다. */
+  /** Accessible name. Also displayed below the icon when showLabels is enabled. */
   label: string
   icon: React.ReactNode
-  /** 자식 요소(<a>·<Link>)를 탭으로 렌더한다. 아이콘·라벨은 그 안에 주입된다. */
+  /** Render the child (a or Link) as the tab, injecting its icon and label inside. */
   asChild?: boolean
 }
 

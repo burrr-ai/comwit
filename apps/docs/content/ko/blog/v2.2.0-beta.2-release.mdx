@@ -1,0 +1,55 @@
+---
+title: 'comwit v2.2.0-beta.2 — 로컬 엔티티 식별자 지정'
+date: '2026-08-16'
+description: '세 번째 2.2 베타는 컬렉션 getId를 지원하고, 서버에 IndexedDB가 없어도 로컬 리소스가 정상적으로 동작하는지 검증합니다.'
+---
+
+세 번째 2.2 베타부터 식별자 필드 이름이 `id`가 아닌 엔티티도 로컬 컬렉션에서 정규화할 수 있습니다.
+
+<a id="default-and-custom-identity"></a>
+
+## 기본 식별자와 사용자 정의 식별자
+
+기본값은 계속 `entity.id`입니다.
+
+```ts
+const products = local.collection<Product>({
+  key: 'products',
+  version: 1,
+})
+```
+
+API가 다른 필드를 사용하면 컬렉션에 `getId`를 한 번 지정하세요.
+
+```ts
+type ExternalProduct = {
+  uuid: string
+  title: string
+}
+
+const products = local.collection<ExternalProduct>({
+  key: 'external-products',
+  version: 1,
+  getId: (product) => product.uuid,
+})
+```
+
+정규화, IndexedDB 저장, 낙관적 쓰기, 목록/상세 전파 모두 컬렉션의 추출기를 사용합니다. 같은 엔티티의 모든 조각에서 같은 문자열 또는 유한한 숫자를 반환해야 합니다. 엔티티 타입에 기본 `id` 필드가 없으면 TypeScript가 `getId`를 필수로 요구합니다.
+
+<a id="server-behavior"></a>
+
+## 서버 동작
+
+서버에는 IndexedDB가 없습니다. 로컬 리소스는 오류 없이 저장소 수명 주기를 건너뜁니다.
+
+- 독립 `local().restore()`는 메모리의 초기값 또는 초기화된 값을 유지합니다.
+- `local.query().load()`는 일반 쿼리 드라이버로 계속 진행합니다.
+- 브라우저에서는 정확한 IndexedDB 뷰를 복원한 뒤 재검증 여부를 판단합니다.
+
+베타 설치:
+
+```bash
+yarn add @comwit/state@2.2.0-beta.2
+```
+
+컬렉션 버전, 인자별 뷰, 서버 초기화, 동기화 동작은 전체 [`local()` 레퍼런스](/docs/api/local)를 참고하세요.

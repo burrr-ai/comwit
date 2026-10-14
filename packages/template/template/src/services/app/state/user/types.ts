@@ -17,9 +17,9 @@ export type User = {
  * User state
  */
 export type UserState = {
-  /** Better Auth 기본 프로필. 레이아웃에서 hydrate하며 null은 확인된 비로그인이다. */
+  /** Basic Better Auth profile, hydrated by the layout; null means confirmed anonymous. */
   me: Query<User | null>
-  /** 로그인/가입/로그아웃 액션의 진행 상태 (초기 세션 로딩과 별개). */
+  /** Progress of sign-in, sign-up, and sign-out actions, separate from initial session loading. */
   isLoading: boolean
 }
 

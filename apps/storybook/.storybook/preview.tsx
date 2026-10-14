@@ -5,7 +5,7 @@ import { Toaster } from '@comwit/ui-templates/toast'
 
 import '../src/tailwind.css'
 
-/** 전역 프로바이더 — popup.confirm/alert/sheet(overlay-kit) + 유리 토스트(엔진 sonner). ui-dev providers 와 동일. */
+/** Global providers match ui-dev: popup.confirm/alert/sheet through overlay-kit and glass toasts through sonner. */
 const preview: Preview = {
   parameters: {
     controls: { matchers: { color: /(background|color)$/i, date: /Date$/i } },

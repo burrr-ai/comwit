@@ -7,7 +7,7 @@ import { Switch as SwitchPrimitive } from '@comwit/ui'
 import { focusRing } from '@/lib/interaction'
 import { cn } from '@/lib/utils/cn'
 
-// 트랙 = Root(button). 이름 있는 group/switch 로 눌림을 썸에 전달 — 바깥 .group 과 섞이지 않게
+// Track = Root(button). Named group/switch passes the pressed state to the thumb without colliding with an outer .group.
 const switchTrackVariants = cva(
   'group/switch relative inline-flex shrink-0 cursor-pointer rounded-pill bg-input transition-colors duration-base data-[state=checked]:bg-primary disabled:cursor-not-allowed disabled:opacity-disabled',
   {
@@ -23,8 +23,8 @@ const switchTrackVariants = cva(
   }
 )
 
-/* 썸 색은 트랙 상태를 따라간다 — 꺼짐은 항상 밝은 --switch-thumb, 켜짐은 primary 와 대비되는
-   --primary-foreground. 단색 하나로는 다크에서 둘 중 하나가 트랙에 묻힌다. */
+/* Thumb color follows track state: off always uses the light --switch-thumb; on uses --primary-foreground
+for contrast with primary. A single color would blend into one track state in dark mode. */
 const switchThumbVariants = cva(
   'pointer-events-none absolute left-0.5 top-0.5 rounded-pill bg-switch-thumb shadow-raised transition-transform duration-base ease-out group-active/switch:scale-press-thumb data-[state=checked]:bg-primary-foreground',
   {
@@ -40,7 +40,7 @@ const switchThumbVariants = cva(
   }
 )
 
-// size 는 우리 토큰 배리언트 (프리미티브의 button size 와 충돌하지 않게 Omit)
+// size is our token variant; Omit prevents a collision with the primitive button size.
 type SwitchProps = Omit<React.ComponentProps<typeof SwitchPrimitive.Root>, 'size'> & {
   size?: 'sm' | 'default'
 }

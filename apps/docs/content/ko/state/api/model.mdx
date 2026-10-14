@@ -1,0 +1,254 @@
+---
+title: 'model()'
+group: 'Model'
+slug: 'api/model'
+order: 21
+---
+
+# model()
+
+반응형 모델을 정의합니다. 각 프로바이더는 자체 상태 인스턴스를 소유하며, 일반적으로 도메인마다 모델 하나를 둡니다.
+
+```ts
+import { model } from '@comwit/state'
+```
+
+<a id="usage"></a>
+
+## 사용법
+
+```ts
+import { model, query } from '@comwit/state'
+import type { PostState } from './types'
+
+export const post = model<PostState>({
+  posts: query<Post[]>({
+    initialData: [],
+    queryFn: () => api.post.findAll(),
+  }),
+  comments: query<Comment[], string>({
+    initialData: [],
+    queryFn: (postId) => api.comment.findAll(postId),
+  }),
+  current: null,
+})
+```
+
+```ts
+// With persist fields
+import { model, query, persist } from '@comwit/state'
+
+export const app = model<AppState>({
+  posts: query<Post[]>({ initialData: [], queryFn: () => api.post.findAll() }),
+  theme: persist({ key: 'theme', defaultValue: 'light' }),
+  current: null,
+})
+```
+
+<a id="how-it-works"></a>
+
+## 동작 방식
+
+`model(initial)`은 초기 값 객체를 받아 `Model<T>`를 반환합니다.
+
+- [`query()`](/state/docs/api/query) 필드는 키가 있는 데이터 리소스가 됩니다. 선택자는 클라이언트 데이터 가져오기에 `.load()`를 사용하고, 생성된 도메인 훅은 준비된 서버 데이터에 `.hydrate()`를 사용합니다.
+- [`local()`](/state/docs/api/local) 필드는 IndexedDB의 정확한 뷰를 복원하고 정규 엔티티를 공유합니다.
+- [`persist()`](/state/docs/api/persist) 필드는 저장소와 자동 동기화됩니다.
+- [`searchParam()`](/state/docs/api/router) 필드는 URL 쿼리 매개변수와 자동 동기화됩니다.
+- 일반 필드(문자열, 객체, 배열, null)는 반응형 로컬 상태입니다.
+- `history: true`인 모델은 실행 취소와 다시 실행을 위한 [`$history`](/state/docs/api/history)를 제공합니다.
+- 모델은 훅이나 액션의 `state(model)`을 통해 처음 접근할 때 지연 초기화됩니다.
+- 각 모델 인스턴스의 범위는 가장 가까운 `ComwitProvider`로 한정됩니다.
+
+<a id="derived-state"></a>
+
+## 파생 상태
+
+의존성이 바뀌면 반응형으로 갱신되는 계산 값을 정의하세요.
+
+```ts
+const cart = model(
+  {
+    items: [] as CartItem[],
+    coupon: null as Coupon | null,
+  },
+  {
+    derive: (state) => ({
+      subtotal: () => state.items.reduce((sum, i) => sum + i.price * i.qty, 0),
+      discount: () =>
+        state.coupon?.type === 'percent'
+          ? state.subtotal * (state.coupon.value / 100)
+          : (state.coupon?.value ?? 0),
+      total: () => Math.max(0, state.subtotal - state.discount),
+      isEmpty: () => state.items.length === 0,
+    }),
+  }
+)
+```
+
+- 파생 값은 접근할 때 지연 계산됩니다.
+- 의존성이 바뀌면 결과도 반응형으로 갱신됩니다.
+- 파생 필드는 **읽기 전용**이며 변경을 시도하면 오류가 발생합니다.
+- 파생 필드가 다른 파생 필드에 의존할 수 있습니다.
+- 컴포넌트와 액션에서 일반 상태와 같은 방식으로 접근합니다.
+
+<a id="validation-rules"></a>
+
+## 유효성 검사 규칙
+
+모델 필드에 유효성 검사 규칙을 연결하세요. 모델이 바뀌면 유효성 검사 상태도 반응형으로 갱신됩니다.
+
+```ts
+const profile = model(
+  {
+    name: '',
+    email: '',
+  },
+  {
+    rules: {
+      name: (v) => v.length > 0 || 'Name is required',
+      email: (v) => v.includes('@') || 'Invalid email format',
+    },
+  }
+)
+```
+
+- `$validation.errors` — `{ name: null, email: 'Invalid email format' }`(null은 통과를 의미합니다)
+- `$validation.isValid` — 모든 규칙을 통과하면 `true`입니다.
+- 상태가 바뀌면 반응형으로 갱신됩니다.
+- 새 훅 없이 기존 `useModel`로 접근합니다.
+
+```ts
+const { name, email, $validation } = useProfile()
+// $validation.errors.name → null (valid)
+// $validation.errors.email → 'Invalid email format'
+// $validation.isValid → false
+```
+
+<a id="lifecycle-hooks"></a>
+
+## 생명주기 훅
+
+모델에 첫 구독자가 생길 때(컴포넌트 마운트) 부수 효과를 실행하고 마지막 구독자가 떠날 때(언마운트) 정리합니다.
+
+```ts
+const chat = model(
+  { messages: [] as Message[], roomId: null as string | null },
+  {
+    onObserve(state) {
+      // Fires once when first component subscribes (0 → 1)
+      const ws = new WebSocket(`wss://api.example.com/chat`)
+      ws.onmessage = (e) => {
+        state.messages = [...state.messages, JSON.parse(e.data)]
+      }
+
+      // Return cleanup — fires when last subscriber unmounts (1 → 0)
+      return () => ws.close()
+    },
+  }
+)
+```
+
+<a id="behavior"></a>
+
+### 동작
+
+- 구독자 수가 0에서 1로 바뀔 때 `onObserve`가 **한 번** 실행됩니다.
+- 추가 컴포넌트가 구독할 때는 다시 실행되지 **않습니다**.
+- **마지막** 구독자가 언마운트될 때 정리 함수가 실행됩니다.
+- 변경 가능한 프록시를 받으며, 상태 변경은 다시 렌더링을 일으킵니다.
+- `ComwitProvider`별로 범위가 나뉘며 각 프로바이더는 독립적인 생명주기를 가집니다.
+- 정리 작업 없이 `undefined`를 반환해도 됩니다.
+
+<a id="use-cases"></a>
+
+### 활용 사례
+
+- WebSocket 연결 열기/닫기
+- 폴링 간격 시작/중지
+- 분석 또는 로깅 초기화
+- 외부 이벤트 소스 구독
+
+<a id="history"></a>
+
+## 히스토리
+
+히스토리는 기본적으로 꺼져 있습니다. 사용자에게 보이는 변경에 실행 취소와 다시 실행이 필요하면 모델별로 활성화하세요.
+
+```ts
+const todo = model(
+  {
+    items: [] as Todo[],
+    selectedId: null as string | null,
+  },
+  {
+    history: {
+      limit: 100,
+    },
+  }
+)
+```
+
+`history: true`는 실행 취소 항목 100개를 기본 제한으로 사용합니다. 스택 크기를 바꾸려면 `history: { limit }`를 전달하세요.
+
+새 훅은 필요하지 않습니다. [`create()`](/state/docs/api/create)의 기존 훅으로 `$history`에 접근하세요.
+
+```tsx
+const history = useTodo((s) => s.$history)
+
+history.undo()
+history.redo()
+history.canUndo
+history.canRedo
+```
+
+각 액션 메서드 호출은 하나의 트랜잭션으로 기록됩니다. 액션 하나 안의 여러 변경은 함께 취소됩니다. 다시 렌더링은 필요하지만 기록되면 안 되는 변경에는 `$history.ignore()`를 사용하세요.
+
+<a id="options"></a>
+
+## 옵션
+
+`model()`의 두 번째 인수로 선택적 설정을 전달할 수 있습니다.
+
+```ts
+model(initial, {
+  derive?: (state) => ({ key: () => value }),
+  rules?: { field: (value) => true | 'error message' },
+  onObserve?: (state) => void | (() => void),
+  history?: boolean | { limit?: number },
+})
+```
+
+<a id="in-actions"></a>
+
+## 액션에서 사용
+
+액션 안에서 `state()`로 모델 상태에 접근합니다.
+
+```ts
+const postActions = action<PostActions>(({ state }) => {
+  class Actions {
+    private model = state(post)
+
+    async loadPosts() {
+      await this.model.posts.query()
+    }
+  }
+  return new Actions()
+})
+```
+
+`state(model)`은 변경 가능한 프록시를 반환합니다. 변경하면 구독 중인 컴포넌트가 다시 렌더링됩니다.
+
+<a id="in-components"></a>
+
+## 컴포넌트에서 사용
+
+[`create()`](/state/docs/api/create)로 만든 훅을 사용해 모델 상태를 읽습니다.
+
+```tsx
+const { posts, current } = usePost((s) => ({
+  posts: s.posts,
+  current: s.current,
+}))
+```

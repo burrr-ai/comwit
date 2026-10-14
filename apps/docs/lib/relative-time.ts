@@ -1,7 +1,6 @@
 const minute = 60_000
 const hour = 60 * minute
 const day = 24 * hour
-const formatter = new Intl.RelativeTimeFormat('en', { numeric: 'always' })
 const units = [
   ['year', 365 * day],
   ['month', 30 * day],
@@ -10,10 +9,11 @@ const units = [
   ['minute', minute],
 ] as const
 
-export function formatRelativeTime(date: string, now: number): string {
+export function formatRelativeTime(date: string, now: number, locale = 'en'): string {
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'always' })
   const difference = new Date(date).getTime() - now
   if (!Number.isFinite(difference)) return date
-  if (Math.abs(difference) < minute) return 'just now'
+  if (Math.abs(difference) < minute) return locale === 'ko' ? '방금 전' : 'just now'
 
   for (const [unit, duration] of units) {
     if (Math.abs(difference) >= duration) {

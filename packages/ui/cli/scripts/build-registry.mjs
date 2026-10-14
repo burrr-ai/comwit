@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────
-// comwit 레지스트리 생성기 (자체 포맷 · shadcn 스키마 아님).
-// @comwit/ui-templates 소스를 읽어 packages/ui/cli/registry/ 로 뽑는다:
-//   index.json      — 아이템 메타(이름/타입/deps) 목록
-//   <name>.json     — 아이템 전체(파일 content 포함)
-// comwit-ui 가 이걸 번들로 싣고 `comwit-ui add <name>` 시 소비한다. shadcn CLI/스키마/components.json 안 씀.
+// Comwit registry generator using its own format, independent of the shadcn schema.
+// Read @comwit/ui-templates sources into packages/ui/cli/registry/.
+// index.json lists item metadata: names, types, and dependencies.
+// Each <name>.json contains the complete item, including file contents.
+// comwit-ui bundles this registry for add commands; no shadcn CLI, schema, or components.json is used.
 // ─────────────────────────────────────────────────────────────────────────
 import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -15,8 +15,8 @@ const outDir = join(here, '..', 'registry') // packages/ui/cli/registry
 
 const IGNORE_NPM = new Set(['react', 'react-dom'])
 
-// 라우터 변형(src/routers/route-boundary.<variant>.tsx)이 의존하는 프레임워크 패키지.
-// 소비 프로젝트에 이미 있어서 감지된 것이므로 설치 목록에 넣지 않고 `framework` 로만 기록한다.
+// Framework dependencies used by router variants in src/routers/route-boundary.<variant>.tsx.
+// Detected frameworks already exist in the consumer project; record them as framework metadata without installing them.
 const ROUTER_VARIANTS = {
   nextjs: 'next',
   'react-router': 'react-router',
@@ -24,16 +24,16 @@ const ROUTER_VARIANTS = {
   generic: null,
 }
 
-// ssgoi 공식 라우터 어댑터 — 이걸 import 하는 변형은 그 라우터용이다(프레임워크 패키지를 직접 import 하지 않아도).
+// Official SSGOI router adapters identify router variants even without a direct framework import.
 const ROUTER_ADAPTERS = {
   '@ssgoi/react/nextjs': 'next',
   '@ssgoi/react/react-router': 'react-router',
   '@ssgoi/react/tanstack-router': '@tanstack/react-router',
 }
 
-// import 로 드러나지 않는 짝 — 함께 설치돼야 완성되는 아이템.
-//   page-transition 은 라우터에 맞는 route-boundary(감지형 변형)와 함께 설치되고, 어댑터를 감싼 route-boundary 변형은
-//   PageTransition(Ssgoi 프로바이더) 안에서만 돈다.
+// Implicit dependency pairs that must be installed together.
+// page-transition installs with the detected router's route-boundary variant;
+// router-adapter boundaries require the PageTransition/Ssgoi provider.
 const EXTRA_REGISTRY_DEPS = {
   'page-transition': ['route-boundary'],
   'route-boundary': ['page-transition'],
@@ -43,12 +43,12 @@ function pkgName(spec) {
   if (spec.startsWith('@')) return spec.split('/').slice(0, 2).join('/')
   return spec.split('/')[0]
 }
-// 실제 import/export 문(행 머리에서 시작)만 본다 — 파일 상단 주석의 사용 예시(`import … from '@/components/ui/toast'`)를
-// 의존성으로 긁으면 `pnpm add @/components` 로 소비 프로젝트의 설치가 통째로 실패한다.
+// Read actual import/export statements at line starts, excluding usage examples in comments.
+// Treating an example alias as an npm dependency would produce an invalid pnpm add @/components command.
 function parseImports(content) {
   const code = content
-    .replace(/\/\*[\s\S]*?\*\//g, '') // 블록 주석
-    .replace(/^[ \t]*\/\/.*$/gm, '') // 행 주석
+    .replace(/\/\*[\s\S]*?\*\//g, '') // Block comments.
+    .replace(/^[ \t]*\/\/.*$/gm, '') // Line comments.
   const specs = []
   const re = /^[ \t]*(?:import|export)\b[^;]*?from\s+["']([^"']+)["']/gm
   let m
@@ -67,7 +67,7 @@ for (const file of readdirSync(uiDir).filter((f) => f.endsWith('.tsx'))) {
   const registryDeps = new Set()
   for (const s of parseImports(content)) {
     if (s.startsWith('./'))
-      registryDeps.add(s.slice(2)) // 형제 ui 컴포넌트
+      registryDeps.add(s.slice(2)) // Sibling UI components.
     else if (s.startsWith('../../lib/')) registryDeps.add(basename(s))
     else if (s.startsWith('../../hooks/')) registryDeps.add(basename(s))
     else if (s.startsWith('.')) continue
@@ -86,10 +86,10 @@ for (const file of readdirSync(uiDir).filter((f) => f.endsWith('.tsx'))) {
   })
 }
 
-// 1b) routers/<name>.<variant>.tsx → 이름마다 하나의 "ui" 아이템 + variants (variantBy: 'router').
-//     files[0] 은 라우터를 못 찾았을 때의 generic 구현이고, comwit-ui add 가 package.json 에서
-//     next / react-router / @tanstack/react-router 를 감지해(또는 --router 로) 변형 content 를 대신 쓴다.
-//     변형끼리는 `./<name>.<variant>` 로 서로를 import 한다 — 레지스트리 의존성은 <name>, 설치 시 CLI 가 접미사를 뗀다.
+// 1b. Group routers/<name>.<variant>.tsx into one UI item per name with router variants.
+// files[0] is the generic fallback; comwit-ui add detects the framework in package.json
+// (next, react-router, or @tanstack/react-router), or uses --router, to select variant contents.
+// Variants import each other with suffixed names; registry dependencies use the base name and the CLI removes suffixes on installation.
 const VARIANT_FILE = /^([a-z][a-z0-9-]*)\.(nextjs|react-router|tanstack-router|generic)\.tsx$/
 function routerVariant(name, file) {
   const content = readFileSync(join(tplSrc, 'routers', file), 'utf8')
@@ -146,7 +146,7 @@ const VARIANT_SUFFIX = /\.(nextjs|react-router|tanstack-router|generic)$/
   }
 }
 
-// 2) lib / hooks 지원 파일
+// 2. Supporting lib/hooks files.
 function fileItem(name, relPath, type) {
   const content = readFileSync(join(tplSrc, relPath), 'utf8')
   const deps = new Set()
@@ -154,7 +154,7 @@ function fileItem(name, relPath, type) {
   for (const s of parseImports(content)) {
     if (s.startsWith('../components/ui/')) registryDeps.add(s.split('/').pop())
     else if (s.startsWith('./'))
-      registryDeps.add(basename(s)) // 같은 폴더의 lib/hook
+      registryDeps.add(basename(s)) // Sibling library or hook.
     else if (s.startsWith('.')) continue
     else {
       const p = pkgName(s)
@@ -169,8 +169,8 @@ function fileItem(name, relPath, type) {
     files: [{ path: relPath, content }],
   }
 }
-// lib/* 와 hooks/* 는 파일 하나 = 아이템 하나 (index.ts 배럴은 패키지 전용이라 제외).
-// 동작 훅(useMobile · ScrollChrome)은 엔진(@comwit/ui)으로 옮겨져 hooks/ 는 비어 있을 수 있다.
+// Each lib/* or hooks/* file is one item; package-only index.ts barrels are excluded.
+// Behavior hooks such as useMobile and ScrollChrome live in @comwit/ui, so hooks/ may be empty.
 for (const [dir, type] of [
   ['lib', 'lib'],
   ['hooks', 'hook'],
@@ -184,8 +184,8 @@ for (const [dir, type] of [
   }
 }
 
-// 2b) locales/ui-text.<locale>.ts → lib/ui-text 아이템의 로케일 변형. 기본(files[0])은 영어판 lib/ui-text.ts 다.
-//     comwit-ui 가 --locale 또는 comwit.json 의 locale 로 고른다. 모든 로케일은 같은 키를 갖는다(check-ui-text.ts 가 검사).
+// 2b. locales/ui-text.<locale>.ts supplies locale variants of lib/ui-text. files[0] defaults to English.
+// Select through --locale or comwit.json. check-ui-text.ts verifies identical keys across locales.
 {
   const item = items.find((i) => i.name === 'ui-text')
   if (!item) throw new Error('lib/ui-text.ts is missing')
@@ -203,19 +203,19 @@ for (const [dir, type] of [
   item.variants = variants
 }
 
-// 3) theme — 토큰 계약. globals.css(SSOT) 에서 :root 이후(토큰 + @theme + base)를 그대로 CSS 파일로 싣는다.
-//    `comwit-ui init` 이 이 파일을 프로젝트에 쓰고 globals.css 에서 @import 하도록 배선한다.
+// 3. Theme: ship the canonical globals.css token contract, including tokens, @theme, and base rules.
+// comwit-ui init writes this file and imports it from the project's globals.css.
 function buildThemeItem() {
   const css = readFileSync(join(tplSrc, 'styles', 'globals.css'), 'utf8')
-  // @custom-variant dark 는 :root 보다 앞에 있고, 이게 없으면 소비자 쪽 `dark:` 변형이 죽는다.
-  // 따라서 자르는 기준은 :root 가 아니라 "tailwind 임포트 이후 첫 저작 규칙"이어야 한다.
+  // @custom-variant dark precedes :root and must be retained for consumer dark: utilities.
+  // Start at the first authored rule after Tailwind imports rather than at :root.
   const startIdx = [css.indexOf('@custom-variant'), css.indexOf(':root')]
     .filter((i) => i !== -1)
     .sort((a, b) => a - b)[0]
   const tokens =
     startIdx === undefined
       ? css
-      : `/* comwit-ui 디자인 토큰 (SSOT: @comwit/ui-templates/styles.css). 값만 바꿔 리테마. */\n` +
+      : `/* comwit-ui design tokens (source: @comwit/ui-templates/styles.css). Retheme by changing values. */\n` +
         css.slice(startIdx)
   return {
     name: 'theme',
@@ -227,7 +227,7 @@ function buildThemeItem() {
 }
 items.push(buildThemeItem())
 
-// 4) 출력: index + per-item
+// 4. Write the index and individual items.
 rmSync(outDir, { recursive: true, force: true })
 mkdirSync(outDir, { recursive: true })
 for (const it of items) {

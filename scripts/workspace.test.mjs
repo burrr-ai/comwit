@@ -12,6 +12,7 @@ import {
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
+import { createRequire } from 'node:module'
 
 const root = resolve(import.meta.dirname, '..')
 const cli = join(root, 'packages/ui/cli/src/index.js')
@@ -89,6 +90,10 @@ test('src-dir projects: files land where the import alias points, lib siblings s
 })
 
 test('component text follows the project locale and declared packages keep their pins', () => {
+  const requireTemplate = createRequire(
+    new URL('../packages/ui/templates/package.json', import.meta.url)
+  )
+  const ts = requireTemplate('typescript')
   execFileSync(process.execPath, [join(root, 'packages/ui/cli/scripts/build-registry.mjs')])
   const fixture = mkdtempSync(join(tmpdir(), 'comwit-cli-locale-'))
   try {
@@ -114,10 +119,16 @@ test('component text follows the project locale and declared packages keep their
     for (const file of ['components/ui/date-picker.tsx', 'lib/popup.tsx']) {
       const source = readFileSync(join(fixture, file), 'utf8')
       assert.match(source, /from ['"]@\/lib\/ui-text['"]/, `${file} reads its text from ui-text`)
+      // Usage examples in comments may be English; runtime copy still comes from ui-text.
+      const runtimeSource = ts
+        .createPrinter({ removeComments: true })
+        .printFile(
+          ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+        )
       assert.doesNotMatch(
-        source,
-        /'Select date'|'Confirm'|'Cancel'/,
-        `${file} has no inline English`
+        runtimeSource,
+        /['"](?:Select date|Confirm|Cancel)['"]/,
+        `${file} has no inline English runtime copy`
       )
     }
     // --locale on add wins over comwit.json; an unknown locale lists the available ones.
@@ -375,6 +386,7 @@ test('create-comwit scaffolds a project that carries no platform-specific files'
     assert.equal(pkg.name, 'my-shop')
     assert.equal(pkg.scripts.dev, 'next dev')
     assert.ok(!('@brrrd/adapter' in pkg.dependencies))
+    assert.doesNotMatch(readFileSync(join(app, 'pnpm-workspace.yaml'), 'utf8'), /workerd/)
     assert.ok('@comwit/state' in pkg.dependencies)
     assert.doesNotMatch(readFileSync(join(app, 'next.config.ts'), 'utf8'), /brrrd|adapterPath/)
     assert.match(readFileSync(join(app, 'README.md'), 'utf8'), /^# my-shop/)
@@ -423,6 +435,9 @@ test('create-comwit --opennext overlays the Cloudflare Workers adapter', () => {
     assert.equal(pkg.name, '@acme/shop')
     assert.ok('@opennextjs/cloudflare' in pkg.devDependencies)
     assert.ok('wrangler' in pkg.devDependencies)
+    const workspace = readFileSync(join(app, 'pnpm-workspace.yaml'), 'utf8')
+    assert.match(workspace, /^  - workerd$/m, 'pnpm 10 can install the worker binary')
+    assert.match(workspace, /^  workerd: true$/m, 'pnpm 11 can install the worker binary')
     assert.match(pkg.scripts.deploy, /opennextjs-cloudflare deploy/)
     assert.match(pkg.scripts.build, /next build/, 'the project build script is kept')
     // Worker names allow only lowercase letters, digits and dashes.

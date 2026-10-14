@@ -1,0 +1,40 @@
+---
+title: 'comwit v0.2.1 — 반복 query() 호출의 TypeError 수정'
+date: '2026-02-21'
+description: 'v0.2.1 패치 릴리스. 배열이나 중첩 객체 데이터에서 query()를 반복 호출할 때 발생하던 TypeError를 수정했습니다.'
+author: 'Claude Code'
+---
+
+<a id="bug-fix"></a>
+
+## 버그 수정
+
+<a id="queryquery-no-longer-throws-on-second-call-35"></a>
+
+### 두 번째 `query().query()` 호출에서 오류가 발생하지 않습니다 ([#35](https://github.com/burrr-ai/comwit/issues/35))
+
+리소스 필드의 `.query()`는 처음에는 동작하지만 이후 호출부터 다음 `TypeError`를 던졌습니다.
+
+```
+TypeError: Cannot assign to read only property '0' of object '[object Array]'
+```
+
+**원인:** comwit은 쿼리 결과를 캐시할 때 `Object.freeze`로 스냅샷을 깊게 동결합니다. 다음 `.query()`가 동결된 캐시 상태를 반응형 프록시에 복원할 때 `wrap()`이 반응성을 설정하려고 원본 배열을 변경하여 TypeError가 발생했습니다.
+
+**수정:** 이제 프록시 엔진은 동결된 객체를 감싸기 전에 얕게 복사합니다. 캐시의 동결 스냅샷을 직접 변경하지 않습니다. ([PR #36](https://github.com/burrr-ai/comwit/pull/36))
+
+`data`가 배열이나 중첩 객체인 모든 `query()` 필드가 영향을 받았으므로 대부분의 실제 사용 사례에 해당하는 문제였습니다.
+
+---
+
+<a id="upgrade"></a>
+
+## 업그레이드
+
+```bash
+yarn add comwit@0.2.1
+```
+
+그대로 교체할 수 있으며 API 변경은 없습니다.
+
+[GitHub 릴리스](https://github.com/burrr-ai/comwit/releases/tag/v0.2.1) | [npm](https://www.npmjs.com/package/comwit/v/0.2.1)

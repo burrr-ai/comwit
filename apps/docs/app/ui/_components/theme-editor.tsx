@@ -1,5 +1,8 @@
 'use client'
 
+import { Copy, useCopy } from '@/i18n/copy'
+import { useTranslations } from 'next-intl'
+
 import * as React from 'react'
 import { MoonIcon, SunIcon } from '@comwit/ui/icons'
 import { cn } from '@comwit/ui-templates/lib/utils'
@@ -16,7 +19,7 @@ import { Glass } from '@comwit/ui-templates/glass'
 import { tokens, tokenMap, byName } from '../_generated/catalog'
 import { CodeBlock } from './code-block'
 
-/** 소비처가 실제로 덮는 L0 — 팔레트 색 + 형태/모션 노브 */
+/** Consumer-facing L0 overrides: palette colors, shape, and motion controls. */
 const COLOR_GROUPS = ['Palette', 'Status'] as const
 const KNOBS = [
   { name: 'radius-scale', label: 'Corner radius', min: 0, max: 2, step: 0.1, unit: '' },
@@ -29,7 +32,7 @@ const KNOBS = [
 const byToken = Object.fromEntries(tokens.map((t) => [t.name, t]))
 const toHex = (v: string) => (/^#[0-9a-fA-F]{6}$/.test(v) ? v : '#888888')
 
-/** 프리미티브 → 그걸 alias 하는 시맨틱 → 그 시맨틱을 쓰는 컴포넌트 */
+/** Primitive tokens, their semantic aliases, and the components using those aliases. */
 function usersOf(name: string) {
   const semantic = tokens
     .filter((t) => t.layer === 'semantic' && t.raw.includes(`var(--${name})`))
@@ -38,6 +41,10 @@ function usersOf(name: string) {
 }
 
 export function ThemeEditor() {
+  const localize = useCopy()
+
+  const copy = useTranslations('Copy')
+
   const [overrides, setOverrides] = React.useState<Record<string, string>>({})
   const [dark, setDark] = React.useState(false)
   const [active, setActive] = React.useState<string | null>(null)
@@ -72,14 +79,14 @@ export function ThemeEditor() {
         <div className="flex items-center justify-between gap-4">
           <p className="text-body-sm text-soft-foreground">
             {Object.keys(overrides).length
-              ? `${Object.keys(overrides).length} changed`
-              : 'Change any value. Everything on the right follows.'}
+              ? copy('changedCount', { count: Object.keys(overrides).length })
+              : localize('Change any value. Everything on the right follows.')}
           </p>
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
               size="icon"
-              aria-label={dark ? 'Light mode' : 'Dark mode'}
+              aria-label={localize(dark ? 'Light mode' : 'Dark mode')}
               aria-pressed={dark}
               onClick={() => setDark((d) => !d)}
             >
@@ -91,13 +98,15 @@ export function ThemeEditor() {
               onClick={reset}
               disabled={!Object.keys(overrides).length}
             >
-              Reset
+              <Copy id="text215" />{' '}
             </Button>
           </div>
         </div>
 
         <section className="space-y-4">
-          <h2 className="text-title-sm text-foreground">Shape and motion</h2>
+          <h2 className="text-title-sm text-foreground">
+            <Copy id="text216" />
+          </h2>
           {KNOBS.map((k) => {
             const raw = overrides[k.name] ?? byToken[k.name]?.value ?? '0'
             const num = raw === '9999px' ? k.max : parseFloat(raw)
@@ -107,7 +116,9 @@ export function ThemeEditor() {
                 className="grid grid-cols-[120px_minmax(0,1fr)_64px] items-center gap-3"
                 onMouseEnter={() => setActive(k.name)}
               >
-                <span className="text-label font-semibold text-foreground">{k.label}</span>
+                <span className="text-label font-semibold text-foreground">
+                  <Copy text={k.label} />
+                </span>
                 <Input
                   bare
                   type="range"
@@ -129,7 +140,7 @@ export function ThemeEditor() {
         {COLOR_GROUPS.map((g) => (
           <section key={g} className="space-y-3">
             <h2 className="text-title-sm text-foreground">
-              {g === 'Palette' ? 'Palette' : 'Status colors'}
+              <Copy text={g === 'Palette' ? 'Palette' : 'Status colors'} />
             </h2>
             <div className="grid gap-1.5 sm:grid-cols-2">
               {colorTokens
@@ -156,7 +167,7 @@ export function ThemeEditor() {
                           value={toHex(value)}
                           onChange={(e) => set(t.name, e.target.value)}
                           className="absolute inset-0 cursor-pointer opacity-0"
-                          aria-label={`${t.name} color`}
+                          aria-label={copy('tokenColor', { name: t.name })}
                         />
                       </label>
                       <div className="min-w-0 flex-1">
@@ -166,7 +177,7 @@ export function ThemeEditor() {
                         <Input
                           bare
                           type="text"
-                          aria-label={`${t.name} value`}
+                          aria-label={copy('tokenValue', { name: t.name })}
                           value={value}
                           onChange={(e) => set(t.name, e.target.value)}
                           spellCheck={false}
@@ -181,7 +192,9 @@ export function ThemeEditor() {
         ))}
 
         <section className="space-y-3">
-          <h2 className="text-title-sm text-foreground">Paste after the token import</h2>
+          <h2 className="text-title-sm text-foreground">
+            <Copy id="text217" />
+          </h2>
           <CodeBlock code={css} language="css" />
         </section>
       </div>
@@ -189,54 +202,70 @@ export function ThemeEditor() {
       <div className="space-y-4 min-[760px]:sticky min-[760px]:top-6 min-[760px]:self-start">
         <div className="space-y-5 rounded-card border border-border bg-card p-5 shadow-card">
           <div className="flex flex-wrap gap-2">
-            <Button size="sm">Save</Button>
+            <Button size="sm">
+              <Copy id="text218" />
+            </Button>
             <Button size="sm" variant="secondary">
-              Cancel
+              <Copy id="text182" />{' '}
             </Button>
             <Button size="sm" variant="outline">
-              Share
+              <Copy id="text219" />{' '}
             </Button>
             <Button size="sm" variant="destructive">
-              Delete
+              <Copy id="text220" />{' '}
             </Button>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Chip selected onClick={() => undefined}>
-              Nearby
+              <Copy id="text221" />{' '}
             </Chip>
-            <Chip onClick={() => undefined}>Trending</Chip>
-            <Badge variant="success">Paid</Badge>
-            <Badge variant="warning">Due soon</Badge>
+            <Chip onClick={() => undefined}>
+              <Copy id="text222" />
+            </Chip>
+            <Badge variant="success">
+              <Copy id="text223" />
+            </Badge>
+            <Badge variant="warning">
+              <Copy id="text224" />
+            </Badge>
           </div>
           <SegmentedControl
-            aria-label="Layout"
+            aria-label={copy('text225')}
             value={view}
             onValueChange={setView}
             options={[
-              { label: 'Grid', value: 'grid' },
-              { label: 'List', value: 'list' },
+              { label: localize('Grid'), value: 'grid' },
+              { label: localize('List'), value: 'list' },
             ]}
           />
           <div className="grid gap-1.5">
-            <Label htmlFor="theme-email">Email</Label>
+            <Label htmlFor="theme-email">
+              <Copy id="text226" />
+            </Label>
             <Input id="theme-email" placeholder="you@company.com" />
           </div>
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2.5">
               <Checkbox id="theme-updates" defaultChecked />
-              <Label htmlFor="theme-updates">Product updates</Label>
+              <Label htmlFor="theme-updates">
+                <Copy id="text228" />
+              </Label>
             </span>
-            <Switch defaultChecked aria-label="Notifications" />
+            <Switch defaultChecked aria-label={copy('text166')} />
           </div>
           <Alert tone="info" className="flex-col gap-1">
-            <AlertTitle>Tokens only</AlertTitle>
-            <AlertDescription>No component file changed to make this.</AlertDescription>
+            <AlertTitle>
+              <Copy id="text229" />
+            </AlertTitle>
+            <AlertDescription>
+              <Copy id="text230" />
+            </AlertDescription>
           </Alert>
           <div data-tone="sunset" className="ui-photo relative h-24 rounded-card p-3">
             <div className="relative isolate z-raised flex h-full items-center justify-center rounded-pill">
               <Glass />
               <span className="relative z-raised text-label font-semibold text-foreground">
-                Glass
+                <Copy id="text231" />{' '}
               </span>
             </div>
           </div>
@@ -244,13 +273,12 @@ export function ThemeEditor() {
 
         <div className="rounded-card border border-border p-4">
           <p className="text-body-sm text-foreground">
-            {active ? (
-              <>
-                Used by <code className="font-mono">--{active}</code>
-              </>
-            ) : (
-              'Hover a token to see where it lands.'
-            )}
+            {active
+              ? copy.rich('tokenUsage', {
+                  token: `--${active}`,
+                  code: (chunks) => <code className="font-mono">{chunks}</code>,
+                })
+              : localize('Hover a token to see where it lands.')}
           </p>
           {active && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -262,12 +290,12 @@ export function ThemeEditor() {
                     target="_top"
                     className="rounded-lg bg-muted px-2 py-0.5 text-caption text-foreground transition-colors duration-fast hover:bg-accent"
                   >
-                    {byName[n]?.title ?? n}
+                    <Copy text={byName[n]?.title ?? n} />
                   </a>
                 ))
               ) : (
                 <span className="text-caption text-muted-foreground">
-                  A global dial — every component reads it.
+                  <Copy id="text233" />{' '}
                 </span>
               )}
             </div>

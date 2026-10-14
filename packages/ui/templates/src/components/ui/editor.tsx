@@ -32,7 +32,7 @@ export interface EditorProps {
   placeholder?: string
   className?: string
   editable?: boolean
-  /** 편집 영역 id — <Label htmlFor> 와 잇는다 */
+  /** Editable-area ID, connected to Label htmlFor. */
   id?: string
   'aria-label'?: string
   'aria-labelledby'?: string

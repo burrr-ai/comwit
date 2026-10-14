@@ -31,7 +31,7 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
-      // 활성 탭은 흰 필+shadow-card 세그먼트(토스톤). 브랜드 언더라인보다 컨테이너 안 필터 UI에 맞음.
+      // The active tab is a white segment with shadow-card, inspired by Toss; suited to in-container filters more than a branded underline.
       className={cn(
         "inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-body-sm font-semibold whitespace-nowrap text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-card disabled:pointer-events-none disabled:opacity-disabled [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         focusRing,

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { KeyRound } from 'lucide-react'
+import { KeyRoundIcon } from '@comwit/ui/icons'
 
 import { Alert } from '@/lib/components/ui/alert'
 import { Button } from '@/lib/components/ui/button'
@@ -59,7 +59,7 @@ export default function AdminAccount() {
       <AdminSection
         title="비밀번호 변경"
         description="변경이 완료되면 다른 기기의 관리자 세션은 로그아웃됩니다."
-        icon={KeyRound}
+        icon={KeyRoundIcon}
       >
         <form className="space-y-4" onSubmit={handleSubmit}>
           <TextField label="현재 비밀번호" required>

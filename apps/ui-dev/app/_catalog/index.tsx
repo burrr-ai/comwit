@@ -60,7 +60,7 @@ import { DataTableDemo } from './data-table-demo'
 import { Foundations } from './foundations'
 import { OverrideLab, OverrideLabControls } from './override-lab'
 
-/* status 5토큰 아나토미 — solid/on-solid 는 헤더 스트립에, surface/on-surface/border 는 본문에 그대로 시연 */
+/* Demonstrate all five status tokens: solid/on-solid in the header, surface/on-surface/border in the body. */
 const STATUS_ANATOMY = [
   {
     key: 'success',
@@ -94,7 +94,7 @@ const STATUS_ANATOMY = [
 
 const BUTTON_VARIANTS = ['default', 'secondary', 'outline', 'ghost', 'link', 'destructive'] as const
 
-/* 콜아웃 = surface 배경 + border + on-surface 텍스트(같은 계열 진한 톤) + 솔리드 아이콘 */
+/* Callout: surface background, border, on-surface text, and a solid icon from the same status family. */
 const CALLOUTS = [
   {
     tone: 'success',
@@ -102,8 +102,8 @@ const CALLOUTS = [
     icon: 'text-success',
     fg: 'text-success-surface-foreground',
     Icon: CheckCircle2Icon,
-    title: '완료되었습니다',
-    body: '작업이 정상적으로 처리되었습니다.',
+    title: 'Completed',
+    body: 'The operation completed successfully.',
   },
   {
     tone: 'info',
@@ -111,8 +111,8 @@ const CALLOUTS = [
     icon: 'text-info',
     fg: 'text-info-surface-foreground',
     Icon: InfoIcon,
-    title: '안내',
-    body: '참고할 정보를 여기에 표시합니다.',
+    title: 'Information',
+    body: 'Useful information appears here.',
   },
   {
     tone: 'warning',
@@ -120,8 +120,8 @@ const CALLOUTS = [
     icon: 'text-warning',
     fg: 'text-warning-surface-foreground',
     Icon: AlertTriangleIcon,
-    title: '주의가 필요합니다',
-    body: '확인이 필요한 항목이 있습니다.',
+    title: 'Attention required',
+    body: 'Some items need your review.',
   },
   {
     tone: 'destructive',
@@ -129,8 +129,8 @@ const CALLOUTS = [
     icon: 'text-destructive',
     fg: 'text-destructive-surface-foreground',
     Icon: XCircleIcon,
-    title: '문제가 발생했습니다',
-    body: '다시 시도해 주세요.',
+    title: 'Something went wrong',
+    body: 'Please try again.',
   },
 ] as const
 
@@ -139,43 +139,43 @@ const FILLED_CALLOUTS = [
     tone: 'success',
     wrap: 'bg-success text-success-foreground',
     Icon: CheckCircle2Icon,
-    title: '저장되었습니다',
+    title: 'Saved',
   },
   {
     tone: 'warning',
     wrap: 'bg-warning text-warning-foreground',
     Icon: AlertTriangleIcon,
-    title: '용량이 얼마 남지 않았습니다',
+    title: 'Storage is almost full',
   },
   {
     tone: 'destructive',
     wrap: 'bg-destructive text-destructive-foreground',
     Icon: XCircleIcon,
-    title: '삭제에 실패했습니다',
+    title: 'Could not delete',
   },
   {
     tone: 'info',
     wrap: 'bg-info text-info-foreground',
     Icon: InfoIcon,
-    title: '새 버전이 있습니다',
+    title: 'A new version is available',
   },
 ] as const
 
 const CHIP_TONES = ['neutral', 'brand', 'success', 'warning', 'destructive', 'info'] as const
 
 const FRUITS: [string, string][] = [
-  ['apple', '사과'],
-  ['banana', '바나나'],
-  ['cherry', '체리'],
-  ['grape', '포도'],
-  ['mango', '망고'],
-  ['orange', '오렌지'],
-  ['peach', '복숭아'],
-  ['strawberry', '딸기'],
-  ['watermelon', '수박'],
+  ['apple', 'Apple'],
+  ['banana', 'Banana'],
+  ['cherry', 'Cherry'],
+  ['grape', 'Grape'],
+  ['mango', 'Mango'],
+  ['orange', 'Orange'],
+  ['peach', 'Peach'],
+  ['strawberry', 'Strawberry'],
+  ['watermelon', 'Watermelon'],
 ]
 
-/* ── 헬퍼 ──────────────────────────────────────────────────────── */
+/* Helpers. */
 
 const NAV: [string, string][] = [
   ['overview', 'Overview'],
@@ -191,23 +191,24 @@ const NAV: [string, string][] = [
   ['elevation', 'Elevation'],
 ]
 
-/* ── 카탈로그 ──────────────────────────────────────────────────── */
+/* Catalog. */
 
 export function DesignSystemCatalog() {
   const [date, setDate] = React.useState('')
   const [time, setTime] = React.useState('')
   const [month, setMonth] = React.useState('')
   const [day, setDay] = React.useState<Date | undefined>(undefined)
-  const [filter, setFilter] = React.useState('전체')
-  const [tags, setTags] = React.useState(['디자인', '토큰', '컴포넌트'])
-  const [floatName, setFloatName] = React.useState('김토큰')
+  const [filter, setFilter] = React.useState('All')
+  const [tags, setTags] = React.useState(['Design', 'Tokens', 'Components'])
+  const [floatName, setFloatName] = React.useState('Alex Token')
   const [floatEmail, setFloatEmail] = React.useState('')
   const [floatBio, setFloatBio] = React.useState('')
   const [fruit, setFruit] = React.useState<React.Key | null>(null)
 
   return (
-    /* 전 섹션을 Override Lab 이 감싼다 — 래퍼에 CSS 변수만 꽂는데 아래 전부가 리스킨된다.
-       소비처가 :root 에서 하는 일과 정확히 같다. */
+    /*
+     * Override Lab wraps every section. Inline CSS variables restyle the whole page, just like consumer overrides on :root.
+     */
     <OverrideLab>
       <div className="min-h-screen bg-background text-foreground">
         <div className="mx-auto flex max-w-6xl gap-12 px-6 py-14">
@@ -230,18 +231,18 @@ export function DesignSystemCatalog() {
 
           <main className="min-w-0 flex-1 space-y-4">
             <header className="pb-6">
-              <h1 className="text-display-lg text-foreground">디자인 시스템</h1>
+              <h1 className="text-display-lg text-foreground">Design system</h1>
             </header>
 
-            <CatalogSection index="00" eyebrow="Overview" title="메인 페이지 미리보기">
+            <CatalogSection index="00" eyebrow="Overview" title="Main page preview">
               <MainPagePreview />
             </CatalogSection>
 
             <CatalogSection
               index="01"
               eyebrow="Foundations"
-              title="디자인 토큰"
-              desc="색·radius·border·elevation·typography·motion·state 를 전부 토큰화했다. 라이브러리는 테마를 싣지 않는다 — 아래 노브를 돌리면(=소비처가 :root 에서 값을 덮으면) 이 페이지의 모든 컴포넌트가 한 번에 리스킨된다. 컴포넌트 코드는 0줄 변한다."
+              title="Design tokens"
+              desc="Colors, radii, borders, elevation, typography, motion, and state all use tokens. Adjust the controls below to override :root values and restyle every component on this page without editing component code."
             >
               <div className="space-y-12">
                 <OverrideLabControls />
@@ -249,9 +250,9 @@ export function DesignSystemCatalog() {
               </div>
             </CatalogSection>
 
-            <CatalogSection index="02" eyebrow="Status" title="상태 팔레트">
+            <CatalogSection index="02" eyebrow="Status" title="Status palette">
               <div className="space-y-10">
-                {/* 토큰 아나토미 — 카드 하나가 5토큰 전부를 제자리에 시연 */}
+                {/* Each card demonstrates all five status tokens in their intended roles. */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   {STATUS_ANATOMY.map((s) => (
                     <div
@@ -266,7 +267,7 @@ export function DesignSystemCatalog() {
                       </div>
                       <div className={`border-t p-4 ${s.surface}`}>
                         <p className={`text-title-sm ${s.fg}`}>
-                          surface 위 텍스트는 같은 계열 진한 톤
+                          Surface text uses a darker tone from the same color family
                         </p>
                         <p className={`mt-0.5 text-body-sm ${s.fg}`}>
                           bg-{s.key}-surface · text-{s.key}-surface-foreground · border-{s.key}
@@ -279,7 +280,7 @@ export function DesignSystemCatalog() {
                 </div>
 
                 <div>
-                  <GroupLabel>콜아웃</GroupLabel>
+                  <GroupLabel>Callouts</GroupLabel>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {CALLOUTS.map((c) => (
                       <div key={c.tone} className={`flex gap-3 rounded-lg border p-4 ${c.wrap}`}>
@@ -291,17 +292,17 @@ export function DesignSystemCatalog() {
                       </div>
                     ))}
                   </div>
-                  {/* 칩형 콜아웃 — 솔리드 칩 + 본문 인라인 */}
+                  {/* Chip callout: solid chip with inline body text. */}
                   <div className="mt-4 flex items-center gap-3 rounded-lg border border-warning-border bg-warning-surface px-4 py-3">
                     <span className="shrink-0 rounded-md bg-warning px-2 py-0.5 text-caption font-semibold text-warning-foreground">
                       Tip
                     </span>
                     <p className="min-w-0 text-body-sm text-warning-surface-foreground">
-                      자세한 사용법은{' '}
+                      See the{' '}
                       <a href="#status" className="font-medium underline underline-offset-2">
-                        디자인 가이드
+                        design guide
                       </a>
-                      에서 확인하세요.
+                      for detailed usage.
                     </p>
                   </div>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -318,7 +319,7 @@ export function DesignSystemCatalog() {
                 </div>
 
                 <div>
-                  <GroupLabel>Chip 톤</GroupLabel>
+                  <GroupLabel>Chip tones</GroupLabel>
                   <div className="flex flex-wrap gap-2">
                     {CHIP_TONES.map((tone) => (
                       <Chip key={tone} tone={tone}>
@@ -330,7 +331,7 @@ export function DesignSystemCatalog() {
               </div>
             </CatalogSection>
 
-            <CatalogSection index="04" eyebrow="Buttons" title="버튼">
+            <CatalogSection index="04" eyebrow="Buttons" title="Buttons">
               <div className="space-y-6 rounded-lg border border-border p-6">
                 <div className="flex flex-wrap items-center gap-3">
                   {BUTTON_VARIANTS.map((v) => (
@@ -344,7 +345,7 @@ export function DesignSystemCatalog() {
                   <Button size="sm">sm</Button>
                   <Button>default</Button>
                   <Button size="lg">lg</Button>
-                  <Button size="icon" variant="outline" aria-label="검색">
+                  <Button size="icon" variant="outline" aria-label="Search">
                     <SearchIcon />
                   </Button>
                   <Button className="rounded-pill px-5">pill</Button>
@@ -353,7 +354,7 @@ export function DesignSystemCatalog() {
               </div>
             </CatalogSection>
 
-            <CatalogSection index="05" eyebrow="Chips" title="칩">
+            <CatalogSection index="05" eyebrow="Chips" title="Chips">
               <div className="space-y-6 rounded-lg border border-border p-6">
                 {(['soft', 'solid', 'outline'] as const).map((variant) => (
                   <div key={variant} className="flex flex-wrap items-center gap-2">
@@ -369,7 +370,7 @@ export function DesignSystemCatalog() {
                 ))}
                 <Separator />
                 <div className="flex flex-wrap items-center gap-2">
-                  {['전체', '인기', '신규'].map((f) => (
+                  {['All', 'Popular', 'New'].map((f) => (
                     <Chip key={f} selected={filter === f} onClick={() => setFilter(f)}>
                       {f}
                     </Chip>
@@ -389,9 +390,9 @@ export function DesignSystemCatalog() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setTags(['디자인', '토큰', '컴포넌트'])}
+                      onClick={() => setTags(['Design', 'Tokens', 'Components'])}
                     >
-                      <PlusIcon /> 되돌리기
+                      <PlusIcon /> Reset
                     </Button>
                   ) : null}
                 </div>
@@ -408,27 +409,27 @@ export function DesignSystemCatalog() {
               </div>
             </CatalogSection>
 
-            <CatalogSection index="06" eyebrow="Form" title="입력 · 선택 컨트롤">
+            <CatalogSection index="06" eyebrow="Form" title="Input and selection controls">
               <div className="grid gap-6 rounded-lg border border-border p-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="ds-input">Input</Label>
-                  <Input id="ds-input" placeholder="텍스트를 입력하세요" />
+                  <Input id="ds-input" placeholder="Enter text" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="ds-input-invalid">Input · invalid</Label>
-                  <Input id="ds-input-invalid" aria-invalid placeholder="오류 상태" />
+                  <Input id="ds-input-invalid" aria-invalid placeholder="Error state" />
                 </div>
                 <div className="space-y-2">
-                  <Label>InputGroup · 검색</Label>
+                  <Label>InputGroup · Search</Label>
                   <InputGroup>
                     <InputAddon>
                       <SearchIcon />
                     </InputAddon>
-                    <Input placeholder="검색어" />
+                    <Input placeholder="Search query" />
                   </InputGroup>
                 </div>
                 <div className="space-y-2">
-                  <Label>InputGroup · 단위</Label>
+                  <Label>InputGroup · Unit</Label>
                   <InputGroup>
                     <InputAddon>₩</InputAddon>
                     <Input placeholder="0" inputMode="numeric" />
@@ -436,11 +437,11 @@ export function DesignSystemCatalog() {
                   </InputGroup>
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label>InputGroup · 버튼</Label>
+                  <Label>InputGroup · Button</Label>
                   <InputGroup>
-                    <Input placeholder="이메일 주소" type="email" />
+                    <Input placeholder="Email address" type="email" />
                     <Button size="sm" className="mr-1">
-                      구독
+                      Subscribe
                     </Button>
                   </InputGroup>
                 </div>
@@ -448,18 +449,18 @@ export function DesignSystemCatalog() {
                   <Label htmlFor="ds-select">Select</Label>
                   <Select>
                     <SelectTrigger id="ds-select">
-                      <SelectValue placeholder="옵션 선택" />
+                      <SelectValue placeholder="Select an option" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="a">옵션 A</SelectItem>
-                      <SelectItem value="b">옵션 B</SelectItem>
-                      <SelectItem value="c">옵션 C</SelectItem>
+                      <SelectItem value="a">Option A</SelectItem>
+                      <SelectItem value="b">Option B</SelectItem>
+                      <SelectItem value="c">Option C</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="ds-textarea">Textarea</Label>
-                  <Textarea id="ds-textarea" placeholder="여러 줄 입력" />
+                  <Textarea id="ds-textarea" placeholder="Multiline input" />
                 </div>
                 <div className="space-y-3">
                   <Label>Checkbox</Label>
@@ -467,13 +468,13 @@ export function DesignSystemCatalog() {
                     <div className="flex items-center gap-2">
                       <Checkbox id="ds-check" defaultChecked />
                       <Label htmlFor="ds-check" className="font-normal">
-                        동의합니다
+                        I agree
                       </Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Checkbox id="ds-check-d" disabled />
                       <Label htmlFor="ds-check-d" className="font-normal text-muted-foreground">
-                        비활성
+                        Disabled
                       </Label>
                     </div>
                   </div>
@@ -484,13 +485,13 @@ export function DesignSystemCatalog() {
                     <div className="flex items-center gap-2">
                       <RadioGroupItem value="one" id="ds-r1" />
                       <Label htmlFor="ds-r1" className="font-normal">
-                        하나
+                        One
                       </Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <RadioGroupItem value="two" id="ds-r2" />
                       <Label htmlFor="ds-r2" className="font-normal">
-                        둘
+                        Two
                       </Label>
                     </div>
                   </RadioGroup>
@@ -501,33 +502,33 @@ export function DesignSystemCatalog() {
                     <div className="flex items-center gap-2">
                       <Switch id="ds-sw" defaultChecked />
                       <Label htmlFor="ds-sw" className="font-normal">
-                        알림 받기
+                        Receive notifications
                       </Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Switch id="ds-sw-sm" size="sm" />
                       <Label htmlFor="ds-sw-sm" className="font-normal">
-                        작게
+                        Small
                       </Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Switch id="ds-sw-d" disabled defaultChecked />
                       <Label htmlFor="ds-sw-d" className="font-normal text-muted-foreground">
-                        비활성
+                        Disabled
                       </Label>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Autocomplete(combobox) — React Aria 엔진. 타이핑 필터 + 키보드 + 선택 표식 */}
+              {/* Autocomplete uses React Aria for filtering, keyboard navigation, and selection indicators. */}
               <div className="mt-10">
-                <GroupLabel>Autocomplete · 검색 선택</GroupLabel>
+                <GroupLabel>Autocomplete · Search and select</GroupLabel>
                 <div className="grid gap-6 rounded-lg border border-border p-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Autocomplete
-                      label="좋아하는 과일"
-                      placeholder="과일 검색…"
+                      label="Favorite fruit"
+                      placeholder="Search fruit…"
                       onSelectionChange={setFruit}
                     >
                       {FRUITS.map(([key, name]) => (
@@ -535,22 +536,22 @@ export function DesignSystemCatalog() {
                       ))}
                     </Autocomplete>
                     <p className="text-caption text-muted-foreground">
-                      선택: {fruit ? FRUITS.find(([k]) => k === fruit)?.[1] : '없음'}
+                      Selected: {fruit ? FRUITS.find(([k]) => k === fruit)?.[1] : 'None'}
                     </p>
                   </div>
                   <div className="space-y-2">
                     <Autocomplete
-                      label="도시"
-                      placeholder="입력해 좁히기…"
+                      label="City"
+                      placeholder="Type to filter…"
                       defaultSelectedKey="seoul"
                     >
                       {[
-                        ['seoul', '서울'],
-                        ['busan', '부산'],
-                        ['incheon', '인천'],
-                        ['daegu', '대구'],
-                        ['gwangju', '광주'],
-                        ['daejeon', '대전'],
+                        ['seoul', 'Seoul'],
+                        ['busan', 'Busan'],
+                        ['incheon', 'Incheon'],
+                        ['daegu', 'Daegu'],
+                        ['gwangju', 'Gwangju'],
+                        ['daejeon', 'Daejeon'],
                       ].map(([key, name]) => (
                         <AutocompleteItem key={key}>{name}</AutocompleteItem>
                       ))}
@@ -559,28 +560,28 @@ export function DesignSystemCatalog() {
                 </div>
               </div>
 
-              {/* TextField — 컴윗은 라벨 고정(outlined) 하나. 라벨↔컨트롤·도움말·에러 배선은 프리미티브가 책임 */}
+              {/* TextField uses a fixed outlined label. The primitive wires labels, controls, descriptions, and errors. */}
               <div className="mt-10 space-y-8">
                 <div>
                   <GroupLabel>TextField</GroupLabel>
                   <div className="grid gap-6 rounded-lg border border-border p-6 md:grid-cols-3">
-                    <TextField label="이름" helperText="실명을 입력하세요">
+                    <TextField label="Name" helperText="Enter your legal name">
                       <Input value={floatName} onChange={(e) => setFloatName(e.target.value)} />
                     </TextField>
-                    <TextField label="이메일" required helperText="회사 이메일">
+                    <TextField label="Email" required helperText="Work email">
                       <Input
                         type="email"
                         value={floatEmail}
                         onChange={(e) => setFloatEmail(e.target.value)}
                       />
                     </TextField>
-                    <TextField label="회사" error="필수 항목입니다">
+                    <TextField label="Company" error="This field is required">
                       <Input aria-invalid />
                     </TextField>
-                    <TextField label="자기소개" className="md:col-span-2">
+                    <TextField label="About you" className="md:col-span-2">
                       <Textarea value={floatBio} onChange={(e) => setFloatBio(e.target.value)} />
                     </TextField>
-                    <TextField label="아이디" disabled helperText="변경할 수 없습니다">
+                    <TextField label="Username" disabled helperText="Cannot be changed">
                       <Input defaultValue="token_user" disabled />
                     </TextField>
                   </div>
@@ -588,21 +589,21 @@ export function DesignSystemCatalog() {
               </div>
             </CatalogSection>
 
-            <CatalogSection index="07" eyebrow="Date" title="날짜 · 시간">
+            <CatalogSection index="07" eyebrow="Date" title="Date and time">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="rounded-lg border border-border p-6">
                   <div className="grid gap-4 sm:grid-cols-3">
                     <div className="space-y-2">
                       <Label>DatePicker</Label>
-                      <DatePicker value={date} onChange={setDate} placeholder="날짜" />
+                      <DatePicker value={date} onChange={setDate} placeholder="Date" />
                     </div>
                     <div className="space-y-2">
                       <Label>TimePicker</Label>
-                      <TimePicker value={time} onChange={setTime} placeholder="시간" />
+                      <TimePicker value={time} onChange={setTime} placeholder="Time" />
                     </div>
                     <div className="space-y-2">
                       <Label>MonthPicker</Label>
-                      <MonthPicker value={month} onChange={setMonth} placeholder="월" />
+                      <MonthPicker value={month} onChange={setMonth} placeholder="Month" />
                     </div>
                   </div>
                 </div>
@@ -613,38 +614,38 @@ export function DesignSystemCatalog() {
               </div>
             </CatalogSection>
 
-            <CatalogSection index="08" eyebrow="Disclosure" title="탭 · 아코디언">
+            <CatalogSection index="08" eyebrow="Disclosure" title="Tabs and accordion">
               <div className="grid gap-6 lg:grid-cols-2">
                 <div className="rounded-lg border border-border p-6">
                   <Tabs defaultValue="t1">
                     <TabsList>
-                      <TabsTrigger value="t1">개요</TabsTrigger>
-                      <TabsTrigger value="t2">상세</TabsTrigger>
-                      <TabsTrigger value="t3">후기</TabsTrigger>
+                      <TabsTrigger value="t1">Overview</TabsTrigger>
+                      <TabsTrigger value="t2">Details</TabsTrigger>
+                      <TabsTrigger value="t3">Reviews</TabsTrigger>
                     </TabsList>
                     <TabsContent value="t1" className="pt-4 text-body-sm text-muted-foreground">
-                      개요 콘텐츠
+                      Overview content
                     </TabsContent>
                     <TabsContent value="t2" className="pt-4 text-body-sm text-muted-foreground">
-                      상세 콘텐츠
+                      Detail content
                     </TabsContent>
                     <TabsContent value="t3" className="pt-4 text-body-sm text-muted-foreground">
-                      후기 콘텐츠
+                      Review content
                     </TabsContent>
                   </Tabs>
                 </div>
                 <div className="rounded-lg border border-border p-6">
                   <Accordion type="single" collapsible>
                     <AccordionItem value="a1">
-                      <AccordionTrigger>항목 하나</AccordionTrigger>
+                      <AccordionTrigger>First item</AccordionTrigger>
                       <AccordionContent className="text-muted-foreground">
-                        펼쳐진 콘텐츠 영역입니다.
+                        This is the expanded content area.
                       </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="a2">
-                      <AccordionTrigger>항목 둘</AccordionTrigger>
+                      <AccordionTrigger>Second item</AccordionTrigger>
                       <AccordionContent className="text-muted-foreground">
-                        또 다른 콘텐츠 영역입니다.
+                        This is another content area.
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
@@ -655,30 +656,32 @@ export function DesignSystemCatalog() {
             <CatalogSection
               index="09"
               eyebrow="Data"
-              title="데이터 테이블"
-              desc="TanStack Table 기반 서버사이드 페이지네이션. 첫 로딩은 스켈레톤, 재조회는 우상단 스피너, 마지막 부분 페이지는 빈 행으로 패딩해 높이가 흔들리지 않는다."
+              title="Data table"
+              desc="Server-side pagination with TanStack Table. Initial loading uses skeletons, refetching shows a top-right spinner, and partial pages are padded with empty rows to maintain height."
             >
               <DataTableDemo />
             </CatalogSection>
 
-            <CatalogSection index="10" eyebrow="Feedback" title="다이얼로그 · 토스트">
+            <CatalogSection index="10" eyebrow="Feedback" title="Dialogs and toasts">
               <div className="space-y-6 rounded-lg border border-border p-6">
                 <div className="flex flex-wrap items-center gap-3">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline">Dialog 열기</Button>
+                      <Button variant="outline">Open dialog</Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>다이얼로그 제목</DialogTitle>
-                        <DialogDescription>모달 본문 설명 텍스트입니다.</DialogDescription>
+                        <DialogTitle>Dialog title</DialogTitle>
+                        <DialogDescription>
+                          Descriptive text for the modal content.
+                        </DialogDescription>
                       </DialogHeader>
                       <DialogFooter>
                         <DialogClose asChild>
-                          <Button variant="ghost">취소</Button>
+                          <Button variant="ghost">Cancel</Button>
                         </DialogClose>
                         <DialogClose asChild>
-                          <Button>확인</Button>
+                          <Button>Confirm</Button>
                         </DialogClose>
                       </DialogFooter>
                     </DialogContent>
@@ -686,30 +689,30 @@ export function DesignSystemCatalog() {
                   <Button
                     variant="outline"
                     onClick={async () => {
-                      const ok = await popup.confirm({ description: '이 작업을 진행할까요?' })
-                      toast(ok ? '확인했습니다' : '취소했습니다')
+                      const ok = await popup.confirm({ description: 'Continue with this action?' })
+                      toast(ok ? 'Confirmed' : 'Canceled')
                     }}
                   >
                     popup.confirm
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => popup.alert({ description: '처리가 완료되었습니다.' })}
+                    onClick={() => popup.alert({ description: 'The operation is complete.' })}
                   >
                     popup.alert
                   </Button>
                 </div>
                 <Separator />
                 <div className="flex flex-wrap items-center gap-3">
-                  {/* status 색은 variant 추가 없이 className 오버라이드(cn=twMerge 로 ghost 위에 status 토큰) */}
-                  <Button variant="outline" size="sm" onClick={() => toast('링크를 복사했습니다')}>
-                    기본
+                  {/* Override status colors through className without adding variants; cn/twMerge applies status tokens over ghost. */}
+                  <Button variant="outline" size="sm" onClick={() => toast('Link copied')}>
+                    Default
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="bg-success text-success-foreground hover:bg-success/90"
-                    onClick={() => toast.success('성공했습니다')}
+                    onClick={() => toast.success('Success')}
                   >
                     success
                   </Button>
@@ -717,7 +720,7 @@ export function DesignSystemCatalog() {
                     variant="ghost"
                     size="sm"
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    onClick={() => toast.error('오류가 발생했습니다')}
+                    onClick={() => toast.error('An error occurred')}
                   >
                     error
                   </Button>
@@ -725,7 +728,7 @@ export function DesignSystemCatalog() {
                     variant="ghost"
                     size="sm"
                     className="bg-warning text-warning-foreground hover:bg-warning/90"
-                    onClick={() => toast.warning('주의가 필요합니다')}
+                    onClick={() => toast.warning('Attention required')}
                   >
                     warning
                   </Button>
@@ -733,7 +736,7 @@ export function DesignSystemCatalog() {
                     variant="ghost"
                     size="sm"
                     className="bg-info text-info-foreground hover:bg-info/90"
-                    onClick={() => toast.info('참고하세요')}
+                    onClick={() => toast.info('For your information')}
                   >
                     info
                   </Button>
@@ -741,7 +744,7 @@ export function DesignSystemCatalog() {
               </div>
             </CatalogSection>
 
-            <CatalogSection index="11" eyebrow="Elevation" title="그림자 · 라운드">
+            <CatalogSection index="11" eyebrow="Elevation" title="Shadows and corners">
               <div className="grid gap-6 sm:grid-cols-2">
                 <div
                   className="flex h-24 items-center justify-center rounded-lg bg-card text-caption text-muted-foreground"

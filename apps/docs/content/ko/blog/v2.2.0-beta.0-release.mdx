@@ -1,0 +1,81 @@
+---
+title: 'comwit v2.2.0-beta.0 — 요청할 때 불러오고 저장하는 쿼리'
+date: '2026-08-16'
+description: '2.2 베타는 local.collection()과 local(query())를 추가합니다. 정규화된 IndexedDB 스냅샷, 정확히 일치하는 인자의 즉시 복원, 백그라운드 서버 재검증을 지원합니다.'
+author: 'Codex'
+---
+
+<a id="query-data-can-now-survive-a-reload"></a>
+
+## 새로고침해도 쿼리 데이터가 남습니다
+
+`local()`은 새 훅이나 변경 API 없이 기존 쿼리 리소스에 IndexedDB 저장 계층을 추가합니다.
+
+```ts
+const todos = local.collection<TodoEntity>({
+  key: 'todos',
+  version: 1,
+})
+
+const todo = model({
+  list: local(
+    query<TodoListItem[], TodoFilter>({
+      initialData: [],
+      staleTime: 30_000,
+      queryFn: api.todo.list,
+    }),
+    { source: todos }
+  ),
+  detail: local(
+    query<TodoDetail | null, string>({
+      initialData: null,
+      queryFn: api.todo.detail,
+    }),
+    { source: todos }
+  ),
+})
+```
+
+셀렉터는 계속 `.load(arg)`를 호출합니다. 액션도 `.query()`, `.refetch()`, `.set()`과 직접 반응형 변경을 그대로 사용합니다.
+
+<a id="normalized-entities-exact-views"></a>
+
+## 정규화된 엔티티와 정확한 뷰
+
+베타는 ID별 기준 엔티티를 저장하고, 각 리소스와 정규화된 쿼리 인자가 소유한 순서 있는 ID 목록을 별도로 저장합니다. 목록 조각을 완전한 상세 응답으로 취급하지 않으면서 목록, 상세, 무한 리소스가 엔티티를 공유할 수 있습니다.
+
+인자가 정확히 일치하는 저장 뷰를 먼저 복원합니다. 이후 `staleTime`에 따라 요청을 건너뛰거나 백그라운드에서 재검증합니다. 오래된 캐시가 있어도 `isLoading`은 false를 유지하고 `isFetching`이 서버 확인을 나타냅니다. 확인이 끝나면 표시 중인 스냅샷이 달라질 수 있으므로 `isFetching`으로 작은 갱신 표시를 줄 수 있습니다. 확인에 실패해도 로컬 데이터는 계속 보입니다.
+
+처음 보는 필터는 서버에 요청합니다. 전체 데이터베이스를 미리 채우는 방식이 아니라 필요할 때 저장하는 쿼리 캐시입니다.
+
+<a id="listdetail-consistency"></a>
+
+## 목록과 상세의 일관성
+
+목록과 상세 조각은 기본적으로 얕게 병합됩니다. 요약 응답은 공통 필드를 갱신하되 생략된 상세 전용 필드를 지우지 않습니다. `merge`로 API별 중첩 병합을 지정하고, 선택적 `revision` 추출기로 오래된 서버 조각을 거부할 수 있습니다.
+
+엔티티를 직접 수정하면 IndexedDB에 저장되고, 같은 컬렉션과 ID를 공유하는 로드된 뷰에도 반영됩니다. 뷰의 포함 여부와 순서는 쿼리가 소유하므로 서버 변경 후에는 여전히 영향받는 목록을 다시 조회해야 합니다.
+
+새 로컬 수정 이전에 시작한 응답은 수정된 행을 덮어쓰지 않습니다. 기존 롤백/재조회 액션 패턴을 유지하면서 흔한 낙관적 갱신 경쟁을 막습니다.
+
+<a id="deliberate-beta-boundaries"></a>
+
+## 베타의 지원 범위
+
+- 컬렉션 `version`은 필수입니다. 마이그레이션은 없으며 버전을 올리면 같은 스코프의 이전 행을 무효화하고 제거합니다.
+- Provider `scope`로 사용자와 테넌트를 분리합니다. 바뀌면 Provider를 다시 마운트하세요.
+- `query()`와 `query.infinite()`를 지원하며 `query.realtime()`은 아직 포함하지 않습니다.
+- 변경 전송함, 오프라인 재시도 큐, CRDT, 기기 간 충돌 해결 엔진은 제공하지 않습니다.
+- IndexedDB가 실패하면 일반 메모리 쿼리 동작으로 전환합니다.
+
+로컬이 소유하는 설정과 초안에는 `persist()`를 사용하세요. 저장된 데이터로 첫 화면을 그리고 백그라운드에서 보정해야 하는 서버 소유 스냅샷에는 `local(query())`를 사용합니다.
+
+<a id="try-the-beta"></a>
+
+## 베타 사용하기
+
+```bash
+yarn add @comwit/state@2.2.0-beta.0
+```
+
+사용자별 데이터에 적용하기 전에 전체 [`local()` 레퍼런스](/docs/api/local)를 확인하세요.

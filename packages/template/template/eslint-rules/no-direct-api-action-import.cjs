@@ -1,6 +1,6 @@
 /**
- * API action 구현 파일은 해당 도메인의 index.ts만 import할 수 있다.
- * 외부 소비자는 항상 domain index를 거쳐야 build loader가 client/server facade를 만들 수 있다.
+ * Only a domain's index.ts may import its action implementation files.
+ * Consumers must use the domain index so the build loader can create client/server facades.
  */
 const path = require('node:path');
 
@@ -14,7 +14,7 @@ module.exports = {
     },
     messages: {
       noDirectApiActionImport:
-        'API action 파일을 직접 import할 수 없습니다. 해당 도메인의 index.ts API 객체를 사용하세요 (see src/services/api.ai.md)',
+        'Do not import API action files directly. Use the domain index.ts API object (see src/services/api.ai.md)',
     },
     schema: [],
   },

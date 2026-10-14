@@ -2,9 +2,9 @@
    (bg-background, text-soft-foreground, rounded-card …) — the docs dogfood the defaults.
    Only layout that utilities can't express lives here. */
 
-/* UI 섹션에선 body 자체가 라이브러리 기본값을 따른다 — 시트·다이얼로그·토스트는 body 로 포털되므로
-   래퍼에만 서체를 주면 포털 속 컴포넌트가 사이트 서체(Inter)로 뜬다. base 레이어라 컴포넌트 유틸이 이긴다.
-   제목의 사이트 서체(Manrope)도 걷되, 라이브러리가 --display-font 를 거는 [data-slot] 제목은 건드리지 않는다. */
+/*
+ * Apply library defaults to body in the UI section so portaled sheets, dialogs, and toasts inherit the correct font. Keep these rules in base so component utilities win. Reset site heading fonts except data-slot headings that use --display-font.
+ */
 @layer base {
   body:has(.ui-product, .ui-scope) {
     background: var(--background);
@@ -25,7 +25,8 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  font-family: var(--font-inter), sans-serif; /* 공유 사이트 헤더는 State 쪽과 같은 모습 */
+  font-family:
+    var(--font-inter), sans-serif; /* The shared site header matches the State section. */
 }
 
 .ui-shell {
@@ -51,7 +52,7 @@
   scroll-margin-top: 24px;
 }
 
-/* 사이드바로 도착한 항목이 잠깐 빛난다 — 이미 제자리였거나 페이지 끝이라 덜 올라간 항목도 어디인지 보인다. */
+/* Briefly highlight items reached through the sidebar, even when already aligned or limited by the page bottom. */
 .ui-product [data-arrived] [data-gallery-stage='card'] {
   animation: gallery-arrive-ring 1.6s ease-out;
 }
@@ -119,7 +120,7 @@
   background: var(--background);
   isolation: isolate;
   transform: translateZ(0);
-  /* backdrop-filter 레이어(시트 전환의 블러·유리)는 overflow:hidden 의 둥근 모서리를 무시할 수 있다 — clip-path 가 확실히 자른다. */
+  /* Use clip-path because backdrop-filter layers can escape rounded overflow:hidden clipping. */
   clip-path: inset(0 round 38px);
 }
 .phone-status {

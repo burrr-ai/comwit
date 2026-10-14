@@ -1,5 +1,8 @@
 'use client'
 
+import { Copy, useCopy } from '@/i18n/copy'
+import { useTranslations } from 'next-intl'
+
 import { Button } from '@comwit/ui-templates/button'
 import * as React from 'react'
 import Link from 'next/link'
@@ -23,19 +26,23 @@ function groupDocs(docs: TemplateDocMeta[]) {
 }
 
 function NavContent({ docs, onNavigate }: { docs: TemplateDocMeta[]; onNavigate?: () => void }) {
+  const copy = useTranslations('Copy')
+
   const pathname = usePathname()
   return (
-    <nav aria-label="Template documentation" className="template-nav">
+    <nav aria-label={copy('text089')} className="template-nav">
       <Link
         href={OVERVIEW}
         aria-current={pathname === OVERVIEW ? 'page' : undefined}
         onClick={onNavigate}
       >
-        Overview
+        <Copy id="text090" />{' '}
       </Link>
       {groupDocs(docs).map(([group, items]) => (
         <React.Fragment key={group}>
-          <p className="template-nav-group">{group}</p>
+          <p className="template-nav-group">
+            <Copy text={group} />
+          </p>
           {items.map((doc) => {
             const href = hrefFor(doc)
             return (
@@ -51,7 +58,9 @@ function NavContent({ docs, onNavigate }: { docs: TemplateDocMeta[]; onNavigate?
           })}
         </React.Fragment>
       ))}
-      <p className="template-nav-group">For agents</p>
+      <p className="template-nav-group">
+        <Copy id="text091" />
+      </p>
       <a href="/template/llms.txt" target="_blank" rel="noreferrer">
         llms.txt
       </a>
@@ -69,6 +78,8 @@ export function Sidebar({ docs }: { docs: TemplateDocMeta[] }) {
 
 /** Narrow screens: the header's menu button opens the same navigation in a panel. */
 export function MobileNav({ docs }: { docs: TemplateDocMeta[] }) {
+  const localize = useCopy()
+
   const [open, setOpen] = React.useState(false)
   // Close the panel after navigation; NavContent's links call onNavigate, so no effect is needed.
   return (
@@ -78,7 +89,7 @@ export function MobileNav({ docs }: { docs: TemplateDocMeta[] }) {
         size="none"
         type="button"
         className="template-menu-button"
-        aria-label={open ? 'Close navigation' : 'Open navigation'}
+        aria-label={localize(open ? 'Close navigation' : 'Open navigation')}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >

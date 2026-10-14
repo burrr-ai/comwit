@@ -4,12 +4,12 @@ import { focusWithinField } from '@/lib/interaction'
 import { cn } from '@/lib/utils/cn'
 
 /**
- * Input 을 감싸 prefix/suffix(아이콘·단위 텍스트)를 붙이는 컨테이너.
- * 내부 Input 의 보더/포커스는 중화하고, 포커스 표시는 이 컨테이너가 받는다.
+ * Container wrapping Input with a prefix/suffix such as an icon or unit label.
+ * Neutralizes the inner Input border/focus ring and displays focus on this container.
  *
  * <InputGroup>
  *   <InputAddon><SearchIcon /></InputAddon>
- *   <Input placeholder="검색" />
+ *   <Input placeholder="Search" />
  * </InputGroup>
  */
 function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
@@ -20,7 +20,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
         'flex h-9 w-full items-center rounded-control border border-input bg-transparent transition-[border-color,box-shadow]',
         focusWithinField,
         'has-[input:disabled]:opacity-disabled has-[[aria-invalid=true]]:border-destructive has-[[aria-invalid=true]]:ring-destructive/20',
-        // 내부 Input 은 컨테이너에 chrome 을 넘기고 자신은 보더·링을 끈다.
+        // The inner Input delegates chrome to the container and disables its own border/ring.
         '[&_[data-slot=input]]:h-full [&_[data-slot=input]]:flex-1 [&_[data-slot=input]]:border-0 [&_[data-slot=input]]:bg-transparent [&_[data-slot=input]]:focus-visible:ring-0 [&_[data-slot=input]]:focus-visible:border-transparent',
         className
       )}
@@ -29,7 +29,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
-// InputGroup 안에서 아이콘·단위 텍스트 등 부가 요소를 담는 슬롯.
+// Slot for supplementary elements such as icons and unit labels inside InputGroup.
 function InputAddon({ className, ...props }: React.ComponentProps<'span'>) {
   return (
     <span

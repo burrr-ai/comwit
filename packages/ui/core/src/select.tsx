@@ -1,5 +1,5 @@
 /**
- * comwit-ui — select. Radix Primitives 구현을 그대로 이식한 자체 엔진 (외부 Radix 패키지 의존성 없음).
+ * comwit-ui — select. An in-house port of Radix Primitives with no external Radix package dependency.
  */
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'

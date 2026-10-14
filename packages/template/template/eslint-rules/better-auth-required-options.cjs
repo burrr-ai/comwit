@@ -1,21 +1,17 @@
 /**
  * ESLint rule to enforce required Better Auth options.
- *
- * .claude/skills/auth-setup/assets/auth-server.ts.ref 에 명시된 옵션이
- * 누락된 채로 betterAuth(...) 가 생성되는 것을 막는다.
+ * Prevent betterAuth(...) from omitting options defined by the auth-server.ts.ref asset.
  *
  * Required:
  *   emailAndPassword.enabled === true
  *   account.skipStateCookieCheck === true
- *   advanced.cookiePrefix          (string, 비어있지 않음)
+ *   advanced.cookiePrefix (nonempty string)
  *   advanced.useSecureCookies === true
  *   advanced.defaultCookieAttributes.sameSite === "None"
- *   trustedOrigins                 (배열, 비어있지 않음)
+ *   trustedOrigins (nonempty array)
  *
- * 동작 방식:
- *   - betterAuth(...) 호출을 찾는다.
- *   - 인자가 ObjectExpression 이면 그대로 검사.
- *   - 인자가 Identifier 이면 같은 파일/스코프에서 선언된 ObjectExpression 을 찾아 검사.
+ * Find betterAuth(...) calls and inspect ObjectExpression arguments directly.
+ * For Identifier arguments, resolve the ObjectExpression declared in the same file/scope.
  */
 
 const REQUIRED = [

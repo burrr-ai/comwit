@@ -1,5 +1,8 @@
 'use client'
 
+import { Copy, useCopy } from '@/i18n/copy'
+import { useTranslations } from 'next-intl'
+
 import { Button } from '@comwit/ui-templates/button'
 import { Input } from '@comwit/ui-templates/input'
 import Link from 'next/link'
@@ -24,6 +27,9 @@ function hrefFor(doc: DocMeta) {
 }
 
 function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNavigate?: () => void }) {
+  const copy = useTranslations('Copy')
+  const localize = useCopy()
+
   const pathname = usePathname()
   const router = useRouter()
   const [query, setQuery] = useState('')
@@ -33,7 +39,9 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
   const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
   const matches = (doc: DocMeta) =>
     terms.every((term) =>
-      `${doc.title} ${doc.slug} ${doc.group || ''}`.toLowerCase().includes(term)
+      `${doc.title} ${doc.slug} ${doc.group ? localize(doc.group) : ''}`
+        .toLowerCase()
+        .includes(term)
     )
   const intro = ungrouped.filter(matches)
   const sections = Object.entries(groups)
@@ -96,14 +104,14 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
       <div className="sidebar-search">
         <MagnifyingGlassIcon size={18} aria-hidden="true" />
         <label className="sr-only" htmlFor={inputId}>
-          Find a documentation page
+          <Copy id="text047" />{' '}
         </label>
         <Input
           bare
           ref={input}
           id={inputId}
           type="search"
-          placeholder="Find a page…"
+          placeholder={copy('text048')}
           autoComplete="off"
           spellCheck={false}
           value={query}
@@ -125,7 +133,7 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
             variant="plain"
             size="none"
             type="button"
-            aria-label="Clear page search"
+            aria-label={copy('text049')}
             onClick={() => {
               setQuery('')
               input.current?.focus()
@@ -136,7 +144,7 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
         )}
       </div>
       <div ref={scrollArea} className="docs-nav-scroll">
-        <nav className="docs-nav" aria-label="Documentation">
+        <nav className="docs-nav" aria-label={copy('text050')}>
           {intro.length > 0 && (
             <div className="docs-nav-intro">{intro.map((doc) => docLink(doc, true))}</div>
           )}
@@ -146,17 +154,21 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
               <section className="docs-nav-section" key={title}>
                 <h3>
                   <SectionIcon size={18} weight="duotone" aria-hidden="true" />
-                  {title}
+                  <Copy text={title} />
                 </h3>
                 <div className="docs-nav-items">{docs.map((doc) => docLink(doc))}</div>
               </section>
             )
           })}
-          {results.length === 0 && <p className="sidebar-empty">No pages found.</p>}
+          {results.length === 0 && (
+            <p className="sidebar-empty">
+              <Copy id="text051" />
+            </p>
+          )}
         </nav>
       </div>
       <span className="sr-only" role="status">
-        {query ? `${results.length} documentation pages found` : ''}
+        {query ? copy('pagesFound', { count: results.length }) : ''}
       </span>
       <a className="sidebar-agent" href="/state/llms.txt">
         <FileCodeIcon size={21} weight="duotone" aria-hidden="true" />
@@ -167,7 +179,7 @@ function Navigation({ ungrouped, groups, onNavigate }: SidebarProps & { onNaviga
   )
 }
 
-/** 좁은 화면의 내비 — 헤더의 메뉴 버튼이 열고, 헤더 바로 아래 패널로 뜬다. */
+/** Mobile navigation opens from the header menu, directly below the header. */
 const MobileNavContext = createContext<{ open: boolean; setOpen: (open: boolean) => void }>({
   open: false,
   setOpen: () => undefined,
@@ -179,6 +191,8 @@ export function MobileNavProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function MobileNavButton() {
+  const localize = useCopy()
+
   const { open, setOpen } = useContext(MobileNavContext)
   return (
     <Button
@@ -186,7 +200,7 @@ export function MobileNavButton() {
       size="none"
       type="button"
       className="docs-menu-button"
-      aria-label={open ? 'Close documentation menu' : 'Open documentation menu'}
+      aria-label={localize(open ? 'Close documentation menu' : 'Open documentation menu')}
       aria-expanded={open}
       aria-controls="docs-mobile-nav"
       onClick={() => setOpen(!open)}

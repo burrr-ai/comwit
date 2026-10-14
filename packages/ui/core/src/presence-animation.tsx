@@ -1,27 +1,27 @@
 'use client'
 
 /**
- * comwit-ui — usePresenceAnimation (헤드리스 · 라이브러리 0).
+ * comwit-ui — headless usePresenceAnimation with no library dependencies.
  *
- * 오버레이 파트(Dialog · Popover · DropdownMenu · Select · BottomSheet 의 Content/Overlay)가 들어오고 나가는 움직임을
- * 스프링으로 풀고 브라우저 내장 Web Animations API(`element.animate`)로 재생한다. 첫 열림부터 돌고, 닫힘이 요청되면
- * 파트는 닫힘 스프링이 멎을 때까지 남는다(Presence 가 기다린다). 공개하는 건 이 훅 하나다 — 적분기와 재생은 내부다.
+ * Animates entry/exit of overlay parts (Dialog, Popover, DropdownMenu, Select, and BottomSheet Content/Overlay)
+ * with springs played through the browser's Web Animations API (element.animate). Runs from the first opening;
+ * Presence keeps closing parts mounted until the exit spring settles. Only this hook is public; integration and playback are internal.
  *
  *   const ref = usePresenceAnimation<HTMLDivElement>({
- *     // 진행도 t: 0 = 닫힘, 1 = 열림. 스프링이 t 를 움직이고, 매 프레임의 모습이 키프레임이 된다.
+ *     // Progress t: 0 = closed, 1 = open. The spring moves t; each frame's style becomes a keyframe.
  *     style: (t) => ({ opacity: t, transform: `scale(${0.6 + 0.4 * t})` }),
  *     enter: { duration: 0.28, bounce: 0.1 },
  *     exit: { duration: 0.2 },
  *   })
  *   <Popover.Content asChild><div ref={ref}>…</div></Popover.Content>
  *
- *  - 진행도는 스프링 적분기로 60fps 프레임에 굽고, 그 프레임들을 키프레임으로 넘긴다 — 재생은 합성기가 한다.
- *  - 도중에 방향이 바뀌면 지금 재생 중인 프레임의 **위치와 속도**를 읽어 반대 목표로 다시 굽는다. 속도가 이어지므로
- *    닫히다 다시 열리는 움직임이 멈칫하지 않는다.
- *  - 시작 시각은 WAAPI 가 정한다 — 첫 프레임이 실제로 그려질 때 출발하고(pending play), transform · opacity 는
- *    합성기에서 돌아 그 뒤 메인 스레드가 바빠도(렌즈 맵 생성 등) 끊기지 않는다. 프레임 루프는 따로 없다.
- *  - 끝난 뒤에도 마지막 모습을 유지한다(fill: both) — 파트 자신의 위치는 translate 같은 개별 속성으로 둔다.
- *  - 모습 · 스프링 값은 소비처(템플릿)의 몫이다 — 여기엔 값이 없다.
+ * - Sample spring progress at 60fps and pass the samples as keyframes; the compositor handles playback.
+ * - On a direction change, read the current frame's position and velocity and resample toward the opposite target.
+ *   Continuous velocity prevents hesitation when reopening during exit.
+ * - WAAPI chooses the start time (pending play), beginning when the first frame is actually painted. Transform and
+ *   opacity run on the compositor, remaining smooth when the main thread is busy (for example, generating a lens map). No separate frame loop.
+ * - Keep the final appearance with fill: both; place the part using individual properties such as translate.
+ * - Consumers (templates) own styles and spring values; this engine supplies neither.
  */
 
 import * as React from 'react'
@@ -36,13 +36,13 @@ import {
 import { useLayoutEffect } from './internal/use-layout-effect'
 
 interface PresenceAnimationOptions {
-  /** 진행도 t(0 = 닫힘, 1 = 열림)에서의 모습. 튕기는 스프링이면 t 가 잠깐 1 을 넘는다. */
+  /** Style at progress t (0 = closed, 1 = open). A bouncing spring may briefly push t above 1. */
   style: (t: number) => Keyframe
-  /** 열릴 때의 스프링. 기본 `{ duration: 0.28 }`. */
+  /** Enter spring. Defaults to { duration: 0.28 }. */
   enter?: SpringConfig
-  /** 닫힐 때의 스프링. 기본 `{ duration: 0.2 }`. */
+  /** Exit spring. Defaults to { duration: 0.2 }. */
   exit?: SpringConfig
-  /** 닫힘이 멎어 파트가 사라지기 직전에 불린다(overlay-kit 의 unmount 등). */
+  /** Called just before the part disappears after exit settles (for example, overlay-kit unmount). */
   onExitComplete?: () => void
 }
 
@@ -62,7 +62,7 @@ function usePresenceAnimation<T extends Element = HTMLElement>(
   exitRef.current = onExitComplete
   const runRef = React.useRef<Run | null>(null)
 
-  // 레이아웃 단계에서 시작한다 — 첫 페인트 전에 닫힌 모습이 걸려 번쩍임이 없다.
+  // Start during layout so the closed appearance is applied before the first paint, avoiding a flash.
   useLayoutEffect(() => {
     const finishExit = () => {
       optionsRef.current.onExitComplete?.()
@@ -75,7 +75,7 @@ function usePresenceAnimation<T extends Element = HTMLElement>(
     const { style, enter = ENTER, exit = EXIT } = optionsRef.current
     const target = present ? 1 : 0
 
-    // 지금 그려진 진행도와 속도 — 처음이면 닫힌 자리에서, 도중이면 거기서 이어받는다.
+    // Current progress and velocity: begin closed on first entry, or continue from the active animation.
     const previous = runRef.current
     let from = { position: 0, velocity: 0 }
     if (previous) {
@@ -97,7 +97,7 @@ function usePresenceAnimation<T extends Element = HTMLElement>(
         () => {
           if (runRef.current?.animation === animation) finishExit()
         },
-        () => {} // 다시 열려서 취소됐다 — 새 재생이 이어받는다.
+        () => {} // Canceled because the part reopened; the new playback takes over.
       )
     }
   }, [node, present])

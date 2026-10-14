@@ -1,43 +1,32 @@
 # @comwit/ui-templates
 
-**Comwit UI 의 스타일 레이어** — [`@comwit/ui`](https://www.npmjs.com/package/@comwit/ui) 헤드리스 엔진 위에
-Tailwind 토큰 + `cva` variant 로 **시각만** 입힌 컴포넌트.
+**Comwit UI's visual layer:** components that apply Tailwind tokens and `cva` variants to the [`@comwit/ui`](https://www.npmjs.com/package/@comwit/ui) headless engine.
 
-배포 철학은 **shadcn 에서 영감(inspired)만** 받았다 — "스타일 컴포넌트를 블랙박스 패키지로 설치하는 게 아니라
-소스를 내 프로젝트로 가져와 **소유·수정**한다". 단 **shadcn 툴엔 의존하지 않는다**. 설치는 comwit 자체 CLI
-**[`comwit-ui`](../cli)** 로 한다(수동 복붙 아님 — shadcn 처럼 CLI 를 배포한다).
+The distribution approach is inspired by shadcn: bring component source into your project to **own and customize it**. Installation uses Comwit's own [`comwit-ui`](../cli) CLI, with no dependency on shadcn tooling.
 
-핵심은 **큐레이션 킷**이다 — UI 구성에 필요한 역할마다 최적화된 라이브러리를 고르고(페이지 전환 ssgoi ·
-토스트 sonner · 팝업 overlay-kit · 에디터 tiptap · 테이블 TanStack Table · 달력 react-day-picker ·
-폼 react-hook-form · 채팅 가상화 react-virtuoso), **중성 이름**과 한 벌의 토큰으로 감싸 소스로 설치한다. 라이브러리 자체는 npm 의존성으로
-깔리고, 래퍼는 내 코드가 된다. docs 의 컴포넌트 카드마다 "Built on …" 으로 원 라이브러리에 링크한다.
+This is a curated kit. Each role uses a suitable library: ssgoi for page transitions, sonner for toasts, overlay-kit for popups, tiptap for editing, TanStack Table for tables, react-day-picker for calendars, react-hook-form for forms, and react-virtuoso for chat virtualization. Neutral component names and shared tokens wrap these engines. Engines install as npm dependencies; wrappers become your code. Documentation cards link to each underlying library with “Built on …”.
 
-## 설치
+## Installation
 
 ```bash
-npx comwit-ui@latest init          # comwit.json + 토큰 계약 배선 + 베이스 deps
-npx comwit-ui@latest add button    # 컴포넌트 + registryDependencies + npm deps
+npx comwit-ui@latest init          # comwit.json, token wiring, and base dependencies.
+npx comwit-ui@latest add button    # Component, registry dependencies, and npm dependencies.
 ```
 
-- **시각 컴포넌트(.tsx)** → CLI 가 내 `components/ui/` 로 복사(내 소유, 자유 수정) + import 경로를 내 alias 로 재작성.
-- **`@comwit/ui`**(헤드리스 엔진) → CLI 가 npm 으로 설치(동작·a11y·IME·포커스·달력/시간·에디터 로직).
-- **토큰 계약** → `init` 이 `comwit-tokens.css` 를 쓰고 전역 CSS 에 `@import` 배선. 기본은 컴윗 블루 + Pretendard이며 리브랜딩은 `--brand` 계열을 덮는다.
-  성격(직각/둥글/그림자/모션)은 `--radius-scale` · `--border-width` · `--elevation-*` · `--duration-*` 같은 L0 노브로.
-  다크는 `.dark` 클래스 하나. **프리셋 테마는 싣지 않는다** — 토큰만 싣고 쓰는 쪽이 `:root` 에서 덮는다. 컴포넌트 수정 0.
-  → 전체 토큰 표 · 노브 영향 범위: [루트 README](../../README.md#토큰-계약-테마--커스터마이징)
+- **Visual components (.tsx):** copied to your `components/ui/` with imports rewritten to your aliases. Edit them freely.
+- **`@comwit/ui`:** installed from npm for behavior, accessibility, IME, focus, calendar/time, and editor logic.
+- **Token contract:** `init` writes `comwit-tokens.css` and imports it into global CSS. Defaults to Comwit blue and Pretendard. Rebrand through `--brand` values; adjust corners, borders, shadows, and motion through L0 controls such as `--radius-scale`, `--border-width`, `--elevation-*`, and `--duration-*`. Dark mode uses one `.dark` class. No preset themes: consumers override tokens without editing components. See the [UI token contract](../README.md#token-contract-theming-and-customization).
 
-CLI 명령/플래그/`comwit.json`/동작 방식 상세는 **[`comwit-ui` README](../cli/README.md)** 참고.
+See the [CLI README](../cli/README.md) for commands, flags, `comwit.json`, and installation behavior.
 
-## 프로바이더 배선
+## Providers
 
-`popup.confirm/alert/sheet` 는 [overlay-kit](https://overlay-kit.slash.page/), 토스트는
-[sonner](https://sonner.emilkowal.ski/) 위에 우리 유리 `<Toast>` 를 꽂는다(`toast.tsx` 의 `toast()` 로 부른다 —
-sonner 의 toast 를 직접 부르면 기본 스킨으로 뜬다). 앱 루트에 한 번 마운트한다:
+`popup.confirm/alert/sheet` uses [overlay-kit](https://overlay-kit.slash.page/). Toasts use [sonner](https://sonner.emilkowal.ski/) with our glass `<Toast>`. Call `toast()` from the installed `toast.tsx`; importing Sonner's toast directly displays its default skin. Mount these once at the app root:
 
 ```tsx
 'use client'
 import { OverlayProvider } from 'overlay-kit'
-import { Toaster } from '@/components/ui/toast' // toast 컴포넌트도 add 대상
+import { Toaster } from '@/components/ui/toast' // Install the toast component too.
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -49,18 +38,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
-## 페이지 전환
+## Page transitions
 
-`page-transition` 은 라우터를 바꾸지 않고 라우트 전환에 네이티브 앱 모션(드릴 · 시트 · 슬라이드 …)을 입힌다.
-엔진은 [`@ssgoi/react`](https://ssgoi.dev) 이고, 이름은 전부 중성적이다 — `PageTransition`(프로바이더) ·
-`PageBoundary`(라우트가 소유한 DOM 경계) · `RouteBoundary`(라우터의 pathname 을 대신 읽는 경계).
+`page-transition` adds native app-style drill, sheet, and slide motion without replacing the router. The engine is [`@ssgoi/react`](https://ssgoi.dev), wrapped in neutral names: `PageTransition` (provider), `PageBoundary` (route-owned DOM boundary), and `RouteBoundary` (reads the router pathname).
 
-`comwit-ui add page-transition` 이 `package.json` 에서 라우터를 감지해 `route-boundary.tsx` 구현체를 고른다
-(`next` → App Router · `react-router(-dom)` · `@tanstack/react-router` · 그 외 → `path` prop 을 받는 generic).
-`--router <name>` 으로 직접 지정할 수 있다. 소스는 `src/routers/route-boundary.<variant>.tsx`.
+`comwit-ui add page-transition` detects the router in `package.json` and installs a `route-boundary.tsx` variant: Next.js App Router, React Router, TanStack Router, or generic with a `path` prop. Use `--router <name>` to override. Variant source lives in `src/routers/route-boundary.<variant>.tsx`.
 
 ```tsx
-// app/layout.tsx — 라우팅되는 영역을 한 번 감싼다
+// app/layout.tsx: wrap the routed area once.
 <PageTransition
   config={{ transitions: [{ on: '/posts/**', except: '/posts', transition: drill() }] }}
 >
@@ -68,35 +53,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
 </PageTransition>
 ```
 
-경계는 key 가 바뀌는 DOM 요소 하나다(`PageBoundary path=…`). React 가 옛 페이지를 언마운트하면 엔진이 그 노드를 붙잡아
-새 페이지 위에 absolute 로 놓고 둘을 함께 움직인다 — 그래서 라우터 없이 `useState` 값으로도 그대로 돈다(docs 의 폰 데모가 그 방식이다).
+A boundary is one DOM element whose key changes (`PageBoundary path=…`). When React unmounts the old page, the engine retains that node, places it absolutely above the new page, and animates both. This also works with `useState` and no router, as in the documentation phone demos.
 
-앱바는 페이지 안(경계 안)에 둔다 — 페이지와 함께 움직인다. 탭바가 살아남는 쉘은 바깥 `RouteBoundary` 에 `routeKey` 를
-고정하고 안쪽 경계가 페이지를 바꾼다(쉘에는 탭바만 남긴다). 안쪽 경계 위에 다른 크롬을 두는 구조라면 그 경계를 `relative`
-부모로 감싸야 한다 — 나가는 페이지가 가장 가까운 positioned 조상의 윗변에 놓이기 때문이다. `hero()` 는 두 페이지의 같은
-요소에 `data-hero-exit-key` / `data-hero-enter-key` 와 `data-hero-radius` 를 단다.
-규칙(`on/except` · `from/to` · `ordered`)·프리셋 옵션·스크롤 복원·트러블슈팅은 엔진 문서 [ssgoi.dev](https://ssgoi.dev/docs) 를 그대로 따른다(설정 모양이 같고 컴포넌트 이름만 다르다).
+Keep the app bar inside the page boundary so it moves with the page. For a persistent tab bar, fix the outer `RouteBoundary`'s `routeKey` and change pages in an inner boundary, leaving the tab bar in the outer shell. If other chrome appears above the inner boundary, wrap it in a `relative` parent: exiting pages align to the nearest positioned ancestor's top edge. For `hero()`, add matching `data-hero-exit-key` / `data-hero-enter-key` and `data-hero-radius` to shared elements.
 
-## 바텀시트
+Rules (`on/except`, `from/to`, `ordered`), preset options, scroll restoration, and troubleshooting follow the [engine documentation](https://ssgoi.dev/docs). Configuration is the same; wrapper component names differ.
 
-`bottom-sheet` 는 아래에서 올라오는 시트다. 위의 핸들을 끌어내리면(또는 탭하면) 닫히고, 본문 스크롤러가 맨 위일 때는 본문을
-끌어도 따라온다. 끌기·거리/속도 판정·안쪽 스크롤 양보는 `@comwit/ui` 의 `BottomSheet` 프리미티브가 갖고, 템플릿은 프리미티브가
-쓰는 `--sheet-drag` 를 translate 로, `--sheet-drag-progress` 를 스크림 불투명도로 그릴 뿐이다. `popup.sheet()` 도 이 시트를 띄운다.
+## Bottom sheets
 
-## 채팅
+`bottom-sheet` rises from the bottom. Drag or tap its top handle to close. Dragging the body also moves the sheet when the body scroller is at the top. The `@comwit/ui` `BottomSheet` primitive owns dragging, distance/velocity thresholds, and nested-scroll handoff. The template maps `--sheet-drag` to translation and `--sheet-drag-progress` to scrim opacity. `popup.sheet()` opens the same sheet.
 
-`chat` 은 헤더 · 메시지 · 컴포저 세로 3단을 컴파운드 파트로 싣는다. `Chat` 이 부모를 채우고(부모에 높이가 있어야
-한다: `h-dvh` · `flex-1 min-h-0`), `ChatMessages` 가 [react-virtuoso](https://virtuoso.dev) 로 가상화한 목록이다.
-동작(가상화 · 스크롤 규칙 · 안 읽음 카운트 · Enter/IME · 자동 높이)은 전부 `@comwit/ui` 의 `Chat` 프리미티브가 갖고,
-템플릿 파일은 파트를 조립해 `data-tone` · `data-align` 에 토큰을 입힐 뿐이다 — 스타일을 바꿔도 동작은 안 깨진다.
-데이터 모양은 강제하지 않는다 — `items` 는 무엇이든, `isOwn` 이 "내 메시지" 를 가른다(기본 `role === 'user'`).
+## Chat
 
-`mode` 가 스크롤 규칙을 정한다:
+`chat` provides compound header, message, and composer sections. `Chat` fills its parent, which needs a height such as `h-dvh` or `flex-1 min-h-0`. `ChatMessages` is virtualized by [react-virtuoso](https://virtuoso.dev).
 
-- **messenger** — 사람과의 대화. 내 메시지는 언제나 바닥으로, 상대 메시지는 바닥에 있을 때만 따라간다.
-  위로 올라가 읽는 중이면 안 읽은 개수를 단 유리 알약(`ChatScrollToBottom`)이 뜬다.
-- **assistant** — AI. 보낸 메시지가 **맨 위로 올라가 붙고** 답변이 그 아래로 흘러내린다(아래 여백은 답변이 채우며
-  줄어들어 튀지 않는다). 답변이 화면을 넘기면 바닥에 있을 때만 따라간다. 왼쪽 말풍선은 면 없는 `plain` 톤이 기본.
+The `@comwit/ui` Chat primitive owns virtualization, scroll rules, unread counts, Enter/IME handling, and automatic height. Templates assemble parts and apply tokens using `data-tone` and `data-align`. Data shape is unrestricted: `items` accepts your model, and `isOwn` identifies your messages, defaulting to `role === 'user'`.
+
+`mode` controls scrolling:
+
+- **messenger:** own messages always scroll to the bottom; incoming messages follow only when already at the bottom. While reading earlier messages, a glass `ChatScrollToBottom` pill displays the unread count.
+- **assistant:** the sent message anchors at the top and the answer grows beneath it. Bottom space shrinks as the answer fills it, preventing jumps. Answers longer than the viewport follow only when already at the bottom. Responses default to the surface-free `plain` tone.
 
 ```tsx
 <div className="h-dvh">
@@ -127,50 +103,39 @@ export function Providers({ children }: { children: React.ReactNode }) {
 </div>
 ```
 
-`ChatComposer` 는 Enter 로 보내고 Shift+Enter 로 줄바꿈하며(한글 조합 중 Enter 는 무시), 자식 없이 쓰면 입력 + 보내기
-버튼을 그리고 `ChatComposerInput` · `ChatComposerActions` · `ChatComposerSubmit` 으로 직접 조립할 수도 있다.
-톤은 전부 토큰이다 — 내 말풍선 `bg-primary` · 상대 `bg-muted` · 컴포저 면 `rounded-sheet` + `shadow-message`.
+`ChatComposer` sends with Enter and inserts a newline with Shift+Enter, ignoring Enter during IME composition. With no children it renders an input and send button; compose your own layout with `ChatComposerInput`, `ChatComposerActions`, and `ChatComposerSubmit`. Visuals use tokens: own bubbles `bg-primary`, others `bg-muted`, and composer `rounded-sheet` + `shadow-message`.
 
-## 사용
+## Usage
 
 ```tsx
-import { Button } from '@/components/ui/button' // CLI 가 복사한 경로
+import { Button } from '@/components/ui/button' // Path copied by the CLI.
 
 ;<Button variant="secondary" size="lg">
   Save
 </Button>
 ```
 
-동작·a11y·IME·포커스·달력/시간 로직은 전부 `@comwit/ui`(엔진)가 소유하고, 이 파일은 cva 로 **시각/variant 만** 입힌다.
-그래서 컴포넌트를 열어 Tailwind 클래스를 마음대로 고쳐도 동작은 안 깨진다.
+Behavior, accessibility, IME, focus, and calendar/time logic live in `@comwit/ui`. The installed file adds visual variants with cva, so changing Tailwind classes does not replace behavior.
 
-## 컴포넌트 (44 + popup)
+## Components
 
-docs 갤러리와 같은 묶음 — 컴윗 특화 UX 가 먼저, 기본형이 마지막.
+The same groups as the documentation gallery, with specialized Comwit experiences first:
 
-- **모바일 앱** — app-shell(AppShell · TabShell, + tab-bar · route-boundary — 라우터 감지 변형) · app-screen · app-bar · bottom-nav · page-transition · pull-to-refresh · drag-scroller
-- **채팅** — chat(`Chat` · `ChatHeader` · `ChatMessages`(가상화) · `ChatMessage` · `ChatBubble` · `ChatTyping` · `ChatComposer` …)
-- **유리** — glass(`Glass` · `GlassSurface` · `GlassButton`) · dropdown-menu · popover · (dialog · sheet · popup · 토스트도 같은 굴절 유리 — 스크림 위라 `dense`)
-- **알림** — toast(`Toaster` · `toast()` · `Toast`) · `lib/popup`(confirm · alert · sheet) · alert · empty-state
-- **피커** — date-picker · time-picker · month-picker (데스크톱 팝오버 · 모바일 바텀시트) · calendar
-- **선택** — segmented-control · chip · checkbox · radio-group · pager
-- **폼·데이터** — text-field · autocomplete · select · form · data-table · editor
-- **기본형** — button · badge · input · input-group · textarea · label · switch · tabs · accordion · collapsible ·
-  dialog · sheet · card · table · avatar · separator · skeleton · pagination
+- **Mobile apps:** app-shell (`AppShell`, `TabShell`, tab-bar, and route-boundary with router variants), app-screen, app-bar, bottom-nav, page-transition, pull-to-refresh, drag-scroller.
+- **Chat:** `Chat`, `ChatHeader`, virtualized `ChatMessages`, `ChatMessage`, `ChatBubble`, `ChatTyping`, `ChatComposer`, and related parts.
+- **Glass:** `Glass`, `GlassSurface`, `GlassButton`, dropdown-menu, popover. Dialogs, sheets, popups, and toasts use the same refractive glass with dense tint above scrims.
+- **Feedback:** toast (`Toaster`, `toast()`, `Toast`), `lib/popup` (confirm, alert, sheet), alert, empty-state.
+- **Pickers:** date-picker, time-picker, month-picker (desktop popovers/mobile sheets), calendar.
+- **Selection:** segmented-control, chip, checkbox, radio-group, pager.
+- **Forms and data:** text-field, autocomplete, select, form, data-table, editor.
+- **Basics:** button, badge, input, input-group, textarea, label, switch, tabs, accordion, collapsible, dialog, sheet, card, table, avatar, separator, skeleton, pagination.
 
-공용: `lib/utils`(토큰을 아는 `cn`) · `lib/interaction`(focusRing 등) · `lib/popup`(overlay-kit 래퍼).
-동작 훅은 엔진이 내보낸다 — `import { ScrollChromeProvider, useScrollChrome, useMobile } from '@comwit/ui'`
-(앱바 reveal · 바텀내비 compact 가 공유하는 스크롤 의도, 모바일 감지). 복사할 `hooks/` 파일은 없다.
+Shared helpers: `lib/utils` (token-aware `cn`), `lib/interaction` (focusRing and related classes), and `lib/popup` (overlay-kit wrapper).
 
-**동작은 프리미티브, 템플릿은 스타일.** 앱바(`AppBar.Root`) · 바텀내비(`BottomNav.Root/Item`) · 드래그 스크롤러
-(`DragScroller.Root/Track`) · 당겨서 새로고침(`PullToRefresh.Root/Scroller/Indicator`) · 앱 셸(`AppShell.Root/Scroller/Indicator` —
-유일한 스크롤러 · 스크롤 의도 · 새로고침 한 묶음) · 뒤로가기 깊이(`NavDepthProvider`) · 채팅(`Chat.*`) · 유리 렌즈
-(`useGlassLens`)의 JS 는 `@comwit/ui` 에 있고, 템플릿은 프리미티브가 방출하는 `data-state` · `data-tone` 같은
-속성에 토큰을 입힌다. 새 컴포넌트를 짤 때도 같은 규칙이다: 제스처·스크롤·키보드 같은 동작은 코어에 옵션으로,
-템플릿에는 className 과 슬롯 조립만.
+Behavior hooks come from the engine: `import { ScrollChromeProvider, useScrollChrome, useMobile } from '@comwit/ui'`. They provide shared app-bar/bottom-nav scroll intent and mobile detection. There are no hook files to copy.
 
-피커·페이저·데이터 테이블의 표시 문구는 영어가 기본이고 `locale`·`labels` 로 바꾼다
-(예: `<DatePicker locale="ko-KR" labels={{ today: '오늘', clear: '지우기' }} />`).
+**Primitives own behavior; templates own styling.** App bars, bottom navigation, drag scrollers, pull-to-refresh, app shells, navigation depth, chat, and glass lenses all keep JavaScript behavior in `@comwit/ui`. Templates apply tokens to state attributes. Follow the same rule for new components: gestures, scrolling, and keyboard behavior become core options; templates contain classes and slot composition.
 
-> 카탈로그(`apps/ui-dev`, http://localhost:3007)와 스토리북(`apps/storybook`, http://localhost:6008)에서
-> variant별로 미리 볼 수 있다.
+Picker, pager, and table labels default to English. Override `locale` and `labels` for other languages, or install Korean defaults with `comwit-ui init --locale ko`. The installed `lib/ui-text.ts` owns default text; app-level localization can pass translated props.
+
+Preview variants in the UI catalog (`apps/ui-dev`, http://localhost:3007) and Storybook (`apps/storybook`, http://localhost:6008).

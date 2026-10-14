@@ -1,50 +1,19 @@
+import { getLocale } from 'next-intl/server'
+
+import { Copy } from '@/i18n/copy'
+import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { getTemplateDocs } from '@/lib/template-docs'
 import { CopyCommand } from './_components/copy-command'
 import { SliceDiagram } from './_components/slice-diagram'
 
-// 개요는 설명하지 않는다 — 강점만 한눈에. 구조·원리·이유는 "How it works" 문서가 맡는다.
-const STRENGTHS: { title: string; body: React.ReactNode }[] = [
-  {
-    title: 'Build like a developer, without being one.',
-    body: (
-      <>
-        <code>AGENTS.md</code>, an <code>.ai.md</code> beside every layer and one-time skills (
-        <code>app-setup</code>, <code>auth-setup</code>, <code>seo-optimize</code>) tell Claude
-        Code, Codex or Antigravity where things go and how they are written. Your prompts stay about
-        the product.
-      </>
-    ),
-  },
-  {
-    title: 'Full-stack in one repo.',
-    body: (
-      <>
-        The api layer is the backend: typed server functions over the kit’s own transport — parallel
-        calls, only <code>ActionError</code> reaches the browser, Server Components call them with
-        no HTTP hop. No second service to run.
-      </>
-    ),
-  },
-  {
-    title: 'Maintainable for a hundred years.',
-    body: (
-      <>
-        Screens sliced by service and domain, four layers that depend one way. A change to posts
-        touches the post slice and nothing else.
-      </>
-    ),
-  },
-  {
-    title: 'Rules that enforce themselves.',
-    body: (
-      <>
-        Two dozen Oxlint rules fail <code>pnpm run validate</code> when a boundary is crossed,
-        before anyone reviews.
-      </>
-    ),
-  },
-]
+// Show strengths at a glance here; structure, principles, and rationale belong in How it works.
+const STRENGTHS = [
+  { title: 'Build like a developer, without being one.', body: 'strengthAgents' },
+  { title: 'Full-stack in one repo.', body: 'strengthStack' },
+  { title: 'Maintainable for a hundred years.', body: 'text064' },
+  { title: 'Rules that enforce themselves.', body: 'strengthRules' },
+] as const
 
 const CHOSEN: { name: string; note?: string; code?: boolean }[] = [
   { name: 'Next.js 16 App Router', note: 'Cache Components, service worker, offline page' },
@@ -59,84 +28,108 @@ const YOURS: React.ReactNode[] = [
   'The database',
   'The bucket',
   <>
-    The hosting (or <code>--opennext</code> for Cloudflare Workers)
+    <Copy id="text068" /> <code>--opennext</code> <Copy id="text070" />{' '}
   </>,
   'The brand tokens',
   'The UI language (Korean by default, one file)',
 ]
 
-export default function TemplateOverview() {
-  const guides = getTemplateDocs().filter((doc) => doc.group === 'How it works')
+export default async function TemplateOverview() {
+  const copy = await getTranslations('Copy')
+
+  const guides = getTemplateDocs(await getLocale()).filter((doc) => doc.group === 'How it works')
 
   return (
     <div className="tp-overview">
       <header className="tp-hero">
         <p className="tp-kicker">
-          <code>create-comwit</code> AI-native · Next.js full-stack
+          <code>create-comwit</code> <Copy id="text072" />{' '}
         </p>
         <h1>
-          <span>One command.</span> <span>A codebase your agent can’t get wrong.</span>
+          <span>
+            <Copy id="text073" />
+          </span>{' '}
+          <span>
+            <Copy id="text074" />
+          </span>
         </h1>
         <p className="tp-lead">
-          Next.js as the whole stack, with the architecture, the agent rulebook and the lint rules
-          that enforce it in one project — so a non-developer with a coding agent builds like a
-          senior team, and the code stays maintainable for a hundred years.
+          <Copy id="text075" />{' '}
         </p>
         <div className="tp-hero-actions">
           <CopyCommand command="npm create comwit@latest my-app" />
           <div className="tp-hero-links">
             <Link href="/template/docs/getting-started" className="tp-button">
-              Install
+              <Copy id="text076" />{' '}
             </Link>
             <Link href="/template/docs/architecture" className="tp-link">
-              How it works
+              <Copy id="text077" />{' '}
             </Link>
           </div>
         </div>
       </header>
 
-      <ul className="tp-strengths" aria-label="What the kit gives you">
+      <ul className="tp-strengths" aria-label={copy('text078')}>
         {STRENGTHS.map((item) => (
           <li key={item.title}>
-            <h2>{item.title}</h2>
-            <p>{item.body}</p>
+            <h2>
+              <Copy text={item.title} />
+            </h2>
+            <p>{copy.rich(item.body, { code: (chunks) => <code>{chunks}</code> })}</p>
           </li>
         ))}
       </ul>
 
       <section className="tp-section" aria-labelledby="tp-slices-title">
         <h2 id="tp-slices-title" className="tp-section-title">
-          One slice per domain. Four layers inside it.
+          <Copy id="text079" />{' '}
         </h2>
         <figure className="tp-figure">
           <SliceDiagram />
           <figcaption className="tp-caption">
-            <code>page → state → api → repository</code>. Never backwards, never around.
+            <code>page → state → api → repository</code>
+            <Copy id="text081" />{' '}
           </figcaption>
         </figure>
       </section>
 
       <section className="tp-section" aria-labelledby="tp-kit-title">
         <h2 id="tp-kit-title" className="tp-section-title">
-          Inside the kit
+          <Copy id="text082" />{' '}
         </h2>
         <div className="tp-kit">
           <div>
-            <h3>Chosen</h3>
+            <h3>
+              <Copy id="text083" />
+            </h3>
             <ul className="tp-chosen">
               {CHOSEN.map((item) => (
                 <li key={item.name}>
-                  {item.code ? <code>{item.name}</code> : <strong>{item.name}</strong>}
-                  {item.note && <span>{item.note}</span>}
+                  {item.code ? (
+                    <code>
+                      <Copy text={item.name} />
+                    </code>
+                  ) : (
+                    <strong>
+                      <Copy text={item.name} />
+                    </strong>
+                  )}
+                  {item.note && (
+                    <span>
+                      <Copy text={item.note} />
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <h3>Yours</h3>
+            <h3>
+              <Copy id="text084" />
+            </h3>
             <ul className="tp-open">
               {YOURS.map((item, index) => (
-                <li key={index}>{item}</li>
+                <li key={index}>{typeof item === 'string' ? <Copy text={item} /> : item}</li>
               ))}
             </ul>
           </div>
@@ -145,7 +138,7 @@ export default function TemplateOverview() {
 
       <section className="tp-section" aria-labelledby="tp-read-title">
         <h2 id="tp-read-title" className="tp-section-title">
-          Read on
+          <Copy id="text085" />{' '}
         </h2>
         <ul className="tp-read">
           {guides.map((doc) => (
@@ -160,8 +153,12 @@ export default function TemplateOverview() {
       </section>
 
       <footer className="tp-footer">
-        <Link href="/state/docs">State docs</Link>
-        <Link href="/ui">UI docs</Link>
+        <Link href="/state/docs">
+          <Copy id="text086" />
+        </Link>
+        <Link href="/ui">
+          <Copy id="text087" />
+        </Link>
         <a href="https://github.com/burrr-ai/comwit" target="_blank" rel="noreferrer">
           GitHub
         </a>

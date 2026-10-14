@@ -16,8 +16,8 @@ const usage = 'node <skill>/scripts/setup.mjs --tabs <tabs.json> [--pwa <pwa.jso
 const UI_COMPONENTS = ['app-shell', 'app-screen', 'bottom-sheet', 'button']
 // Registry items above exist from these versions on. The CLI is bin-only, so it resolves by its entry file.
 const MIN_VERSIONS = {
-  '@comwit/ui': { min: [0, 4], entry: '@comwit/ui' },
-  'comwit-ui': { min: [0, 6], entry: 'comwit-ui/src/index.js' },
+  '@comwit/ui': { min: [0, 6], entry: '@comwit/ui' },
+  'comwit-ui': { min: [0, 7], entry: 'comwit-ui/src/index.js' },
 }
 
 /** Package "exports" may hide package.json, so walk up from the resolved entry to the package root. */
@@ -56,10 +56,10 @@ async function main() {
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
   const declared = { ...pkg.dependencies, ...pkg.devDependencies }
   const requireFromProject = createRequire(pkgPath)
-  for (const name of ['@comwit/ui', '@ssgoi/react', 'lucide-react', 'comwit-ui']) {
+  for (const name of ['@comwit/ui', '@ssgoi/react', 'comwit-ui']) {
     if (!declared[name]) throw new Error(`Required package is not declared: ${name}`)
   }
-  for (const name of ['@comwit/ui', '@ssgoi/react', 'lucide-react']) requireFromProject.resolve(name)
+  for (const name of ['@comwit/ui', '@ssgoi/react']) requireFromProject.resolve(name)
   for (const [name, { min: [major, minor], entry }] of Object.entries(MIN_VERSIONS)) {
     const version = installedVersion(requireFromProject, name, entry)
     const [a, b] = version.split('.').map(Number)
@@ -70,7 +70,8 @@ async function main() {
   if (!fs.existsSync(path.join(projectRoot, 'comwit.json'))) {
     throw new Error('comwit.json is missing. Run pnpm exec comwit-ui init first.')
   }
-  const icons = requireFromProject('lucide-react')
+  // Tab icons come from the kit's own set; a name is the export without its `Icon` suffix (House, Search …).
+  const icons = requireFromProject('@comwit/ui/icons')
   const tabs = JSON.parse(fs.readFileSync(path.resolve(projectRoot, tabsPath), 'utf8'))
   if (!Array.isArray(tabs) || tabs.length < 2 || tabs.length > 5) {
     throw new Error('tabs.json must contain 2–5 tabs with href, label, icon')
@@ -83,8 +84,8 @@ async function main() {
     }
     if (typeof tab.label !== 'string' || !tab.label.trim() ||
         typeof tab.icon !== 'string' || !/^[A-Z][A-Za-z0-9]*$/.test(tab.icon) ||
-        !Object.hasOwn(icons, tab.icon) || !icons[tab.icon]?.render) {
-      throw new Error('Each tab needs a nonempty label and an exported Lucide icon name')
+        typeof icons[`${tab.icon}Icon`] !== 'function') {
+      throw new Error('Each tab needs a nonempty label and a Comwit icon name from @comwit/ui/icons (without the Icon suffix, e.g. House)')
     }
     hrefs.add(tab.href)
   }
@@ -122,11 +123,11 @@ async function main() {
     const relative = path.join('src', path.relative(assetRoot, source))
     let content = fs.readFileSync(source, 'utf8')
     if (path.basename(source) === 'app-tabs.ts') {
-      const imports = [...new Set(tabs.map((tab) => tab.icon))].join(', ')
-      content = content.replace("import { Home } from 'lucide-react'", `import { ${imports} } from 'lucide-react'`)
+      const imports = [...new Set(tabs.map((tab) => `${tab.icon}Icon`))].join(', ')
+      content = content.replace("import { HouseIcon } from '@comwit/ui/icons'", `import { ${imports} } from '@comwit/ui/icons'`)
       content = content.replace(
-        "  { href: '/', label: '홈', icon: Home },",
-        tabs.map((tab) => `  { href: ${JSON.stringify(tab.href)}, label: ${JSON.stringify(tab.label)}, icon: ${tab.icon} },`).join('\n'),
+        "  { href: '/', label: '홈', icon: HouseIcon },",
+        tabs.map((tab) => `  { href: ${JSON.stringify(tab.href)}, label: ${JSON.stringify(tab.label)}, icon: ${tab.icon}Icon },`).join('\n'),
       )
     }
     if (!fs.existsSync(absolute(relative))) write(relative, content)

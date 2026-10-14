@@ -1,143 +1,136 @@
 # Design Guide
 
-> **화면 작업 전에 이 문서를 가장 먼저 읽는다. 디자인 방향이 정해지거나 바뀌면 코드보다 이 문서를 먼저 고친다.**
-> 아래 원칙은 프로젝트가 아직 자기 디자인 언어를 갖지 않았을 때의 기본값이다. 브랜드와 제품 성격에 맞게 바꿀 수 있지만,
-> 예외가 생기면 이 문서에 이유와 새 원칙을 남겨 다음 화면도 같은 판단을 하게 한다.
-> 프로젝트 디자인과 페이지 상태는 `pnpm storybook`의 최상단 **디자인 시스템** 및 사용자 유형별 페이지에서 확인한다. `/design` 앱 라우트는 사용하지 않는다. 작성 규칙은 [`.storybook/stories/.ai.md`](../../.storybook/stories/.ai.md)를 따른다.
-> 기본 컴포넌트 사용법 참고는 comwit-ui 갤러리(https://library.comwit.io/ui/components)와 테마 페이지(https://library.comwit.io/ui/theming)에서 한다.
+> **Read this first before working on screens. When design direction is chosen or changes, update this document before the code.**
+> These defaults apply until the project has its own design language. Adapt them to the brand and product, recording the reason and replacement principle for any exception so later screens follow the same decisions.
+> Review the design system and page states in `pnpm storybook`, under the top-level **Design system** and user-type pages. Do not use a `/design` app route. Follow [`.storybook/stories/.ai.md`](../../.storybook/stories/.ai.md).
+> Refer to the [comwit-ui gallery](https://library.comwit.io/ui/components) and [theming documentation](https://library.comwit.io/ui/theming) for component usage.
 
----
+## Project concept
 
-## 프로젝트 컨셉
+_The base template has no product-specific voice or mood yet. Fill in these two lines when the project is defined._
 
-_(베이스 템플릿이므로 제품 고유의 보이스와 무드는 미정이다. 프로젝트가 정해지면 이 두 줄부터 채운다.)_
+- **Voice**: _For example: courteous and direct / friendly and casual / expert._
+- **Mood**: _For example: minimal and spacious / colorful and playful / dense data dashboard._
 
-- **말투(보이스)**: _(예: 단정한 존댓말 / 친근한 반말 / 전문가 톤)_
-- **느낌(무드)**: _(예: 미니멀·여백 중심 / 컬러풀·플레이풀 / 밀도 높은 데이터 대시보드)_
+Even before the concept is defined:
 
-컨셉을 정하기 전에도 다음 기본 방향은 유지한다.
+- Keep only content people need to read, using short, clear sentences.
+- Prioritize generous spacing and clear typography hierarchy. Decoration cannot replace information structure.
+- Reserve brand color for primary actions and meaningful emphasis.
+- Separate content with spacing, background tones, and typography instead of repeated cards, shadows, and borders.
 
-- 사람이 실제로 읽어야 하는 내용만 남기고, 짧고 단정한 문장으로 쓴다.
-- 넓은 여백과 분명한 타이포 위계로 먼저 읽히게 한다. 장식은 정보 구조를 대신하지 않는다.
-- 브랜드색은 핵심 행동과 정말 강조할 대상에 아껴 쓴다.
-- 카드·그림자·보더를 반복해 단락을 만드는 대신 여백, 배경 톤, 타이포로 구획한다.
+## Screen editing principles
 
-## 화면 편집 원칙
+### Every design choice needs a purpose
 
-### 모든 디자인에는 목적이 있어야 한다
+- Each element must contribute to **information hierarchy, comprehension, action, state/feedback, or brand impression**.
+- Before adding an element, explain why it is needed and what removing it would lose. If neither has an answer, omit or remove it.
+- Beauty can serve an intentional brand impression, but does not justify harming readability, usability, or speed.
+- Use icons only when they communicate faster than text or save space. Remove decorative icons that still require text to understand.
+- Use borders, shadows, and gradients to communicate boundaries, depth, state, or visual flow. Do not add them just because a screen looks empty.
+- Use motion to clarify state changes, spatial relationships, direction, and interaction results. Avoid endless decoration and unrelated scroll effects.
 
-- 화면에 놓는 요소는 최소한 **정보 위계, 내용 이해, 행동 유도, 상태·피드백, 브랜드 인상** 중 하나에 실제로 기여해야 한다.
-- 요소를 넣기 전에 “왜 필요한가?”와 “없애면 무엇이 나빠지는가?”를 답한다. 둘 다 설명할 수 없으면 넣지 않거나 삭제한다.
-- 예쁘게 보이게 하는 것도 의도된 브랜드 인상을 만들 때는 목적이 될 수 있다. 다만 읽기·행동·속도를 해치면서까지 유지할 이유는 되지 않는다.
-- 아이콘은 글보다 빨리 알아보게 하거나 공간을 절약할 때만 쓴다. 텍스트를 다시 읽어야 이해되는 장식 아이콘은 뺀다.
-- 보더·그림자·그라데이션은 구획, 깊이, 상태, 시선 흐름을 설명할 때만 쓴다. 단순히 화면이 비어 보인다는 이유로 추가하지 않는다.
-- 모션은 상태 변화, 공간 관계, 진행 방향, 조작 결과를 이해시키는 데만 쓴다. 계속 움직이는 장식이나 기능과 무관한 스크롤 효과는 뺀다.
+After implementation, **review by removing elements one at a time** before considering additions. Choose the simpler version when meaning and usability remain intact.
 
-완성 뒤에는 요소를 더하는 검토보다 **하나씩 빼보는 검토**를 먼저 한다. 제거해도 의미와 사용성이 유지되면 더 단순한 쪽을 선택한다.
+### Do not add copy that narrates the UI
 
-### UI를 부연 설명하는 텍스트를 붙이지 않는다
+- **No small text above headings.** Do not introduce headings with eyebrows, English subtitles, introductory labels, or decorative numbers.
+- **No supporting copy explaining sections, buttons, or visual effects.** Avoid phrases such as "See the features below," "Click to navigate," or "Appears on scroll."
+- **Do not solve weak comprehension or emphasis solely by adding explanations.** First use size and weight hierarchy, alignment, grouping, spacing, contrast, familiar icons, real previews, selection/progress states, and interaction feedback.
+- Make primary actions clear through button placement, size, and contrast; show selection through checks and selected styles; show progress through step placement and current position. Never rely on color or one unfamiliar icon alone.
+- Provide essential text clearly: button names, field labels, accessible names, error causes and remedies, and conditions needed for decisions. Do not remove actual content or essential guidance, or replace it with ambiguous icons.
 
-- **제목 위에 작은 글씨를 붙이지 않는다.** eyebrow, 영문 소제목, 도입 라벨, 장식용 번호로 제목을 예고하거나 꾸미는 패턴은 금지한다.
-- **섹션·버튼·시각 효과를 해설하는 부수 설명을 넣지 않는다.** “아래에서 기능을 확인하세요”, “버튼을 눌러 이동하세요”, “스크롤하면 나타납니다”처럼 화면의 구성이나 조작·효과를 말로 풀어 쓰지 않는다.
-- 이해나 강조가 부족할 때 **설명 문구를 추가하는 것만으로 해결하려는 시도는 금지한다.** 크기·굵기의 위계, 배치·정렬·그룹화, 여백·대비, 익숙한 아이콘, 실제 화면·미리보기, 선택·진행 상태와 조작 피드백으로 전달할 방법을 먼저 설계한다.
-- 예를 들어 주요 행동은 버튼의 위치·크기·대비로 드러내고, 선택 항목은 체크 아이콘과 선택 스타일로, 진행 과정은 단계 배치와 현재 위치로 이해시킨다. 색이나 낯선 아이콘 하나에만 의미를 맡기지 않는다.
-- 버튼 이름·입력 라벨·접근성 이름, 오류 원인과 해결 방법, 결정에 필요한 조건처럼 사용에 필수인 텍스트는 명확히 제공한다. 본문 콘텐츠와 필수 안내를 없애거나 모호한 아이콘으로 대체하지 않는다.
+**Excess explanation reduces readability.** Review hierarchy, actions, and state with ancillary copy removed. If unclear, improve structure and visual cues before restoring explanations.
 
-**지나친 텍스트 설명은 가독성을 떨어뜨린다.** 검토할 때 부수 설명을 지운 상태에서도 계층·행동·상태가 이해되는지 확인하고,
-불분명하면 설명을 되붙이기 전에 구조와 시각적 단서를 고친다.
+### One section, one story
 
-### 한 섹션에는 한 가지 이야기만 둔다
+- The default unit for public landing and introduction pages is **one large statement plus one visual that demonstrates it**.
+- If the heading conveys the meaning, omit subtitles and descriptions. Put essential information absent from the heading into one short body-size paragraph.
+- Do not stack heading, subtitle, body, and caption in one section. Usually introduce one new reading task at a time.
+- Split independent claims, audiences, or steps into another scene or clear rows.
+- Do not repeat the same message in the heading, description, and cards. A visual should demonstrate a real screen, result, or process.
 
-- 랜딩·소개 같은 공개 페이지의 기본 단위는 **큰 문장 하나 + 그 문장을 증명하는 시각물 하나**다.
-- 제목만으로 뜻이 전달되면 부제와 설명을 붙이지 않는다. 제목에 없는 필수 내용은 본문 크기의 짧은 문단 하나로 전달한다.
-- 제목 → 부제 → 본문 → 캡션을 한 섹션에 층층이 쌓지 않는다. 한 번에 새로 읽을 대상은 하나가 기본이다.
-- 서로 독립된 주장, 대상, 단계가 둘 이상이면 한 섹션에 압축하지 말고 다음 장면이나 명확한 행으로 나눈다.
-- 같은 뜻을 제목, 설명, 카드에서 반복하지 않는다. 시각물은 문장을 되풀이하는 장식이 아니라 실제 화면·결과·과정을 보여주는 증거여야 한다.
+The goal is not mechanical word reduction. Organize necessarily detailed terms, help, and specifications into readable lines and paragraphs. Keep landing-page persuasion separate from product task instructions.
 
-글자 수를 기계적으로 줄이는 것이 목적은 아니다. 약관·도움말·제품 명세처럼 길어야 정확한 내용은 읽기 좋은 행과 문단으로
-구조화한다. 다만 랜딩의 설득 문구와 제품 화면의 작업 문구를 한 덩어리에 섞지 않는다.
+### Do not hide information in small type
 
-### 작은 글씨로 정보를 숨기지 않는다
+- Use large typography for public landing headings, benefits, and explanations. Start narrative body copy around 18–24px on desktop and at least 16px on mobile.
+- Reserve `text-body-sm`, `text-caption`, and `text-micro` for genuinely secondary information such as dense product UI, metadata, and field help, never to fit more landing copy.
+- Promote necessary supporting explanations to their own scene or a body-size sentence instead of stacking small gray text.
+- Re-edit the order, scale, and spacing of mobile content so one message reads within roughly one screen; do not simply stack the desktop layout.
 
-- 공개 랜딩의 제목·핵심 효용·설명은 큰 타이포로 읽힌다. 서사 본문은 데스크톱에서 대체로 18–24px, 모바일에서도 16px 아래로 내리지 않는 것을 출발점으로 삼는다.
-- `text-body-sm`, `text-caption`, `text-micro`는 조밀한 제품 UI, 메타데이터, 입력 도움말처럼 실제로 보조적인 정보에만 쓴다. 랜딩 문구를 더 많이 넣기 위한 수단으로 쓰지 않는다.
-- 필요한 부가 설명은 작은 회색 글을 여러 줄 쌓지 말고, 별도 장면이나 본문 크기의 문장으로 승격한다.
-- 모바일은 데스크톱을 단순히 세로로 쌓지 않는다. 한 화면 안팎에서 메시지 하나가 읽히도록 문장과 시각물의 순서·크기·여백을 다시 편집한다.
+### Separate content with spacing first
 
-### 콘텐츠 구획은 먼저 여백으로 만든다
+- Keep ordinary information sections inside containers. Use full bleed only for heroes or necessary extended narrative scenes.
+- Separate sections with generous spacing and background tones before adding hairlines for actual boundaries.
+- Use cards for independent objects such as projects, payment methods, or posts. Avoid repeating white cards and shadows on white backgrounds or nesting cards.
+- Place labels and section headings outside containers when possible so the information structure is visible first.
 
-- 일반 정보 섹션은 컨테이너 안에 두고, 풀블리드는 히어로 또는 꼭 필요한 긴 서사 장면에만 쓴다.
-- 섹션 사이는 충분한 여백과 배경 톤으로 먼저 나눈다. 헤어라인은 실제 경계가 필요할 때만 쓴다.
-- 카드는 프로젝트·결제 수단·게시물처럼 하나의 독립된 객체일 때 사용한다. 흰 배경 위 흰 카드와 그림자를 반복하거나 카드 안에 카드를 중첩하지 않는다.
-- 라벨과 섹션 제목은 가능하면 컨테이너 밖에 두어 정보 구조가 먼저 보이게 한다.
+## Text color: choose by role, not size
 
-## 텍스트 색 — 크기가 아니라 역할로 고른다
+Do not automatically use `text-muted-foreground` for non-heading text.
 
-제목이 아닌 읽을거리에 곧바로 `text-muted-foreground`를 쓰지 않는다.
-
-| 단계 | 유틸리티 | 쓰임 |
+| Level | Utility | Use |
 |---|---|---|
-| 1. 제목·강조 | `text-foreground` | 페이지·섹션·카드 제목, 선택된 값, 사용자가 입력한 핵심 값 |
-| 2. 기본 읽기 | `text-soft-foreground` | **제목이 아닌 글의 기본값.** 본문, 제목 아래 설명, 카드 요약, 빈 상태 안내, 대화·댓글 |
-| 3. 보조 정보 | `text-muted-foreground` | 날짜·시간·개수·작성자 같은 메타데이터, 입력 도움말, 비활성 탭·아이콘 |
-| 4. 힌트 | `text-subtle-foreground` | 플레이스홀더처럼 아직 내용이 아닌 것, 없어도 작업을 이해하는 아주 낮은 힌트 |
-| 5. 비활성 | `text-disabled-foreground` | 실제 disabled 상태만. 본문·설명·메타데이터에는 사용하지 않는다 |
+| 1. Headings/emphasis | `text-foreground` | Page, section, and card headings; selected values; key user-entered values |
+| 2. Main reading | `text-soft-foreground` | **Default for non-heading text:** body copy, descriptions, card summaries, empty-state guidance, conversations, comments |
+| 3. Supporting information | `text-muted-foreground` | Dates, times, counts, authors, field help, inactive tabs/icons |
+| 4. Hints | `text-subtle-foreground` | Placeholders and low-priority hints unnecessary for understanding the task |
+| 5. Disabled | `text-disabled-foreground` | Actual disabled states only; never body copy, descriptions, or metadata |
 
-판단 순서는 간단하다. **제목인가?** 그러면 `foreground`. 아니라면 우선 `soft-foreground`다. 그 글을 읽지 않아도
-현재 화면을 이해하고 작업을 완료할 수 있을 때만 `muted-foreground`로 내린다. 글자가 작다는 이유만으로 색까지 옅게 만들지 않는다.
+Use `foreground` for headings and start other text at `soft-foreground`. Reduce to `muted-foreground` only when readers can understand the screen and complete the task without it. Small text does not automatically need a lighter color.
 
-## 타입 스케일
+## Type scale
 
-목적형 토큰 하나가 크기·행간·자간을 함께 갖는다. 제목 토큰에는 기본 굵기가 있고 본문 계열에는 없다.
+A purpose-specific token combines size, line height, and tracking. Heading tokens have a default weight; body tokens do not.
 
-| 토큰 | 기본 크기 | 쓰임 |
+| Token | Default size | Use |
 |---|---:|---|
-| `text-display-xl` … `text-display-sm` | 40 / 32 / 28 / 22px | 히어로·페이지·큰 섹션 제목 |
-| `text-title-lg` … `text-title-sm` | 18 / 16 / 14px | 섹션·카드·목록 제목 |
-| `text-body` / `text-body-sm` | 15 / 13px | 제품 UI의 본문 / 조밀한 본문 |
-| `text-label` | 14px | 버튼·탭·폼 라벨 |
-| `text-caption` | 12px | 입력 도움말·메타데이터 |
-| `text-micro` | 11px | 배지·아주 짧은 메타 정보 |
+| `text-display-xl` … `text-display-sm` | 40 / 32 / 28 / 22px | Hero, page, and large section headings |
+| `text-title-lg` … `text-title-sm` | 18 / 16 / 14px | Section, card, and list headings |
+| `text-body` / `text-body-sm` | 15 / 13px | Product body copy / dense body copy |
+| `text-label` | 14px | Button, tab, and form labels |
+| `text-caption` | 12px | Field help and metadata |
+| `text-micro` | 11px | Badges and very short metadata |
 
-- 랜딩처럼 더 큰 에디토리얼 타입이 필요하면 반응형 `clamp()`나 프로젝트 전용 목적형 토큰을 쓸 수 있다. 같은 값이 반복되면 토큰으로 올린다.
-- `body`·`label`·`caption`·`micro`에는 굵기가 내장되지 않는다. 강조가 필요할 때만 `font-medium` 또는 `font-semibold`를 더한다.
-- 제목과 짧은 문장은 `text-balance`를 우선 검토하고, 한국어가 어색하게 잘리면 `break-keep`과 폭을 함께 조정한다.
+- For larger editorial typography, use responsive `clamp()` or project-specific purpose tokens. Promote repeated values into tokens.
+- `body`, `label`, `caption`, and `micro` have no built-in weight. Add `font-medium` or `font-semibold` only for emphasis.
+- Consider `text-balance` for headings and short sentences. For awkward Korean line breaks, adjust `break-keep` and width together.
 
-## 현재 디자인 시스템
+## Current design system
 
-- **이름 있는 팔레트** — 면(`--canvas*`·`--surface-subtle`·`--fill*`), 잉크(`--ink*`), 브랜드(`--brand*`), 선(`--line*`)이 라이트·다크 단계를 만들며 컴포넌트는 `background`·`muted`·`selected` 같은 시맨틱 토큰만 사용한다.
-- **브랜드 시작값** — 템플릿은 범용적인 스타터 블루(`#3182f6`)에서 시작하지만 프로젝트 색이 아니다. 브랜드가 정해지면 `--brand`·`--brand-strong`·`--brand-ink`·`--brand-surface`·`--brand-foreground`를 함께 교체한다.
-- **타입** — Pretendard 중심의 타이트한 제목과 목적형 스케일을 쓴다. `--display-font`·`--text-scale`·`--tracking-scale`·웨이트 노브로 프로젝트 성격을 바꾼다.
-- **상태색** — success/warning/destructive/info마다 솔리드, 솔리드 위 텍스트, 틴트 면, 틴트 위 텍스트, 보더의 5토큰을 사용한다. 브랜드와 분리해 리브랜딩에도 의미가 유지된다.
-- **토큰은 3계층 계약** — L0 노브(팔레트·radius·border·elevation·motion·state·z-index), L1 시맨틱 역할, L2 Tailwind 유틸리티다. 프로젝트의 개성은 L0/시맨틱 값을 덮어 만들고 공통 컴포넌트 JSX 수정은 최소화한다.
+- **Named palettes:** surfaces (`--canvas*`, `--surface-subtle`, `--fill*`), ink (`--ink*`), brand (`--brand*`), and lines (`--line*`) provide light/dark levels. Components consume semantic tokens such as `background`, `muted`, and `selected`.
+- **Starter brand:** the generic blue (`#3182f6`) is a starting point. Replace `--brand`, `--brand-strong`, `--brand-ink`, `--brand-surface`, and `--brand-foreground` together when the brand is defined.
+- **Typography:** Pretendard, tight headings, and a purpose-specific scale. Adjust `--display-font`, `--text-scale`, `--tracking-scale`, and weight controls for the project.
+- **State colors:** success/warning/destructive/info each have five tokens: solid, on-solid text, tinted surface, on-tint text, and border. Keep them independent of brand colors so their meaning survives rebranding.
+- **Three-layer token contract:** L0 controls palette, radius, border, elevation, motion, state, and z-index; L1 defines semantic roles; L2 provides Tailwind utilities. Express project identity by overriding L0/semantic values and minimize shared component JSX edits.
 
-## 수정 가이드 — 어디를 고치면 뭐가 바뀌나
+## Where to make changes
 
-| 바꾸고 싶은 것 | 수정 위치 |
+| Desired change | Location |
 |---|---|
-| 색 (브랜드 / 중립 / 상태) | `src/app/globals.css` 프로젝트 테마 블록에서 L0 팔레트 값을 덮는다 |
-| 타입 스케일 · 폰트 | 같은 블록에서 `--text-scale`·`--tracking-scale`·`--display-font`·웨이트 노브 |
-| 라운드 · 보더 · 그림자 · 모션 · 밀도 | 같은 블록에서 L0 노브 |
-| 토큰 정의 전체 (읽기 전용) | `src/app/comwit-tokens.css` — comwit-ui 설치본. 고치지 않고 `globals.css`에서 덮는다 |
-| 컴포넌트 외형 (variant) | `src/lib/components/ui/*`의 cva variants (comwit-ui 설치본 — 토큰으로 안 될 때만 수정) |
-| 기본 문구 · 날짜 로케일 | `src/lib/ui-text.ts` |
-| 인터랙션 (리플·포커스·전환) | `src/lib/interaction.ts` — UI 템플릿의 공통 Tailwind 상태 클래스 |
-| 프리미티브 엔진 | `@comwit/ui` — 앱에서는 `src/lib/components/ui/*` 컴포넌트만 import |
+| Brand, neutral, or state colors | Override L0 palette values in the project theme block of `src/app/globals.css` |
+| Type scale and fonts | `--text-scale`, `--tracking-scale`, `--display-font`, and weight controls in the same block |
+| Radii, borders, shadows, motion, density | L0 controls in the same block |
+| Full token definitions (read-only) | `src/app/comwit-tokens.css`, installed by comwit-ui; override in `globals.css` |
+| Component variants | cva variants in `src/lib/components/ui/*`; edit installed components only when tokens cannot express the change |
+| Default labels and date locale | `src/lib/ui-text.ts` |
+| Ripple, focus, and transitions | `src/lib/interaction.ts`, shared Tailwind interaction classes |
+| Primitive engine | `@comwit/ui`; application code imports only `src/lib/components/ui/*` |
 
-- 컴포넌트에서는 L0 팔레트(`--ink*`·`--canvas*` …)를 직접 쓰지 않고 시맨틱 토큰 유틸리티만 사용한다.
-- 프로젝트 초반에 `--brand` 계열, `--radius-scale`, `--display-font`, `--text-scale`, elevation·duration 노브와 이 문서의 컨셉을 먼저 정한다.
-- 같은 시각 값이 여러 곳에서 반복되면 토큰으로 올린다. 한 화면에서만 쓰는 장식색·서드파티 브랜드색·런타임 레이아웃 값은 그 자리에서 쓸 수 있다.
+- Components use semantic token utilities, never L0 palette values such as `--ink*` or `--canvas*` directly.
+- Establish the concept, `--brand` family, `--radius-scale`, `--display-font`, `--text-scale`, elevation, and duration early.
+- Promote repeated visual values to tokens. One-off decoration, third-party brand colors, and runtime layout values may remain local.
 
-## 하지 말 것
+## Avoid
 
-- **목적 없는 요소 금지** — 존재 이유와 제거했을 때의 손실을 설명할 수 없는 텍스트·도형·이미지·아이콘·색·선·모션은 넣지 않는다.
-- **제목 위 작은 글씨·장식 글자 금지** — 제목 위 eyebrow·도입 라벨·장식용 번호(`01 —`), 의미 없는 영문 라벨, 불필요한 chip/badge를 사용자 화면에 넣지 않는다.
-- **UI 해설·작은 설명 누적 금지** — 섹션·버튼·효과의 부수 설명이나 작은 도입 문구·부제·캡션을 붙여 이해와 강조를 해결하지 않는다. 계층·배치·아이콘·상태 표현을 먼저 고친다.
-- **옅은 본문 금지** — 본문·카드 요약·빈 상태 안내에 `muted`·`subtle`·`disabled` 텍스트를 쓰지 않는다.
-- **과한 장식 금지** — 의미 없는 아이콘·이모지·가짜 터미널·불필요한 보더·그림자·그라데이션·스크롤 모션을 두지 않는다.
-- **카드로만 화면을 만들지 말 것** — 폼 라벨과 섹션 제목을 카드 안에 가두거나, 흰 카드와 그림자를 반복해 계층을 만들지 않는다.
-- **토큰 우회 금지** — 이미 토큰이 있는 색·타입·반경·그림자를 raw hex나 arbitrary 값으로 다시 만들지 않는다. 프로젝트 고유 값이 반복되면 이름 있는 토큰을 추가한다.
-- **native 인터랙션 요소 금지** — `<button>`·`<input>`·`<select>`·`<textarea>` 대신 `src/lib/components/ui/*`의 컴포넌트를 쓴다.
+- **Purposeless elements:** omit text, shapes, images, icons, colors, lines, and motion whose purpose and removal cost cannot be explained.
+- **Small text above headings:** no eyebrows, introductory labels, decorative numbers (`01 —`), meaningless English labels, or unnecessary chips/badges.
+- **UI narration and accumulated tiny explanations:** improve hierarchy, layout, icons, and state before adding supporting section/button/effect descriptions, subtitles, or captions.
+- **Faint body copy:** do not use muted/subtle/disabled text for body copy, card summaries, or empty-state guidance.
+- **Excess decoration:** no meaningless icons, emoji, fake terminals, unnecessary borders, shadows, gradients, or scroll motion.
+- **Card-only layouts:** do not trap labels/headings inside cards or build hierarchy by repeating white cards and shadows.
+- **Token bypasses:** do not recreate existing token colors, typography, radii, or shadows with raw hex/arbitrary values. Name repeated project-specific values.
+- **Native interactive elements:** use `src/lib/components/ui/*` instead of `<button>`, `<input>`, `<select>`, or `<textarea>`.
 
-갤러리·테마 페이지의 토큰명·메타데이터 표기는 문서용이다. 이를 실제 사용자 화면의 장식용 라벨이나 작은 설명을 늘리는 근거로
-사용하지 않는다.
+Gallery/theming token names and metadata are documentation, not a reason to add decorative labels or small explanations to user-facing screens.

@@ -1,13 +1,14 @@
 'use client'
 
 /**
- * BottomSheet — 아래에서 올라오는 시트. 위의 핸들을 끌어내리면(또는 탭하면) 닫힌다.
+ * BottomSheet — sheet rising from the bottom. Drag the top handle downward or tap it to close.
  *
- * 동작(끌기 · 거리/속도 판정 · 안쪽 스크롤 양보 · 포커스 트랩 · ESC · 스크림)은 @comwit/ui 의 BottomSheet
- * 프리미티브가 갖고, 여기서는 유리 면 · 핸들 · 여백만 입힌다. 끌린 거리는 프리미티브가 쓰는 `--sheet-drag` 를
- * translate 로 그리고, 끄는 동안(`data-dragging`)엔 전환을 끄며, 놓으면 제자리로 돌아온다. 스크림은
- * `--sheet-drag-progress` 만큼 옅어진다. 열림·닫힘은 lib/overlay-motion 이 transform 으로 그린다 — 첫 열림부터
- * 자기 높이만큼(100%) 올라오고, 닫힐 땐(드래그로 닫혀도 끌린 자리에서 이어서) 끝까지 내려간 뒤에 사라진다.
+ * The @comwit/ui BottomSheet primitive owns dragging, distance/velocity thresholds, nested-scroll handoff,
+ * focus trapping, Escape, and scrim behavior. This layer adds the glass surface, handle, and spacing.
+ * Translate follows the primitive's --sheet-drag; transitions are disabled during data-dragging and return the
+ * sheet to rest on release. The scrim fades with --sheet-drag-progress. lib/overlay-motion animates entry/exit
+ * using transform: from the first opening it travels its full height (100%), then exits all the way down before
+ * unmounting. A drag dismissal continues from the dragged position.
  *
  *   <BottomSheet>
  *     <BottomSheetTrigger asChild><Button>Filters</Button></BottomSheetTrigger>
@@ -21,8 +22,8 @@
  *     </BottomSheetContent>
  *   </BottomSheet>
  *
- * 긴 본문은 가운데 영역에 `min-h-0 flex-1 overflow-y-auto` 를 준다 — 그 스크롤이 맨 위일 때만 시트가 따라온다.
- * `container` 로 포털 대상을 바꾸면 앱 쉘(transform 이 걸린 폰 프레임 등) 안에 띄울 수 있다.
+ * For long content, use min-h-0 flex-1 overflow-y-auto on the middle section; the sheet follows only when
+ * that scroller is at the top. Set container to portal inside an app shell, such as a transformed phone frame.
  */
 
 import * as React from 'react'
@@ -64,13 +65,13 @@ function BottomSheetOverlay({
       {...props}
       asChild
     >
-      {/* 들어오고 나가는 투명도는 바깥(lib/overlay-motion)이, 끄는 동안 옅어지는 건 안쪽 면이 갖는다 — 한 속성을 둘이 잡지 않게. */}
+      {/* The outer layer (lib/overlay-motion) owns enter/exit opacity; the inner surface owns drag fading so they do not compete for one property. */}
       <OverlayMotion preset="scrim">
         <span
           aria-hidden="true"
           className={cn(
             'absolute inset-0 bg-overlay',
-            // 끌수록 옅어진다(프리미티브가 바깥 요소에 쓰는 진행도를 물려받는다). 끄는 동안은 전환 없이 바로.
+            // Fade while dragging using progress inherited from the outer primitive element. Update immediately without transitions during dragging.
             'opacity-[calc(1-var(--sheet-drag-progress,0))] transition-opacity duration-slow group-data-[dragging]/scrim:transition-none'
           )}
         />
@@ -79,7 +80,7 @@ function BottomSheetOverlay({
   )
 }
 
-/** 그래버 — 프리미티브가 탭 닫기와 touch-action 을 갖고, 여기서는 바만 그린다. */
+/** Grabber: the primitive owns tap-to-close and touch-action; this layer only draws the bar. */
 function BottomSheetHandle({
   className,
   ...props
@@ -98,11 +99,11 @@ function BottomSheetHandle({
 }
 
 type BottomSheetContentProps = React.ComponentProps<typeof BottomSheetPrimitive.Content> & {
-  /** 포털 대상. 기본 body. 앱 쉘 안에 띄우려면 그 요소를 준다. */
+  /** Portal target, defaulting to body. Pass an app-shell element to render inside it. */
   container?: React.ComponentProps<typeof BottomSheetPrimitive.Portal>['container']
-  /** 위의 그래버. 기본 true. */
+  /** Top grabber. Defaults to true. */
   showHandle?: boolean
-  /** 우상단 ✕. 핸들이 있으니 기본 false. */
+  /** Top-right close X. Defaults to false because the handle is present. */
   showCloseButton?: boolean
 }
 
@@ -117,21 +118,21 @@ function BottomSheetContent({
   return (
     <BottomSheetPortal container={container}>
       <BottomSheetOverlay />
-      {/* 스크림 위의 굴절 유리(dense) — 면·보더·그림자는 .glass 가 갖는다. 바닥에 붙는 변은 보더를 걷는다. */}
+      {/* Dense refractive glass above the scrim: .glass owns surface, border, and shadow. Remove the border along the edge attached to the bottom. */}
       <GlassSurface variant="morphing" shape="panel" dense>
         <BottomSheetPrimitive.Content
           data-slot="bottom-sheet-content"
           className={cn(
             'fixed inset-x-0 bottom-0 z-modal mx-auto flex max-h-[calc(100%-2.5rem)] w-full max-w-lg flex-col rounded-t-sheet border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)] text-popover-foreground outline-none',
-            // 손가락을 따라오는 translate — 끄는 동안은 전환 없이, 놓으면 제자리로 돌아온다. 열림·닫힘은 transform 이
-            // 따로 그리므로(lib/overlay-motion) 여기선 translate 만 전환한다. 드래그로 닫히면 끌린 자리에서 이어서 내려간다.
+            // Translate follows the finger without a transition while dragging, then returns to rest on release. Entry/exit uses transform
+            // separately in lib/overlay-motion, so only translate transitions here. Drag dismissal continues downward from the dragged position.
             'translate-y-(--sheet-drag) transition-[translate] duration-slower ease-[cubic-bezier(0.22,1,0.36,1)] data-[dragging]:transition-none',
             className
           )}
           {...props}
           asChild
         >
-          {/* 아래 변에서 자기 높이만큼(100%) 올라오고 내려간다 */}
+          {/* Travel one full component height (100%) up from or down to the bottom edge. */}
           <OverlayMotion preset="sheet" side="bottom">
             {showHandle ? <BottomSheetHandle /> : null}
             {children}

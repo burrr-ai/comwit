@@ -12,8 +12,8 @@ const serverOnlyLoader = fileURLToPath(
 )
 
 /**
- * Server Function의 client/server 변환과 가상 manifest 생성을 Next config에 연결한다.
- * 호출자는 loader 경로나 Turbopack 조건을 직접 관리하지 않는다.
+ * Connect Server Function client/server transforms and virtual manifest generation to Next config.
+ * Callers do not manage loader paths or Turbopack conditions directly.
  */
 export function withServerFn(config: NextConfig): NextConfig {
   const projectRoot = process.cwd()
@@ -30,13 +30,13 @@ export function withServerFn(config: NextConfig): NextConfig {
       ...config.turbopack,
       rules: {
         ...config.turbopack?.rules,
-        // `*`로 후보를 받은 뒤 project-relative path 조건으로 정확한 파일만 고른다.
-        // Turbopack의 rule key glob은 slash 유무에 따라 기준이 달라져 이 형태가 안정적이다.
+        // Receive candidates with '*' and select exact files using project-relative path conditions.
+        // This avoids Turbopack rule-key glob semantics changing depending on whether a slash is present.
         '*': [
           ...existingWildcardRules,
           {
-            // 소스의 'use server'를 산출물에서 server-only import로 바꾼다. 이후 browser
-            // action loader가 실행되면 handler와 이 import를 함께 함수 id 참조로 치환한다.
+            // Replace source 'use server' with a server-only import in output. The browser
+            // action loader then replaces the handler and import with a function-ID reference.
             condition: {
               path: /src\/services\/[^/]+\/api\/[^/]+\/actions\/.*\.ts$/,
             },

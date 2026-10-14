@@ -3,7 +3,7 @@
    cut through them as slices). Everything else stays quiet — ink, rules, one green.
    Header geometry is the shared contract (globals.css); only its colors change here. */
 
-/* :root 에도 건다 — html 의 scroll-padding-top 이 이 높이를 읽어야 앵커가 헤더 바로 아래에 선다. */
+/* Also set this on :root so html scroll-padding-top places anchors below the header. */
 :root:has(.template-product),
 .template-product {
   --site-header-height: 64px;
@@ -35,7 +35,7 @@
   font-family: var(--font-inter), sans-serif;
 }
 @layer base {
-  /* 오버스크롤·짧은 페이지에서도 manila 가 이어진다 */
+  /* Continue the manila background through overscroll and short pages. */
   body:has(.template-product) {
     background: #ede3c3;
   }
@@ -128,7 +128,7 @@
   padding: 16px;
   background: var(--tp-paper);
 }
-/* 패널은 헤더의 nav 안에 그려진다 — 공유 헤더의 nav 정렬·글자 규칙을 되돌린다. */
+/* The panel lives in the header nav; reset shared navigation alignment and typography. */
 .site-header.app-header .template-mobile-nav .template-nav {
   display: flex;
   flex-direction: column;
@@ -161,7 +161,7 @@
 .tp-overview :is(h1, h2, h3) {
   font-family: var(--tp-display);
 }
-/* :where — 다이어그램·목록의 자체 code 크기를 이기지 않도록 특이성 0 */
+/* Use :where for zero specificity so diagrams and lists can set their own code sizes. */
 :where(.tp-overview :not(pre)) > code {
   font-size: 0.88em;
 }
@@ -328,7 +328,7 @@
   line-height: 1.05;
 }
 .tp-strengths code {
-  white-space: nowrap; /* seo-optimize 가 하이픈에서 끊기지 않게 */
+  white-space: nowrap; /* Keep seo-optimize from wrapping at the hyphen. */
 }
 .tp-strengths p {
   margin: 10px 0 0;
@@ -347,7 +347,7 @@
   padding: 26px 30px 22px 22px;
   border-radius: 14px;
   background-color: var(--tp-mat);
-  /* 1cm 격자 + 5cm 굵은 선 — 커팅 매트 */
+  /* Cutting mat: a 1cm grid with heavier lines every 5cm. */
   background-image:
     linear-gradient(var(--tp-mat-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--tp-mat-line) 1px, transparent 1px),
@@ -551,7 +551,7 @@
   background-size: 1px 6px;
   background-repeat: repeat-y;
 }
-/* 서비스의 마지막 칸 — cart 와 report */
+/* Last cell in each service: cart and report. */
 .slice-cell[data-last='true'] {
   border-radius: 0 4px 4px 0;
 }
@@ -563,7 +563,7 @@
   background-image: none;
   color: var(--tp-sheet);
 }
-/* 한 방향: 켜진 조각의 띠 사이에 아래를 가리키는 작은 화살 */
+/* One-way flow: small downward arrows connect the active slice's layers. */
 .slice-cell[data-lit='true']::after {
   content: '';
   position: absolute;
@@ -726,7 +726,7 @@
   font-size: 14px;
   color: #3d372b;
 }
-/* 비워 둔 칸 — 표제란의 빈 필드처럼 점선 */
+/* Dashed empty cells resemble unfilled title-block fields. */
 .tp-open {
   display: flex;
   flex-direction: column;
@@ -865,7 +865,7 @@
   letter-spacing: -0.01em;
 }
 .template-guide.prose :is(h1, h2, h3) {
-  overflow-wrap: anywhere; /* src/services/{service} 같은 경로 제목이 좁은 화면을 넘지 않게 */
+  overflow-wrap: anywhere; /* Keep path headings such as src/services/{service} inside narrow screens. */
 }
 .template-guide.prose :is(h2, h3) code {
   font-size: 0.8em;
@@ -910,7 +910,7 @@
 .template-guide.prose pre code {
   font-family: inherit;
 }
-/* 코드 색은 종이 쪽 팔레트로 — 전역(State)의 보라 대신 */
+/* Use the paper palette for code instead of the global State purple. */
 .template-guide .hljs-keyword,
 .template-guide .hljs-built_in {
   color: #e6c46a;
@@ -1092,14 +1092,14 @@
   }
 }
 @media (max-width: 800px) {
-  /* 같은 선택자 목록이어야 한다 — 빌드가 목록을 :is() 로 묶어 특이성이 :root:has() 쪽으로 오른다. */
+  /* Keep the same selector list because the build's :is() wrapper inherits :root:has() specificity. */
   :root:has(.template-product),
   .template-product {
     --site-header-height: 56px;
     --site-header-gutter: 16px;
   }
 
-  /* 좁은 매트: 레이어 이름이 띠 위 한 줄로 올라가고, 방향 표시는 오른쪽 위 구석으로. */
+  /* On narrow mats, layer names move above the rows and the direction marker moves to the upper right. */
   .slice-mat {
     --cell-h: 44px;
     padding: 18px 12px 16px;
@@ -1193,7 +1193,7 @@
     font-size: 10px;
     letter-spacing: -0.02em;
   }
-  /* 좁은 화면에선 띠 사이에 레이어 이름 줄이 끼므로 칸 사이 화살은 뺀다 — 오른쪽 위 표시가 방향을 말한다 */
+  /* Omit arrows between cells when layer labels separate the rows; the top-right marker shows the direction. */
   .slice-cell[data-lit='true']::after {
     content: none;
   }

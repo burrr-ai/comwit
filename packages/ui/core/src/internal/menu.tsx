@@ -271,8 +271,8 @@ interface MenuRootContentTypeProps extends Omit<
 > {}
 
 /**
- * 닫히는 애니메이션 도중 다시 열리면 파트는 새로 마운트되지 않는다 — 마운트 때(onMountAutoFocus)처럼
- * 콘텐츠에 포커스를 돌려 키보드가 다시 메뉴 안에서 움직이게 한다.
+ * Reopening during the closing animation does not remount the part. Restore focus to the content,
+ * as onMountAutoFocus does on mount, so keyboard navigation works inside the menu again.
  */
 function useFocusOnReopen(ref: React.RefObject<HTMLElement | null>, open: boolean) {
   const wasOpenRef = React.useRef(open)

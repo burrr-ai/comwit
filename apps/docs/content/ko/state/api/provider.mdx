@@ -1,0 +1,117 @@
+---
+title: 'ComwitProvider'
+group: 'Setup'
+slug: 'api/provider'
+order: 11
+---
+
+# ComwitProvider
+
+클라이언트 트리를 한 번 감싸세요. 프로바이더는 모델 인스턴스와 쿼리 캐시를 소유하며, 각 모델은 훅이나 액션이 처음 접근할 때 초기화됩니다.
+
+```tsx
+'use client'
+
+import { ComwitProvider, keepPreviousData } from '@comwit/state'
+import { useRouter, useServerInsertedHTML } from 'next/navigation'
+import type { ReactNode } from 'react'
+import { getServerSearchParams } from './get-server-search-params'
+
+export function Providers({ children }: { children: ReactNode }) {
+  const router = useRouter()
+
+  return (
+    <ComwitProvider
+      context={{ router }}
+      getServerSearchParams={getServerSearchParams}
+      useServerInsertedHTML={useServerInsertedHTML}
+      defaultOptions={{
+        query: {
+          staleTime: 30_000,
+          gcTime: 5 * 60_000,
+          placeholderData: keepPreviousData,
+        },
+        persist: { debounceMs: 100 },
+        local: { database: 'my-app' },
+      }}
+    >
+      {children}
+    </ComwitProvider>
+  )
+}
+```
+
+`children`만 필수입니다. `<ComwitProvider>{children}</ComwitProvider>`만으로 설정이 완료됩니다.
+
+| 속성                          | 용도                                                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `context`                     | 라우터나 인증 도우미 등 액션 팩토리에서 사용할 공유 값                                                 |
+| `getServerSearchParams`       | [searchParam() 필드](/state/docs/api/router)를 위한 선택적 `() => string \| null` 서버 getter          |
+| `useServerInsertedHTML`       | 서버에서 완료된 [`.suspend()`](/state/docs/api/query) 결과를 스트리밍하는 선택적 프레임워크 훅(실험적) |
+| `defaultOptions.query`        | 전역 `staleTime`, `gcTime`, `placeholderData`                                                          |
+| `defaultOptions.persist`      | 전역 영속화 디바운스 간격                                                                              |
+| `defaultOptions.local`        | IndexedDB 데이터베이스, 기본 범위, 저장소 오류 처리기                                                  |
+| `defaultOptions.interceptors` | 모든 액션 메서드에 적용되는 인터셉터                                                                   |
+
+쿼리 기본값은 쿼리 필드나 명령형 `.query(arg, options)` 호출에서 재정의할 수 있습니다. 선택자의 `.load(arg)`는 쿼리 인수만 받습니다.
+
+<a id="framework-functions"></a>
+
+## 프레임워크 함수
+
+프로바이더는 프레임워크를 직접 가져오지 않습니다. Next.js가 요청 데이터나 HTML 스트림을 관리한다면 Next.js가 내보내는 함수를 전달하세요. 호출 시점은 프로바이더가 결정합니다.
+
+- `getServerSearchParams`는 서버 초기화 중 한 번 실행되어 `searchParam()` 필드의 초기 값을 제공합니다. 프로바이더가 결과를 실행되지 않는 JSON으로 하이드레이션에 전달하며 브라우저에서는 호출하지 않습니다.
+- `next/navigation`의 `useServerInsertedHTML`은 각 청크를 내보내기 전에 지금까지 완료된 `.suspend()` 결과를 실행되지 않는 JSON 스크립트로 삽입합니다. 하이드레이션 중인 선택자는 `queryFn`을 다시 실행하는 대신 해당 스크립트를 읽습니다. 훅이므로 프로바이더의 수명 동안 고정하세요.
+
+두 속성은 선택적이며 서로 독립적입니다. 전체 `providers.tsx`와 요청 getter는 [Next.js 가이드](/state/docs/guide/nextjs)를 참고하세요.
+
+<a id="use-shared-context-in-actions"></a>
+
+## 액션에서 공유 컨텍스트 사용
+
+```ts
+import { action } from '@comwit/state'
+
+type AppContext = { router: { push(href: string): void } }
+type NavigationActions = { openProducts(): void }
+
+export const navigationActions = action<NavigationActions, AppContext>(({ context }) => ({
+  openProducts() {
+    context.router.push('/products')
+  },
+}))
+```
+
+컨텍스트 값은 프로바이더가 렌더링될 때 갱신됩니다. 시간이 지나며 바뀔 수 있는 값은 액션 실행 시점에 읽으세요.
+
+<a id="global-interceptors"></a>
+
+## 전역 인터셉터
+
+```tsx
+import { ComwitProvider, Log, OnError } from '@comwit/state'
+;<ComwitProvider
+  defaultOptions={{
+    interceptors: [OnError((error) => reportError(error)), Log('info')],
+  }}
+>
+  {children}
+</ComwitProvider>
+```
+
+실행 순서는 프로바이더 → 클래스 → 메서드 → 액션 본문입니다. 재시도, 권한 검사, 큐, 유효성 검사는 [데코레이터](/state/docs/decorators)를 참고하세요.
+
+<a id="isolation-and-local-storage-scopes"></a>
+
+## 격리와 로컬 저장소 범위
+
+중첩 프로바이더는 독립적인 상태를 소유합니다. 새 프로바이더는 새로운 메모리 레지스트리로 시작합니다. 프로바이더 수준의 사용자 또는 테넌트 범위가 있다면 범위가 바뀔 때 프로바이더를 다시 마운트하세요.
+
+```tsx
+<ComwitProvider key={user.id} defaultOptions={{ local: { scope: `user:${user.id}` } }}>
+  {children}
+</ComwitProvider>
+```
+
+컬렉션에서 자체 고정 범위나 모델에서 파생한 범위를 정의할 수도 있습니다. 이 범위는 프로바이더 기본값보다 우선합니다. [local() 범위 규칙](/state/docs/api/local#provider-setup)을 참고하세요.

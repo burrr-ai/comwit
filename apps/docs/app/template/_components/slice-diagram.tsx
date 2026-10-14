@@ -1,5 +1,9 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
+import { Copy } from '@/i18n/copy'
+
 import { Button } from '@comwit/ui-templates/button'
 import * as React from 'react'
 
@@ -48,13 +52,12 @@ const LAYERS = ['page', 'state', 'api'] as const
 const REPOSITORY_FILES = ['post.ts', 'user.ts', 'cart.ts', 'report.ts']
 
 /*
- * 도메인 열의 그리드 위치. 넓은 화면: 1열은 레이어 이름, 서비스 사이에 좁은 틈 열.
- * 좁은 화면: 레이어 이름이 띠 위 한 줄로 올라가므로 1열이 없다. CSS 가 --col / --col-narrow 중 하나를 쓴다.
+ * Domain grid positions: wide screens reserve column 1 for layer names and a gap between services. Narrow screens move layer names above the rows; CSS chooses --col or --col-narrow.
  */
 const columns = SERVICES.flatMap((service, serviceIndex) =>
   service.domains.map((domain, domainIndex) => {
     const before = SERVICES.slice(0, serviceIndex).reduce((n, s) => n + s.domains.length, 0)
-    const index = before + domainIndex + serviceIndex // 서비스마다 틈 열 하나
+    const index = before + domainIndex + serviceIndex // One gap column per service.
     return {
       domain,
       service: service.name,
@@ -83,6 +86,7 @@ function place(index: number, span = 1) {
  * the idea reads without interaction, including on touch screens.
  */
 export function SliceDiagram() {
+  const copy = useTranslations('Copy')
   const [pinned, setPinned] = React.useState('post')
   const [hovered, setHovered] = React.useState<string | null>(null)
   const active = hovered ?? pinned
@@ -99,13 +103,17 @@ export function SliceDiagram() {
           >
             <span>
               <code>{service.name}</code>
-              <span className="slice-service-who">{service.who}</span>
+              <span className="slice-service-who">
+                <Copy text={service.who} />
+              </span>
             </span>
           </div>
         ))}
 
         <div className="slice-direction" aria-hidden="true">
-          <span>depends</span>
+          <span>
+            <Copy id="text092" />
+          </span>
           <svg viewBox="0 0 12 100" preserveAspectRatio="none" focusable="false">
             <line x1="6" y1="0" x2="6" y2="100" vectorEffect="non-scaling-stroke" />
           </svg>
@@ -126,7 +134,7 @@ export function SliceDiagram() {
                 style={place(index)}
                 data-lit={lit}
                 aria-pressed={pinned === domain.name}
-                aria-label={`${service}/${domain.name}: trace the slice`}
+                aria-label={copy('traceSlice', { service, domain: domain.name })}
                 onPointerEnter={(event) => {
                   if (event.pointerType === 'mouse') setHovered(domain.name)
                 }}
@@ -171,7 +179,9 @@ export function SliceDiagram() {
         <div className="slice-foundation" style={place(0, columns.at(-1)!.index + 1)}>
           <span className="slice-foundation-path">
             <code>src/server/repository</code>
-            <span>shared by every service</span>
+            <span>
+              <Copy id="text095" />
+            </span>
           </span>
           <span className="slice-files">
             {REPOSITORY_FILES.map((file) => (
@@ -183,14 +193,15 @@ export function SliceDiagram() {
         </div>
       </div>
       <p className="slice-readout" aria-live="polite">
-        {activeDomain && (
-          <>
-            <code>{columns.find((c) => c.domain.name === active)!.service}/</code>
-            <code>{activeDomain.name}</code> lives in <code>page/{activeDomain.page}</code>,{' '}
-            <code>state/{activeDomain.name}/</code> and <code>api/{activeDomain.name}/</code>, and
-            reads <code>{activeDomain.repository}</code>.
-          </>
-        )}
+        {activeDomain &&
+          copy.rich('sliceReadout', {
+            domain: `${columns.find((c) => c.domain.name === active)!.service}/${activeDomain.name}`,
+            page: `page/${activeDomain.page}`,
+            state: `state/${activeDomain.name}/`,
+            api: `api/${activeDomain.name}/`,
+            repository: activeDomain.repository,
+            code: (chunks) => <code>{chunks}</code>,
+          })}
       </p>
     </div>
   )

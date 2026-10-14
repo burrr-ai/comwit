@@ -1,7 +1,7 @@
 @import '@comwit/ui-templates/styles.css';
 @source '../../../packages/ui/templates/src';
 @source '../../../packages/ui/core/src';
-/* gitignore 된 생성 예시는 자동 감지에서 빠지므로 명시한다 */
+/* Include ignored generated examples explicitly in Tailwind source detection. */
 @source './ui/_generated';
 @plugin '@tailwindcss/typography';
 
@@ -12,12 +12,13 @@
   --site-border: #dedbe3;
   --site-accent: #755291;
 }
-/* 사이트 요소 규칙은 base 레이어에 둔다 — unlayered 로 두면 라이브러리 컴포넌트의
-   유틸(transition·outline-none·font)을 이겨서 docs 안의 컴포넌트가 원래 모습과 달라진다. */
+/*
+ * Keep site element rules in the base layer so they do not override library utilities for transitions, outlines, or fonts.
+ */
 @layer base {
   html {
     scroll-behavior: smooth;
-    /* 앵커는 고정 헤더 바로 아래에 선다. 여백이 필요한 대상은 자기 scroll-margin-top 으로 더한다. */
+    /* Anchors stop below the fixed header. Individual targets can add scroll-margin-top for extra spacing. */
     scroll-padding-top: var(--site-header-height);
   }
   body {
@@ -1869,7 +1870,7 @@
   color: #f9f6ed;
 }
 
-/* 사이드바 글자는 UI 사이드바의 척도를 따른다 — 13px 본문, 12px 캡션. */
+/* Match the UI sidebar typography: 13px body text and 12px captions. */
 .state-version {
   font: 12px var(--font-geist-mono);
   white-space: nowrap;
@@ -2190,7 +2191,7 @@ html {
 
 /* Inside a library the header belongs to it: `comwit. / State` or `comwit. / UI`. The wordmark is
    the way back out; narrow screens put the navigation button here instead of a second bar. */
-/* :root 에도 건다 — html 의 scroll-padding-top 이 이 높이를 읽어야 앵커가 헤더 바로 아래에 선다. */
+/* Also set this on :root so html scroll-padding-top places anchors below the header. */
 :root:has(.ui-product, .state-docs-frame),
 .ui-product,
 .state-docs-frame {
@@ -2255,8 +2256,9 @@ html {
   background: #ffffff12;
 }
 @media (max-width: 800px) {
-  /* 위와 같은 선택자 목록이어야 한다 — 빌드가 목록을 :is() 로 묶어 특이성이 :root:has() 쪽으로 오르므로,
-     .ui-product 하나로는 폰에서 헤더 높이가 64px 로 남는다. */
+  /*
+   * Keep the same selector list: the build wraps it in :is(), inheriting :root:has() specificity. A lone .ui-product leaves the mobile header at 64px.
+   */
   :root:has(.ui-product, .state-docs-frame),
   .ui-product,
   .state-docs-frame {
@@ -2270,5 +2272,33 @@ html {
 @media (max-width: 600px) {
   .docs-menu-button {
     display: inline-flex;
+  }
+}
+
+.site-locale-switch {
+  flex-shrink: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 0.4rem;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  min-height: 36px;
+}
+html:lang(ko) body {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .site-header.app-header .product-nav > span {
+    display: none;
+  }
+  .site-header.app-header .product-nav {
+    padding-inline: 6px;
+  }
+  .site-header.app-header nav {
+    gap: 6px;
   }
 }

@@ -1,3 +1,4 @@
+import { Copy } from '@/i18n/copy'
 import Link from 'next/link'
 import { ArrowUpRightIcon } from '@comwit/ui/icons'
 import { Button } from '@comwit/ui-templates/button'
@@ -5,7 +6,7 @@ import { CliCommand } from './_components/cli-command'
 import { AppShellExhibit } from './_components/exhibits'
 import { components, groups, type Component } from './_generated/catalog'
 
-/** 큐레이션 — 라이브러리 → 그 위에 만든 컴포넌트. 카탈로그의 크레딧(npm deps)에서 자동으로 모은다. */
+/** Group libraries by the components built on them, using catalog dependency credits. */
 function curatedLibraries() {
   const byLibrary = new Map<string, { href: string; items: Component[] }>()
   for (const c of components)
@@ -25,8 +26,7 @@ export default function UiOverview() {
         <div className="max-w-xl">
           <h1 className="text-display-xl text-foreground sm:text-[56px]">Comwit UI</h1>
           <p className="mt-4 text-title-lg font-normal text-soft-foreground">
-            A curated kit for building app UI. The best library for each job, wrapped under one
-            design system and installed as source you own.
+            <Copy id="text130" />{' '}
           </p>
           <div className="mt-8 space-y-2">
             <CliCommand command="npx comwit-ui@latest init" />
@@ -34,13 +34,19 @@ export default function UiOverview() {
           </div>
           <div className="mt-6 flex flex-wrap gap-2">
             <Button size="lg" asChild>
-              <Link href="/ui/components">Browse components</Link>
+              <Link href="/ui/components">
+                <Copy id="text131" />
+              </Link>
             </Button>
             <Button size="lg" variant="secondary" asChild>
-              <Link href="/ui/docs/installation">Installation</Link>
+              <Link href="/ui/docs/installation">
+                <Copy id="text132" />
+              </Link>
             </Button>
             <Button size="lg" variant="secondary" asChild>
-              <Link href="/ui/icons">Explore icons</Link>
+              <Link href="/ui/icons">
+                <Copy id="text133" />
+              </Link>
             </Button>
           </div>
         </div>
@@ -51,7 +57,7 @@ export default function UiOverview() {
 
       <section aria-labelledby="inside" className="mt-24">
         <h2 id="inside" className="text-display-sm text-foreground">
-          In the gallery
+          <Copy id="text134" />{' '}
         </h2>
         <ul className="mt-6 grid gap-x-10 sm:grid-cols-2">
           {groups.map((g) => (
@@ -61,9 +67,11 @@ export default function UiOverview() {
                 className="group block rounded-control py-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <span className="block text-title-md text-foreground transition-colors duration-fast group-hover:text-primary">
-                  {g.title}
+                  <Copy text={g.title} />
                 </span>
-                <span className="mt-1 block text-body-sm text-soft-foreground">{g.blurb}</span>
+                <span className="mt-1 block text-body-sm text-soft-foreground">
+                  <Copy text={g.blurb} />
+                </span>
               </Link>
             </li>
           ))}
@@ -72,12 +80,10 @@ export default function UiOverview() {
 
       <section aria-labelledby="curated" className="mt-24">
         <h2 id="curated" className="text-display-sm text-foreground">
-          One library per job
+          <Copy id="text135" />{' '}
         </h2>
         <p className="mt-2 max-w-2xl text-body text-soft-foreground">
-          Where a proven library already does the job best, the template wraps it under a neutral
-          name and the CLI installs the wrapper as source. Behavior and accessibility stay in the
-          headless engine; the look comes from one set of tokens.
+          <Copy id="text136" />{' '}
         </p>
         <ul className="mt-6 grid gap-x-10 sm:grid-cols-2">
           {curated.map(([label, { href, items }]) => (
@@ -92,7 +98,7 @@ export default function UiOverview() {
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 rounded-control text-title-md text-foreground outline-none transition-colors duration-fast hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {label}
+                  <Copy text={label} />
                   <ArrowUpRightIcon className="size-4 text-muted-foreground" aria-hidden="true" />
                 </a>
                 <span className="mt-1 block text-body-sm text-soft-foreground">
@@ -103,7 +109,7 @@ export default function UiOverview() {
                         href={`/ui/components#${c.name}`}
                         className="rounded-sm underline decoration-border underline-offset-[3px] transition-colors duration-fast hover:text-primary hover:decoration-primary"
                       >
-                        {c.title}
+                        <Copy text={c.title} />
                       </Link>
                     </span>
                   ))}

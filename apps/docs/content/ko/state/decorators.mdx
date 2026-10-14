@@ -1,0 +1,224 @@
+---
+title: '데코레이터'
+group: 'Action'
+slug: 'decorators'
+order: 32
+---
+
+<a id="decorators"></a>
+
+# 데코레이터
+
+액션 클래스 메서드에 데코레이터를 겹쳐 적용하여 공통 동작을 추가하세요.
+
+```ts
+import {
+  OnError,
+  OnSuccess,
+  Debounce,
+  Throttle,
+  Authorized,
+  Retry,
+  Queue,
+  Log,
+  Validate,
+} from '@comwit/state'
+```
+
+<a id="built-in-decorators"></a>
+
+## 기본 제공 데코레이터
+
+| 데코레이터                      | 용도                                                                                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@OnError(fn)`                  | 오류를 받는 처리기입니다. 전파하려면 다시 던지세요.                                                                                                     |
+| `@OnSuccess(fn)`                | 성공적으로 완료된 후 실행됩니다.                                                                                                                        |
+| `@Debounce(ms)`                 | 메서드 호출을 디바운스합니다. `flushDebounce` / `cancelDebounce`와 함께 사용하세요.                                                                     |
+| `@Throttle(ms)`                 | 메서드 호출을 스로틀합니다. `flushThrottle` / `cancelThrottle`과 함께 사용하세요.                                                                       |
+| `@Authorized({ when, onDeny })` | 인증 가드입니다. `when: () => boolean \| Promise<boolean>`                                                                                              |
+| `@Retry(count, options?)`       | 오류 발생 시 최대 `count`번 재시도합니다. `options`는 밀리초 단위 `delay` 또는 `{ delay?, backoff? }`이며 backoff는 `'fixed'` \| `'exponential'`입니다. |
+| `@Queue(strategy?)`             | 동시성을 제어합니다. `strategy`: `'drop'`(기본) \| `'queue'` \| `'replace'`.                                                                            |
+| `@Log(level?)`                  | 실행 시간을 포함해 메서드 실행을 기록합니다. 수준: `'info'` \| `'debug'` \| `'warn'`.                                                                   |
+| `@Validate(validators)`         | 실행 전에 인수를 검사합니다. 실패하면 `ValidationError`를 던집니다.                                                                                     |
+
+<a id="example"></a>
+
+## 예제
+
+```ts
+import { action, OnError, OnSuccess, Debounce } from '@comwit/state'
+
+export const postActions = action<Pick<PostActions, 'create' | 'search'>, AppContext>(
+  ({ state, context }) => {
+    class Actions {
+      private model = state(post)
+
+      @OnSuccess(() => context.router.push('/posts'))
+      @OnError((e) => toast.error(e instanceof Error ? e.message : 'Failed'))
+      async create(title: string) {
+        const created = await api.post.create({ title })
+        this.model.posts.data.push(created)
+      }
+
+      @Debounce(300)
+      async search(keyword: string) {
+        await this.model.posts.query(keyword)
+      }
+    }
+    return new Actions()
+  }
+)
+```
+
+<a id="flushing-pending-debounce--throttle-calls"></a>
+
+## 대기 중인 @Debounce / @Throttle 호출 즉시 실행
+
+`@Debounce`와 `@Throttle`은 지연 호출을 예약합니다. 대기 시간이 끝나기 전에 **대기 중인 호출을 즉시 실행**해야 하는 경우가 있습니다. 특히 주변 상태가 곧 해제되어 지연 호출이 조용히 사라질 수 있을 때 필요합니다.
+
+대표적인 예는 카드 상세 시트의 자동 저장입니다.
+
+> 사용자가 초안에 입력 → 키 입력이 `@Debounce(700) persistSoon()` 호출 → 디바운스 시간 안에 시트를 닫음 → 주변 상태(예: 활성 초안 ID)가 초기화됨 → 닫은 후 타이머 실행 → 선행 조건이 더 이상 맞지 않아 메서드 조기 종료 → **사용자의 마지막 입력이 오류 표시 없이 사라짐**.
+
+<a id="helpers"></a>
+
+### 도우미 함수
+
+```ts
+import { flushDebounce, cancelDebounce, flushThrottle, cancelThrottle } from '@comwit/state'
+
+// Fire the pending trailing call now. Resolves with the method's return
+// value, or `undefined` if there was no pending call. Rejects if the
+// flushed method throws — surrounding decorators (e.g. @OnError) see the
+// error exactly as if it had fired on its own.
+flushDebounce<T>(target: T, methodName: keyof T & string): Promise<unknown>
+
+// Drop the pending trailing call. No-op when nothing is pending.
+cancelDebounce<T>(target: T, methodName: keyof T & string): void
+
+// Same shape, for @Throttle.
+flushThrottle<T>(target: T, methodName: keyof T & string): Promise<unknown>
+cancelThrottle<T>(target: T, methodName: keyof T & string): void
+```
+
+`target`에는 액션 클래스 인스턴스 또는 `useAction(...)`이 반환한 통합 액션 객체를 전달할 수 있습니다. 즉시 실행할 메서드가 호출자와 다른 액션 슬라이스에 있을 때는 보통 후자를 사용합니다.
+
+```ts
+class DraftActions {
+  @LoginRequired
+  @Debounce(700)
+  @OnError(toastErr)
+  async persistSoon() {
+    await this.saveDraft()
+  }
+}
+
+// In another action slice — flush before navigating away.
+await flushDebounce(this.draftActions, 'persistSoon')
+```
+
+전체 데코레이터 스택이 함께 동작합니다. 도우미가 내부 타이머와 같은 코드 경로를 사용하므로 즉시 실행된 호출도 자연스럽게 발생한 지연 호출과 똑같이 `@OnError`, `@LoginRequired`, `@Retry` 등을 통과합니다.
+
+<a id="why-helpers-and-not-instancemethodflush"></a>
+
+### `instance.method.flush()` 대신 도우미를 사용하는 이유
+
+es-toolkit과 비슷한 `instance.persistSoon.flush()`가 더 편리한 API일 수 있습니다. 하지만 comwit의 인터셉터 파이프라인(`composeInterceptors`)은 호출 시그니처만 전달하므로 v1.x에서는 도우미를 선택했습니다. 스택에서 다른 데코레이터가 `@Debounce` 바깥을 감싸면 함수에 붙은 속성(`.flush`, `.cancel`)이 조용히 사라집니다. 메서드 형태를 바꾸려면 모든 인터셉터가 부착 속성을 전달한다는 계약과 `StageMethodDecorator` 전반의 타입 변경이 필요합니다. 이는 여러 부분을 함께 바꿔야 하는 작업이므로 추후 선택적으로 도입할 예정입니다([#71](https://github.com/burrr-ai/comwit/issues/71)). 여기 소개한 도우미는 슬라이스 간 호출의 표준 방법으로 유지되며 변경 없이 계속 동작합니다.
+
+<a id="custom-decorators-with-intercept"></a>
+
+## intercept()로 사용자 정의 데코레이터 만들기
+
+생명주기 전체를 제어하는 재사용 가능한 데코레이터를 만드세요.
+
+```ts
+import { intercept } from '@comwit/state'
+```
+
+`intercept()`는 두 가지 모드를 지원합니다.
+
+- **즉시 모드** — 데코레이터 적용 시점에 훅이 적용됩니다. 런타임 컨텍스트가 필요하지 않을 때 사용하세요.
+- **지연 모드** — 팩토리가 `state`와 `context`를 포함한 `ActionContext`를 받으며, 액션이 프로바이더에 바인딩될 때 결정됩니다.
+
+<a id="immediate-mode"></a>
+
+### 즉시 모드
+
+```ts
+const MyLog = intercept({
+  onBefore: (...args) => console.log('called with', args),
+  onSuccess: (result) => console.log('returned', result),
+  onError: (err) => console.error('failed', err),
+})
+```
+
+사용 가능한 훅: `onBefore`, `onSuccess`, `onError`, `onSettled`, `intercept`.
+
+<a id="lazy-mode"></a>
+
+### 지연 모드
+
+데코레이터에서 모델 상태나 프로바이더 컨텍스트에 접근해야 할 때 사용하세요.
+
+```ts
+const LoginRequired = intercept<AppContext>(({ state, context }) => {
+  const u = state(user)
+  return {
+    intercept: (execute, args) => {
+      if (!u.me) {
+        context.router.push('/login')
+        return
+      }
+      return execute(...args)
+    },
+  }
+})
+```
+
+다른 데코레이터와 같은 방식으로 사용합니다.
+
+```ts
+@LoginRequired
+@OnSuccess(() => context.router.push('/posts'))
+async create(title: string) {
+  const created = await api.post.create({ title })
+  this.model.posts.data.push(created)
+}
+```
+
+<a id="decorators-with-arguments"></a>
+
+### 인수를 받는 데코레이터
+
+`intercept()`를 함수로 감싸 매개변수를 받는 데코레이터를 만드세요.
+
+```ts
+function MinLength(field: string, min: number) {
+  return intercept({
+    intercept: (execute, args) => {
+      if (args[0]?.length < min) throw new Error(`${field} must be at least ${min} chars`)
+      return execute(...args)
+    },
+  })
+}
+```
+
+## @Validate
+
+실행 전에 인수를 검사합니다. 검사기의 키는 인수 위치에 대응합니다.
+
+```ts
+import { Validate, ValidationError } from '@comwit/state'
+
+class TodoActions {
+  @Validate({
+    title: (v) => (typeof v === 'string' && v.length > 0) || 'Title required',
+    priority: (v) => [1, 2, 3].includes(v) || 'Priority must be 1-3',
+  })
+  async createTodo(title: string, priority: number) {
+    // ...
+  }
+}
+```
+
+각 검사기는 통과 시 `true`를, 실패 시 오류 메시지 문자열을 반환합니다. 실패하면 모든 실패 항목을 담은 `.errors` 레코드와 함께 `ValidationError`를 던집니다.

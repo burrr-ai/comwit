@@ -1,5 +1,5 @@
 /**
- * comwit-ui — radio-group. Radix Primitives 구현을 그대로 이식한 자체 엔진 (외부 Radix 패키지 의존성 없음).
+ * comwit-ui — radio-group. An in-house port of Radix Primitives with no external Radix package dependency.
  */
 import * as React from 'react'
 import { composeEventHandlers } from './internal/compose-event-handlers'
@@ -402,8 +402,8 @@ const RadioGroup = React.forwardRef<RadioGroupElement, RadioGroupProps>(
     const [value, setValue] = useControllableState({
       prop: valueProp,
       defaultProp: defaultValue ?? null,
-      // value 는 초기/리셋 시 null 일 수 있으나 public onValueChange 는 (string) => void 계약이다.
-      // null(그룹 비움) 전이는 선택-변경이 아니므로 소비자 콜백에 흘리지 않는다(타입 캐스트 대신 가드).
+      // value can be null initially or after reset, but public onValueChange has a (string) => void contract.
+      // A null transition clears the group rather than changing selection; guard it instead of casting the callback type.
       onChange: (value) => {
         if (value !== null) onValueChange?.(value)
       },

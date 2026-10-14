@@ -47,7 +47,13 @@ replaced, what was kept and what is left.
    provider and root layout, `config.ts`, the repository scaffolding, replacing the
    project's own versions.
 6. **Installs comwit-ui** and replaces the project's components with the kit's,
-   rebuilding what the kit does not cover from kit parts and tokens.
+   rebuilding what the kit does not cover from kit parts and tokens. When updating an
+   older Comwit project, use `@comwit/ui` 0.6.0 with `comwit-ui` 0.7.0 (or a newer
+   compatible pair) before installing the current components. The CLI preserves
+   existing dependency pins, so update those pins explicitly. Replace `lucide-react`
+   imports with `@comwit/ui/icons`; animated icons use `@comwit/ui/icons/animated`.
+   Review a diff before overwriting customized component source, and remove
+   `lucide-react` only after no remaining file imports it.
 7. **Applies the design system**: `design.md` filled with the real brand, tokens in
    `globals.css`, and every migrated screen restyled to the guide rather than copied.
 8. **Moves screens and data into services and domains**, `repository → api → state →

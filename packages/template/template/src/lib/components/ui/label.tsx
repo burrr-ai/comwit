@@ -4,7 +4,7 @@ import * as React from 'react'
 
 import { cn } from '@/lib/utils/cn'
 
-// 프리미티브 없이 자립(순수 프레젠테이션). 유일 behavior 인 "더블클릭 텍스트 선택 방지"만 인라인.
+// Self-contained presentation without a primitive. Its only behavior, preventing double-click text selection, is inline.
 type LabelProps = React.ComponentProps<'label'>
 
 function Label({ className, onMouseDown, ...props }: LabelProps) {
@@ -17,7 +17,7 @@ function Label({ className, onMouseDown, ...props }: LabelProps) {
       )}
       {...props}
       onMouseDown={(event) => {
-        // 라벨 안의 컨트롤 클릭이면 통과, 아니면 더블클릭 시 텍스트 선택만 막는다.
+        // Allow clicks on controls inside the label; otherwise prevent only double-click text selection.
         const target = event.target as HTMLElement
         if (target.closest('button, input, select, textarea')) return
         onMouseDown?.(event)

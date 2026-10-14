@@ -9,7 +9,9 @@ import { cn } from '@/lib/utils/cn'
 export type SegmentedOption<T extends string | null> = {
   label: React.ReactNode
   value: T
-  /** 우측 작은 카운트 배지 (예: 미처리 12) */
+  /**
+   * Small count badge on the right, such as 12 pending items.
+   */
   count?: number
 }
 
@@ -46,11 +48,11 @@ const segmentVariants = cva(
 )
 
 /**
- * 세그먼트 컨트롤 — 들어간 회색 트랙 위에 흰 알약이 선택지를 가리킨다(토스 톤).
- * 필터·보기 전환처럼 즉시 반영되는 단일 선택에 쓴다.
+ * Segmented control: a white pill marks the selection on an inset gray track, inspired by Toss.
+ * Use for single selections that apply immediately, such as filters and view switches.
  *
- * 각 칸은 독립 버튼(`aria-pressed`)이다. 그룹의 "다시 누르면 해제"와 실제 null 옵션값("All")이
- * 충돌하므로 토글 그룹 프리미티브를 쓰지 않는다.
+ * Each segment is an independent aria-pressed button. A toggle group's press-again-to-clear behavior would
+ * conflict with an actual null option value ("All"), so this does not use the toggle-group primitive.
  */
 function SegmentedControl<T extends string | null>({
   options,

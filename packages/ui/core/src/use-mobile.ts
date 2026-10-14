@@ -1,22 +1,22 @@
 'use client'
 
 /**
- * comwit-ui — 모바일 감지 훅 (헤드리스).
- * 피커(팝오버 ↔ 바텀시트)·토스트(상단 ↔ 우하단)처럼 화면 크기로 표현을 고르는 컴포넌트가 쓴다.
+ * comwit-ui — headless mobile-detection hook.
+ * Used by components that choose presentation by viewport size, such as popover/bottom-sheet pickers and top/bottom-right toasts.
  */
 
 import * as React from 'react'
 
 interface UseMobileResult {
   isMobile: boolean
-  /** false 면 SSR 중이거나 아직 감지 전 — 스켈레톤을 그리거나 데스크톱 표현을 기본으로 둔다. */
+  /** False during SSR or before detection. Render a skeleton or default to the desktop presentation. */
   detected: boolean
 }
 
 /**
- * 화면 너비 기반 모바일 감지. `(max-width: breakpoint px)` 미디어 쿼리를 따른다.
+ * Viewport-width mobile detection using the (max-width: breakpoint px) media query.
  *
- * @param breakpoint 모바일로 간주할 최대 너비(기본 768)
+ * @param breakpoint Maximum width considered mobile; defaults to 768.
  */
 function useMobile(breakpoint: number = 768): UseMobileResult {
   const [state, setState] = React.useState<UseMobileResult>({ isMobile: false, detected: false })
@@ -32,7 +32,7 @@ function useMobile(breakpoint: number = 768): UseMobileResult {
   return state
 }
 
-/** User Agent 기반 모바일 기기 감지 — 화면 크기가 아니라 실제 기기 종류. */
+/** User-agent mobile-device detection; checks the device type, not viewport size. */
 function useMobileDevice(): UseMobileResult {
   const [state, setState] = React.useState<UseMobileResult>({ isMobile: false, detected: false })
 

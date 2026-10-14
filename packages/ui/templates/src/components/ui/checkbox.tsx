@@ -5,7 +5,7 @@ import { Checkbox as CheckboxPrimitive, useCenterRipple } from '@comwit/ui'
 import { focusRing, rippleItemClassName } from '../../lib/interaction'
 import { cn } from '../../lib/utils'
 
-// onCheckedChange 는 boolean 만 흘려보낸다 (프리미티브의 indeterminate 는 호출부서 안 씀)
+// onCheckedChange emits booleans only; consumers do not use the primitive's indeterminate state.
 type CheckboxProps = Omit<
   React.ComponentProps<typeof CheckboxPrimitive.Root>,
   'onCheckedChange' | 'asChild' | 'children'
@@ -42,7 +42,7 @@ function Checkbox({
         }}
         {...props}
       >
-        {/* forceMount 로 항상 마운트 → data-state 로 stroke 드로우 인/아웃 애니를 구동 */}
+        {/* Always mount with forceMount so data-state can drive stroke draw-in/draw-out animations. */}
         <CheckboxPrimitive.Indicator asChild forceMount>
           <svg
             aria-hidden="true"
@@ -62,7 +62,7 @@ function Checkbox({
           </svg>
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Root>
-      {/* 호버 헤일로 + 센터 리플 — 컨트롤 뒤 원형 면. 색은 currentColor 로 상태 따라 전환 */}
+      {/* Hover halo and centered ripple behind the control. currentColor follows state changes. */}
       <span
         aria-hidden
         className={cn(

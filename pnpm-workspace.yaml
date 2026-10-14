@@ -9,6 +9,8 @@ allowBuilds:
   sharp: true
   '@tailwindcss/oxide': true
   unrs-resolver: true
+  '@parcel/watcher': false
+  '@swc/core': false
 
 minimumReleaseAgeExclude:
   - '@ssgoi/core@7.3.1'

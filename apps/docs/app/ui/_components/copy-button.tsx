@@ -1,5 +1,7 @@
 'use client'
 
+import { Copy, useCopy } from '@/i18n/copy'
+
 import { Button } from '@comwit/ui-templates/button'
 import * as React from 'react'
 import { CheckIcon, CopyIcon } from '@comwit/ui/icons'
@@ -14,6 +16,8 @@ export function CopyButton({
   label?: string
   className?: string
 }) {
+  const localize = useCopy()
+
   const [copied, setCopied] = React.useState(false)
   React.useEffect(() => {
     if (!copied) return
@@ -25,13 +29,13 @@ export function CopyButton({
       variant="plain"
       size="none"
       type="button"
-      aria-label={copied ? 'Copied' : label}
+      aria-label={localize(copied ? 'Copied' : label)}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text)
           setCopied(true)
         } catch {
-          /* clipboard 가 막힌 환경은 무시 */
+          /* Ignore environments where clipboard access is unavailable. */
         }
       }}
       className={cn(
@@ -41,7 +45,7 @@ export function CopyButton({
     >
       {copied ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
       <span className="sr-only" role="status">
-        {copied ? 'Copied to clipboard' : ''}
+        <Copy text={copied ? 'Copied to clipboard' : ''} />
       </span>
     </Button>
   )

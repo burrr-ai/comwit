@@ -1,4 +1,4 @@
-// comwit-ui — 이벤트 핸들러 합성 유틸. Radix Primitives 구현을 그대로 이식한 자체 엔진 (외부 Radix 패키지 의존성 없음).
+// comwit-ui — event-handler composition utility. An in-house port of Radix Primitives with no external Radix package dependency.
 
 export function composeEventHandlers<E extends { defaultPrevented: boolean }>(
   originalEventHandler?: (event: E) => void,

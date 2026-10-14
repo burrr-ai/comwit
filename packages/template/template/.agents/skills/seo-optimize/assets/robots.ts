@@ -3,8 +3,8 @@ import { config } from "@/server/config";
 import { ADMIN_BASE_PATH } from "@/lib/admin-routes";
 
 /**
- * /robots.txt 자동 생성 (src/app/robots.ts).
- * sitemap 위치를 크롤러에게 알려줍니다.
+ * Generate /robots.txt (src/app/robots.ts).
+ * Tell crawlers where to find the sitemap.
  */
 export default function robots(): MetadataRoute.Robots {
   const baseUrl = config.SITE_URL ?? "http://localhost:3000";
@@ -13,7 +13,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // 관리자 등 비공개 경로는 여기서 차단
+      // Block private paths such as admin here.
       disallow: [ADMIN_BASE_PATH],
     },
     sitemap: `${baseUrl}/sitemap.xml`,

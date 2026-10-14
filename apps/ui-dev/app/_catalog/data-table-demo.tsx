@@ -18,14 +18,22 @@ type Order = {
 }
 
 const STATUS_LABEL: Record<Status, string> = {
-  success: '결제완료',
-  warning: '배송대기',
-  destructive: '취소',
+  success: 'Paid',
+  warning: 'Awaiting shipment',
+  destructive: 'Canceled',
 }
 
-const NAMES = ['김토큰', '이서피스', '박라디우스', '최섀도우', '정하이라인', '한파치먼트', '오잉크']
+const NAMES = [
+  'Alex Token',
+  'Jamie Surface',
+  'Sam Radius',
+  'Taylor Shadow',
+  'Morgan Hairline',
+  'Jordan Parchment',
+  'Casey Ink',
+]
 
-/* 서버를 흉내내는 고정 데이터셋 — 47건이라 마지막 페이지가 부분 페이지(빈 행 패딩 시연) */
+/* Fixed server-like dataset: 47 rows leave a partial final page to demonstrate empty-row padding. */
 const ALL: Order[] = Array.from({ length: 47 }, (_, i) => ({
   id: `ORD-${String(1000 + i)}`,
   customer: NAMES[i % NAMES.length],
@@ -36,11 +44,11 @@ const ALL: Order[] = Array.from({ length: 47 }, (_, i) => ({
 const LIMIT = 8
 
 const columns: ColumnDef<Order>[] = [
-  { accessorKey: 'id', header: '주문번호' },
-  { accessorKey: 'customer', header: '고객' },
+  { accessorKey: 'id', header: 'Order number' },
+  { accessorKey: 'customer', header: 'Customer' },
   {
     accessorKey: 'status',
-    header: '상태',
+    header: 'Status',
     cell: ({ row }) => {
       const s = row.original.status
       return <Chip tone={s}>{STATUS_LABEL[s]}</Chip>
@@ -48,16 +56,16 @@ const columns: ColumnDef<Order>[] = [
   },
   {
     accessorKey: 'amount',
-    header: () => <span className="block text-right">금액</span>,
+    header: () => <span className="block text-right">Amount</span>,
     cell: ({ row }) => (
       <span className="block text-right tabular-nums">
-        {row.original.amount.toLocaleString('ko-KR')}원
+        {row.original.amount.toLocaleString('ko-KR')} KRW
       </span>
     ),
   },
 ]
 
-/** 네트워크 지연을 흉내내 스켈레톤(첫 로딩)과 "갱신 중" 스피너(재조회)를 둘 다 보여준다. */
+/** Simulate latency to show initial-loading skeletons and the refresh spinner. */
 export function DataTableDemo() {
   const [query, setQuery] = React.useState<QueryData<Order>>({
     data: { items: [], total: 0, page: 1, limit: LIMIT, totalPages: 0 },
@@ -113,10 +121,10 @@ export function DataTableDemo() {
             <InputAddon>
               <SearchIcon />
             </InputAddon>
-            <Input placeholder="주문번호 검색" />
+            <Input placeholder="Search orders" />
           </InputGroup>
           <span className="shrink-0 text-caption text-muted-foreground">
-            toolbar 슬롯 — 필터·검색 자유 배치
+            Toolbar slot: arrange filters and search freely
           </span>
         </div>
       }

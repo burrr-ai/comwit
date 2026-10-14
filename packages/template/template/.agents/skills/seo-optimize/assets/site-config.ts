@@ -1,24 +1,24 @@
 /**
- * 사이트 공통 SEO 설정값 (Single Source of Truth)
+ * Shared site SEO configuration (single source of truth).
  *
- * 이 값만 서비스에 맞게 바꾸면 전역 메타데이터 / OG / 트위터 / JSON-LD에 모두 반영됩니다.
- * 페이지별로 다르게 하고 싶으면 buildMetadata({ ... })로 부분만 덮어쓰세요.
+ * Changing these values updates global metadata, OG, Twitter, and JSON-LD.
+ * Use buildMetadata({ ... }) for individual page overrides.
  */
 export const siteConfig = {
-  /** 사이트/서비스 이름 (title 템플릿, siteName, JSON-LD에 사용) */
+  /** Site/service name used by the title template, siteName, and JSON-LD. */
   name: "My App",
-  /** 기본 타이틀 */
+  /** Default title. */
   title: "My App",
-  /** 기본 설명 (검색결과 / OG description) */
+  /** Default description for search results and OG. */
   description:
-    "Next.js 16 으로 만든 서비스입니다. 서비스에 맞게 이 설명을 바꾸세요.",
-  /** OG 이미지 경로 — public/og.png (권장 1200x630) */
+    "A service built with Next.js 16. Customize this description for your project.",
+  /** OG image path: public/og.png (recommended: 1200×630). */
   ogImage: "/og.png",
-  /** 콘텐츠 언어/지역 (예: ko_KR, en_US) */
+  /** Content language/region (e.g. ko_KR, en_US). */
   locale: "ko_KR",
-  /** <html lang> 값 (예: ko, en) */
+  /** <html lang> value (e.g. ko, en). */
   lang: "ko",
-  /** 트위터 핸들(@포함). 없으면 빈 문자열로 둡니다. */
+  /** Twitter handle, including @. Leave empty when unavailable. */
   twitterHandle: "",
 } as const;
 

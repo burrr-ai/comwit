@@ -15,7 +15,7 @@ function Avatar({ className, ...props }: React.ComponentProps<typeof AvatarPrimi
   )
 }
 
-// 프리미티브 Image 는 실제 <img /> 로 렌더된다.
+// The Image primitive renders an actual img element.
 function AvatarImage({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
     <AvatarPrimitive.Image

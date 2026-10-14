@@ -5,12 +5,14 @@ import { todoModel } from '../model'
 import { createTodo, deleteTodo, updateTodo } from '@/api/todo/index'
 
 function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : '요청 처리 중 알 수 없는 오류가 발생했습니다.'
+  return error instanceof Error
+    ? error.message
+    : 'An unknown error occurred while processing the request.'
 }
 
 function handleError(context: string, error: unknown) {
   const message = errorMessage(error)
-  toast.error(`${context} 실패`, { description: message })
+  toast.error(`${context} failed`, { description: message })
   throw error
 }
 
@@ -27,9 +29,9 @@ export const todoCrudActions = action<
     constructor(private readonly model: TodoState) {}
 
     @OnSuccess((created: Todo) => {
-      toast.success('할 일 생성 완료', { description: created.title })
+      toast.success('Task created', { description: created.title })
     })
-    @OnError((error: unknown) => handleError('할 일 생성', error))
+    @OnError((error: unknown) => handleError('Create task', error))
     async create(title: string, priority: Todo['priority'], options?: TodoActionOptions) {
       const optimistic: Todo = {
         id: nextOptimisticId(),
@@ -57,9 +59,9 @@ export const todoCrudActions = action<
     }
 
     @OnSuccess((updated: Todo) => {
-      toast.success('상태 변경 완료', { description: `${updated.title} (${updated.status})` })
+      toast.success('Status updated', { description: `${updated.title} (${updated.status})` })
     })
-    @OnError((error: unknown) => handleError('상태 변경', error))
+    @OnError((error: unknown) => handleError('Update status', error))
     async updateStatus(id: string, status: Todo['status'], options?: TodoActionOptions) {
       if (!id) {
         throw new Error('Todo id is required')
@@ -107,9 +109,9 @@ export const todoCrudActions = action<
     }
 
     @OnSuccess((updated: Todo) => {
-      toast.success('우선순위 변경 완료', { description: `${updated.title} (${updated.priority})` })
+      toast.success('Priority updated', { description: `${updated.title} (${updated.priority})` })
     })
-    @OnError((error: unknown) => handleError('우선순위 변경', error))
+    @OnError((error: unknown) => handleError('Update priority', error))
     async updatePriority(id: string, priority: Todo['priority'], options?: TodoActionOptions) {
       if (!id) {
         throw new Error('Todo id is required')
@@ -156,9 +158,9 @@ export const todoCrudActions = action<
     }
 
     @OnSuccess(() => {
-      toast.success('삭제 완료')
+      toast.success('Deleted')
     })
-    @OnError((error: unknown) => handleError('할 일 삭제', error))
+    @OnError((error: unknown) => handleError('Delete task', error))
     async delete(id: string, options?: TodoActionOptions) {
       if (!id) {
         throw new Error('Todo id is required')

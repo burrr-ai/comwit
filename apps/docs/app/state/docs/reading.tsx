@@ -1,5 +1,7 @@
 'use client'
 
+import { Copy } from '@/i18n/copy'
+
 import { usePathname } from 'next/navigation'
 import { TableOfContents } from './toc'
 import { SiteHeader } from '../../site-header'
@@ -17,7 +19,7 @@ export function StateDocsFrame({
     <MobileNavProvider>
       <div className={`state-docs-frame ${introduction ? 'is-introduction' : ''}`}>
         <a href="#docs-content" className="skip-link">
-          Skip to content
+          <Copy id="text017" />{' '}
         </a>
         <div className="docs-header">
           <SiteHeader product="state" menu={<MobileNavButton />} />

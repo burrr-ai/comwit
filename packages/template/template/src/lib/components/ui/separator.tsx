@@ -4,18 +4,20 @@ import { cn } from '@/lib/utils/cn'
 
 type SeparatorProps = React.ComponentProps<'div'> & {
   orientation?: 'horizontal' | 'vertical'
-  /** true(기본): 장식용 → 스크린리더 무시. false: 의미 있는 구분(role=separator). */
+  /**
+   * True (default): decorative and ignored by screen readers. False: meaningful separator with role=separator.
+   */
   decorative?: boolean
 }
 
-// 동작이 없어 프리미티브 없이 자립. role/aria-orientation 만 파생한다.
+// No behavior requiring a primitive; derive only role and aria-orientation.
 function Separator({
   className,
   orientation = 'horizontal',
   decorative = true,
   ...props
 }: SeparatorProps) {
-  // separator role 의 암묵 기본이 horizontal 이라 vertical 일 때만 명시.
+  // The separator role defaults to horizontal, so specify orientation only for vertical separators.
   const semantic = decorative
     ? { role: 'none' as const }
     : {

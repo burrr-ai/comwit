@@ -13,9 +13,9 @@ function buildSlots(stepMinutes: number): string[] {
 }
 
 /**
- * 시간 슬롯 목록(30분 간격 등). Popover·바텀시트 공유.
- * 현재 value 가 슬롯 배수와 안 맞으면(예: 어드민 시드/레거시 18:45) 그 값을 목록에 끼워 넣어
- * 하이라이트·보존한다(근처 슬롯이 조용히 덮어쓰지 않게). 마운트 시 선택 슬롯을 보이게 스크롤.
+ * Time slots (for example, 30-minute intervals), shared by Popover and bottom sheet.
+ * If the current value is off the slot interval (for example, a seeded or legacy 18:45), insert it into the list
+ * to highlight and preserve it instead of silently overwriting it with a nearby slot. Scroll to the selected slot on mount.
  */
 export function useTimePanel(opts: { value?: string; stepMinutes: number }): {
   slots: string[]
@@ -28,7 +28,7 @@ export function useTimePanel(opts: { value?: string; stepMinutes: number }): {
     const base = buildSlots(stepMinutes)
     if (value && !base.includes(value)) {
       base.push(value)
-      base.sort() // 'HH:mm' 제로패딩이라 사전식=시간순
+      base.sort() // Zero-padded HH:mm strings sort lexicographically in chronological order.
     }
     return base
   }, [stepMinutes, value])

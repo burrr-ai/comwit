@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Dialog as DialogPrimitive } from '@comwit/ui'
-import { XIcon } from 'lucide-react'
+import { XIcon } from '@comwit/ui/icons'
 
 import { GlassSurface } from '@/lib/components/ui/glass'
 import { OverlayMotion } from '@/lib/overlay-motion'
@@ -46,14 +46,17 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  closeLabel = uiText.close,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  /** Accessible name for the close button; defaults to the project locale. */
+  closeLabel?: string
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
-      {/* 스크림 위의 굴절 유리(dense) — 면·보더·그림자는 .glass 가 갖는다. 색만 유틸로 덮으면 유리가 사라진다. */}
+      {/* Dense refractive glass above the scrim: .glass owns surface, border, and shadow. Overriding only the color with utilities removes the glass effect. */}
       <GlassSurface variant="morphing" shape="panel" dense>
         <DialogPrimitive.Content
           data-slot="dialog-content"
@@ -64,7 +67,7 @@ function DialogContent({
           {...props}
           asChild
         >
-          {/* 0.9 배에서 커지며 나타나고 같은 길로 사라진다 — lib/overlay-motion */}
+          {/* Enter by growing from scale 0.9, and exit along the same path using lib/overlay-motion. */}
           <OverlayMotion preset="dialog">
             {children}
             {showCloseButton && (
@@ -76,7 +79,7 @@ function DialogContent({
                 )}
               >
                 <XIcon />
-                <span className="sr-only">{uiText.close}</span>
+                <span className="sr-only">{closeLabel}</span>
               </DialogPrimitive.Close>
             )}
           </OverlayMotion>
