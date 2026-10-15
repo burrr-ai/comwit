@@ -10,6 +10,15 @@ type ServerInsertedHTMLHook = NonNullable<
   React.ComponentProps<typeof ComwitProvider>['useServerInsertedHTML']
 >
 
+/** A render that suspends through React 19 `use()` must run inside an awaited act. */
+async function renderAsync(ui: React.ReactElement) {
+  let result!: ReturnType<typeof render>
+  await act(async () => {
+    result = render(ui)
+  })
+  return result
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void
   const promise = new Promise<T>((res) => {
@@ -251,7 +260,7 @@ describe('query selector suspend streaming hydration', () => {
       return <span>{value.data}</span>
     }
 
-    render(
+    await renderAsync(
       <ComwitProvider>
         <Suspense fallback={<span>loading</span>}>
           <View />

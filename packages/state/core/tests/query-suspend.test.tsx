@@ -4,6 +4,15 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, test, vi } from 'vitest'
 import { action, ComwitProvider, local, model, query, useAction, useModel } from '../src'
 
+/** A render that suspends through React 19 `use()` must run inside an awaited act. */
+async function renderAsync(ui: React.ReactElement) {
+  let result!: ReturnType<typeof render>
+  await act(async () => {
+    result = render(ui)
+  })
+  return result
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void
   let reject!: (error: unknown) => void
@@ -47,7 +56,7 @@ describe('query selector suspend', () => {
       return <div data-testid="detail">{detail.data?.title}</div>
     }
 
-    render(
+    await renderAsync(
       <React.StrictMode>
         <ComwitProvider>
           <Suspense fallback={<div data-testid="fallback">loading</div>}>
@@ -98,7 +107,7 @@ describe('query selector suspend', () => {
       )
     }
 
-    render(
+    await renderAsync(
       <ComwitProvider>
         <App />
       </ComwitProvider>
@@ -111,7 +120,9 @@ describe('query selector suspend', () => {
     await waitFor(() => expect(screen.getByTestId('detail').textContent).toBe('a'))
     expect(screen.getByTestId('active').textContent).toBe('a')
 
-    fireEvent.click(screen.getByText('next'))
+    await act(async () => {
+      fireEvent.click(screen.getByText('next'))
+    })
     expect(queryFn).toHaveBeenCalledTimes(2)
     expect(screen.getByTestId('detail').textContent).toBe('a')
     expect(screen.getByTestId('active').textContent).toBe('a')
@@ -152,7 +163,7 @@ describe('query selector suspend', () => {
       )
     }
 
-    render(
+    await renderAsync(
       <ComwitProvider>
         <App />
       </ComwitProvider>
@@ -164,11 +175,15 @@ describe('query selector suspend', () => {
     })
     await waitFor(() => expect(screen.getByTestId('detail').textContent).toBe('a'))
 
-    fireEvent.click(screen.getByText('stage b'))
+    await act(async () => {
+      fireEvent.click(screen.getByText('stage b'))
+    })
     expect(queryFn).toHaveBeenCalledTimes(2)
     expect(screen.getByTestId('active').textContent).toBe('a')
 
-    fireEvent.click(screen.getByText('stay on a'))
+    await act(async () => {
+      fireEvent.click(screen.getByText('stay on a'))
+    })
 
     await act(async () => {
       abandoned.resolve({ id: 'b' })
@@ -194,7 +209,7 @@ describe('query selector suspend', () => {
       return <div>{value.data}</div>
     }
 
-    render(
+    await renderAsync(
       <ComwitProvider>
         <ErrorBoundary fallback={<div data-testid="error">failed</div>}>
           <Suspense fallback={<div data-testid="fallback">loading</div>}>
@@ -230,7 +245,7 @@ describe('query selector suspend', () => {
       return <div data-testid="local-detail">{detail.data?.id}</div>
     }
 
-    render(
+    await renderAsync(
       <ComwitProvider>
         <Suspense fallback={<div data-testid="local-fallback">loading</div>}>
           <View />
@@ -263,7 +278,7 @@ describe('query selector suspend', () => {
       return null
     }
 
-    render(
+    await renderAsync(
       <ComwitProvider>
         <ErrorBoundary fallback={<div data-testid="unsupported-stream">unsupported</div>}>
           <Suspense fallback={<div>loading</div>}>
@@ -305,7 +320,7 @@ describe('query selector suspend', () => {
       )
     }
 
-    render(
+    await renderAsync(
       <ComwitProvider>
         <Suspense fallback={<div data-testid="fallback">loading</div>}>
           <View />
@@ -319,7 +334,9 @@ describe('query selector suspend', () => {
     })
     await waitFor(() => expect(screen.getByTestId('items').textContent).toBe('a'))
 
-    fireEvent.click(screen.getByText('next page'))
+    await act(async () => {
+      fireEvent.click(screen.getByText('next page'))
+    })
     expect(screen.queryByTestId('fallback')).toBeNull()
     expect(screen.getByTestId('items').textContent).toBe('a')
 
@@ -355,7 +372,7 @@ describe('query selector suspend', () => {
       )
     }
 
-    render(
+    await renderAsync(
       <ComwitProvider>
         <Suspense fallback={<div data-testid="fallback">loading</div>}>
           <View />
@@ -369,7 +386,9 @@ describe('query selector suspend', () => {
     })
     await waitFor(() => expect(screen.getByTestId('value').textContent).toBe('first'))
 
-    fireEvent.click(screen.getByText('refetch'))
+    await act(async () => {
+      fireEvent.click(screen.getByText('refetch'))
+    })
     expect(screen.queryByTestId('fallback')).toBeNull()
     expect(screen.getByTestId('value').textContent).toBe('first')
 
@@ -391,7 +410,7 @@ describe('query selector suspend', () => {
       return <div data-testid="value">{value.data}</div>
     }
 
-    render(
+    await renderAsync(
       <ComwitProvider>
         <Suspense fallback={<div data-testid="fallback">loading</div>}>
           <View />
