@@ -109,8 +109,8 @@
     "text105": "사이트",
     "text106": "라이브러리",
     "text109": "Comwit",
-    "text110": "화면부터",
-    "text111": "앱의 구조까지.",
+    "text110": "LLM이 더 나은",
+    "text111": "코드를 만들도록.",
     "text115": "라이브러리 선택",
     "text116": "State",
     "text119": "문서",
@@ -653,7 +653,9 @@
     "tokenUsage": "<code>{token}</code>을 사용하는 컴포넌트",
     "stateSummary": "React 상태 관리",
     "uiSummary": "React 컴포넌트",
-    "templateSummary": "Next.js 풀스택"
+    "templateSummary": "Next.js 풀스택",
+    "landingOrigin": "<site>comwit.io</site>를 만드는 도구들",
+    "landingOpenSource": "오픈소스로 만듭니다"
   },
   "Locale": {
     "switch": "영어로 전환"

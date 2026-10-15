@@ -16,6 +16,12 @@
       "product": "template",
       "prompt": "Use case: logo-brand. Asset type: Comwit Template product symbol for a developer documentation website header. Create one distinctive compact flat illustrated brand mark: three chunky offset folded sheets that form a simple architectural stack, like an origami starter kit. The upper sheet has a bold diagonally folded corner, making a memorable clear silhouette. Main colors terracotta #c56645 and apricot #eba77d, warm cream #fff0d1 front face, restrained charcoal #292330 contours. Clean 2D geometry, flat opaque fills, softly rounded corners, slightly playful hand-cut character, confident simple shapes, no fine detail. Must read at 28px next to a cream-and-charcoal illustrated panda mascot and a violet four-part modular logo. Centered, balanced, entire symbol occupies 84% of square canvas. This is a single logo, not a sheet of options. No text, no letters, no code brackets, no background tile or badge, no bounding box, no gradients, no cast shadow, no 3D render, no watermark. Truly transparent background with alpha.",
       "path": "apps/docs/public/brand/template-mark.webp"
+    },
+    {
+      "product": "state-landing-monochrome",
+      "prompt": "Edit the referenced panda into a sophisticated monochrome logo icon for a developer tools landing page. Preserve the panda identity, front facing round face, two round ears, one open eye and one winking eye, small nose and restrained smile. Render as a SINGLE flat solid black ink mark on genuine transparent alpha background, with negative transparent cutouts for all light areas. No white or cream fill anywhere. Simplify to crisp geometric vector-like contours and consistent bold stroke width, matching a clean regular-weight icon family. The outer head is a clean black outline, ears solid black, eye patches solid black with eye cutouts transparent, nose and mouth black. No fur tuft, texture, shadows, gradients, blush, color or 3D. Optically balanced compact icon, readable at 24px, entire face centered with 10 percent padding, square canvas. This will be used as a CSS alpha mask inheriting lime on charcoal and charcoal on lime, so every visible part must be black and all negative spaces fully transparent.",
+      "reference": "apps/docs/public/brand/state-mark.webp",
+      "path": "apps/docs/public/brand/state-mark-monochrome.png"
     }
   ]
 }

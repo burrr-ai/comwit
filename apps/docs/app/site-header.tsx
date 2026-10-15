@@ -30,10 +30,12 @@ export function SiteHeader({
   home = false,
   product,
   menu,
+  monochromeMarks = false,
 }: {
   home?: boolean
   product?: Product
   menu?: React.ReactNode
+  monochromeMarks?: boolean
 }) {
   const copy = useTranslations('Copy')
 
@@ -80,7 +82,7 @@ export function SiteHeader({
               pathname === `/${key}` || pathname.startsWith(`/${key}/`) ? 'page' : undefined
             }
           >
-            <ProductMark product={key} />
+            <ProductMark product={key} monochrome={monochromeMarks} />
             <span>{products[key].label}</span>
           </Link>
         ))}

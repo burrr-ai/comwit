@@ -1593,6 +1593,12 @@
   object-fit: contain;
   flex-shrink: 0;
 }
+.product-mark-monochrome {
+  width: var(--product-mark-size);
+  height: var(--product-mark-size);
+  background: currentColor;
+  mask: var(--product-mark-image) center / contain no-repeat;
+}
 .site-header .product-nav:hover,
 .site-header .product-nav[aria-current] {
   background: #eae8e2;
@@ -1815,7 +1821,7 @@
     gap: 6px;
     font-size: 12px;
   }
-  .site-header .product-nav img {
+  .site-header .product-nav :is(img, .product-mark-monochrome) {
     width: 24px;
     height: 24px;
   }
@@ -1930,7 +1936,7 @@ html {
   border-radius: 10px;
   font-weight: 600;
 }
-.site-header.app-header .product-nav img {
+.site-header.app-header .product-nav :is(img, .product-mark-monochrome) {
   width: 32px;
   height: 32px;
   flex-shrink: 0;
@@ -2158,7 +2164,7 @@ html {
     padding: 6px 8px;
     gap: 6px;
   }
-  .site-header.app-header .product-nav img {
+  .site-header.app-header .product-nav :is(img, .product-mark-monochrome) {
     width: 24px;
     height: 24px;
   }
@@ -2231,7 +2237,7 @@ html {
   color: inherit;
   white-space: nowrap;
 }
-.product-home img {
+.product-home :is(img, .product-mark-monochrome) {
   width: 30px;
   height: 30px;
 }
@@ -2350,7 +2356,7 @@ html:lang(ko) body {
     margin-left: -4px;
     font-size: 13px;
   }
-  .product-home img {
+  .product-home :is(img, .product-mark-monochrome) {
     width: 26px;
     height: 26px;
   }
@@ -2378,7 +2384,7 @@ html:lang(ko) body {
     padding: 6px 8px;
     font-size: 13px;
   }
-  .site-header.app-header .product-nav img {
+  .site-header.app-header .product-nav :is(img, .product-mark-monochrome) {
     width: 30px;
     height: 30px;
   }

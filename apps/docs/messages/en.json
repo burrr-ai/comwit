@@ -109,8 +109,8 @@
     "text105": "Site",
     "text106": "Libraries",
     "text109": "Comwit",
-    "text110": "From interface",
-    "text111": "to architecture.",
+    "text110": "Help your LLM",
+    "text111": "write better code.",
     "text115": "Choose a library",
     "text116": "State",
     "text119": "documentation",
@@ -653,7 +653,9 @@
     "tokenUsage": "Components using <code>{token}</code>",
     "stateSummary": "React state management",
     "uiSummary": "React components",
-    "templateSummary": "Next.js full-stack starter"
+    "templateSummary": "Next.js full-stack starter",
+    "landingOrigin": "The tools behind <site>comwit.io</site>",
+    "landingOpenSource": "Open source, by"
   },
   "Locale": {
     "switch": "Switch to Korean"

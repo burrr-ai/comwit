@@ -36,12 +36,18 @@ State keeps its panda favicon (`app/state/layout.tsx`). UI and every other route
 
 ## Product marks
 
-Navigation and landing links share `app/product-mark.tsx` and three transparent WebP assets:
+Navigation and landing links share `app/product-mark.tsx`:
 
 - `public/brand/state-mark.webp`: the original winking panda with its square background removed.
-- `public/brand/ui-mark.webp`: cobalt and sky-blue interlocking modules. UI does not use purple.
-- `public/brand/template-mark.webp`: terracotta and cream folded sheets.
+- UI uses `public/brand/ui-mark-monochrome.png`: a mobile frame with a content card and bottom navigation.
+- Template uses `public/brand/template-mark-monochrome.png`: the original three offset sheets and folded corner, redrawn as a monochrome outline.
 
-The marks were made with built-in ImageGen. Exact final prompts are in `product-mark-prompts.json`. Each image retains its alpha channel and is optimized to 512 × 512 WebP with consistent transparent padding. Do not put the marks inside a colored tile or clip their silhouette with a border radius.
+The UI and Template alpha masks inherit the surrounding ink color, staying crisp at navigation sizes and reversing naturally on the landing's dark links. The State image retains its alpha channel and transparent padding; do not put it inside a colored tile or clip its silhouette with a border radius.
+
+Only the main landing uses `public/brand/state-mark-monochrome.png` as an alpha mask for State, in both its header and product link. This flat panda inherits the same ink as the UI and Template symbols. State documentation and all other headers keep the original colored panda.
+
+The UI and Template masks were generated with built-in ImageGen and optimized to 256 × 256 PNG while preserving alpha. Their exact prompts and references are recorded in `landing-tool-mark-prompts.json`.
+
+The earlier generated UI and Template WebP assets remain available in `public/brand/`, with their generation prompts in `product-mark-prompts.json`, but are not used in navigation.
 
 Mobile landing navigation keeps all three product names visible on a second header row. Product documentation uses the same mark beside the product name. Hover, pressed, and keyboard focus states belong to the link around the image.

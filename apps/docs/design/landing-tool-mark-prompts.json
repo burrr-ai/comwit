@@ -1,0 +1,21 @@
+{
+  "tool": "Built-in ImageGen",
+  "transparent_background": true,
+  "assets": [
+    {
+      "product": "ui",
+      "prompt": "Use case: logo-brand. Create one flat monochrome mobile-app product icon for Comwit UI, matching the crisp black ink silhouette and outline weight of the attached panda reference (reference is style only; do not depict a panda). A front-facing rounded smartphone frame, deliberately slightly wide, with a small top speaker bar, one large outlined landscape content card inside, one short thick text-rule below the card, and a bottom navigation row of three small solid dots. Strong simple geometry with consistent medium-bold strokes and rounded corners; enough interior detail to read as an app UI, not an empty phone. Refined editorial developer-tool branding. SINGLE solid black ink with genuine transparent alpha everywhere else, INCLUDING the screen and every enclosed negative space. No white opaque fills, no colors, no gray, no gradient, no shadow, no 3D, no text, no letters, no decorative objects. Square canvas. Phone height 84% of canvas and width approximately 58% of canvas, vertically and horizontally centered with even padding. Must remain legible at 28px and 48px. This asset will be used as an alpha mask, inheriting black on lime and lime on black. Black strokes opaque, all negative space transparent.",
+      "reference": "apps/docs/public/brand/state-mark-monochrome.png",
+      "path": "apps/docs/public/brand/ui-mark-monochrome.png"
+    },
+    {
+      "product": "template",
+      "prompt": "Edit target: first reference, the three folded stacked sheets Comwit Template icon. Style reference: second reference, monochrome panda outline. Keep the FIRST reference's exact recognizable composition: three offset rectangular paper sheets stepping diagonally down-left, slightly tilted together, uppermost page toward upper-right with a large folded top-right corner. Preserve the proportions, jaunty angle and distinctive stacked silhouette. Redraw as a refined flat SINGLE solid black outline logo icon matching the second reference's crisp medium-bold outline style. Remove all terracotta, cream and other fills; every page interior, corner interior, gap, and background must be genuinely transparent alpha, no white opaque areas. Outline visible sheet edges in black with even bold strokes and gently rounded joins, avoid doubled edges and excess fine detail. No content lines or letters on pages. No shadows, gradients, texture, 3D, badge, background or additional objects. Entire mark centered on square canvas, occupying 84% of canvas with 8% transparent padding. Legible at 28px and 48px. It will be used as a CSS alpha mask, black on lime and lime on black.",
+      "references": [
+        "apps/docs/public/brand/template-mark.webp",
+        "apps/docs/public/brand/state-mark-monochrome.png"
+      ],
+      "path": "apps/docs/public/brand/template-mark-monochrome.png"
+    }
+  ]
+}

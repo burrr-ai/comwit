@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import type { CSSProperties } from 'react'
 
 export type Product = 'state' | 'ui' | 'template'
 
@@ -8,8 +9,31 @@ export const products = {
   template: { href: '/template', label: 'Template' },
 } satisfies Record<Product, { href: string; label: string }>
 
-/** Shared artwork keeps each product recognizable in navigation and on the landing. */
-export function ProductMark({ product, size = 32 }: { product: Product; size?: number }) {
+/** State keeps its colored mascot outside the landing; all other marks inherit ink. */
+export function ProductMark({
+  product,
+  size = 32,
+  monochrome = false,
+}: {
+  product: Product
+  size?: number
+  monochrome?: boolean
+}) {
+  if (monochrome || product !== 'state') {
+    return (
+      <span
+        className={`product-mark product-mark-monochrome product-mark-${product}`}
+        style={
+          {
+            '--product-mark-size': `${size}px`,
+            '--product-mark-image': `url('/brand/${product}-mark-monochrome.png')`,
+          } as CSSProperties
+        }
+        aria-hidden="true"
+      />
+    )
+  }
+
   return (
     <Image
       className="product-mark"

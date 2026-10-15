@@ -98,7 +98,7 @@ export function ExhibitionLanding() {
       <a href="#main" className="skip-link">
         <Copy id="text017" />{' '}
       </a>
-      <SiteHeader />
+      <SiteHeader monochromeMarks />
       <main id="main" className="exhibition-main">
         <h1 className="exhibition-title" aria-label="Comwit">
           <span aria-hidden="true">
@@ -113,6 +113,15 @@ export function ExhibitionLanding() {
               <Copy id="text110" /> <br />
               <Copy id="text111" />{' '}
             </p>
+            <a
+              className="exhibition-origin"
+              href="https://comwit.io"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span>{copy.rich('landingOrigin', { site: (text) => <strong>{text}</strong> })}</span>
+              <ArrowUpRightIcon size={17} aria-hidden="true" />
+            </a>
           </div>
           <motion.div
             className="exhibition-art"
@@ -139,7 +148,7 @@ export function ExhibitionLanding() {
             onBlur={() => setLibrary(null)}
             className="exhibition-route"
           >
-            <ProductMark product="state" size={52} />
+            <ProductMark product="state" size={52} monochrome />
             <span className="exhibition-route-copy">
               <span className="exhibition-route-title">State</span>
               <span className="exhibition-route-detail">
@@ -203,14 +212,19 @@ export function ExhibitionLanding() {
         </nav>
       </main>
       <footer className="exhibition-footer">
-        <a
-          className="exhibition-site-link"
-          href="https://comwit.io"
-          target="_blank"
-          rel="noreferrer"
-        >
-          comwit.io <ArrowUpRightIcon size={15} aria-hidden="true" />
-        </a>
+        <div className="exhibition-credit">
+          <span>
+            <Copy id="landingOpenSource" />
+          </span>
+          <a
+            className="exhibition-site-link"
+            href="https://comwit.io"
+            target="_blank"
+            rel="noreferrer"
+          >
+            comwit.io <ArrowUpRightIcon size={15} aria-hidden="true" />
+          </a>
+        </div>
         <div>
           <Link href="/blog">
             <Copy id="text126" />
