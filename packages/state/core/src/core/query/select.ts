@@ -14,6 +14,7 @@ import {
   RESOURCE_SUSPEND_STREAM,
 } from './types'
 import type { StreamedSuspendResult } from './stream'
+import { SETTLED, suspendOn } from './suspense'
 
 export type QuerySelectorLoad = {
   arg: unknown
@@ -259,6 +260,10 @@ export function querySelectorLoadKey(loads: QuerySelectorLoad[]): string {
  * Starts every `.suspend()` request collected by the current selector after
  * useSyncExternalStore has finished reading its snapshot. The accessor only
  * mutates its non-observable key cache during this phase.
+ *
+ * Every distinct suspend key yields one thenable, in selector order, whether it is still
+ * pending or already settled: `suspendOn` hands the whole list to React 19 `use()`, whose
+ * per-render slots must line up across replays. A failed request throws instead.
  */
 export function prepareQuerySelectorSuspense(
   loads: QuerySelectorLoad[],
@@ -268,7 +273,7 @@ export function prepareQuerySelectorSuspense(
   if (suspendLoads.length === 0) return
 
   const seen = new WeakMap<object, Set<QueryCacheKey>>()
-  let firstPromise: Promise<unknown> | undefined
+  const thenables: Promise<unknown>[] = []
   let firstError: unknown
 
   for (const load of suspendLoads) {
@@ -291,14 +296,14 @@ export function prepareQuerySelectorSuspense(
         load.key,
         load.controller
       )
-      if (!firstPromise && promise instanceof Promise) firstPromise = promise
+      thenables.push(promise instanceof Promise ? promise : SETTLED)
     } catch (error) {
       firstError ??= error
     }
   }
 
   if (firstError !== undefined) throw firstError
-  if (firstPromise) throw firstPromise
+  suspendOn(thenables)
 }
 
 export function runQuerySelectorLoads(

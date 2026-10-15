@@ -131,7 +131,8 @@ Supported fields: `query()`, `query.infinite()`, `local.query()`, and `local.inf
 ## Experimental selector Suspense
 
 `.suspend(arg)` remains experimental. It starts or reuses a keyed query Promise during render and
-throws while pending. It accepts only the inferred query argument—never a Promise or initial-data
+suspends while pending (through `use()` on React 19, a thrown Promise on React 18). It accepts only
+the inferred query argument—never a Promise or initial-data
 override. Use it only when `queryFn` can safely execute in every environment that renders the
 Client Component; Next.js Server Functions cannot be called during render.
 
