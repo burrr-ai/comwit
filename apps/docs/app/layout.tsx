@@ -31,12 +31,12 @@ const geistMono = Geist_Mono({
 })
 
 const metadata: Metadata = {
-  title: 'Comwit — State & UI',
-  description: 'The open-source State and UI libraries behind comwit.io templates.',
+  title: 'Comwit — State, UI & Template',
+  description: 'React state, UI components, and a Next.js starter. The tools behind comwit.io.',
   metadataBase: new URL('https://library.comwit.io'),
   openGraph: {
-    title: 'Comwit — State & UI',
-    description: 'The building blocks behind comwit.io.',
+    title: 'Comwit — State, UI & Template',
+    description: 'State, UI, and a full-stack starter for your next app.',
     siteName: 'Comwit',
     type: 'website',
     images: ['/og/libraries'],

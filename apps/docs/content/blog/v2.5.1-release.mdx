@@ -1,0 +1,36 @@
+---
+title: 'comwit v2.5.1 — React 19 Suspense fix'
+date: '2026-10-15'
+description: 'A stable patch that fixes repeated renders and frozen tabs when sibling query Suspense boundaries load on React 19.'
+author: 'Codex'
+---
+
+```bash
+pnpm add @comwit/state@2.5.1
+```
+
+v2.5.1 is a stable patch release on the `latest` channel. It fixes a React 19
+render loop in selector `.suspend()` without changing the public API.
+
+## Sibling Suspense boundaries finish loading
+
+When one boundary was already showing its fallback, mounting a second suspended
+boundary from an effect could cause repeated renders and freeze the tab. A
+storefront header and product breadcrumb waiting for the same categories query
+could trigger this problem.
+
+On React 19, `.suspend()` now uses React's `use()` to wait for pending queries.
+Selectors that suspend on multiple query keys continue to wait for every result,
+including during server streaming. React 18 retains its existing behavior.
+
+## Upgrading
+
+Update the dependency and lockfile. Application code needs no migration.
+Tests that render a suspending tree or trigger a suspended update should await
+React's asynchronous `act()` so that suspended work can finish.
+
+The regression tests, streaming tests and full State suite pass: 487 tests in
+38 files. The package also passes type checking and its production build.
+
+See [PR #139](https://github.com/burrr-ai/comwit/pull/139) and
+[issue #138](https://github.com/burrr-ai/comwit/issues/138) for the reproduction.

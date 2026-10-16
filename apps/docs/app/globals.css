@@ -1588,8 +1588,16 @@
   padding: 8px 12px;
   border-radius: 7px;
 }
-.product-nav img {
-  border-radius: 7px;
+.product-mark {
+  display: block;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.product-mark-monochrome {
+  width: var(--product-mark-size);
+  height: var(--product-mark-size);
+  background: currentColor;
+  mask: var(--product-mark-image) center / contain no-repeat;
 }
 .site-header .product-nav:hover,
 .site-header .product-nav[aria-current] {
@@ -1813,7 +1821,7 @@
     gap: 6px;
     font-size: 12px;
   }
-  .site-header .product-nav img {
+  .site-header .product-nav :is(img, .product-mark-monochrome) {
     width: 24px;
     height: 24px;
   }
@@ -1922,13 +1930,15 @@ html {
 .site-header.app-header .product-nav {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 8px 14px;
   min-height: 44px;
+  border-radius: 10px;
+  font-weight: 600;
 }
-.site-header.app-header .product-nav img {
-  width: 28px;
-  height: 28px;
+.site-header.app-header .product-nav :is(img, .product-mark-monochrome) {
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
 }
 .site-header.app-header .product-nav > svg {
@@ -2154,7 +2164,7 @@ html {
     padding: 6px 8px;
     gap: 6px;
   }
-  .site-header.app-header .product-nav img {
+  .site-header.app-header .product-nav :is(img, .product-mark-monochrome) {
     width: 24px;
     height: 24px;
   }
@@ -2219,16 +2229,17 @@ html {
   gap: 8px;
   margin-left: -6px;
   padding: 6px;
+  min-height: 44px;
   border-radius: 8px;
   font:
     600 15px/1 var(--font-inter),
     sans-serif;
   color: inherit;
+  white-space: nowrap;
 }
-.product-home img {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+.product-home :is(img, .product-mark-monochrome) {
+  width: 30px;
+  height: 30px;
 }
 .product-home > svg {
   width: 20px;
@@ -2291,14 +2302,98 @@ html:lang(ko) body {
   overflow-wrap: anywhere;
 }
 
-@media (max-width: 600px) {
-  .site-header.app-header .product-nav > span {
-    display: none;
+/* Keep product names visible on phones, with navigation on its own row. */
+.site-header.app-header:not(.product-header) {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 24px;
+}
+.site-header:not(.product-header) > .brand {
+  justify-self: start;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 20px;
+  font-size: 13px;
+}
+.site-header.app-header .header-actions .github-nav {
+  margin-left: 0;
+}
+.site-header .product-nav:active,
+.product-home:active {
+  transform: translateY(1px);
+}
+.site-header :is(a, button):focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.site-header.app-header nav a:hover {
+  color: inherit;
+}
+.site-locale-switch:hover:not(:disabled) {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+.site-locale-switch:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+@media (max-width: 400px) {
+  .site-header.app-header.product-header {
+    padding-inline: 12px;
+    gap: 8px;
+  }
+  .product-brand {
+    gap: 6px;
+  }
+  .site-header.product-header .wordmark {
+    font-size: 19px;
+  }
+  .product-home {
+    gap: 6px;
+    padding-inline: 4px;
+    margin-left: -4px;
+    font-size: 13px;
+  }
+  .product-home :is(img, .product-mark-monochrome) {
+    width: 26px;
+    height: 26px;
+  }
+}
+@media (max-width: 760px) {
+  :root:has(.site-header:not(.product-header)) {
+    --site-header-height: 116px;
+    --site-header-gutter: 20px;
+  }
+  .site-header.app-header:not(.product-header) {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 56px 60px;
+    gap: 0 16px;
+  }
+  .site-header.app-header .product-navigation {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: space-between;
+    gap: 4px;
+    padding-bottom: 8px;
   }
   .site-header.app-header .product-nav {
-    padding-inline: 6px;
+    justify-content: center;
+    gap: 7px;
+    padding: 6px 8px;
+    font-size: 13px;
   }
-  .site-header.app-header nav {
-    gap: 6px;
+  .site-header.app-header .product-nav :is(img, .product-mark-monochrome) {
+    width: 30px;
+    height: 30px;
+  }
+  .header-actions {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 16px;
+  }
+  .site-header.app-header .header-actions .github-nav {
+    display: flex;
   }
 }
