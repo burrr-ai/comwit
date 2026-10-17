@@ -96,6 +96,10 @@
   --glass-glow: rgba(255, 255, 255, 0.42); /* Radial reflection on the surface. */
   --glass-shade: rgba(10, 10, 10, 0.08); /* Bottom-edge shading. */
   --glass-shadow: 0 2px 4px rgba(16, 24, 40, 0.09), 0 12px 28px rgba(16, 24, 40, 0.12);
+  --glass-panel-tint: rgb(240 241 243); /* Neutral film for readable morphing panels. */
+  --glass-panel-opacity: 0.24;
+  --glass-frosted-panel-opacity: 0.78;
+  --glass-panel-shadow: 0 8px 28px rgba(16, 24, 40, 0.14);
 
   /* Shape controls. */
   --radius: 10px; /* Control radius for inputs and selects, excluding buttons → rounded-control. */
@@ -219,6 +223,10 @@
   --glass-glow: rgba(255, 255, 255, 0.06);
   --glass-shade: rgba(0, 0, 0, 0.3);
   --glass-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 12px 28px rgba(0, 0, 0, 0.55);
+  --glass-panel-tint: rgb(48 49 52);
+  --glass-panel-opacity: 0.2;
+  --glass-frosted-panel-opacity: 0.68;
+  --glass-panel-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
 
   /* Black drop shadows alone provide no depth on near-black backgrounds; combine strong shadows with white inset highlights. */
   --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -825,8 +833,11 @@
 
     .glass-morphing {
       --glass-opacity: 0.22;
-      -webkit-backdrop-filter: blur(12px) saturate(165%) contrast(103%);
-      backdrop-filter: blur(12px) saturate(165%) contrast(103%);
+      -webkit-backdrop-filter: var(
+        --glass-morphing-backdrop,
+        blur(12px) saturate(165%) contrast(103%)
+      );
+      backdrop-filter: var(--glass-morphing-backdrop, blur(12px) saturate(165%) contrast(103%));
     }
 
     /* SVG lens: JS adds .glass-lens only in Chromium. */
@@ -887,8 +898,11 @@
      * The lens returns once the transition ends and contain is removed.
      */
     [style*='contain: layout paint'] .glass-morphing.glass-lens {
-      -webkit-backdrop-filter: blur(12px) saturate(165%) contrast(103%);
-      backdrop-filter: blur(12px) saturate(165%) contrast(103%);
+      -webkit-backdrop-filter: var(
+        --glass-morphing-backdrop,
+        blur(12px) saturate(165%) contrast(103%)
+      );
+      backdrop-filter: var(--glass-morphing-backdrop, blur(12px) saturate(165%) contrast(103%));
     }
     [style*='contain: layout paint'] .glass-blur.glass-lens {
       -webkit-backdrop-filter: blur(22px) saturate(185%) contrast(106%);
@@ -902,6 +916,28 @@
       -webkit-backdrop-filter: blur(18px) saturate(155%) contrast(102%);
       backdrop-filter: blur(18px) saturate(155%) contrast(102%);
     }
+  }
+
+  /*
+   * Panels share a neutral film and soft shadow. Morphing keeps the backdrop and edge refraction
+   * visible; frosted increases blur and tint for busy backgrounds. Dense surfaces below can still
+   * increase film opacity above a scrim. :where keeps preference overrides later in this layer effective.
+   */
+  .glass-panel {
+    --glass-tint: var(--glass-panel-tint);
+    --glass-opacity: var(--glass-panel-opacity);
+    --glass-morphing-backdrop: blur(2px) saturate(65%);
+    border-color: color-mix(in srgb, var(--glass-edge) 35%, transparent);
+    background-image: none;
+    box-shadow: var(--glass-panel-shadow);
+  }
+  .glass-panel::after {
+    display: none;
+  }
+  .glass-panel:where(.glass-frosted) {
+    --glass-opacity: var(--glass-frosted-panel-opacity);
+    -webkit-backdrop-filter: blur(24px) saturate(65%);
+    backdrop-filter: blur(24px) saturate(65%);
   }
 
   /* Disable the layer's own shadow here, not the outer button's, for glass attached to a surface such as an app-bar back button. */
@@ -924,14 +960,14 @@
   }
 
   /* Glass menu rows: show hover/focus through text color instead of fill so the refractive surface remains visible. */
-  .glass-morphing [data-glass-item] {
+  :is(.glass-morphing, .glass-frosted) [data-glass-item] {
     transition:
       color 150ms ease,
       background-color 150ms ease,
       box-shadow 150ms ease,
       transform 150ms ease;
   }
-  .glass-morphing
+  :is(.glass-morphing, .glass-frosted)
     [data-glass-item]:not(:disabled, [data-disabled], [aria-disabled='true']):is(
       :hover,
       :focus-visible,
@@ -941,7 +977,7 @@
     background-color: transparent;
     color: var(--primary-strong);
   }
-  .glass-morphing
+  :is(.glass-morphing, .glass-frosted)
     [data-glass-item][data-variant='destructive']:not(
       :disabled,
       [data-disabled],
@@ -952,7 +988,7 @@
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
   }
-  .glass-morphing
+  :is(.glass-morphing, .glass-frosted)
     [data-glass-item]:not(:disabled, [data-disabled], [aria-disabled='true']):is(
       :hover,
       :focus-visible,
@@ -962,11 +998,11 @@
     :is(svg, [data-glass-label]) {
     color: inherit;
   }
-  .glass-morphing [data-glass-item][data-variant='destructive'] svg {
+  :is(.glass-morphing, .glass-frosted) [data-glass-item][data-variant='destructive'] svg {
     color: inherit;
   }
   /* Inset outline remains visible inside scrolling menus. */
-  .glass-morphing [data-glass-item]:focus-visible {
+  :is(.glass-morphing, .glass-frosted) [data-glass-item]:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: -2px;
     box-shadow: none;
